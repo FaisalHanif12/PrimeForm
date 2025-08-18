@@ -1,16 +1,18 @@
+import React from 'react';
 import { Stack } from 'expo-router';
-import { colors } from '../src/theme/colors';
+import { colors } from '../theme/colors';
 
-export default function RootLayout() {
+export default function AuthNavigator() {
   return (
     <Stack screenOptions={{
       headerShown: false,
       contentStyle: { backgroundColor: colors.background },
     }}>
-      <Stack.Screen name="index" />
       <Stack.Screen name="auth/login" />
       <Stack.Screen name="auth/signup" />
       <Stack.Screen name="auth/forgot" />
     </Stack>
   );
 }
+
+
