@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TextInputProps, TouchableOpacity } from 'react-native';
+import React, { useState, forwardRef } from 'react';
+import { View, TextInput, Text, StyleSheet, TextInputProps, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, typography } from '../theme/colors';
 
@@ -9,7 +9,7 @@ type Props = TextInputProps & {
   leftIcon?: React.ComponentProps<typeof Ionicons>['name'];
 };
 
-export default function AuthInput({ label, error, secureTextEntry, leftIcon, ...rest }: Props) {
+const AuthInput = forwardRef<TextInput, Props>(({ label, error, secureTextEntry, leftIcon, ...rest }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const [isSecure, setIsSecure] = useState(!!secureTextEntry);
 
@@ -23,14 +23,25 @@ export default function AuthInput({ label, error, secureTextEntry, leftIcon, ...
           <Ionicons name={leftIcon} size={18} color={colors.gold} style={styles.leftIcon} />
         ) : null}
         <TextInput
+          ref={ref}
           placeholderTextColor={colors.mutedText}
           style={styles.input}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           secureTextEntry={isSecure}
           autoCorrect={false}
-          importantForAutofill="yes"
           autoCapitalize="none"
+          clearButtonMode="never"
+          spellCheck={false}
+          // Prevent caret jump on Android by ensuring single-line and disabling selection changes from parent updates
+          multiline={false}
+          underlineColorAndroid="transparent"
+          selectionColor={colors.gold}
+          caretHidden={false}
+          {...(Platform.OS === 'android' ? { importantForAutofill: 'no' } : null)}
+          {...(Platform.OS === 'android' && typeof rest.value === 'string'
+            ? { selection: { start: (rest.value as string).length, end: (rest.value as string).length } }
+            : null)}
           {...rest}
         />
         {secureTextEntry ? (
@@ -39,10 +50,14 @@ export default function AuthInput({ label, error, secureTextEntry, leftIcon, ...
           </TouchableOpacity>
         ) : null}
       </View>
+      {/* Underlay fill behind the TextInput to avoid white placeholder/field background on Android */}
+      {/* Kept outside input row to not affect caret */}
       {!!error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
-}
+});
+
+export default AuthInput;
 
 const styles = StyleSheet.create({
   container: {
@@ -57,20 +72,26 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     width: '100%',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.lg,
     backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.inputBorder,
     borderRadius: radius.md,
-    color: '#FACC15',
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 36,
+    marginBottom: spacing.lg,
   },
   input: {
     flex: 1,
     color: colors.text,
+    fontSize: typography.body,
     paddingRight: spacing.md,
+    minHeight: 16,
+    // Avoid Android caret rendering issues caused by textAlignVertical/includeFontPadding on single-line inputs
+    textAlign: 'left',
+    backgroundColor: 'transparent',
   },
   inputFocused: {
     borderColor: colors.gold,

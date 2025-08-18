@@ -39,7 +39,8 @@ export default function GlassCard({ children, style }: Props) {
 const styles = StyleSheet.create({
   wrapper: {
     borderRadius: CARD_RADIUS,
-    overflow: 'hidden',
+    // Avoid overflow clipping on Android to prevent TextInput caret rendering issues
+    overflow: Platform.OS === 'ios' ? 'hidden' : 'visible',
     shadowColor: '#0A0F1C',
     shadowOpacity: 0.55,
     shadowRadius: 30,
@@ -50,16 +51,17 @@ const styles = StyleSheet.create({
     padding: 1,
   },
   surface: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     backgroundColor: 'rgba(17, 25, 40, 0.6)',
     borderRadius: CARD_RADIUS,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    overflow: 'hidden',
+    // Avoid overflow clipping on Android to prevent TextInput caret rendering issues
+    overflow: Platform.OS === 'ios' ? 'hidden' : 'visible',
   },
   inner: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 });
 

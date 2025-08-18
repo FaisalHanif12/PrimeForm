@@ -10,6 +10,7 @@ export const colors = {
   goldSoft: 'rgba(255, 215, 0, 0.7)',
   // Glass surfaces
   inputBackground: 'rgba(17, 25, 40, 0.4)',
+  inputFill: 'rgba(17, 25, 40, 0.6)',
   inputBorder: 'rgba(255, 255, 255, 0.15)',
   cardBackground: 'rgba(17, 25, 40, 0.6)',
   cardBorder: 'rgba(146, 180, 216, 0.35)',

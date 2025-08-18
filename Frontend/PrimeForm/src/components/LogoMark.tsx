@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors } from '../theme/colors';
+import { colors, spacing } from '../theme/colors';
 
 type Props = {
   subtitle?: string;
@@ -33,8 +33,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '900',
     letterSpacing: 1.2,
-    marginBottom: 20,
-    
+    marginBottom: spacing.lg,
+    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
     marginTop: 4,
