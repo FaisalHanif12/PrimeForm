@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, Platform } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors, spacing } from '../theme/colors';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { colors, spacing, fonts } from '../theme/colors';
 
 type Props = {
   subtitle?: string;
@@ -9,7 +9,7 @@ type Props = {
 
 export default function LogoMark({ subtitle }: Props) {
   return (
-    <Animated.View entering={FadeInDown.duration(700)} style={styles.container}>
+    <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/PrimeLogo.png')} style={styles.icon} />
       <Text style={styles.title}>PRIMEFORM</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -30,18 +30,27 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 1.2,
+    fontSize: 38,
+    fontWeight: '300',
+    letterSpacing: 4,
     marginBottom: spacing.lg,
-    fontFamily: Platform.OS === 'ios' ? 'Helvetica Neue' : 'sans-serif-light',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    fontFamily: fonts.brand,
+    textShadowColor: 'rgba(255, 215, 0, 0.4)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 8,
+    // Add elegant shadow effect
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   subtitle: {
     marginTop: 4,
-    color: colors.mutedText,
+    color: colors.gold,
+    fontSize: 16,
+    fontWeight: '400',
+    fontFamily: fonts.body,
+    letterSpacing: 1,
   },
 });
 

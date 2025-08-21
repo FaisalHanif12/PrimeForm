@@ -125,3 +125,19 @@ Scalability: APIs + database must handle future features.
 Data Privacy: JWT, password hashing, GDPR compliance.
 
 Performance: Optimize animations, caching for AI responses.
+
+
+
+Background: A very deep navy blue to black gradient.
+
+Text/Accents: Golden gradient (from soft gold → bright yellow gold) giving a glowing elite vibe.
+
+Input Fields & Buttons: Transparent / glassmorphism style with subtle navy overlays and glowing edges.
+
+Extra Elements:
+
+Logo & headers: Silver → White gradient (metallic).
+
+Links (“Forgot Password?”): Golden text (not gradient, just flat gold).
+
+⚡ In short → It’s Navy Blue + Black for background, with Golden gradient accents, mixed with a glassmorphism style for inputs/buttons.
