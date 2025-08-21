@@ -40,7 +40,33 @@ export function useAuth() {
     }
   }, []);
 
-  return { loading, signIn, signUp, sendReset };
+  const verifyOTP = useCallback(async (email: string, otp: string) => {
+    try {
+      setLoading(true);
+      // Simulate OTP verification - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, token: string, newPassword: string) => {
+    try {
+      setLoading(true);
+      // Simulate password reset - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { loading, signIn, signUp, sendReset, verifyOTP, resetPassword };
 }
 
 

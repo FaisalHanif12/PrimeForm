@@ -1,13 +1,21 @@
 ⚖️ Primeform Project Rules & Instructions
+
 🎨 Design & Theme
 
-Background: Always Navy Blue (#0a1a2f).
+Background: A very deep navy blue to black gradient.
 
-Text & Accents: Always Golden (#FFD700).
+Text/Accents: Golden gradient (from soft gold → bright yellow gold) giving a glowing elite vibe.
 
-Font Style: Premium, bold, modern (Montserrat / Poppins / luxury serif for headings).
+Input Fields & Buttons: Transparent / glassmorphism style with subtle navy overlays and glowing edges.
 
-Style Vibe: Minimalist, elite, luxury feel.
+Extra Elements:
+
+Logo & headers: Silver → White gradient (metallic).
+
+Links (“Forgot Password?”): Golden text (not gradient, just flat gold).
+
+⚡ In short → It’s Navy Blue + Black for background, with Golden gradient accents, mixed with a glassmorphism style for inputs/buttons.
+
 
 Animations: Must be integrated in UI (React Native Reanimated + Lottie). Exercise demos always animated, not static.
 

@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const colors = {
   // Dark navy + gold glassmorphism theme
   background: '#0F172A',
@@ -42,6 +44,16 @@ export const typography = {
   subtitle: 18,
   body: 16,
   small: 13,
+};
+
+export const fonts = {
+  // Beautiful font families
+  heading: Platform.OS === 'ios' ? 'Avenir Next' : 'Roboto',
+  headingBold: Platform.OS === 'ios' ? 'Avenir Next' : 'Roboto',
+  brand: Platform.OS === 'ios' ? 'Optima' : 'sans-serif-light',
+  brandBold: Platform.OS === 'ios' ? 'Optima' : 'sans-serif-light', 
+  body: Platform.OS === 'ios' ? 'Avenir Next' : 'Roboto',
+  mono: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
 };
 
 
