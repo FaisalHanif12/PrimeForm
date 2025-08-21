@@ -1,7 +1,7 @@
 import React, { useState, forwardRef } from 'react';
 import { View, TextInput, Text, StyleSheet, TextInputProps, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '../theme/colors';
+import { colors, radius, spacing, typography, fonts } from '../theme/colors';
 
 type Props = TextInputProps & {
   label?: string;
@@ -87,6 +87,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     fontSize: typography.body,
+    fontFamily: fonts.body,
     paddingRight: spacing.md,
     minHeight: 16,
     // Avoid Android caret rendering issues caused by textAlignVertical/includeFontPadding on single-line inputs
@@ -107,9 +108,13 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   error: {
-    marginTop: spacing.xs,
+    marginTop: -spacing.md + spacing.xs,
+    marginBottom: spacing.sm,
     color: colors.error,
     fontSize: typography.small,
+    fontFamily: fonts.body,
+    lineHeight: 16,
+    paddingHorizontal: spacing.xs,
   },
 });
 
