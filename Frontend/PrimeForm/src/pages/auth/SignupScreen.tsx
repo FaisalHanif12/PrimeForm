@@ -6,9 +6,11 @@ import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import AuthInput from '../../components/AuthInput';
 import SimpleInput from '../../components/SimpleInput';
 import AuthButton from '../../components/AuthButton';
-import CustomAlert from '../../components/CustomAlert';
+
 import { colors, spacing, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -16,6 +18,8 @@ import LogoMark from '../../components/LogoMark';
 export default function SignupScreen() {
   const router = useRouter();
   const { signUp, loading } = useAuth();
+  const { login: setAuthUser } = useAuthContext();
+  const { showToast } = useToast();
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
@@ -28,20 +32,7 @@ export default function SignupScreen() {
   const [showRequirements, setShowRequirements] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirm?: string }>({});
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean; confirm?: boolean }>({});
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>;
-    autoDismiss?: boolean;
-  }>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-    autoDismiss: false,
-  });
+
 
   const validateName = (name: string) => {
     if (!name.trim()) return 'Name is required';
@@ -57,12 +48,13 @@ export default function SignupScreen() {
   };
 
   const validatePassword = (password: string) => {
+    const issues = [];
     if (!password.trim()) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
-    // More relaxed validation for better UX
-    if (!/(?=.*[a-zA-Z])/.test(password)) return 'Password must contain at least one letter';
-    if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number';
-    return undefined;
+    if (password.length < 6) issues.push('At least 6 characters required');
+    if (!/(?=.*[a-z])/.test(password)) issues.push('One lowercase letter required');
+    if (!/(?=.*[A-Z])/.test(password)) issues.push('One uppercase letter required');
+    if (!/(?=.*\d)/.test(password)) issues.push('One number required');
+    return issues.length > 0 ? issues[0] : undefined;
   };
 
   const validateConfirm = (confirm: string, password: string) => {
@@ -77,14 +69,14 @@ export default function SignupScreen() {
     next.email = validateEmail(email);
     next.password = validatePassword(password);
     next.confirm = validateConfirm(confirm, password);
-    
+
     // Remove undefined errors
     Object.keys(next).forEach(key => {
       if (!next[key as keyof typeof next]) {
         delete next[key as keyof typeof next];
       }
     });
-    
+
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -149,54 +141,51 @@ export default function SignupScreen() {
     setErrors(prev => ({ ...prev, confirm: error }));
   };
 
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>, autoDismiss?: boolean) => {
-    setAlertConfig({
-      visible: true,
-      type,
-      title,
-      message,
-      buttons,
-      autoDismiss: autoDismiss || false,
-    });
-  };
 
-  const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
+
+
 
   const onSignup = async () => {
     // Force validation for all fields
     setTouched({ name: true, email: true, password: true, confirm: true });
-    
+
     const isValid = validate();
     console.log('Validation result:', isValid);
     console.log('Current errors:', errors);
-    console.log('Form data:', { name, email, password, confirm });
-    
+    console.log('Form data:', { fullName: name, email, password, confirm });
+
     if (!isValid) {
+      showToast('error', 'Please complete all requirements before signing up');
       return;
     }
-    
+
     try {
-      const ok = await signUp({ name, email, password });
-      if (ok) {
-        showAlert('success', 'Account Created!', 'Your account has been created successfully. Redirecting to login...', undefined, true);
-        // Auto navigate after 2 seconds
+      const response = await signUp({ fullName: name, email, password });
+      if (response?.success) {
+        // Set user in auth context for automatic login
+        if (response.data?.user) {
+          setAuthUser(response.data.user);
+        }
+
+        showToast('success', 'Account created successfully!');
+
+        // Auto-navigate to dashboard after toast
         setTimeout(() => {
-          router.replace('/auth/login');
-        }, 2000);
+          router.replace('/(dashboard)');
+        }, 1500);
       } else {
-        showAlert('error', 'Registration Failed', 'Failed to create account. Please try again.');
+        showToast('error', response?.message || 'Failed to create account');
       }
     } catch (error) {
-      showAlert('error', 'Something Went Wrong', 'An unexpected error occurred. Please try again.');
+      console.error('Signup error:', error);
+      showToast('error', 'Connection error. Please try again.');
     }
   };
 
   return (
     <DecorativeBackground>
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
@@ -204,203 +193,181 @@ export default function SignupScreen() {
         >
           <Animated.View entering={FadeInUp} style={styles.centerWrap}>
             <GlassCard style={styles.card}>
-              {/* Info Icon - Top Right Corner */}
-              <TouchableOpacity 
-                style={styles.infoIconButton}
-                onPress={() => setShowRequirements(!showRequirements)}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={showRequirements ? "information-circle" : "information-circle-outline"} 
-                  size={24} 
-                  color={colors.gold} 
-                />
-              </TouchableOpacity>
-              
+
               <LogoMark />
-            <Animated.View entering={FadeInDown}>
-              {isAndroid ? (
-                <SimpleInput 
-                  value={name} 
-                  onChangeText={handleNameChange}
-                  onBlur={handleNameBlur}
-                  error={errors.name}
-                  placeholder="Username" 
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  onSubmitEditing={() => emailRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              ) : (
-              <AuthInput 
-                value={name} 
-                onChangeText={handleNameChange}
-                onBlur={handleNameBlur}
-                error={errors.name} 
-                leftIcon="person" 
-                placeholder="Username" 
-                autoCapitalize="words"
-                textContentType="name"
-                autoComplete="name"
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-              )}
-            </Animated.View>
-            <Animated.View entering={FadeInDown}>
-              {isAndroid ? (
-                <SimpleInput 
-                  ref={emailRef}
-                  keyboardType="email-address" 
-                  autoCapitalize="none" 
-                  value={email} 
-                  onChangeText={handleEmailChange}
-                  onBlur={handleEmailBlur}
-                  error={errors.email}
-                  placeholder="Email" 
-                  returnKeyType="next"
-                  onSubmitEditing={() => passwordRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              ) : (
-              <AuthInput 
-                ref={emailRef}
-                keyboardType="email-address" 
-                autoCapitalize="none" 
-                textContentType="emailAddress"
-                autoComplete="email"
-                value={email} 
-                onChangeText={handleEmailChange}
-                onBlur={handleEmailBlur}
-                error={errors.email} 
-                leftIcon="mail" 
-                placeholder="Email" 
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-              )}
-            </Animated.View>
-            <Animated.View entering={FadeInDown}>
-              {isAndroid ? (
-                <SimpleInput 
-                  ref={passwordRef}
-                  secureTextEntry 
-                  value={password} 
-                  onChangeText={handlePasswordChange}
-                  onBlur={handlePasswordBlur}
-                  error={errors.password}
-                  placeholder="Password" 
-                  returnKeyType="next"
-                  onSubmitEditing={() => confirmRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              ) : (
-              <AuthInput 
-                ref={passwordRef}
-                secureTextEntry 
-                textContentType="newPassword"
-                autoComplete="password-new"
-                value={password} 
-                onChangeText={handlePasswordChange}
-                onBlur={handlePasswordBlur}
-                error={errors.password} 
-                leftIcon="lock-closed" 
-                placeholder="Password" 
-                returnKeyType="next"
-                onSubmitEditing={() => confirmRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-              )}
-            </Animated.View>
-            <Animated.View entering={FadeInDown}>
-              {isAndroid ? (
-                <SimpleInput 
-                  ref={confirmRef}
-                  secureTextEntry 
-                  value={confirm} 
-                  onChangeText={handleConfirmChange}
-                  onBlur={handleConfirmBlur}
-                  error={errors.confirm}
-                  placeholder="Confirm Password" 
-                  returnKeyType="done"
-                  onSubmitEditing={onSignup}
-                />
-              ) : (
-              <AuthInput 
-                ref={confirmRef}
-                secureTextEntry 
-                textContentType="newPassword"
-                autoComplete="password-new"
-                value={confirm} 
-                onChangeText={handleConfirmChange}
-                onBlur={handleConfirmBlur}
-                error={errors.confirm} 
-                leftIcon="shield-checkmark" 
-                placeholder="Confirm Password" 
-                returnKeyType="done"
-                onSubmitEditing={onSignup}
-              />
-              )}
-            </Animated.View>
-
-
-            {/* Requirements Panel */}
-            {showRequirements && (
               <Animated.View entering={FadeInDown}>
-                <View style={styles.requirementsPanel}>
-                  <Text style={styles.requirementsTitle}>Email & Password Requirements</Text>
-                  
-                  <View style={styles.requirementSection}>
-                    <Text style={styles.sectionTitle}>📧 Email Format:</Text>
-                    <Text style={styles.requirementText}>• Must be a valid email (e.g., user@gmail.com)</Text>
-                    <Text style={styles.requirementText}>• Cannot contain spaces</Text>
+                {isAndroid ? (
+                  <SimpleInput
+                    value={name}
+                    onChangeText={handleNameChange}
+                    onBlur={handleNameBlur}
+                    error={errors.name}
+                    placeholder="Username"
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                ) : (
+                  <AuthInput
+                    value={name}
+                    onChangeText={handleNameChange}
+                    onBlur={handleNameBlur}
+                    error={errors.name}
+                    leftIcon="person"
+                    placeholder="Username"
+                    autoCapitalize="words"
+                    textContentType="name"
+                    autoComplete="name"
+                    returnKeyType="next"
+                    onSubmitEditing={() => emailRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                )}
+              </Animated.View>
+              <Animated.View entering={FadeInDown}>
+                {isAndroid ? (
+                  <SimpleInput
+                    ref={emailRef}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    onBlur={handleEmailBlur}
+                    error={errors.email}
+                    placeholder="Email"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                ) : (
+                  <AuthInput
+                    ref={emailRef}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    textContentType="emailAddress"
+                    autoComplete="email"
+                    value={email}
+                    onChangeText={handleEmailChange}
+                    onBlur={handleEmailBlur}
+                    error={errors.email}
+                    leftIcon="mail"
+                    placeholder="Email"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                )}
+              </Animated.View>
+              <Animated.View entering={FadeInDown}>
+                {isAndroid ? (
+                  <SimpleInput
+                    ref={passwordRef}
+                    secureTextEntry
+                    value={password}
+                    onChangeText={handlePasswordChange}
+                    onBlur={handlePasswordBlur}
+                    error={errors.password}
+                    placeholder="Password"
+                    returnKeyType="next"
+                    onSubmitEditing={() => confirmRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                ) : (
+                  <AuthInput
+                    ref={passwordRef}
+                    secureTextEntry
+                    textContentType="newPassword"
+                    autoComplete="password-new"
+                    value={password}
+                    onChangeText={handlePasswordChange}
+                    onBlur={handlePasswordBlur}
+                    error={errors.password}
+                    leftIcon="lock-closed"
+                    placeholder="Password"
+                    returnKeyType="next"
+                    onSubmitEditing={() => confirmRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                )}
+              </Animated.View>
+              <Animated.View entering={FadeInDown}>
+                {isAndroid ? (
+                  <SimpleInput
+                    ref={confirmRef}
+                    secureTextEntry
+                    value={confirm}
+                    onChangeText={handleConfirmChange}
+                    onBlur={handleConfirmBlur}
+                    error={errors.confirm}
+                    placeholder="Confirm Password"
+                    returnKeyType="done"
+                    onSubmitEditing={onSignup}
+                  />
+                ) : (
+                  <AuthInput
+                    ref={confirmRef}
+                    secureTextEntry
+                    textContentType="newPassword"
+                    autoComplete="password-new"
+                    value={confirm}
+                    onChangeText={handleConfirmChange}
+                    onBlur={handleConfirmBlur}
+                    error={errors.confirm}
+                    leftIcon="shield-checkmark"
+                    placeholder="Confirm Password"
+                    returnKeyType="done"
+                    onSubmitEditing={onSignup}
+                  />
+                )}
+              </Animated.View>
+
+
+              {/* Requirements Panel */}
+              {showRequirements && (
+                <Animated.View entering={FadeInDown}>
+                  <View style={styles.requirementsPanel}>
+                    <Text style={styles.requirementsTitle}>Email & Password Requirements</Text>
+
+                    <View style={styles.requirementSection}>
+                      <Text style={styles.sectionTitle}>📧 Email Format:</Text>
+                      <Text style={styles.requirementText}>• Must be a valid email (e.g., user@gmail.com)</Text>
+                      <Text style={styles.requirementText}>• Cannot contain spaces</Text>
+                    </View>
+
+                    <View style={styles.requirementSection}>
+                      <Text style={styles.sectionTitle}>🔒 Password Requirements:</Text>
+                      <Text style={[styles.requirementText, password.length >= 6 && styles.requirementMet]}>
+                        • At least 6 characters long
+                      </Text>
+                      <Text style={[styles.requirementText, /(?=.*[a-zA-Z])/.test(password) && styles.requirementMet]}>
+                        • Contains at least one letter (a-z, A-Z)
+                      </Text>
+                      <Text style={[styles.requirementText, /(?=.*\d)/.test(password) && styles.requirementMet]}>
+                        • Contains at least one number (0-9)
+                      </Text>
+                    </View>
                   </View>
-                  
-                  <View style={styles.requirementSection}>
-                    <Text style={styles.sectionTitle}>🔒 Password Requirements:</Text>
-                    <Text style={[styles.requirementText, password.length >= 6 && styles.requirementMet]}>
-                      • At least 6 characters long
-                    </Text>
-                    <Text style={[styles.requirementText, /(?=.*[a-zA-Z])/.test(password) && styles.requirementMet]}>
-                      • Contains at least one letter (a-z, A-Z)
-                    </Text>
-                    <Text style={[styles.requirementText, /(?=.*\d)/.test(password) && styles.requirementMet]}>
-                      • Contains at least one number (0-9)
-                    </Text>
-                  </View>
+                </Animated.View>
+              )}
+
+              <Animated.View entering={FadeInDown}>
+                <AuthButton label="Sign Up" onPress={onSignup} loading={loading} />
+              </Animated.View>
+              <Animated.View entering={FadeInDown}>
+                <View style={styles.bottomRow}>
+                  <Text style={styles.bottomText}>Already have an account? </Text>
+                  <Link href="/auth/login" asChild>
+                    <TouchableOpacity style={styles.linkButton} activeOpacity={0.7}>
+                      <Text style={styles.linkText}>Log In</Text>
+                    </TouchableOpacity>
+                  </Link>
                 </View>
               </Animated.View>
-            )}
-
-            <Animated.View entering={FadeInDown}>
-              <AuthButton label="Sign Up" onPress={onSignup} loading={loading} />
-            </Animated.View>
-            <Animated.View entering={FadeInDown}>
-              <View style={styles.bottomRow}>
-                <Text style={styles.bottomText}>Already have an account? </Text>
-                <Link href="/auth/login" asChild>
-                  <TouchableOpacity style={styles.linkButton} activeOpacity={0.7}>
-                    <Text style={styles.linkText}>Log In</Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
-            </Animated.View>
-          </GlassCard>
-        </Animated.View>
+            </GlassCard>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-      
-      <CustomAlert
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideAlert}
-        autoDismiss={alertConfig.autoDismiss}
-      />
     </DecorativeBackground>
   );
 }
@@ -414,10 +381,10 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Platform.select({ 
-      ios: spacing.lg, 
+    paddingHorizontal: Platform.select({
+      ios: spacing.lg,
       android: spacing.md,
-      default: spacing.lg 
+      default: spacing.lg
     }),
     paddingTop: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
     paddingBottom: spacing.xl,
