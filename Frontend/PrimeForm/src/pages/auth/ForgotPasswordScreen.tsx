@@ -6,9 +6,10 @@ import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import AuthInput from '../../components/AuthInput';
 import SimpleInput from '../../components/SimpleInput';
 import AuthButton from '../../components/AuthButton';
-import CustomAlert from '../../components/CustomAlert';
+
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -16,24 +17,14 @@ import LogoMark from '../../components/LogoMark';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { sendReset, loading } = useAuth();
+  const { showToast } = useToast();
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [touched, setTouched] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>;
-  }>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-  });
+
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,25 +41,15 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>) => {
-    setAlertConfig({
-      visible: true,
-      type,
-      title,
-      message,
-      buttons,
-    });
-  };
 
-  const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
 
   const handleEmailBlur = () => {
     setTouched(true);
     const emailError = validateEmail(email);
     setError(emailError);
   };
+
+
 
   const onSubmit = async () => {
     setTouched(true);
@@ -82,19 +63,24 @@ export default function ForgotPasswordScreen() {
     setError(undefined);
     
     try {
-      const ok = await sendReset(email);
-      if (ok) {
+      const response = await sendReset(email);
+      if (response?.success) {
         setIsSubmitted(true);
-        // Navigate directly to OTP screen without showing alert
-        router.push({
-          pathname: '/auth/otp-verification',
-          params: { email }
-        });
+        showToast('success', 'Reset code sent to your email!');
+        
+        // Navigate to OTP screen immediately after showing toast
+        setTimeout(() => {
+          router.push({
+            pathname: '/auth/otp-verification',
+            params: { email, type: 'reset' }
+          });
+        }, 1500);
       } else {
-        showAlert('error', 'Email Not Found', 'Email address not found. Please check and try again.');
+        showToast('error', 'Email not found');
       }
     } catch (error) {
-      showAlert('error', 'Something Went Wrong', 'An unexpected error occurred. Please try again.');
+      console.error('Forgot password error:', error);
+      showToast('error', 'Connection error. Please try again.');
     }
   };
 
@@ -149,7 +135,7 @@ export default function ForgotPasswordScreen() {
             </Animated.View>
             <Animated.View entering={FadeInDown}>
               <AuthButton 
-                label={isSubmitted ? "Reset Link Sent" : "Send Reset Link"} 
+                label={isSubmitted ? "OTP Sent" : "Send OTP"} 
                 onPress={onSubmit} 
                 loading={loading}
                 disabled={isSubmitted}
@@ -159,15 +145,6 @@ export default function ForgotPasswordScreen() {
           </GlassCard>
         </View>
       </KeyboardAvoidingView>
-      
-      <CustomAlert
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideAlert}
-      />
     </DecorativeBackground>
   );
 }

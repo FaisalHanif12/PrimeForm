@@ -6,17 +6,19 @@ import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import AuthInput from '../../components/AuthInput';
 import SimpleInput from '../../components/SimpleInput';
 import AuthButton from '../../components/AuthButton';
-import CustomAlert from '../../components/CustomAlert';
+
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { email, token } = useLocalSearchParams();
+  const { email, otp } = useLocalSearchParams();
   const { resetPassword, loading } = useAuth();
+  const { showToast } = useToast();
   const confirmRef = useRef<TextInput>(null);
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
@@ -24,27 +26,16 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [touched, setTouched] = useState<{ password?: boolean; confirmPassword?: boolean }>({});
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>;
-    autoDismiss?: boolean;
-  }>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-    autoDismiss: false,
-  });
+
 
   const validatePassword = (password: string) => {
+    const issues = [];
     if (!password.trim()) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
-    if (!/(?=.*[a-zA-Z])/.test(password)) return 'Password must contain at least one letter';
-    if (!/(?=.*\d)/.test(password)) return 'Password must contain at least one number';
-    return undefined;
+    if (password.length < 6) issues.push('At least 6 characters required');
+    if (!/(?=.*[a-z])/.test(password)) issues.push('One lowercase letter required');
+    if (!/(?=.*[A-Z])/.test(password)) issues.push('One uppercase letter required');
+    if (!/(?=.*\d)/.test(password)) issues.push('One number required');
+    return issues.length > 0 ? issues[0] : undefined;
   };
 
   const validateConfirmPassword = (confirmPassword: string, password: string) => {
@@ -69,20 +60,9 @@ export default function ResetPasswordScreen() {
     return Object.keys(next).length === 0;
   };
 
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>, autoDismiss?: boolean) => {
-    setAlertConfig({
-      visible: true,
-      type,
-      title,
-      message,
-      buttons,
-      autoDismiss: autoDismiss || false,
-    });
-  };
 
-  const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
+
+
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
@@ -120,22 +100,27 @@ export default function ResetPasswordScreen() {
     setTouched({ password: true, confirmPassword: true });
     
     if (!validate()) {
+      showToast('error', 'Please complete all password requirements');
       return;
     }
     
     try {
-      const ok = await resetPassword(email as string, token as string, password);
-      if (ok) {
-        showAlert('success', 'Password Reset!', 'Your password has been reset successfully. Redirecting to login...', undefined, true);
-        // Auto navigate after 2 seconds
+      const response = await resetPassword(email as string, otp as string, password);
+      console.log('Reset password response:', response);
+      
+      if (response?.success) {
+        showToast('success', 'Password updated successfully!');
+        
+        // Navigate to dashboard after successful reset
         setTimeout(() => {
-          router.replace('/auth/login');
-        }, 2000);
+          router.replace('/(dashboard)');
+        }, 1500);
       } else {
-        showAlert('error', 'Reset Failed', 'Failed to reset password. Please try again or request a new reset link.');
+        showToast('error', response?.message || 'Failed to reset password');
       }
     } catch (error) {
-      showAlert('error', 'Something Went Wrong', 'An unexpected error occurred. Please try again.');
+      console.error('Reset password error:', error);
+      showToast('error', 'Connection error. Please try again.');
     }
   };
 
@@ -236,36 +221,12 @@ export default function ResetPasswordScreen() {
                 loading={loading}
               />
             </Animated.View>
-
-            <Animated.View entering={FadeInDown}>
-              <View style={styles.passwordRequirements}>
-                <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-                <Text style={[styles.requirement, password.length >= 6 && styles.requirementMet]}>
-                  • At least 6 characters
-                </Text>
-                <Text style={[styles.requirement, /(?=.*[a-zA-Z])/.test(password) && styles.requirementMet]}>
-                  • Contains at least one letter
-                </Text>
-                <Text style={[styles.requirement, /(?=.*\d)/.test(password) && styles.requirementMet]}>
-                  • Contains at least one number
-                </Text>
-              </View>
-            </Animated.View>
+           
             </Animated.View>
           </GlassCard>
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      
-      <CustomAlert
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideAlert}
-        autoDismiss={alertConfig.autoDismiss}
-      />
     </DecorativeBackground>
   );
 }
