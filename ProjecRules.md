@@ -1,20 +1,6 @@
 ⚖️ Primeform Project Rules & Instructions
 
-🎨 Design & Theme
 
-Background: A very deep navy blue to black gradient.
-
-Text/Accents: Golden gradient (from soft gold → bright yellow gold) giving a glowing elite vibe.
-
-Input Fields & Buttons: Transparent / glassmorphism style with subtle navy overlays and glowing edges.
-
-Extra Elements:
-
-Logo & headers: Silver → White gradient (metallic).
-
-Links (“Forgot Password?”): Golden text (not gradient, just flat gold).
-
-⚡ In short → It’s Navy Blue + Black for background, with Golden gradient accents, mixed with a glassmorphism style for inputs/buttons.
 
 
 Animations: Must be integrated in UI (React Native Reanimated + Lottie). Exercise demos always animated, not static.
@@ -123,14 +109,3 @@ primeform-backend/
 │── .env                    # Environment variables
 └── package.json
 
-
-
-Design Approach
-
-Use animations wherever possible to make UI dynamic and modern.
-
-For exercise demonstrations, always use animated demos or motion graphics (Lottie/3D models/videos).
-
-Keep navigation smooth & intuitive (bottom tabs, stack navigators).
-
-Stick to minimalist UI with elite feel → no clutter, big spacing, glowing effects.

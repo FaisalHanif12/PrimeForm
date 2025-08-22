@@ -1,0 +1,65 @@
+# Root level .gitignore for entire PrimeForm project
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build directories
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+coverage/
+.nyc_output/
+
+# Expo
+.expo/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Package manager locks
+# Uncomment if you want to ignore these
+# package-lock.json
+# yarn.lock
