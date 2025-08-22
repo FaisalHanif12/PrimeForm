@@ -4,33 +4,32 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import AuthButton from '../../components/AuthButton';
-import CustomAlert from '../../components/CustomAlert';
+
 import { colors, spacing, radius } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../context/ToastContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
 
 export default function OTPVerificationScreen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams();
-  const { verifyOTP, loading } = useAuth();
+  const { email, type } = useLocalSearchParams();
+  const { verifyOTP, loading, sendReset } = useAuth();
+  const { showToast } = useToast();
+
+  // Debug parameters
+  console.log('OTP Screen - Email param:', email);
+  console.log('OTP Screen - Type param:', type);
+  console.log('OTP Screen - All params:', useLocalSearchParams());
   
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>;
-  }>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-  });
+  const [attempts, setAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTimer, setLockTimer] = useState(0);
+
 
   const otpRefs = useRef<Array<TextInput | null>>([]);
 
@@ -45,19 +44,19 @@ export default function OTPVerificationScreen() {
     }
   }, [timer]);
 
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>) => {
-    setAlertConfig({
-      visible: true,
-      type,
-      title,
-      message,
-      buttons,
-    });
-  };
+  useEffect(() => {
+    if (lockTimer > 0) {
+      const interval = setInterval(() => {
+        setLockTimer(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    } else if (isLocked) {
+      setIsLocked(false);
+      setAttempts(0);
+    }
+  }, [lockTimer, isLocked]);
 
-  const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
+
 
   const handleOTPChange = (value: string, index: number) => {
     const newOtp = [...otp];
@@ -76,24 +75,55 @@ export default function OTPVerificationScreen() {
     }
   };
 
+
+
   const handleVerifyOTP = async () => {
-    const otpString = otp.join('');
-    if (otpString.length !== 6) {
+    if (isLocked) {
+      showToast('error', `Too many attempts. Wait ${Math.ceil(lockTimer / 60)} minute(s)`);
       return;
     }
 
+    const otpString = otp.join('');
+    if (otpString.length !== 6) {
+      showToast('warning', 'Please enter complete 6-digit code');
+      return;
+    }
+
+    console.log('Verifying OTP:', otpString, 'for email:', email);
+
     try {
-      const ok = await verifyOTP(email as string, otpString);
-      if (ok) {
-        router.push({
-          pathname: '/auth/reset-password',
-          params: { email, token: otpString }
-        });
+      const response = await verifyOTP(email as string, otpString);
+      console.log('OTP Verification Response:', response);
+      
+      if (response?.success) {
+        showToast('success', 'Code verified!');
+        setAttempts(0);
+        
+        // Navigate to reset password screen
+        setTimeout(() => {
+          router.push({
+            pathname: '/auth/reset-password',
+            params: { email, otp: otpString }
+          });
+        }, 1500);
       } else {
-        showAlert('error', 'Invalid Code', 'The verification code you entered is incorrect. Please try again.');
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        
+        if (newAttempts >= 3) {
+          setIsLocked(true);
+          setLockTimer(60); // 1 minute lock
+          showToast('error', 'Too many wrong attempts. Locked for 1 minute.');
+        } else {
+          showToast('error', `Invalid code. ${3 - newAttempts} attempts left`);
+        }
+        
+        setOtp(['', '', '', '', '', '']);
+        otpRefs.current[0]?.focus();
       }
     } catch (error) {
-      showAlert('error', 'Verification Failed', 'Something went wrong. Please try again.');
+      console.error('OTP verification error:', error);
+      showToast('error', 'Connection error. Please try again.');
     }
   };
 
@@ -101,8 +131,21 @@ export default function OTPVerificationScreen() {
     setTimer(60);
     setCanResend(false);
     setOtp(['', '', '', '', '', '']);
-    // Here you would call the resend OTP API
-    showAlert('info', 'Code Sent', 'A new verification code has been sent to your email.');
+    setAttempts(0); // Reset attempts when getting new code
+    setIsLocked(false);
+    setLockTimer(0);
+    
+    try {
+      const response = await sendReset(email as string);
+      if (response?.success) {
+        showToast('success', 'New code sent to your email!');
+      } else {
+        showToast('error', 'Failed to resend code');
+      }
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      showToast('error', 'Connection error. Please try again.');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -153,11 +196,20 @@ export default function OTPVerificationScreen() {
 
             <Animated.View entering={FadeInDown}>
               <AuthButton 
-                label="Verify Code" 
+                label={isLocked ? `Locked (${Math.ceil(lockTimer / 60)}m)` : "Verify Code"} 
                 onPress={handleVerifyOTP} 
                 loading={loading}
+                disabled={isLocked}
               />
             </Animated.View>
+
+            {attempts > 0 && !isLocked && (
+              <Animated.View entering={FadeInDown}>
+                <Text style={styles.attemptsText}>
+                  {3 - attempts} attempts remaining
+                </Text>
+              </Animated.View>
+            )}
 
             <Animated.View entering={FadeInDown}>
               <View style={styles.resendContainer}>
@@ -179,15 +231,6 @@ export default function OTPVerificationScreen() {
           </GlassCard>
         </View>
       </KeyboardAvoidingView>
-      
-      <CustomAlert
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideAlert}
-      />
     </DecorativeBackground>
   );
 }
@@ -300,6 +343,13 @@ const styles = StyleSheet.create({
   timerText: {
     color: colors.gold,
     fontSize: 15,
+    fontWeight: '500',
+  },
+  attemptsText: {
+    color: colors.error,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: spacing.sm,
     fontWeight: '500',
   },
 });

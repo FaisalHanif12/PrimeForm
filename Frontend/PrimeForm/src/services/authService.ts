@@ -1,19 +1,293 @@
-// Thin placeholder service. Wire to backend later.
-export const authService = {
-  async login(email: string, password: string) {
-    await new Promise(res => setTimeout(res, 600));
-    return { token: 'mock-token', email };
-  },
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import apiConfig from '../config/api';
 
-  async signup(payload: { name: string; email: string; password: string }) {
-    await new Promise(res => setTimeout(res, 800));
-    return { success: true };
-  },
+// Backend API configuration
+const API_BASE_URL = apiConfig.baseURL;
 
-  async forgotPassword(email: string) {
-    await new Promise(res => setTimeout(res, 700));
-    return { success: true };
-  },
-};
+interface LoginResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  data?: {
+    user: any;
+  };
+  showSignupButton?: boolean;
+}
+
+interface SignupResponse {
+  success: boolean;
+  message: string;
+  token?: string;
+  data?: {
+    user: any;
+  };
+}
+
+interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+interface VerifyOTPResponse {
+  success: boolean;
+  message: string;
+}
+
+interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+interface DashboardResponse {
+  success: boolean;
+  message: string;
+  data: any;
+}
+
+class AuthService {
+  // Helper method for API calls
+  private async apiCall(endpoint: string, method: string = 'GET', body?: any): Promise<any> {
+    try {
+      const config: RequestInit = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      // Add authorization header if token exists
+      const token = await AsyncStorage.getItem('authToken');
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          'Authorization': `Bearer ${token}`,
+        };
+      }
+
+      // Add body for POST/PUT requests
+      if (body && (method === 'POST' || method === 'PUT')) {
+        config.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.log('API Error Response:', data);
+        // Return the error data instead of throwing
+        return data;
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error occurred');
+    }
+  }
+
+  // Store auth token
+  private async storeToken(token: string): Promise<void> {
+    await AsyncStorage.setItem('authToken', token);
+  }
+
+  // Get stored token
+  async getToken(): Promise<string | null> {
+    return await AsyncStorage.getItem('authToken');
+  }
+
+  // Clear auth token
+  async clearToken(): Promise<void> {
+    await AsyncStorage.removeItem('authToken');
+  }
+
+  // Login method
+  async login(email: string, password: string): Promise<LoginResponse> {
+    try {
+      const response = await this.apiCall('/auth/login', 'POST', {
+        email,
+        password,
+      });
+
+      console.log('Login API Response:', response);
+
+      if (response.success && response.token) {
+        await this.storeToken(response.token);
+        return response;
+      }
+
+      // Handle error cases
+      if (response.showSignupButton || (response.message && response.message.includes('Account not found'))) {
+        return {
+          success: false,
+          message: response.message || 'Account not found',
+          showSignupButton: true,
+        };
+      }
+
+      return {
+        success: false,
+        message: response.message || 'Login failed. Please try again.',
+      };
+    } catch (error) {
+      console.error('Login service error:', error);
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  // Signup method
+  async signup(payload: { fullName: string; email: string; password: string }): Promise<SignupResponse> {
+    try {
+      const response = await this.apiCall('/auth/signup', 'POST', payload);
+
+      if (response.success && response.token) {
+        await this.storeToken(response.token);
+      }
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+      return {
+        success: false,
+        message: 'Signup failed. Please try again.',
+      };
+    }
+  }
+
+  // Forgot password method
+  async forgotPassword(email: string): Promise<ForgotPasswordResponse> {
+    try {
+      const response = await this.apiCall('/auth/forgot-password', 'POST', {
+        email,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+      return {
+        success: false,
+        message: 'Failed to send reset email. Please try again.',
+      };
+    }
+  }
+
+  // Verify OTP for password reset
+  async verifyResetOTP(email: string, otp: string): Promise<VerifyOTPResponse> {
+    try {
+      const response = await this.apiCall('/auth/verify-reset-otp', 'POST', {
+        email,
+        otp,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+      return {
+        success: false,
+        message: 'OTP verification failed. Please try again.',
+      };
+    }
+  }
+
+  // Reset password method
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<ResetPasswordResponse> {
+    try {
+      const response = await this.apiCall('/auth/reset-password', 'POST', {
+        email,
+        otp,
+        newPassword,
+      });
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+        };
+      }
+      return {
+        success: false,
+        message: 'Password reset failed. Please try again.',
+      };
+    }
+  }
+
+  // Get user profile
+  async getProfile(): Promise<any> {
+    try {
+      const response = await this.apiCall('/auth/me');
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get dashboard data
+  async getDashboard(): Promise<DashboardResponse> {
+    try {
+      const response = await this.apiCall('/dashboard');
+      return response;
+    } catch (error) {
+      if (error instanceof Error) {
+        return {
+          success: false,
+          message: error.message,
+          data: null,
+        };
+      }
+      return {
+        success: false,
+        message: 'Failed to load dashboard. Please try again.',
+        data: null,
+      };
+    }
+  }
+
+  // Logout method
+  async logout(): Promise<void> {
+    try {
+      await this.apiCall('/auth/logout', 'POST');
+    } catch (error) {
+      // Continue with logout even if API call fails
+      console.warn('Logout API call failed:', error);
+    } finally {
+      await this.clearToken();
+    }
+  }
+
+  // Check if user is authenticated
+  async isAuthenticated(): Promise<boolean> {
+    const token = await this.getToken();
+    return !!token;
+  }
+}
+
+export const authService = new AuthService();
 
 

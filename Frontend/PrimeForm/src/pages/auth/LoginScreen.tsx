@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import SimpleInput from '../../components/SimpleInput';
 import AuthInput from '../../components/AuthInput';
 import AuthButton from '../../components/AuthButton';
-import CustomAlert from '../../components/CustomAlert';
+
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
+import { useAuthContext } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -15,6 +17,8 @@ import LogoMark from '../../components/LogoMark';
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn, loading } = useAuth();
+  const { login: setAuthUser } = useAuthContext();
+  const { showToast } = useToast();
   const passwordRef = useRef<TextInput>(null);
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
@@ -22,18 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-    buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>;
-  }>({
-    visible: false,
-    type: 'info',
-    title: '',
-    message: '',
-  });
+
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -64,6 +57,8 @@ export default function LoginScreen() {
     return Object.keys(nextErrors).length === 0;
   };
 
+
+
   const handleEmailChange = (value: string) => {
     setEmail(value);
     if (touched.email) {
@@ -92,19 +87,7 @@ export default function LoginScreen() {
     setErrors(prev => ({ ...prev, password: error }));
   };
 
-  const showAlert = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string, buttons?: Array<{ text: string; onPress?: () => void; style?: 'default' | 'destructive' | 'cancel' }>) => {
-    setAlertConfig({
-      visible: true,
-      type,
-      title,
-      message,
-      buttons,
-    });
-  };
 
-  const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
 
   const onLogin = async () => {
     // Force show all validation errors immediately
@@ -115,16 +98,32 @@ export default function LoginScreen() {
     }
     
     try {
-      const ok = await signIn(email, password);
-      if (ok) {
-        showAlert('success', 'Welcome Back!', 'Login successful! Welcome to PrimeForm.');
-        // Placeholder: On success you would route to the app's main area
-        // router.replace('/(tabs)/home');
+      const response = await signIn(email, password);
+      if (response?.success) {
+        // Set user in auth context
+        if (response.data?.user) {
+          setAuthUser(response.data.user);
+        }
+        
+        showToast('success', 'Login successful!');
+        
+        // Auto-navigate to dashboard after toast
+        setTimeout(() => {
+          router.replace('/(dashboard)');
+        }, 1500);
       } else {
-        showAlert('error', 'Login Failed', 'Invalid email or password. Please check your credentials and try again.');
+        // Handle specific error cases
+        if (response?.showSignupButton || 
+            response?.message?.includes('Account not found') ||
+            response?.message?.includes('not found')) {
+          showToast('error', 'Account not found');
+        } else {
+          showToast('error', 'Wrong credentials');
+        }
       }
     } catch (error) {
-      showAlert('error', 'Something Went Wrong', 'An unexpected error occurred. Please try again.');
+      console.error('Login error:', error);
+      showToast('error', 'Connection error. Please try again.');
     }
   };
 
@@ -227,15 +226,6 @@ export default function LoginScreen() {
           </GlassCard>
         </View>
       </KeyboardAvoidingView>
-      
-      <CustomAlert
-        visible={alertConfig.visible}
-        type={alertConfig.type}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        buttons={alertConfig.buttons}
-        onClose={hideAlert}
-      />
     </DecorativeBackground>
   );
 }
