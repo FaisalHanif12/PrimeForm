@@ -10,6 +10,8 @@ import AuthButton from '../../components/AuthButton';
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
+import { useAuthContext } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -19,6 +21,7 @@ export default function ResetPasswordScreen() {
   const { email, otp } = useLocalSearchParams();
   const { resetPassword, loading } = useAuth();
   const { showToast } = useToast();
+  const { login: setAuthUser } = useAuthContext();
   const confirmRef = useRef<TextInput>(null);
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
@@ -109,6 +112,14 @@ export default function ResetPasswordScreen() {
       console.log('Reset password response:', response);
       
       if (response?.success) {
+        // Store auth token and set user context for automatic login
+        if (response.token) {
+          await authService.storeToken(response.token);
+          if (response.data?.user) {
+            setAuthUser(response.data.user);
+          }
+        }
+        
         showToast('success', 'Password updated successfully!');
         
         // Navigate to dashboard after successful reset

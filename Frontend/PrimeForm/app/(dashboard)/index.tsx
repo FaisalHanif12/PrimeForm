@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -7,7 +7,11 @@ import { colors, spacing, typography, fonts, radius } from '../../src/theme/colo
 import { authService } from '../../src/services/authService';
 import { useAuthContext } from '../../src/context/AuthContext';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
-import GlassCard from '../../src/components/GlassCard';
+import DashboardHeader from '../../src/components/DashboardHeader';
+import BottomNavigation from '../../src/components/BottomNavigation';
+import StatsCard from '../../src/components/StatsCard';
+import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
+import MealPlanCard from '../../src/components/MealPlanCard';
 
 
 interface DashboardData {
@@ -45,6 +49,7 @@ export default function DashboardScreen() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'home' | 'diet' | 'gym' | 'workout' | 'progress'>('home');
 
 
   const loadDashboard = async () => {
@@ -89,6 +94,39 @@ export default function DashboardScreen() {
     console.log('Feature coming soon:', action);
   };
 
+  const handleProfilePress = () => {
+    console.log('Profile pressed - feature coming soon');
+  };
+
+  const handleNotificationPress = () => {
+    console.log('Notifications pressed - feature coming soon');
+  };
+
+  const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
+    setActiveTab(tab);
+    console.log('Tab pressed:', tab, '- feature coming soon');
+  };
+
+  // Mock data for demonstration
+  const mockStats = [
+    { label: 'Calories left', value: '1,200', icon: 'flame', color: colors.gold },
+    { label: 'Water', value: '2.1', unit: 'L', icon: 'water', color: colors.blue },
+    { label: 'Workouts remaining', value: '2', icon: 'barbell', color: colors.green },
+    { label: 'Steps', value: '8,500', icon: 'walk', color: colors.purple },
+  ];
+
+  const mockWorkouts = [
+    { name: 'Push-Ups', sets: '3x12', reps: '12 reps', weight: '' },
+    { name: 'Leg Press', sets: '4x10', reps: '10 reps', weight: '120kg' },
+    { name: 'Bench Press', sets: '3x8', reps: '8 reps', weight: '80kg' },
+  ];
+
+  const mockMeals = [
+    { name: 'Oatmeal Bowl', calories: 350, weight: '200g' },
+    { name: 'Greek Salad', calories: 500, weight: '400g' },
+    { name: 'Grilled Chicken', calories: 650, weight: '500g' },
+  ];
+
   if (loading) {
     return (
       <DecorativeBackground>
@@ -114,138 +152,83 @@ export default function DashboardScreen() {
 
   return (
     <DecorativeBackground>
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.gold}
-            colors={[colors.gold]}
-          />
-        }
-      >
+      <SafeAreaView style={styles.safeArea}>
         {/* Header */}
-        <Animated.View entering={FadeInUp} style={styles.header}>
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.welcomeText}>Welcome back!</Text>
-              <Text style={styles.nameText}>{(user?.fullName || dashboardData.user.fullName).split(' ')[0]} 🏃‍♂️</Text>
-            </View>
-            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={24} color={colors.mutedText} />
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
+        <DashboardHeader 
+          userName={(user?.fullName || dashboardData.user.fullName).split(' ')[0]}
+          onProfilePress={handleProfilePress}
+          onNotificationPress={handleNotificationPress}
+          notificationCount={dashboardData.notifications.length}
+        />
 
-        {/* Notifications */}
-        {dashboardData.notifications.length > 0 && (
-          <Animated.View entering={FadeInDown}>
-            {dashboardData.notifications.map((notification, index) => (
-              <GlassCard key={index} style={[styles.notificationCard, 
-                notification.priority === 'high' && styles.highPriorityNotification
-              ]}>
-                <View style={styles.notificationContent}>
-                  <Ionicons 
-                    name={notification.type === 'welcome' ? 'sparkles' : 'mail'} 
-                    size={20} 
-                    color={colors.gold} 
-                    style={styles.notificationIcon}
-                  />
-                  <View style={styles.notificationText}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationMessage}>{notification.message}</Text>
-                  </View>
-                </View>
-              </GlassCard>
-            ))}
+        {/* Content */}
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.gold}
+              colors={[colors.gold]}
+            />
+          }
+        >
+          {/* Welcome Message */}
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.welcomeSection}>
+            <Text style={styles.greetingText}>Good Morning, {(user?.fullName || dashboardData.user.fullName).split(' ')[0]} 💪</Text>
+            <Text style={styles.motivationText}>Ready to crush your fitness goals today?</Text>
           </Animated.View>
-        )}
 
-        {/* Stats Card */}
-        <Animated.View entering={FadeInDown}>
-          <GlassCard style={styles.statsCard}>
-            <Text style={styles.cardTitle}>Your Progress</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{dashboardData.stats.totalWorkouts}</Text>
-                <Text style={styles.statLabel}>Workouts</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{dashboardData.stats.currentStreak}</Text>
-                <Text style={styles.statLabel}>Day Streak</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{dashboardData.stats.totalCaloriesBurned}</Text>
-                <Text style={styles.statLabel}>Calories</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{dashboardData.user.daysSinceJoining}</Text>
-                <Text style={styles.statLabel}>Days Member</Text>
-              </View>
-            </View>
-          </GlassCard>
-        </Animated.View>
+          {/* Stats Overview */}
+          <StatsCard 
+            title="Today's Overview"
+            stats={mockStats}
+            delay={200}
+          />
 
-        {/* Quick Actions */}
-        <Animated.View entering={FadeInDown}>
-          <GlassCard style={styles.actionsCard}>
-            <Text style={styles.cardTitle}>Quick Actions</Text>
-            <View style={styles.actionsGrid}>
-              {dashboardData.quickActions.map((action, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  style={styles.actionItem}
-                  onPress={() => handleQuickAction(action.action)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.actionIcon}>{action.icon}</Text>
-                  <Text style={styles.actionTitle}>{action.title}</Text>
-                  <Text style={styles.actionDescription}>{action.description}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </GlassCard>
-        </Animated.View>
+          {/* Today's Workout Plan */}
+          <WorkoutPlanCard
+            title="Today's Workout Plan"
+            workouts={mockWorkouts}
+            onPress={() => console.log('View workout plan')}
+            delay={300}
+          />
 
-        {/* Account Info */}
-        <Animated.View entering={FadeInDown}>
-          <GlassCard style={styles.accountCard}>
-            <Text style={styles.cardTitle}>Account Information</Text>
-            <View style={styles.accountInfo}>
-              <View style={styles.infoRow}>
-                <Ionicons name="mail" size={16} color={colors.mutedText} />
-                <Text style={styles.infoText}>{dashboardData.user.email}</Text>
-                {dashboardData.user.isEmailVerified ? (
-                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                ) : (
-                  <Ionicons name="alert-circle" size={16} color={colors.gold} />
-                )}
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="calendar" size={16} color={colors.mutedText} />
-                <Text style={styles.infoText}>
-                  Member since {new Date(dashboardData.user.memberSince).toLocaleDateString()}
-                </Text>
-              </View>
-            </View>
-          </GlassCard>
-        </Animated.View>
-      </ScrollView>
+          {/* Today's Meal Plan */}
+          <MealPlanCard
+            title="Today's Meal Plan"
+            meals={mockMeals}
+            totalCalories={1500}
+            onPress={() => console.log('View meal plan')}
+            delay={400}
+          />
 
+          {/* Extra spacing for bottom navigation */}
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
 
+        {/* Bottom Navigation */}
+        <BottomNavigation 
+          activeTab={activeTab}
+          onTabPress={handleTabPress}
+        />
+      </SafeAreaView>
     </DecorativeBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   content: {
     padding: spacing.lg,
-    paddingTop: 60, // Account for status bar
+    paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -275,141 +258,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: typography.body,
   },
-  header: {
-    marginBottom: spacing.lg,
+  welcomeSection: {
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.sm,
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  greetingText: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
   },
-  welcomeText: {
+  motivationText: {
     color: colors.mutedText,
     fontSize: typography.body,
     fontFamily: fonts.body,
+    lineHeight: 22,
   },
-  nameText: {
-    color: colors.white,
-    fontSize: typography.title,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginTop: spacing.xs,
-  },
-  logoutButton: {
-    padding: spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: radius.md,
-  },
-  notificationCard: {
-    marginBottom: spacing.md,
-  },
-  highPriorityNotification: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.gold,
-  },
-  notificationContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  notificationIcon: {
-    marginRight: spacing.md,
-    marginTop: 2,
-  },
-  notificationText: {
-    flex: 1,
-  },
-  notificationTitle: {
-    color: colors.white,
-    fontSize: typography.body,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
-  },
-  notificationMessage: {
-    color: colors.mutedText,
-    fontSize: typography.small,
-    lineHeight: 18,
-  },
-  statsCard: {
-    marginBottom: spacing.lg,
-  },
-  cardTitle: {
-    color: colors.white,
-    fontSize: typography.subtitle,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statItem: {
-    width: '48%',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  statNumber: {
-    color: colors.gold,
-    fontSize: 28,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  statLabel: {
-    color: colors.mutedText,
-    fontSize: typography.small,
-    marginTop: spacing.xs,
-  },
-  actionsCard: {
-    marginBottom: spacing.lg,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  actionItem: {
-    width: '48%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: spacing.sm,
-  },
-  actionTitle: {
-    color: colors.white,
-    fontSize: typography.small,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  actionDescription: {
-    color: colors.mutedText,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  accountCard: {
-    marginBottom: spacing.lg,
-  },
-  accountInfo: {
-    gap: spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  infoText: {
-    color: colors.white,
-    fontSize: typography.small,
-    flex: 1,
+  bottomSpacing: {
+    height: 100, // Space for bottom navigation
   },
 });
