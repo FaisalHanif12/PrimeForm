@@ -6,8 +6,14 @@ export default function DashboardLayout() {
     <Stack screenOptions={{
       headerShown: false,
       contentStyle: { backgroundColor: colors.background },
+      animation: 'slide_from_right',
     }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen 
+        name="index" 
+        options={{
+          title: 'Dashboard',
+        }}
+      />
     </Stack>
   );
 }
