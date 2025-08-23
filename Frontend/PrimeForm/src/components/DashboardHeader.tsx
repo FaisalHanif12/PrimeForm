@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 interface Props {
   userName: string;
@@ -17,6 +18,7 @@ export default function DashboardHeader({
   onNotificationPress, 
   notificationCount = 0 
 }: Props) {
+  const { t } = useLanguage();
   return (
     <Animated.View entering={FadeInUp} style={styles.container}>
       {/* Profile Icon */}
@@ -30,10 +32,9 @@ export default function DashboardHeader({
         </View>
       </TouchableOpacity>
 
-      {/* Center - PrimeForm Brand */}
+      {/* Center - App Brand */}
       <View style={styles.centerContainer}>
-        <Text style={styles.brandText}>Prime</Text>
-        <Text style={[styles.brandText, styles.brandAccent]}>Form</Text>
+        <Text style={styles.brandText}>{t('app.name')}</Text>
       </View>
 
       {/* Notification Icon */}
