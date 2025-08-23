@@ -1,26 +1,31 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  // Dark navy + gold glassmorphism theme
-  background: '#0F172A',
+  // Dark navy + gold glassmorphism theme - Updated to match provided UI
+  background: '#0A0E1A',
+  surface: '#1A1F2E',
   text: '#FFFFFF',
-  mutedText: '#94A3B8',
+  mutedText: '#6B7280',
   white: '#FFFFFF',
-  // Gold accents
-  gold: '#FFD700',
-  goldDark: '#B8860B',
-  goldSoft: 'rgba(255, 215, 0, 0.7)',
-  // Glass surfaces
-  inputBackground: 'rgba(17, 25, 40, 0.4)',
-  inputFill: 'rgba(17, 25, 40, 0.6)',
-  inputBorder: 'rgba(255, 255, 255, 0.15)',
-  cardBackground: 'rgba(17, 25, 40, 0.6)',
-  cardBorder: 'rgba(146, 180, 216, 0.35)',
+  // Gold accents - More vibrant to match the image
+  gold: '#F59E0B',
+  goldDark: '#D97706',
+  goldSoft: 'rgba(245, 158, 11, 0.7)',
+  // Glass surfaces - Darker and more subtle
+  inputBackground: 'rgba(26, 31, 46, 0.6)',
+  inputFill: 'rgba(26, 31, 46, 0.8)',
+  inputBorder: 'rgba(255, 255, 255, 0.1)',
+  cardBackground: 'rgba(26, 31, 46, 0.4)',
+  cardBorder: 'rgba(255, 255, 255, 0.08)',
+  // Additional colors from the image
+  blue: '#3B82F6',
+  green: '#10B981',
+  purple: '#8B5CF6',
   // Feedback
   error: '#EF4444',
-  // Legacy gradient tokens (not used for background anymore)
-  gradientStart: '#0F172A',
-  gradientMid: '#0B1225',
+  // Legacy gradient tokens
+  gradientStart: '#0A0E1A',
+  gradientMid: '#0F1419',
   gradientEnd: '#020617',
 };
 
