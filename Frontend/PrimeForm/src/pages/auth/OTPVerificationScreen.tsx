@@ -8,6 +8,7 @@ import AuthButton from '../../components/AuthButton';
 import { colors, spacing, radius } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -17,6 +18,7 @@ export default function OTPVerificationScreen() {
   const { email, type } = useLocalSearchParams();
   const { verifyOTP, loading, sendReset } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   // Debug parameters
   console.log('OTP Screen - Email param:', email);
@@ -79,13 +81,13 @@ export default function OTPVerificationScreen() {
 
   const handleVerifyOTP = async () => {
     if (isLocked) {
-      showToast('error', `Too many attempts. Wait ${Math.ceil(lockTimer / 60)} minute(s)`);
+      showToast('error', `${t('auth.otp.wait')} ${Math.ceil(lockTimer / 60)} ${t('auth.otp.minutes')}`);
       return;
     }
 
     const otpString = otp.join('');
     if (otpString.length !== 6) {
-      showToast('warning', 'Please enter complete 6-digit code');
+      showToast('warning', t('auth.otp.incomplete'));
       return;
     }
 
@@ -96,7 +98,7 @@ export default function OTPVerificationScreen() {
       console.log('OTP Verification Response:', response);
       
       if (response?.success) {
-        showToast('success', 'Code verified!');
+        showToast('success', t('toast.otp.success'));
         setAttempts(0);
         
         // Navigate to reset password screen
@@ -113,9 +115,9 @@ export default function OTPVerificationScreen() {
         if (newAttempts >= 3) {
           setIsLocked(true);
           setLockTimer(60); // 1 minute lock
-          showToast('error', 'Too many wrong attempts. Locked for 1 minute.');
+          showToast('error', t('auth.otp.locked'));
         } else {
-          showToast('error', `Invalid code. ${3 - newAttempts} attempts left`);
+          showToast('error', t('toast.otp.error'));
         }
         
         setOtp(['', '', '', '', '', '']);
@@ -123,7 +125,7 @@ export default function OTPVerificationScreen() {
       }
     } catch (error) {
       console.error('OTP verification error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
@@ -138,13 +140,13 @@ export default function OTPVerificationScreen() {
     try {
       const response = await sendReset(email as string);
       if (response?.success) {
-        showToast('success', 'New code sent to your email!');
+        showToast('success', t('toast.reset.success'));
       } else {
-        showToast('error', 'Failed to resend code');
+        showToast('error', t('auth.otp.failed'));
       }
     } catch (error) {
       console.error('Resend OTP error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
@@ -173,7 +175,7 @@ export default function OTPVerificationScreen() {
             <LogoMark/>
             
             <Text style={styles.description}>
-              Enter the 6-digit verification code sent to{'\n'}
+              {t('auth.otp.description')}{'\n'}
               <Text style={styles.emailText}>{email}</Text>
             </Text>
 
@@ -196,7 +198,7 @@ export default function OTPVerificationScreen() {
 
             <Animated.View entering={FadeInDown}>
               <AuthButton 
-                label={isLocked ? `Locked (${Math.ceil(lockTimer / 60)}m)` : "Verify Code"} 
+                label={isLocked ? `Locked (${Math.ceil(lockTimer / 60)}m)` : t('auth.otp.button')} 
                 onPress={handleVerifyOTP} 
                 loading={loading}
                 disabled={isLocked}
@@ -206,7 +208,7 @@ export default function OTPVerificationScreen() {
             {attempts > 0 && !isLocked && (
               <Animated.View entering={FadeInDown}>
                 <Text style={styles.attemptsText}>
-                  {3 - attempts} attempts remaining
+                  {3 - attempts} {t('auth.otp.attempts')}
                 </Text>
               </Animated.View>
             )}
@@ -214,15 +216,15 @@ export default function OTPVerificationScreen() {
             <Animated.View entering={FadeInDown}>
               <View style={styles.resendContainer}>
                 <Text style={styles.resendText}>
-                  Didn't receive the code?
+                  {t('auth.otp.nocode')}
                 </Text>
                 {canResend ? (
                   <TouchableOpacity onPress={handleResendOTP} style={styles.resendButton}>
-                    <Text style={styles.resendButtonText}>Resend Code</Text>
+                    <Text style={styles.resendButtonText}>{t('auth.otp.resend')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <Text style={styles.timerText}>
-                    Resend in {formatTime(timer)}
+                    {t('auth.otp.resendTimer')} {formatTime(timer)}
                   </Text>
                 )}
               </View>

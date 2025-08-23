@@ -10,6 +10,7 @@ import AuthButton from '../../components/AuthButton';
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useAuthContext } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
 import DecorativeBackground from '../../components/DecorativeBackground';
@@ -21,6 +22,7 @@ export default function ResetPasswordScreen() {
   const { email, otp } = useLocalSearchParams();
   const { resetPassword, loading } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const { login: setAuthUser } = useAuthContext();
   const confirmRef = useRef<TextInput>(null);
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
@@ -33,17 +35,17 @@ export default function ResetPasswordScreen() {
 
   const validatePassword = (password: string) => {
     const issues = [];
-    if (!password.trim()) return 'Password is required';
-    if (password.length < 6) issues.push('At least 6 characters required');
-    if (!/(?=.*[a-z])/.test(password)) issues.push('One lowercase letter required');
-    if (!/(?=.*[A-Z])/.test(password)) issues.push('One uppercase letter required');
-    if (!/(?=.*\d)/.test(password)) issues.push('One number required');
+    if (!password.trim()) return t('validation.password.required');
+    if (password.length < 6) issues.push(t('validation.password.minLength'));
+    if (!/(?=.*[a-z])/.test(password)) issues.push(t('validation.password.lowercase'));
+    if (!/(?=.*[A-Z])/.test(password)) issues.push(t('validation.password.uppercase'));
+    if (!/(?=.*\d)/.test(password)) issues.push(t('validation.password.number'));
     return issues.length > 0 ? issues[0] : undefined;
   };
 
   const validateConfirmPassword = (confirmPassword: string, password: string) => {
-    if (!confirmPassword.trim()) return 'Please confirm your password';
-    if (password && confirmPassword && password !== confirmPassword) return 'Passwords do not match';
+    if (!confirmPassword.trim()) return t('validation.confirm.required');
+    if (password && confirmPassword && password !== confirmPassword) return t('validation.confirm.mismatch');
     return undefined;
   };
 
@@ -120,18 +122,18 @@ export default function ResetPasswordScreen() {
           }
         }
         
-        showToast('success', 'Password updated successfully!');
+        showToast('success', t('toast.password.success'));
         
         // Navigate to dashboard after successful reset
         setTimeout(() => {
           router.replace('/(dashboard)');
         }, 1500);
       } else {
-        showToast('error', response?.message || 'Failed to reset password');
+        showToast('error', response?.message || t('toast.password.error'));
       }
     } catch (error) {
       console.error('Reset password error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
@@ -157,10 +159,10 @@ export default function ResetPasswordScreen() {
             </View>
             <Animated.View entering={FadeInUp}>
             
-            <LogoMark subtitle="Create new password" />
+            <LogoMark subtitle={t('auth.reset.description')}/>
             
             <Text style={styles.description}>
-              Choose a strong password for your account. Make sure it's something you'll remember!
+              {t('auth.reset.description')}
             </Text>
 
             <Animated.View entering={FadeInDown}>
@@ -171,7 +173,7 @@ export default function ResetPasswordScreen() {
                   onChangeText={handlePasswordChange}
                   onBlur={handlePasswordBlur}
                   error={errors.password}
-                  placeholder="New Password" 
+                  placeholder={t('auth.reset.new')} 
                   returnKeyType="next"
                   onSubmitEditing={() => confirmRef.current?.focus()}
                   blurOnSubmit={false}
@@ -186,7 +188,7 @@ export default function ResetPasswordScreen() {
                   onBlur={handlePasswordBlur}
                   error={errors.password} 
                   leftIcon="lock-closed" 
-                  placeholder="New Password" 
+                  placeholder={t('auth.reset.new')} 
                   returnKeyType="next"
                   onSubmitEditing={() => confirmRef.current?.focus()}
                   blurOnSubmit={false}
@@ -203,7 +205,7 @@ export default function ResetPasswordScreen() {
                   onChangeText={handleConfirmPasswordChange}
                   onBlur={handleConfirmPasswordBlur}
                   error={errors.confirmPassword}
-                  placeholder="Confirm New Password" 
+                  placeholder={t('auth.reset.confirm')} 
                   returnKeyType="done"
                   onSubmitEditing={handleResetPassword}
                 />
@@ -218,7 +220,7 @@ export default function ResetPasswordScreen() {
                   onBlur={handleConfirmPasswordBlur}
                   error={errors.confirmPassword} 
                   leftIcon="shield-checkmark" 
-                  placeholder="Confirm New Password" 
+                  placeholder={t('auth.reset.confirm')} 
                   returnKeyType="done"
                   onSubmitEditing={handleResetPassword}
                 />
@@ -227,9 +229,9 @@ export default function ResetPasswordScreen() {
 
             <Animated.View entering={FadeInDown}>
               <AuthButton 
-                label="Reset Password" 
+                label={t('auth.reset.button')} 
                 onPress={handleResetPassword} 
-                loading={loading}
+                loading={loading} 
               />
             </Animated.View>
            

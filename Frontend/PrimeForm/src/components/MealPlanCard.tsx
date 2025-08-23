@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 interface MealItem {
   name: string;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function MealPlanCard({ title, meals, totalCalories, onPress, delay = 0 }: Props) {
+  const { t } = useLanguage();
   return (
     <Animated.View 
       entering={FadeInDown.delay(delay)} 
@@ -55,7 +57,7 @@ export default function MealPlanCard({ title, meals, totalCalories, onPress, del
             
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
-                <Text style={styles.viewAllText}>View Full Meal Plan</Text>
+                <Text style={styles.viewAllText}>{t('dashboard.view.full.meal')}</Text>
                 <Ionicons name="arrow-forward" size={16} color={colors.gold} />
               </TouchableOpacity>
             )}
