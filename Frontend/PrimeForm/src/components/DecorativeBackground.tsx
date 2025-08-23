@@ -12,7 +12,7 @@ export default function DecorativeBackground({ children }: Props) {
     <LinearGradient
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      colors={["#0b1020", "#000000"]}
+      colors={[colors.gradientStart, colors.gradientMid, colors.gradientEnd]}
       style={styles.container}
     >
       {children}
@@ -23,7 +23,7 @@ export default function DecorativeBackground({ children }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: colors.background,
   },
 });
 
