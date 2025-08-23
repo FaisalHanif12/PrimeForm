@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, spacing, radius, typography, fonts } from '../theme/colors';
 
 type TabType = 'home' | 'diet' | 'gym' | 'workout' | 'progress';
@@ -26,7 +26,8 @@ const tabs: Tab[] = [
 ];
 
 export default function BottomNavigation({ activeTab, onTabPress }: Props) {
-  const indicatorPosition = useSharedValue(0);
+  const indicatorPosition = useSharedValue(0); // Keeping for potential future use but indicator removed
+  const containerWidth = useSharedValue(0);
 
   const getTabIndex = (tab: TabType) => tabs.findIndex(t => t.key === tab);
 
@@ -38,24 +39,15 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     });
   }, [activeTab]);
 
-  const indicatorStyle = useAnimatedStyle(() => {
-    const containerWidth = 100; // percentage
-    const tabWidth = containerWidth / tabs.length;
-    const translateValue = indicatorPosition.value * tabWidth;
-    
-    return {
-      transform: [
-        {
-          translateX: `${translateValue}%`,
-        },
-      ],
-    };
-  });
+  // Indicator is removed, but shared values kept if needed later
 
   return (
-    <View style={styles.container}>
-      {/* Floating indicator */}
-      <Animated.View style={[styles.indicator, indicatorStyle]} />
+    <View
+      style={styles.container}
+      onLayout={({ nativeEvent }) => {
+        containerWidth.value = nativeEvent.layout.width;
+      }}
+    >
       
       {/* Tab buttons */}
       {tabs.map((tab) => {
@@ -71,7 +63,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
               <Ionicons
                 name={tab.icon}
                 size={22}
-                color={isActive ? colors.background : colors.mutedText}
+                color={isActive ? colors.gold : colors.mutedText}
               />
               <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
                 {tab.label}
@@ -90,23 +82,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl + spacing.md, // Increased bottom margin
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     position: 'relative',
   },
-  indicator: {
-    position: 'absolute',
-    top: spacing.xs,
-    bottom: spacing.xs,
-    left: spacing.xs,
-    width: `${100 / tabs.length - 1.2}%`,
-    backgroundColor: colors.gold,
-    borderRadius: 16,
-    zIndex: 0,
-  },
+  // Removed indicator styling
   tab: {
     flex: 1,
     zIndex: 1,
@@ -118,7 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   activeTabContent: {
-    // Active state styling handled by indicator
+    // No special background for active tab
   },
   tabLabel: {
     color: colors.mutedText,
@@ -128,7 +111,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activeTabLabel: {
-    color: colors.background,
+    color: colors.gold,
     fontWeight: '600',
   },
 });

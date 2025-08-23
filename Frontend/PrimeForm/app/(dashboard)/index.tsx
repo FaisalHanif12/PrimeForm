@@ -12,6 +12,7 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import StatsCard from '../../src/components/StatsCard';
 import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
 import MealPlanCard from '../../src/components/MealPlanCard';
+import Sidebar from '../../src/components/Sidebar';
 
 
 interface DashboardData {
@@ -50,6 +51,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'diet' | 'gym' | 'workout' | 'progress'>('home');
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
 
   const loadDashboard = async () => {
@@ -95,7 +97,7 @@ export default function DashboardScreen() {
   };
 
   const handleProfilePress = () => {
-    console.log('Profile pressed - feature coming soon');
+    setSidebarVisible(true);
   };
 
   const handleNotificationPress = () => {
@@ -107,6 +109,25 @@ export default function DashboardScreen() {
     console.log('Tab pressed:', tab, '- feature coming soon');
   };
 
+  const handleSidebarMenuPress = async (action: string) => {
+    switch (action) {
+      case 'profile':
+        console.log('Profile - feature coming soon');
+        break;
+      case 'settings':
+        console.log('Settings - feature coming soon');
+        break;
+      case 'subscription':
+        console.log('Subscription Plan - feature coming soon');
+        break;
+      case 'logout':
+        await handleLogout();
+        break;
+      default:
+        console.log('Unknown action:', action);
+    }
+  };
+
   // Mock data for demonstration
   const mockStats = [
     { label: 'Calories left', value: '1,200', icon: 'flame', color: colors.gold },
@@ -116,15 +137,15 @@ export default function DashboardScreen() {
   ];
 
   const mockWorkouts = [
-    { name: 'Push-Ups', sets: '3x12', reps: '12 reps', weight: '' },
-    { name: 'Leg Press', sets: '4x10', reps: '10 reps', weight: '120kg' },
-    { name: 'Bench Press', sets: '3x8', reps: '8 reps', weight: '80kg' },
+    { name: '💪 Push-Ups', sets: '3x12', reps: '12 reps', weight: '' },
+    { name: '🦵 Leg Press', sets: '4x10', reps: '10 reps', weight: '120kg' },
+    { name: '🏋️ Bench Press', sets: '3x8', reps: '8 reps', weight: '80kg' },
   ];
 
   const mockMeals = [
-    { name: 'Oatmeal Bowl', calories: 350, weight: '200g' },
-    { name: 'Greek Salad', calories: 500, weight: '400g' },
-    { name: 'Grilled Chicken', calories: 650, weight: '500g' },
+    { name: '🥣 Oatmeal Bowl', calories: 350, weight: '200g' },
+    { name: '🥗 Greek Salad', calories: 500, weight: '400g' },
+    { name: '🍗 Grilled Chicken', calories: 650, weight: '500g' },
   ];
 
   if (loading) {
@@ -213,6 +234,15 @@ export default function DashboardScreen() {
         <BottomNavigation 
           activeTab={activeTab}
           onTabPress={handleTabPress}
+        />
+
+        {/* Sidebar */}
+        <Sidebar
+          visible={sidebarVisible}
+          onClose={() => setSidebarVisible(false)}
+          onMenuItemPress={handleSidebarMenuPress}
+          userName={user?.fullName || dashboardData.user.fullName}
+          userEmail={user?.email || dashboardData.user.email}
         />
       </SafeAreaView>
     </DecorativeBackground>
