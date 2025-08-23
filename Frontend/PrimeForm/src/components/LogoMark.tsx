@@ -2,16 +2,19 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, Platform } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 type Props = {
   subtitle?: string;
 };
 
 export default function LogoMark({ subtitle }: Props) {
+  const { t } = useLanguage();
+  
   return (
     <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/PrimeLogo.png')} style={styles.icon} />
-      <Text style={styles.title}>PRIMEFORM</Text>
+      <Text style={styles.title}>{t('app.name').toUpperCase()}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </Animated.View>
   );

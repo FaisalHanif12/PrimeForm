@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, TextInput, ScrollView, Modal } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -11,15 +11,19 @@ import { colors, spacing, fonts, radius } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthContext } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
+import { BlurView } from 'expo-blur';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignupScreen() {
   const router = useRouter();
   const { signUp, loading } = useAuth();
   const { login: setAuthUser } = useAuthContext();
   const { showToast } = useToast();
+  const { t, changeLanguage, isRTL } = useLanguage();
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmRef = useRef<TextInput>(null);
@@ -30,36 +34,37 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showRequirements, setShowRequirements] = useState(false);
+  const [showLanguageOverlay, setShowLanguageOverlay] = useState<boolean>(false);
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirm?: string }>({});
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; password?: boolean; confirm?: boolean }>({});
 
 
   const validateName = (name: string) => {
-    if (!name.trim()) return 'Name is required';
-    if (name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!name.trim()) return t('validation.name.required');
+    if (name.trim().length < 2) return t('validation.name.minLength');
     return undefined;
   };
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email like user@gmail.com';
+    if (!email.trim()) return t('validation.email.required');
+    if (!emailRegex.test(email)) return t('validation.email.invalid');
     return undefined;
   };
 
   const validatePassword = (password: string) => {
     const issues = [];
-    if (!password.trim()) return 'Password is required';
-    if (password.length < 6) issues.push('At least 6 characters required');
-    if (!/(?=.*[a-z])/.test(password)) issues.push('One lowercase letter required');
-    if (!/(?=.*[A-Z])/.test(password)) issues.push('One uppercase letter required');
-    if (!/(?=.*\d)/.test(password)) issues.push('One number required');
+    if (!password.trim()) return t('validation.password.required');
+    if (password.length < 6) issues.push(t('validation.password.minLength'));
+    if (!/(?=.*[a-z])/.test(password)) issues.push(t('validation.password.lowercase'));
+    if (!/(?=.*[A-Z])/.test(password)) issues.push(t('validation.password.uppercase'));
+    if (!/(?=.*\d)/.test(password)) issues.push(t('validation.password.number'));
     return issues.length > 0 ? issues[0] : undefined;
   };
 
   const validateConfirm = (confirm: string, password: string) => {
-    if (!confirm.trim()) return 'Please confirm your password';
-    if (password && confirm && password !== confirm) return 'Passwords do not match';
+    if (!confirm.trim()) return t('validation.confirm.required');
+    if (password && confirm && password !== confirm) return t('validation.confirm.mismatch');
     return undefined;
   };
 
@@ -141,8 +146,21 @@ export default function SignupScreen() {
     setErrors(prev => ({ ...prev, confirm: error }));
   };
 
+  // Check if language already selected
+  useEffect(() => {
+    const checkLanguage = async () => {
+      const chosen = await AsyncStorage.getItem('primeform_language_selected');
+      if (!chosen) {
+        setShowLanguageOverlay(true);
+      }
+    };
+    checkLanguage();
+  }, []);
 
-
+  const chooseLanguage = async (lang: 'en' | 'ur') => {
+    await changeLanguage(lang);
+    setShowLanguageOverlay(false);
+  };
 
 
   const onSignup = async () => {
@@ -155,7 +173,7 @@ export default function SignupScreen() {
     console.log('Form data:', { fullName: name, email, password, confirm });
 
     if (!isValid) {
-      showToast('error', 'Please complete all requirements before signing up');
+      showToast('error', t('toast.validation.error'));
       return;
     }
 
@@ -167,23 +185,40 @@ export default function SignupScreen() {
           setAuthUser(response.data.user);
         }
 
-        showToast('success', 'Account created successfully!');
+        showToast('success', t('toast.signup.success'));
 
         // Auto-navigate to dashboard after toast
         setTimeout(() => {
           router.replace('/(dashboard)');
         }, 1500);
       } else {
-        showToast('error', response?.message || 'Failed to create account');
+        showToast('error', response?.message || t('toast.signup.error'));
       }
     } catch (error) {
       console.error('Signup error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
   return (
     <DecorativeBackground>
+      {/* Language selection overlay */}
+      {showLanguageOverlay && (
+        <BlurView intensity={50} style={styles.overlayAbsolute} tint="dark">
+          <Animated.View entering={FadeInDown} style={styles.languageCard}>
+            <Text style={styles.modalTitle}>{t('language.choose')}</Text>
+            <View style={styles.langButtonsRow}>
+              <TouchableOpacity style={styles.langButton} onPress={() => chooseLanguage('ur')}>
+                <Text style={styles.langButtonText}>{t('language.urdu')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.langButton} onPress={() => chooseLanguage('en')}>
+                <Text style={styles.langButtonText}>{t('language.english')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </BlurView>
+      )}
+
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={styles.scrollView}
@@ -202,7 +237,7 @@ export default function SignupScreen() {
                     onChangeText={handleNameChange}
                     onBlur={handleNameBlur}
                     error={errors.name}
-                    placeholder="Username"
+                    placeholder={t('auth.signup.name')}
                     autoCapitalize="words"
                     returnKeyType="next"
                     onSubmitEditing={() => emailRef.current?.focus()}
@@ -215,7 +250,7 @@ export default function SignupScreen() {
                     onBlur={handleNameBlur}
                     error={errors.name}
                     leftIcon="person"
-                    placeholder="Username"
+                    placeholder={t('auth.signup.name')}
                     autoCapitalize="words"
                     textContentType="name"
                     autoComplete="name"
@@ -235,7 +270,7 @@ export default function SignupScreen() {
                     onChangeText={handleEmailChange}
                     onBlur={handleEmailBlur}
                     error={errors.email}
-                    placeholder="Email"
+                    placeholder={t('auth.signup.email')}
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     blurOnSubmit={false}
@@ -252,7 +287,7 @@ export default function SignupScreen() {
                     onBlur={handleEmailBlur}
                     error={errors.email}
                     leftIcon="mail"
-                    placeholder="Email"
+                    placeholder={t('auth.signup.email')}
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
                     blurOnSubmit={false}
@@ -268,7 +303,7 @@ export default function SignupScreen() {
                     onChangeText={handlePasswordChange}
                     onBlur={handlePasswordBlur}
                     error={errors.password}
-                    placeholder="Password"
+                    placeholder={t('auth.signup.password')}
                     returnKeyType="next"
                     onSubmitEditing={() => confirmRef.current?.focus()}
                     blurOnSubmit={false}
@@ -284,7 +319,7 @@ export default function SignupScreen() {
                     onBlur={handlePasswordBlur}
                     error={errors.password}
                     leftIcon="lock-closed"
-                    placeholder="Password"
+                    placeholder={t('auth.signup.password')}
                     returnKeyType="next"
                     onSubmitEditing={() => confirmRef.current?.focus()}
                     blurOnSubmit={false}
@@ -300,7 +335,7 @@ export default function SignupScreen() {
                     onChangeText={handleConfirmChange}
                     onBlur={handleConfirmBlur}
                     error={errors.confirm}
-                    placeholder="Confirm Password"
+                    placeholder={t('auth.signup.confirm')}
                     returnKeyType="done"
                     onSubmitEditing={onSignup}
                   />
@@ -315,7 +350,7 @@ export default function SignupScreen() {
                     onBlur={handleConfirmBlur}
                     error={errors.confirm}
                     leftIcon="shield-checkmark"
-                    placeholder="Confirm Password"
+                    placeholder={t('auth.signup.confirm')}
                     returnKeyType="done"
                     onSubmitEditing={onSignup}
                   />
@@ -352,14 +387,14 @@ export default function SignupScreen() {
               )}
 
               <Animated.View entering={FadeInDown}>
-                <AuthButton label="Sign Up" onPress={onSignup} loading={loading} />
+                <AuthButton label={t('auth.signup.button')} onPress={onSignup} loading={loading} />
               </Animated.View>
               <Animated.View entering={FadeInDown}>
                 <View style={styles.bottomRow}>
-                  <Text style={styles.bottomText}>Already have an account? </Text>
+                  <Text style={styles.bottomText}>{t('auth.signup.hasAccount')}</Text>
                   <Link href="/auth/login" asChild>
                     <TouchableOpacity style={styles.linkButton} activeOpacity={0.7}>
-                      <Text style={styles.linkText}>Log In</Text>
+                      <Text style={styles.linkText}>{t('auth.signup.login')}</Text>
                     </TouchableOpacity>
                   </Link>
                 </View>
@@ -476,6 +511,45 @@ const styles = StyleSheet.create({
   },
   requirementMet: {
     color: '#10B981',
+  },
+  // Language modal styles
+  overlayAbsolute: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  languageCard: {
+    backgroundColor: 'rgba(25,35,75,0.95)',
+    padding: spacing.xl,
+    borderRadius: radius.md,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  langButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  langButton: {
+    flex: 1,
+    marginHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  langButtonText: {
+    color: colors.background,
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
 

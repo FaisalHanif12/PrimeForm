@@ -6,6 +6,7 @@ import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { authService } from '../../src/services/authService';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
@@ -47,6 +48,7 @@ interface DashboardData {
 export default function DashboardScreen() {
   const router = useRouter();
   const { logout: authLogout, user } = useAuthContext();
+  const { t, transliterateName, transliterateText } = useLanguage();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,29 +132,29 @@ export default function DashboardScreen() {
 
   // Mock data for demonstration
   const mockStats = [
-    { label: 'Calories left', value: '1,200', icon: 'flame', color: colors.gold },
-    { label: 'Water', value: '2.1', unit: 'L', icon: 'water', color: colors.blue },
-    { label: 'Workouts remaining', value: '2', icon: 'barbell', color: colors.green },
-    { label: 'Steps', value: '8,500', icon: 'walk', color: colors.purple },
+    { label: t('dashboard.stats.calories'), value: '1,200', icon: 'flame', color: colors.gold },
+    { label: t('dashboard.stats.water'), value: '2.1', unit: 'L', icon: 'water', color: colors.blue },
+    { label: t('dashboard.stats.workouts'), value: '2', icon: 'barbell', color: colors.green },
+    { label: t('dashboard.stats.steps'), value: '8,500', icon: 'walk', color: colors.purple },
   ];
 
   const mockWorkouts = [
-    { name: '💪 Push-Ups', sets: '3x12', reps: '12 reps', weight: '' },
-    { name: '🦵 Leg Press', sets: '4x10', reps: '10 reps', weight: '120kg' },
-    { name: '🏋️ Bench Press', sets: '3x8', reps: '8 reps', weight: '80kg' },
+    { name: `💪 ${transliterateText('Push-Ups')}`, sets: '3x12', reps: `12 ${t('workout.reps')}`, weight: '' },
+    { name: `🦵 ${transliterateText('Leg Press')}`, sets: '4x10', reps: `10 ${t('workout.reps')}`, weight: '120kg' },
+    { name: `🏋️ ${transliterateText('Bench Press')}`, sets: '3x8', reps: `8 ${t('workout.reps')}`, weight: '80kg' },
   ];
 
   const mockMeals = [
-    { name: '🥣 Oatmeal Bowl', calories: 350, weight: '200g' },
-    { name: '🥗 Greek Salad', calories: 500, weight: '400g' },
-    { name: '🍗 Grilled Chicken', calories: 650, weight: '500g' },
+    { name: `🥣 ${transliterateText('Chicken Rice')}`, calories: 350, weight: '200g' },
+    { name: `🥗 ${transliterateText('Greek Salad')}`, calories: 500, weight: '400g' },
+    { name: `🍗 ${transliterateText('Grilled Chicken')}`, calories: 650, weight: '500g' },
   ];
 
   if (loading) {
     return (
       <DecorativeBackground>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </DecorativeBackground>
     );
@@ -176,7 +178,7 @@ export default function DashboardScreen() {
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <DashboardHeader 
-          userName={(user?.fullName || dashboardData.user.fullName).split(' ')[0]}
+          userName={transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])}
           onProfilePress={handleProfilePress}
           onNotificationPress={handleNotificationPress}
           notificationCount={dashboardData.notifications.length}
@@ -198,20 +200,20 @@ export default function DashboardScreen() {
         >
           {/* Welcome Message */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.welcomeSection}>
-            <Text style={styles.greetingText}>Good Morning, {(user?.fullName || dashboardData.user.fullName).split(' ')[0]} 💪</Text>
-            <Text style={styles.motivationText}>Ready to crush your fitness goals today?</Text>
+            <Text style={styles.greetingText}>{t('dashboard.greeting')}, {transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])} 💪</Text>
+            <Text style={styles.motivationText}>{t('dashboard.subtitle')}</Text>
           </Animated.View>
 
           {/* Stats Overview */}
           <StatsCard 
-            title="Today's Overview"
+            title={t('dashboard.overview')}
             stats={mockStats}
             delay={200}
           />
 
           {/* Today's Workout Plan */}
           <WorkoutPlanCard
-            title="Today's Workout Plan"
+            title={t('dashboard.workout.plan')}
             workouts={mockWorkouts}
             onPress={() => console.log('View workout plan')}
             delay={300}
@@ -219,7 +221,7 @@ export default function DashboardScreen() {
 
           {/* Today's Meal Plan */}
           <MealPlanCard
-            title="Today's Meal Plan"
+            title={t('dashboard.meal.plan')}
             meals={mockMeals}
             totalCalories={1500}
             onPress={() => console.log('View meal plan')}
@@ -241,7 +243,7 @@ export default function DashboardScreen() {
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
-          userName={user?.fullName || dashboardData.user.fullName}
+          userName={transliterateName(user?.fullName || dashboardData.user.fullName)}
           userEmail={user?.email || dashboardData.user.email}
         />
       </SafeAreaView>

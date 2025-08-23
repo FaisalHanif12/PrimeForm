@@ -10,6 +10,7 @@ import AuthButton from '../../components/AuthButton';
 import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -18,6 +19,7 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { sendReset, loading } = useAuth();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
   const [email, setEmail] = useState('');
@@ -28,8 +30,8 @@ export default function ForgotPasswordScreen() {
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    if (!email.trim()) return t('validation.email.required');
+    if (!emailRegex.test(email)) return t('validation.email.invalid');
     return undefined;
   };
 
@@ -66,7 +68,7 @@ export default function ForgotPasswordScreen() {
       const response = await sendReset(email);
       if (response?.success) {
         setIsSubmitted(true);
-        showToast('success', 'Reset code sent to your email!');
+        showToast('success', t('toast.reset.success'));
         
         // Navigate to OTP screen immediately after showing toast
         setTimeout(() => {
@@ -76,11 +78,11 @@ export default function ForgotPasswordScreen() {
           });
         }, 1500);
       } else {
-        showToast('error', 'Email not found');
+        showToast('error', t('toast.reset.error'));
       }
     } catch (error) {
       console.error('Forgot password error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
@@ -101,7 +103,7 @@ export default function ForgotPasswordScreen() {
             <Animated.View entering={FadeInUp}>
             <LogoMark/>
             <Text style={styles.description}>
-              Enter your email address and we'll send you a link to reset your password.
+              {t('auth.forgot.description')}
             </Text>
             <Animated.View entering={FadeInDown}>
               {isAndroid ? (
@@ -112,7 +114,7 @@ export default function ForgotPasswordScreen() {
                   onChangeText={handleEmailChange}
                   onBlur={handleEmailBlur}
                   error={error}
-                  placeholder="Email" 
+                  placeholder={t('auth.login.email')} 
                   returnKeyType="done"
                   onSubmitEditing={onSubmit}
                 />
@@ -127,7 +129,7 @@ export default function ForgotPasswordScreen() {
                   onBlur={handleEmailBlur}
                   error={error} 
                   leftIcon="mail" 
-                  placeholder="Email" 
+                  placeholder={t('auth.login.email')} 
                   returnKeyType="done"
                   onSubmitEditing={onSubmit}
                 />
@@ -135,7 +137,7 @@ export default function ForgotPasswordScreen() {
             </Animated.View>
             <Animated.View entering={FadeInDown}>
               <AuthButton 
-                label={isSubmitted ? "OTP Sent" : "Send OTP"} 
+                label={isSubmitted ? t('auth.forgot.sent') : t('auth.forgot.button')} 
                 onPress={onSubmit} 
                 loading={loading}
                 disabled={isSubmitted}

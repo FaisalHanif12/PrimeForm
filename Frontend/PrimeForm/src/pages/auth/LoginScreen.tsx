@@ -10,6 +10,7 @@ import { colors, spacing } from '../../theme/colors';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthContext } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { useLanguage } from '../../context/LanguageContext';
 import DecorativeBackground from '../../components/DecorativeBackground';
 import GlassCard from '../../components/GlassCard';
 import LogoMark from '../../components/LogoMark';
@@ -19,6 +20,7 @@ export default function LoginScreen() {
   const { signIn, loading } = useAuth();
   const { login: setAuthUser } = useAuthContext();
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const passwordRef = useRef<TextInput>(null);
   const isAndroid = Platform.select({ android: true, default: false }) as boolean;
 
@@ -30,14 +32,14 @@ export default function LoginScreen() {
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim()) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    if (!email.trim()) return t('validation.email.required');
+    if (!emailRegex.test(email)) return t('validation.email.invalid');
     return undefined;
   };
 
   const validatePassword = (password: string) => {
-    if (!password.trim()) return 'Password is required';
-    if (password.length < 6) return 'Password must be at least 6 characters';
+    if (!password.trim()) return t('validation.password.required');
+    if (password.length < 6) return t('validation.password.minLength');
     return undefined;
   };
 
@@ -105,7 +107,7 @@ export default function LoginScreen() {
           setAuthUser(response.data.user);
         }
         
-        showToast('success', 'Login successful!');
+        showToast('success', t('toast.login.success'));
         
         // Auto-navigate to dashboard after toast
         setTimeout(() => {
@@ -116,14 +118,14 @@ export default function LoginScreen() {
         if (response?.showSignupButton || 
             response?.message?.includes('Account not found') ||
             response?.message?.includes('not found')) {
-          showToast('error', 'Account not found');
+          showToast('error', t('toast.login.error'));
         } else {
-          showToast('error', 'Wrong credentials');
+          showToast('error', t('toast.login.error'));
         }
       }
     } catch (error) {
       console.error('Login error:', error);
-      showToast('error', 'Connection error. Please try again.');
+      showToast('error', t('toast.connection.error'));
     }
   };
 
@@ -144,7 +146,7 @@ export default function LoginScreen() {
                   onChangeText={handleEmailChange}
                   onBlur={handleEmailBlur}
                   error={errors.email}
-                  placeholder="Email"
+                  placeholder={t('auth.login.email')}
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
                   blurOnSubmit={false}
@@ -160,7 +162,7 @@ export default function LoginScreen() {
                   onBlur={handleEmailBlur}
                   error={errors.email}
                   leftIcon="mail"
-                  placeholder="Email"
+                  placeholder={t('auth.login.email')}
                   returnKeyType="next"
                   onSubmitEditing={() => passwordRef.current?.focus()}
                   blurOnSubmit={false}
@@ -178,7 +180,7 @@ export default function LoginScreen() {
                   onChangeText={handlePasswordChange}
                   onBlur={handlePasswordBlur}
                   error={errors.password}
-                  placeholder="Password"
+                  placeholder={t('auth.login.password')}
                   returnKeyType="done"
                   onSubmitEditing={onLogin}
                 />
@@ -193,7 +195,7 @@ export default function LoginScreen() {
                   onBlur={handlePasswordBlur}
                   error={errors.password}
                   leftIcon="lock-closed"
-                  placeholder="Password"
+                  placeholder={t('auth.login.password')}
                   returnKeyType="done"
                   onSubmitEditing={onLogin}
                 />
@@ -201,7 +203,7 @@ export default function LoginScreen() {
             </View>
 
             <View>
-              <AuthButton label="Log In" onPress={onLogin} loading={loading} />
+              <AuthButton label={t('auth.login.button')} onPress={onLogin} loading={loading} />
             </View>
 
             <View>
@@ -212,14 +214,14 @@ export default function LoginScreen() {
                   style={styles.linkButton}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.linkTextCenterStrong}>Sign Up</Text>
+                  <Text style={styles.linkTextCenterStrong}>{t('auth.login.signup')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   onPress={() => router.push('/auth/forgot')}
                   style={styles.linkButton}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.linkText}>Forgot Password?</Text>
+                  <Text style={styles.linkText}>{t('auth.login.forgot')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

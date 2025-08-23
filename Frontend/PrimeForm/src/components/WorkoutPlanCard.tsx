@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 interface WorkoutItem {
   name: string;
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export default function WorkoutPlanCard({ title, workouts, onPress, delay = 0 }: Props) {
+  const { t } = useLanguage();
   return (
     <Animated.View 
       entering={FadeInDown.delay(delay)} 
@@ -59,7 +61,7 @@ export default function WorkoutPlanCard({ title, workouts, onPress, delay = 0 }:
             
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
-                <Text style={styles.viewAllText}>View Full Workout</Text>
+                <Text style={styles.viewAllText}>{t('dashboard.view.full.workout')}</Text>
                 <Ionicons name="arrow-forward" size={16} color={colors.gold} />
               </TouchableOpacity>
             )}
