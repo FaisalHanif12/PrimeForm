@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, withSpring } from 'react-native-reanimated';
 import { colors, spacing, radius, typography, fonts } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 type TabType = 'home' | 'diet' | 'gym' | 'workout' | 'progress';
 
@@ -26,6 +27,7 @@ const tabs: Tab[] = [
 ];
 
 export default function BottomNavigation({ activeTab, onTabPress }: Props) {
+  const { t } = useLanguage();
   const indicatorPosition = useSharedValue(0); // Keeping for potential future use but indicator removed
   const containerWidth = useSharedValue(0);
 
@@ -66,7 +68,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
                 color={isActive ? colors.gold : colors.mutedText}
               />
               <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
-                {tab.label}
+                {t(`nav.${tab.key}`)}
               </Text>
             </View>
           </TouchableOpacity>

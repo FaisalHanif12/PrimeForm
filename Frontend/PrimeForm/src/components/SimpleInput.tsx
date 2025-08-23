@@ -1,6 +1,7 @@
-import React, { forwardRef } from 'react';
-import { View, TextInput, StyleSheet, TextInputProps, Text } from 'react-native';
+import React, { forwardRef, useState } from 'react';
+import { View, TextInput, StyleSheet, TextInputProps, Text, TouchableOpacity } from 'react-native';
 import { colors, radius, spacing, typography, fonts } from '../theme/colors';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = TextInputProps & {
   left?: React.ReactNode;
@@ -8,31 +9,41 @@ type Props = TextInputProps & {
   error?: string;
 };
 
-const SimpleInput = forwardRef<TextInput, Props>(({ left, right, style, error, ...rest }, ref) => {
-  return (
-    <View style={styles.container}>
-      <View style={[styles.inputRow, !!error && styles.inputError]}>
-        {left}
-        <TextInput
-          ref={ref}
-          style={[styles.input, style]}
-          placeholderTextColor={colors.mutedText}
-          autoCapitalize="none"
-          autoCorrect={false}
-          spellCheck={false}
-          underlineColorAndroid="transparent"
-          multiline={false}
-          selectionColor={colors.gold}
-          caretHidden={false}
-          // Keep the field visually dark; text is white
-          {...rest}
-        />
-        {right}
+const SimpleInput = forwardRef<TextInput, Props>(
+  ({ left, right, style, error, secureTextEntry, ...rest }, ref) => {
+    const [isSecure, setIsSecure] = useState(!!secureTextEntry);
+
+    return (
+      <View style={styles.container}>
+        <View style={[styles.inputRow, !!error && styles.inputError]}>
+          {left}
+          <TextInput
+            ref={ref}
+            style={[styles.input, style]}
+            placeholderTextColor={colors.mutedText}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            underlineColorAndroid="transparent"
+            multiline={false}
+            selectionColor={colors.gold}
+            caretHidden={false}
+            secureTextEntry={isSecure}
+            {...rest}
+          />
+          {secureTextEntry ? (
+            <TouchableOpacity onPress={() => setIsSecure(s => !s)}>
+              <Ionicons name={isSecure ? 'eye-off' : 'eye'} size={18} color={colors.gold} />
+            </TouchableOpacity>
+          ) : (
+            right
+          )}
+        </View>
+        {!!error && <Text style={styles.error}>{error}</Text>}
       </View>
-      {!!error && <Text style={styles.error}>{error}</Text>}
-    </View>
-  );
-});
+    );
+  }
+);
 
 export default SimpleInput;
 
