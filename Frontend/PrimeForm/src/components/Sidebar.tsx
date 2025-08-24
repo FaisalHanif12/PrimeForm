@@ -1,9 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+
+interface UserInfo {
+  country: string;
+  age: string;
+  gender: string;
+  height: string;
+  currentWeight: string;
+  goalWeight: string;
+  bodyGoal: string;
+  medicalConditions: string;
+  occupationType: string;
+  availableEquipment: string;
+  dietPreference: string;
+}
 
 interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -18,6 +32,7 @@ interface Props {
   onMenuItemPress: (action: string) => void;
   userName: string;
   userEmail: string;
+  userInfo?: UserInfo | null;
 }
 
 const menuItems: MenuItem[] = [
@@ -28,13 +43,19 @@ const menuItems: MenuItem[] = [
   { icon: 'log-out-outline', label: 'Log Out', action: 'logout', color: colors.error },
 ];
 
-export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail }: Props) {
+export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo }: Props) {
   const { t, language, changeLanguage } = useLanguage();
   const [showLanguageToggle, setShowLanguageToggle] = useState(false);
 
   const handleMenuPress = (action: string) => {
     if (action === 'language') {
       setShowLanguageToggle(!showLanguageToggle);
+      return;
+    }
+    if (action === 'profile') {
+      // Navigate to profile page instead of showing dropdown
+      onMenuItemPress('profile');
+      onClose();
       return;
     }
     onMenuItemPress(action);
@@ -297,12 +318,11 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
   },
   languageText: {
-    color: colors.white,
+    color: colors.mutedText,
     fontSize: typography.small,
     fontFamily: fonts.body,
   },
   activeLanguageText: {
     color: colors.gold,
-    fontWeight: '600',
   },
 });

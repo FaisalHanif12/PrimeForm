@@ -13,6 +13,7 @@ const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const userProfileRoutes = require('./routes/userProfileRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -109,6 +110,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/user-profile', userProfileRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
