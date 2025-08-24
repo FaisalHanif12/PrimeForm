@@ -14,6 +14,8 @@ import StatsCard from '../../src/components/StatsCard';
 import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
 import MealPlanCard from '../../src/components/MealPlanCard';
 import Sidebar from '../../src/components/Sidebar';
+import OnboardingModal from '../../src/components/OnboardingModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 interface DashboardData {
@@ -54,6 +56,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'diet' | 'gym' | 'workout' | 'progress'>('home');
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
 
   const loadDashboard = async () => {
@@ -74,11 +77,44 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboard();
+    checkOnboardingStatus();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadDashboard();
+  };
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const hasSeenOnboarding = await AsyncStorage.getItem('primeform_dashboard_onboarding_seen');
+      // Show modal only for new users who haven't seen it at all
+      if (!hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error);
+    }
+  };
+
+  const handleStartOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('primeform_dashboard_onboarding_seen', 'started');
+      setShowOnboarding(false);
+      // Here you would navigate to the actual onboarding questions
+      console.log('Starting dashboard onboarding questions...');
+    } catch (error) {
+      console.error('Failed to save onboarding status:', error);
+    }
+  };
+
+  const handleCancelOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('primeform_dashboard_onboarding_seen', 'cancelled');
+      setShowOnboarding(false);
+    } catch (error) {
+      console.error('Failed to save onboarding status:', error);
+    }
   };
 
 
@@ -108,7 +144,13 @@ export default function DashboardScreen() {
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     setActiveTab(tab);
-    console.log('Tab pressed:', tab, '- feature coming soon');
+    if (tab === 'workout') {
+      router.push('/(dashboard)/workout');
+    } else if (tab === 'diet') {
+      router.push('/(dashboard)/diet');
+    } else {
+      console.log('Feature coming soon:', tab);
+    }
   };
 
   const handleSidebarMenuPress = async (action: string) => {
@@ -245,6 +287,15 @@ export default function DashboardScreen() {
           onMenuItemPress={handleSidebarMenuPress}
           userName={transliterateName(user?.fullName || dashboardData.user.fullName)}
           userEmail={user?.email || dashboardData.user.email}
+        />
+
+        {/* Onboarding Modal */}
+        <OnboardingModal
+          visible={showOnboarding}
+          onStart={handleStartOnboarding}
+          onCancel={handleCancelOnboarding}
+          title={t('onboarding.title')}
+          description={t('onboarding.description')}
         />
       </SafeAreaView>
     </DecorativeBackground>
