@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, SafeAreaView, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -14,6 +14,9 @@ import StatsCard from '../../src/components/StatsCard';
 import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
 import MealPlanCard from '../../src/components/MealPlanCard';
 import Sidebar from '../../src/components/Sidebar';
+import UserInfoModal from '../../src/components/UserInfoModal';
+import ProfilePage from '../../src/components/ProfilePage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 interface DashboardData {
@@ -54,6 +57,10 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'diet' | 'gym' | 'workout' | 'progress'>('home');
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showUserInfoModal, setShowUserInfoModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
 
   const loadDashboard = async () => {
@@ -74,11 +81,111 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboard();
+    checkOnboardingStatus();
+    loadUserInfo();
+    checkUserInfoStatus();
   }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await loadDashboard();
+  };
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const hasSeenPermissionModal = await AsyncStorage.getItem('primeform_permission_modal_seen');
+      
+      // Show permission modal only for new users who haven't seen it at all
+      if (!hasSeenPermissionModal) {
+        setShowPermissionModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error);
+    }
+  };
+
+  const handlePermissionStart = async () => {
+    try {
+      await AsyncStorage.setItem('primeform_permission_modal_seen', 'started');
+      setShowPermissionModal(false);
+      // Show user info collection modal
+      setShowUserInfoModal(true);
+    } catch (error) {
+      console.error('Failed to save permission status:', error);
+    }
+  };
+
+  const handlePermissionCancel = async () => {
+    try {
+      await AsyncStorage.setItem('primeform_permission_modal_seen', 'cancelled');
+      setShowPermissionModal(false);
+      // After cancelling permission, never show UserInfoModal on dashboard again
+    } catch (error) {
+      console.error('Failed to save permission status:', error);
+    }
+  };
+
+  const handleCompleteUserInfo = async (userInfoData: any) => {
+    try {
+      // Save user info to AsyncStorage for now (will be replaced with API call)
+      await AsyncStorage.setItem('primeform_user_info', JSON.stringify(userInfoData));
+      await AsyncStorage.setItem('primeform_user_info_completed', 'true');
+      setUserInfo(userInfoData);
+      setShowUserInfoModal(false);
+      console.log('User info completed:', userInfoData);
+    } catch (error) {
+      console.error('Failed to save user info:', error);
+    }
+  };
+
+  const handleCancelUserInfo = async () => {
+    try {
+      // Mark that user cancelled user info collection
+      await AsyncStorage.setItem('primeform_user_info_cancelled', 'true');
+      setShowUserInfoModal(false);
+    } catch (error) {
+      console.error('Failed to save cancellation status:', error);
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      const savedUserInfo = await AsyncStorage.getItem('primeform_user_info');
+      if (savedUserInfo) {
+        setUserInfo(JSON.parse(savedUserInfo));
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const checkUserInfoStatus = async () => {
+    try {
+      const userInfoCompleted = await AsyncStorage.getItem('primeform_user_info_completed');
+      const userInfoCancelled = await AsyncStorage.getItem('primeform_user_info_cancelled');
+      const permissionCancelled = await AsyncStorage.getItem('primeform_permission_modal_seen');
+      
+      // Only show user info modal if:
+      // 1. User hasn't completed user info collection, AND
+      // 2. User previously cancelled user info collection, AND
+      // 3. User didn't cancel the permission modal
+      if (!userInfoCompleted && userInfoCancelled === 'true' && permissionCancelled !== 'cancelled') {
+        setShowUserInfoModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to check user info status:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      // Save updated user info to AsyncStorage for now (will be replaced with API call)
+      await AsyncStorage.setItem('primeform_user_info', JSON.stringify(updatedUserInfo));
+      setUserInfo(updatedUserInfo);
+      console.log('User info updated:', updatedUserInfo);
+    } catch (error) {
+      console.error('Failed to update user info:', error);
+    }
   };
 
 
@@ -108,13 +215,23 @@ export default function DashboardScreen() {
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     setActiveTab(tab);
-    console.log('Tab pressed:', tab, '- feature coming soon');
+    if (tab === 'workout') {
+      router.push('/(dashboard)/workout');
+    } else if (tab === 'diet') {
+      router.push('/(dashboard)/diet');
+    } else {
+      console.log('Feature coming soon:', tab);
+    }
   };
 
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        console.log('Profile - feature coming soon');
+        setShowProfilePage(true);
+        break;
+      case 'edit_profile':
+        // Show user info modal for editing
+        setShowUserInfoModal(true);
         break;
       case 'settings':
         console.log('Settings - feature coming soon');
@@ -243,8 +360,61 @@ export default function DashboardScreen() {
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
-          userName={transliterateName(user?.fullName || dashboardData.user.fullName)}
+          userName={transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])}
           userEmail={user?.email || dashboardData.user.email}
+          userInfo={userInfo}
+        />
+
+        {/* Permission Modal */}
+        <Modal
+          visible={showPermissionModal}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+        >
+          <View style={styles.permissionOverlay}>
+            <View style={styles.permissionModal}>
+              <View style={styles.permissionHeader}>
+                <Text style={styles.permissionTitle}>Welcome to PrimeForm! 🎉</Text>
+                <Text style={styles.permissionSubtitle}>
+                  To provide you with personalized diet and workout plans, we need to collect some information about you.
+                </Text>
+              </View>
+              
+              <View style={styles.permissionButtons}>
+                <TouchableOpacity 
+                  style={styles.permissionStartButton}
+                  onPress={handlePermissionStart}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.permissionStartButtonText}>Start</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.permissionCancelButton}
+                  onPress={handlePermissionCancel}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.permissionCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* User Info Modal */}
+        <UserInfoModal
+          visible={showUserInfoModal}
+          onComplete={handleCompleteUserInfo}
+          onCancel={handleCancelUserInfo}
+        />
+
+        {/* Profile Page */}
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
       </SafeAreaView>
     </DecorativeBackground>
@@ -309,5 +479,64 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 100, // Space for bottom navigation
+  },
+  permissionOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  permissionModal: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: '80%',
+    alignItems: 'center',
+  },
+  permissionHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  permissionTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  permissionSubtitle: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  permissionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: spacing.md,
+  },
+  permissionStartButton: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  permissionStartButtonText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: typography.body,
+  },
+  permissionCancelButton: {
+    backgroundColor: colors.mutedText,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+  },
+  permissionCancelButtonText: {
+    color: colors.white,
+    fontWeight: '600',
+    fontSize: typography.body,
   },
 });

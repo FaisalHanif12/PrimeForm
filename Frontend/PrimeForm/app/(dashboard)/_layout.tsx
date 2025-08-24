@@ -14,6 +14,18 @@ export default function DashboardLayout() {
           title: 'Dashboard',
         }}
       />
+      <Stack.Screen 
+        name="workout" 
+        options={{
+          title: 'Workout',
+        }}
+      />
+      <Stack.Screen 
+        name="diet" 
+        options={{
+          title: 'Diet',
+        }}
+      />
     </Stack>
   );
 }

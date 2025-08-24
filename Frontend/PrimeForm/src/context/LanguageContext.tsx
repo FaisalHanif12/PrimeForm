@@ -34,7 +34,7 @@ const translations = {
     'auth.login.noAccount': "Don't have an account? ",
     
     'auth.signup.title': 'Create Account',
-    'auth.signup.subtitle': 'Join PrimeForm today',
+    'auth.signup.subtitle': 'Join Prime Form today',
     'auth.signup.name': 'Username',
     'auth.signup.email': 'Email',
     'auth.signup.password': 'Password',
@@ -77,7 +77,7 @@ const translations = {
     'sidebar.version': 'Version 1.0.0',
     
     // Common
-    'common.loading': 'Loading PrimeForm...',
+    'common.loading': 'Loading Prime Form...',
     'common.error': 'Something went wrong',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
@@ -161,7 +161,57 @@ const translations = {
     'meal.fat': 'Fat',
     
     // App Branding
-    'app.name': 'PrimeForm',
+    'app.name': 'Prime Form',
+    
+    // Onboarding
+    'onboarding.title': 'Are you ready for AI driven questions to personalize your diet and exercise?',
+    'onboarding.description': '',
+    'onboarding.start': 'Start',
+    'onboarding.cancel': 'Cancel',
+    
+    // Workout Page
+    'workout.page.subtitle': 'Track your workouts and build strength',
+    'workout.page.comingSoon': 'Workout tracking coming soon!',
+    'workout.page.comingSoonDesc': 'We\'re building amazing workout features to help you track your progress and achieve your fitness goals.',
+    
+    // Diet Page
+    'diet.page.subtitle': 'Plan your meals and track nutrition',
+    'diet.page.comingSoon': 'Diet planning coming soon!',
+    'diet.page.comingSoonDesc': 'We\'re building comprehensive diet tracking features to help you maintain a healthy and balanced nutrition plan.',
+    
+    // User Info Modal
+    'userinfo.title': 'Personalize Your Experience',
+    'userinfo.step': 'Step',
+    'userinfo.of': 'of',
+    'userinfo.personal.info': 'Personal Information',
+    'userinfo.goals.preferences': 'Goals & Preferences',
+    'userinfo.medical.info': 'Medical Information',
+    'userinfo.location': 'Location',
+    'userinfo.age': 'Age',
+    'userinfo.gender': 'Gender',
+    'userinfo.height': 'Height',
+    'userinfo.current.weight': 'Current Weight',
+    'userinfo.body.goal': 'Body Goal',
+    'userinfo.diet.preference': 'Diet Preference',
+    'userinfo.occupation': 'Occupation',
+    'userinfo.equipment': 'Equipment',
+    'userinfo.medical.conditions': 'Medical Conditions',
+    'userinfo.country': 'Country',
+    'userinfo.years': 'years',
+    'userinfo.previous': 'Previous',
+    'userinfo.next': 'Next',
+    'userinfo.complete': 'Complete',
+    'userinfo.cancel': 'Cancel',
+    'userinfo.select.country': 'Select your country',
+    'userinfo.select.goal': 'Select your goal',
+    'userinfo.select.occupation': 'Select your occupation type',
+    'userinfo.select.equipment': 'Select available equipment',
+    'userinfo.placeholder.medical': 'e.g., diabetes, hypertension, PCOS, heart issues (or none)',
+    'userinfo.summary.title': 'Summary',
+    'userinfo.summary.text': 'We\'ll use this information to create your personalized diet and workout plans.',
+    'userinfo.lifestyle.health': 'Lifestyle & Health',
+    'userinfo.diet.preferences': 'Diet Preferences',
+    'userinfo.select.diet': 'Select your diet preference',
   },
   ur: {
     // Auth screens
@@ -175,7 +225,7 @@ const translations = {
     'auth.login.noAccount': 'کیا آپ کا اکاؤنٹ نہیں ہے؟ ',
     
     'auth.signup.title': 'اکاؤنٹ بنائیں',
-    'auth.signup.subtitle': 'آج ہی PrimeForm میں شامل ہوں',
+    'auth.signup.subtitle': 'آج ہی پرائم فارم میں شامل ہوں',
     'auth.signup.name': 'صارف نام',
     'auth.signup.email': 'ای میل',
     'auth.signup.password': 'پاس ورڈ',
@@ -218,7 +268,7 @@ const translations = {
     'sidebar.version': 'ورژن 1.0.0',
     
     // Common
-    'common.loading': 'PrimeForm لوڈ ہو رہا ہے...',
+    'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
     'common.error': 'کچھ غلط ہو گیا',
     'common.retry': 'دوبارہ کوشش',
     'common.cancel': 'منسوخ',
@@ -303,6 +353,56 @@ const translations = {
     
     // App Branding
     'app.name': 'پرائم فارم',
+    
+    // Onboarding
+    'onboarding.title': 'کیا آپ اپنی خوراک اور ورزش کو ذاتی بنانے کے لیے AI سے چلنے والے سوالات کے لیے تیار ہیں؟',
+    'onboarding.description': '',
+    'onboarding.start': 'شروع کریں',
+    'onboarding.cancel': 'منسوخ',
+    
+    // Workout Page
+    'workout.page.subtitle': 'اپنی ورکاؤٹس کو ٹریک کریں اور طاقت بنائیں',
+    'workout.page.comingSoon': 'ورکاؤٹ ٹریکنگ جلد آ رہی ہے!',
+    'workout.page.comingSoonDesc': 'ہم آپ کی پیش رفت کو ٹریک کرنے اور آپ کے فٹنس اہداف کو حاصل کرنے میں مدد کے لیے شاندار ورکاؤٹ فیچرز بنا رہے ہیں۔',
+    
+    // Diet Page
+    'diet.page.subtitle': 'اپنے کھانے کی منصوبہ بندی کریں اور غذائیت کو ٹریک کریں',
+    'diet.page.comingSoon': 'ڈائٹ پلاننگ جلد آ رہی ہے!',
+    'diet.page.comingSoonDesc': 'ہم آپ کو صحت مند اور متوازن غذائیت کے پلان کو برقرار رکھنے میں مدد کے لیے جامع ڈائٹ ٹریکنگ فیچرز بنا رہے ہیں۔',
+    
+    // User Info Modal
+    'userinfo.title': 'اپنی تجربہ کو پروردہ کریں',
+    'userinfo.step': 'قدم',
+    'userinfo.of': 'کے',
+    'userinfo.personal.info': 'صرف پروفائل',
+    'userinfo.goals.preferences': 'اعداد اور پسندیاں',
+    'userinfo.medical.info': 'میڈیکل اطلاعات',
+    'userinfo.location': 'مقام',
+    'userinfo.age': 'عمر',
+    'userinfo.gender': 'جنس',
+    'userinfo.height': 'قد',
+    'userinfo.current.weight': 'ابھی کی وزن',
+    'userinfo.body.goal': 'جسم کا مقصد',
+    'userinfo.diet.preference': 'خوراک پسندی',
+    'userinfo.occupation': 'کام',
+    'userinfo.equipment': 'ادائیگی',
+    'userinfo.medical.conditions': 'میڈیکل سمندریات',
+    'userinfo.country': 'ممالک',
+    'userinfo.years': 'سال',
+    'userinfo.previous': 'پچھلا',
+    'userinfo.next': 'اگلا',
+    'userinfo.complete': 'مکمل',
+    'userinfo.cancel': 'منسوخ',
+    'userinfo.select.country': 'اپنی ممالک دیکھیں',
+    'userinfo.select.goal': 'اپنا مقصد دیکھیں',
+    'userinfo.select.occupation': 'اپنے کام کی قسم دیکھیں',
+    'userinfo.select.equipment': 'موجودہ ادائیگی دیکھیں',
+    'userinfo.placeholder.medical': 'جیسے دیاسی، ہیپرتینسی، PCOS، قلب کے مسائل (یا کوئی نہیں)',
+    'userinfo.summary.title': 'جائزہ',
+    'userinfo.summary.text': 'ہم اس معلومات کو استعمال کریں گے تاکہ آپ کی پروردہ خوراک اور ورکاؤٹ پلان بنائیں۔',
+    'userinfo.lifestyle.health': 'لافک اور صحت',
+    'userinfo.diet.preferences': 'خوراک پسندیاں',
+    'userinfo.select.diet': 'اپنی خوراک پسندی دیکھیں',
   },
 };
 
