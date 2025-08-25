@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Image, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -46,6 +48,55 @@ const menuItems: MenuItem[] = [
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo }: Props) {
   const { t, language, changeLanguage } = useLanguage();
   const [showLanguageToggle, setShowLanguageToggle] = useState(false);
+  const [userImage, setUserImage] = useState<string | null>(null);
+
+  // Load user image on component mount
+  useEffect(() => {
+    loadUserImage();
+  }, []);
+
+  const loadUserImage = async () => {
+    try {
+      const savedImage = await AsyncStorage.getItem('userProfileImage');
+      if (savedImage) {
+        setUserImage(savedImage);
+      }
+    } catch (error) {
+      console.error('Failed to load user image:', error);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to access your photo library');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        
+        // Save image URI to AsyncStorage (persistent across app reinstalls)
+        await AsyncStorage.setItem('userProfileImage', imageUri);
+        setUserImage(imageUri);
+        
+        console.log('User image uploaded and saved successfully');
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    }
+  };
 
   const handleMenuPress = (action: string) => {
     if (action === 'language') {
@@ -102,9 +153,27 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <View style={styles.avatarContainer}>
-                <Ionicons name="person" size={32} color={colors.gold} />
-              </View>
+              <TouchableOpacity 
+                style={styles.avatarContainer} 
+                onPress={handleImageUpload}
+                activeOpacity={0.8}
+              >
+                {userImage ? (
+                  <Image source={{ uri: userImage }} style={styles.userAvatar} />
+                ) : (
+                  <Ionicons name="person" size={32} color={colors.gold} />
+                )}
+                {!userImage && (
+                  <View style={styles.uploadOverlay}>
+                    <Ionicons name="camera" size={16} color={colors.white} />
+                  </View>
+                )}
+                {userImage && (
+                  <View style={styles.imageOverlay}>
+                    <Ionicons name="camera" size={14} color={colors.white} />
+                  </View>
+                )}
+              </TouchableOpacity>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{userName}</Text>
                 <Text style={styles.userEmail}>{userEmail}</Text>
@@ -131,11 +200,18 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                       {t(`sidebar.${item.action}`)}
                     </Text>
                   </View>
-                  <Ionicons 
-                    name={item.action === 'language' ? (showLanguageToggle ? "chevron-up" : "chevron-down") : "chevron-forward"} 
-                    size={18} 
-                    color={colors.mutedText} 
-                  />
+                  <View style={styles.menuItemRight}>
+                    {item.action === 'subscription' && (
+                      <View style={styles.upgradeBadge}>
+                        <Text style={styles.upgradeText}>{t('sidebar.upgrade')}</Text>
+                      </View>
+                    )}
+                    <Ionicons 
+                      name={item.action === 'language' ? (showLanguageToggle ? "chevron-up" : "chevron-down") : "chevron-forward"} 
+                      size={18} 
+                      color={colors.mutedText} 
+                    />
+                  </View>
                 </TouchableOpacity>
                 
                 {/* Language Toggle Options */}
@@ -146,9 +222,8 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                       onPress={() => handleLanguageChange('en')}
                     >
                       <Text style={[styles.languageText, language === 'en' && styles.activeLanguageText]}>
-                        English
+                        {t('language.english')}
                       </Text>
-                      {language === 'en' && <Ionicons name="checkmark" size={16} color={colors.gold} />}
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={[styles.languageOption, language === 'ur' && styles.activeLanguage]}
@@ -157,7 +232,6 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                       <Text style={[styles.languageText, language === 'ur' && styles.activeLanguageText]}>
                         اردو
                       </Text>
-                      {language === 'ur' && <Ionicons name="checkmark" size={16} color={colors.gold} />}
                     </TouchableOpacity>
                   </View>
                 )}
@@ -167,7 +241,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.appName}>{t('app.name')}</Text>
+            <Text style={styles.appName}>{t('sidebar.appName')}</Text>
             <Text style={styles.version}>{t('sidebar.version')}</Text>
           </View>
         </Animated.View>
@@ -221,7 +295,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+    position: 'relative', // Added for positioning overlay
   },
+  userAvatar: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 25,
+  },
+  uploadOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.gold,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.white,
+  },
+
   userInfo: {
     flex: 1,
   },
@@ -276,6 +383,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginLeft: spacing.md,
   },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  upgradeBadge: {
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    marginRight: spacing.sm,
+  },
+  upgradeText: {
+    color: colors.white,
+    fontSize: typography.small,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,
@@ -325,4 +449,6 @@ const styles = StyleSheet.create({
   activeLanguageText: {
     color: colors.gold,
   },
+  
+
 });
