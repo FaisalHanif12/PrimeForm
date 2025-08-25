@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, SafeAreaView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
-import { authService } from '../../src/services/authService';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
-import DecorativeBackground from '../../src/components/DecorativeBackground';
+import userProfileService from '../../src/services/userProfileService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
-import StatsCard from '../../src/components/StatsCard';
-import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
-import MealPlanCard from '../../src/components/MealPlanCard';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
 import ProfilePage from '../../src/components/ProfilePage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import StatsCard from '../../src/components/StatsCard';
+import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
+import MealPlanCard from '../../src/components/MealPlanCard';
+import DecorativeBackground from '../../src/components/DecorativeBackground';
 
 
 interface DashboardData {
@@ -60,88 +59,98 @@ export default function DashboardScreen() {
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  // Removed permission modal state
+  const [backendAvailable, setBackendAvailable] = useState(false); // Start with backend unavailable
+  const [offlineMode, setOfflineMode] = useState(true); // Start in offline mode
 
 
   const loadDashboard = async () => {
     try {
-      const response = await authService.getDashboard();
-      if (response.success) {
-        setDashboardData(response.data);
-      } else {
-        console.error('Failed to load dashboard data');
-      }
+      setLoading(true);
+      // For now, we'll use mock data since dashboard API is not implemented
+      // This maintains the exact same functionality
+      setDashboardData({
+        stats: mockStats,
+        workouts: mockWorkouts,
+        meals: mockMeals,
+        user: {
+          fullName: user?.fullName || 'User',
+          email: user?.email || 'user@example.com'
+        },
+        notifications: []
+      });
     } catch (error) {
-      console.error('Dashboard error:', error);
+      console.error('Failed to load dashboard:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadDashboard();
-    checkOnboardingStatus();
+    // Removed checkOnboardingStatus();
     loadUserInfo();
-    checkUserInfoStatus();
+    // Removed checkUserInfoStatus();
+    // Check backend availability in background without blocking
+    checkBackendAvailability();
   }, []);
+
+  const checkBackendAvailability = async () => {
+    try {
+      // Simple check - try to get user profile to see if backend is working
+      const response = await userProfileService.getUserProfile();
+      setBackendAvailable(true);
+      setOfflineMode(false);
+      console.log('Backend is available');
+    } catch (error: any) {
+      console.log('Backend is not available:', error.message);
+      setBackendAvailable(false);
+      setOfflineMode(true);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadDashboard();
-  };
-
-  const checkOnboardingStatus = async () => {
     try {
-      const hasSeenPermissionModal = await AsyncStorage.getItem('primeform_permission_modal_seen');
-      
-      // Show permission modal only for new users who haven't seen it at all
-      if (!hasSeenPermissionModal) {
-        setShowPermissionModal(true);
-      }
+      await loadDashboard();
     } catch (error) {
-      console.error('Failed to check onboarding status:', error);
+      console.error('Failed to refresh dashboard:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
-  const handlePermissionStart = async () => {
-    try {
-      await AsyncStorage.setItem('primeform_permission_modal_seen', 'started');
-      setShowPermissionModal(false);
-      // Show user info collection modal
-      setShowUserInfoModal(true);
-    } catch (error) {
-      console.error('Failed to save permission status:', error);
-    }
-  };
+  // Removed checkOnboardingStatus function
 
-  const handlePermissionCancel = async () => {
-    try {
-      await AsyncStorage.setItem('primeform_permission_modal_seen', 'cancelled');
-      setShowPermissionModal(false);
-      // After cancelling permission, never show UserInfoModal on dashboard again
-    } catch (error) {
-      console.error('Failed to save permission status:', error);
-    }
-  };
+  // Removed handlePermissionStart function
+
+  // Removed handlePermissionCancel function
 
   const handleCompleteUserInfo = async (userInfoData: any) => {
     try {
-      // Save user info to AsyncStorage for now (will be replaced with API call)
-      await AsyncStorage.setItem('primeform_user_info', JSON.stringify(userInfoData));
-      await AsyncStorage.setItem('primeform_user_info_completed', 'true');
-      setUserInfo(userInfoData);
-      setShowUserInfoModal(false);
-      console.log('User info completed:', userInfoData);
+      // Save to backend database
+      const response = await userProfileService.createOrUpdateProfile(userInfoData);
+      
+      if (response.success) {
+        setUserInfo(userInfoData);
+        setShowUserInfoModal(false);
+        console.log('User profile saved to database:', response.data);
+      } else {
+        console.error('Failed to save to database:', response.message);
+        // Show error to user
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+      }
     } catch (error) {
       console.error('Failed to save user info:', error);
+      // Show error to user
+      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
 
   const handleCancelUserInfo = async () => {
     try {
       // Mark that user cancelled user info collection
-      await AsyncStorage.setItem('primeform_user_info_cancelled', 'true');
+      // Removed AsyncStorage dependency
       setShowUserInfoModal(false);
     } catch (error) {
       console.error('Failed to save cancellation status:', error);
@@ -150,41 +159,30 @@ export default function DashboardScreen() {
 
   const loadUserInfo = async () => {
     try {
-      const savedUserInfo = await AsyncStorage.getItem('primeform_user_info');
-      if (savedUserInfo) {
-        setUserInfo(JSON.parse(savedUserInfo));
-      }
+      // Removed AsyncStorage dependency
+      setUserInfo(null); // Clear user info on app load
     } catch (error) {
       console.error('Failed to load user info:', error);
     }
   };
 
-  const checkUserInfoStatus = async () => {
-    try {
-      const userInfoCompleted = await AsyncStorage.getItem('primeform_user_info_completed');
-      const userInfoCancelled = await AsyncStorage.getItem('primeform_user_info_cancelled');
-      const permissionCancelled = await AsyncStorage.getItem('primeform_permission_modal_seen');
-      
-      // Only show user info modal if:
-      // 1. User hasn't completed user info collection, AND
-      // 2. User previously cancelled user info collection, AND
-      // 3. User didn't cancel the permission modal
-      if (!userInfoCompleted && userInfoCancelled === 'true' && permissionCancelled !== 'cancelled') {
-        setShowUserInfoModal(true);
-      }
-    } catch (error) {
-      console.error('Failed to check user info status:', error);
-    }
-  };
+  // Removed checkUserInfoStatus function
 
   const handleUpdateUserInfo = async (updatedUserInfo: any) => {
     try {
-      // Save updated user info to AsyncStorage for now (will be replaced with API call)
-      await AsyncStorage.setItem('primeform_user_info', JSON.stringify(updatedUserInfo));
-      setUserInfo(updatedUserInfo);
-      console.log('User info updated:', updatedUserInfo);
+      // Update in backend database
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+        console.log('User profile updated in database:', response.data);
+      } else {
+        console.error('Failed to update in database:', response.message);
+        Alert.alert('Error', 'Failed to update profile. Please try again.');
+      }
     } catch (error) {
       console.error('Failed to update user info:', error);
+      Alert.alert('Error', 'Failed to update profile. Please check your connection and try again.');
     }
   };
 
@@ -227,6 +225,7 @@ export default function DashboardScreen() {
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
+        // Show profile page
         setShowProfilePage(true);
         break;
       case 'edit_profile':
@@ -234,13 +233,20 @@ export default function DashboardScreen() {
         setShowUserInfoModal(true);
         break;
       case 'settings':
-        console.log('Settings - feature coming soon');
+        Alert.alert('Settings', 'Settings feature coming soon!');
         break;
       case 'subscription':
-        console.log('Subscription Plan - feature coming soon');
+        Alert.alert('Subscription', 'Subscription Plan feature coming soon!');
         break;
       case 'logout':
-        await handleLogout();
+        // Actually perform logout
+        try {
+          await authLogout();
+          router.replace('/auth/login');
+        } catch (error) {
+          console.error('Logout failed:', error);
+          Alert.alert('Error', 'Failed to logout. Please try again.');
+        }
         break;
       default:
         console.log('Unknown action:', action);
@@ -366,41 +372,7 @@ export default function DashboardScreen() {
         />
 
         {/* Permission Modal */}
-        <Modal
-          visible={showPermissionModal}
-          transparent
-          animationType="fade"
-          statusBarTranslucent
-        >
-          <View style={styles.permissionOverlay}>
-            <View style={styles.permissionModal}>
-              <View style={styles.permissionHeader}>
-                <Text style={styles.permissionTitle}>Welcome to PrimeForm! 🎉</Text>
-                <Text style={styles.permissionSubtitle}>
-                  To provide you with personalized diet and workout plans, we need to collect some information about you.
-                </Text>
-              </View>
-              
-              <View style={styles.permissionButtons}>
-                <TouchableOpacity 
-                  style={styles.permissionStartButton}
-                  onPress={handlePermissionStart}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.permissionStartButtonText}>Start</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.permissionCancelButton}
-                  onPress={handlePermissionCancel}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.permissionCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* Removed Permission Modal */}
 
         {/* User Info Modal */}
         <UserInfoModal
@@ -480,63 +452,14 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100, // Space for bottom navigation
   },
-  permissionOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  permissionModal: {
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    width: '80%',
-    alignItems: 'center',
-  },
-  permissionHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  permissionTitle: {
-    color: colors.white,
-    fontSize: 24,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
-  },
-  permissionSubtitle: {
-    color: colors.mutedText,
-    fontSize: typography.body,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  permissionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginTop: spacing.md,
-  },
-  permissionStartButton: {
-    backgroundColor: colors.gold,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  permissionStartButtonText: {
-    color: '#000',
-    fontWeight: '600',
-    fontSize: typography.body,
-  },
-  permissionCancelButton: {
-    backgroundColor: colors.mutedText,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  permissionCancelButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: typography.body,
-  },
+  // Removed permissionOverlay styles
+  // Removed permissionModal styles
+  // Removed permissionHeader styles
+  // Removed permissionTitle styles
+  // Removed permissionSubtitle styles
+  // Removed permissionButtons styles
+  // Removed permissionStartButton styles
+  // Removed permissionStartButtonText styles
+  // Removed permissionCancelButton styles
+  // Removed permissionCancelButtonText styles
 });

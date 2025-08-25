@@ -75,6 +75,7 @@ const translations = {
     'sidebar.logout': 'Log Out',
     'sidebar.language': 'Language',
     'sidebar.version': 'Version 1.0.0',
+    'sidebar.profile.details': 'Profile Details',
     
     // Common
     'common.loading': 'Loading Prime Form...',
@@ -82,6 +83,9 @@ const translations = {
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
     'common.save': 'Save',
+    
+    // Brand
+    'brand.primeform': 'PRIMEFORM',
     
     // Validation messages
     'validation.name.required': 'Name is required',
@@ -170,14 +174,139 @@ const translations = {
     'onboarding.cancel': 'Cancel',
     
     // Workout Page
-    'workout.page.subtitle': 'Track your workouts and build strength',
-    'workout.page.comingSoon': 'Workout tracking coming soon!',
-    'workout.page.comingSoonDesc': 'We\'re building amazing workout features to help you track your progress and achieve your fitness goals.',
     
     // Diet Page
-    'diet.page.subtitle': 'Plan your meals and track nutrition',
-    'diet.page.comingSoon': 'Diet planning coming soon!',
-    'diet.page.comingSoonDesc': 'We\'re building comprehensive diet tracking features to help you maintain a healthy and balanced nutrition plan.',
+    'diet.page.title': 'Diet Plan',
+    'diet.page.subtitle': 'Your personalized nutrition guide',
+    'diet.page.generate.title': 'Generate Your Diet Plan',
+    'diet.page.generate.description': 'Click to provide your information and get a personalized diet plan tailored to your goals',
+    'diet.page.generate.button': 'Generate Diet Plan',
+    'diet.page.features.title': 'What You\'ll Get',
+    'diet.page.features.personalized.title': 'Personalized Plans',
+    'diet.page.features.personalized.text': 'Custom nutrition plans based on your body, goals, and preferences',
+    'diet.page.features.nutrition.title': 'Nutrition Analysis',
+    'diet.page.features.nutrition.text': 'Detailed breakdown of calories, macros, and micronutrients',
+    'diet.page.features.meals.title': 'Meal Suggestions',
+    'diet.page.features.meals.text': 'Delicious meal ideas that fit your dietary requirements',
+    'diet.page.features.tracking.title': 'Progress Tracking',
+    'diet.page.features.tracking.text': 'Monitor your nutrition journey and see results',
+    'diet.page.content.title': 'Your Personalized Diet Plan',
+    'diet.page.content.description': 'Based on your profile, your personalized diet plan will appear here with detailed meal suggestions, nutrition information, and progress tracking.',
+    
+    // Workout Page
+    'workout.page.title': 'Workout Plan',
+    'workout.page.subtitle': 'Your personalized fitness guide',
+    'workout.page.generate.title': 'Generate Your Workout Plan',
+    'workout.page.generate.description': 'Click to provide your information and get a personalized workout plan designed for your fitness level',
+    'workout.page.generate.button': 'Generate Workout Plan',
+    'workout.page.features.title': 'What You\'ll Get',
+    'workout.page.features.personalized.title': 'Personalized Plans',
+    'workout.page.features.personalized.text': 'Custom workout routines based on your fitness level and goals',
+    'workout.page.features.progress.title': 'Progress Tracking',
+    'workout.page.features.progress.text': 'Monitor your strength gains and fitness improvements',
+    'workout.page.features.exercises.title': 'Exercise Library',
+    'workout.page.features.exercises.text': 'Access to hundreds of exercises with proper form guides',
+    'workout.page.features.tracking.title': 'Workout Logging',
+    'workout.page.features.tracking.text': 'Track your workouts and maintain consistency',
+    'workout.page.content.title': 'Your Personalized Workout Plan',
+    'workout.page.content.description': 'Based on your profile, your personalized workout plan will appear here with exercise routines, sets, reps, and progress tracking.',
+    
+    // Diet & Workout Page Content
+    'diet.hero.title': 'Smart Diet Planning',
+    'diet.hero.subtitle': 'Personalized nutrition plans tailored to your goals and lifestyle',
+    'diet.generate.button': 'Generate My Diet Plan',
+    'diet.features.title': 'Why Choose Our Diet Plans?',
+    'diet.features.personalized.title': 'Personalized',
+    'diet.features.personalized.text': 'Tailored to your body type, goals, and dietary preferences',
+    'diet.features.science.title': 'Science-Based',
+    'diet.features.science.text': 'Backed by nutrition science and expert recommendations',
+    'diet.features.delicious.title': 'Delicious',
+    'diet.features.delicious.text': 'Flavorful recipes that make healthy eating enjoyable',
+    'diet.features.tracking.title': 'Easy Tracking',
+    'diet.features.tracking.text': 'Monitor your progress and stay accountable',
+    'diet.magic.message': 'You are one click away from magic! ✨',
+    
+    'workout.hero.title': 'Smart Workout Plans',
+    'workout.hero.subtitle': 'Personalized training programs designed for your fitness level and goals',
+    'workout.generate.button': 'Create My Workout Plan',
+    'workout.features.title': 'Why Choose Our Workout Plans?',
+    'workout.features.personalized.title': 'Personalized',
+    'workout.features.personalized.text': 'Tailored to your fitness level, goals, and available equipment',
+    'workout.features.progressive.title': 'Progressive',
+    'workout.features.progressive.text': 'Gradually increase intensity to avoid plateaus and injuries',
+    'workout.features.varied.title': 'Varied',
+    'workout.features.varied.text': 'Mix of strength, cardio, and flexibility for balanced fitness',
+    'workout.features.trackable.title': 'Trackable',
+    'workout.features.trackable.text': 'Monitor progress and stay motivated with detailed analytics',
+    'workout.magic.message': 'You are one click away from magic! ✨',
+    
+    // Dropdown Options
+    'dropdown.select.country': '🌍 Select your country',
+    'dropdown.select.gender': '👤 Select gender',
+    'dropdown.select.goal': '🎯 Select your goal',
+    'dropdown.select.occupation': '💼 Select occupation type',
+    'dropdown.select.equipment': '🏋️ Select available equipment',
+    'dropdown.select.diet': '🥗 Select diet preference',
+    
+    // Body Goals
+    'goal.lose.fat': '🔥 Lose Fat',
+    'goal.gain.muscle': '💪 Gain Muscle',
+    'goal.maintain.weight': '⚖️ Maintain Weight',
+    'goal.general.training': '🏃‍♂️ General Training',
+    'goal.improve.fitness': '🌟 Improve Fitness',
+    
+    // Occupation Types
+    'occupation.sedentary': '🪑 Sedentary Desk Job',
+    'occupation.active': '🏃‍♂️ Active Job',
+    'occupation.shift': '⏰ Shift Worker',
+    'occupation.student': '📚 Student',
+    'occupation.retired': '🌅 Retired',
+    'occupation.other': '🔧 Other',
+    
+    // Equipment Options
+    'equipment.none': '❌ None',
+    'equipment.dumbbells': '💪 Basic Dumbbells',
+    'equipment.bands': '🎯 Resistance Bands',
+    'equipment.home.gym': '🏠 Home Gym',
+    'equipment.full.gym': '🏢 Full Gym Access',
+    
+    // Diet Preferences
+    'diet.vegetarian': '🥬 Vegetarian',
+    'diet.non.vegetarian': '🍖 Non-Vegetarian',
+    'diet.vegan': '🌱 Vegan',
+    'diet.flexitarian': '🥄 Flexitarian',
+    'diet.pescatarian': '🐟 Pescatarian',
+    
+    // Validation Messages
+    'validation.country.required': 'Please select your country',
+    'validation.age.required': 'Please enter your age',
+    'validation.gender.required': 'Please select your gender',
+    'validation.height.required': 'Please enter your height',
+    'validation.weight.required': 'Please enter your current weight',
+    'validation.goal.required': 'Please select your body goal',
+    'validation.occupation.required': 'Please select your occupation type',
+    'validation.equipment.required': 'Please select your available equipment',
+    'validation.diet.required': 'Please select your diet preference',
+    
+    // Input Placeholders
+    'placeholder.height': '175 cm or 5\'8 inches',
+    'placeholder.weight': '70 kg or 154 lbs',
+    'placeholder.age': '25',
+    'placeholder.medical': 'e.g., diabetes, hypertension, PCOS, heart issues (or none)',
+    
+    // Step Titles
+    'step.personal.info': 'Personal Information',
+    'step.physical.info': 'Physical Information',
+    'step.lifestyle.health': 'Lifestyle & Health',
+    'step.diet.preferences': 'Diet Preferences',
+    
+    // Alert Messages
+    'alert.incomplete.title': 'Incomplete Information',
+    'alert.incomplete.message': 'Please fill in all required fields in {step} before continuing.',
+    'alert.missing.title': 'Missing Information',
+    'alert.missing.message': 'Please fill in all required fields before completing.',
+    'alert.invalid.age': 'Invalid Age',
+    'alert.invalid.age.message': 'Please enter a valid age between 13 and 120 years.',
     
     // User Info Modal
     'userinfo.title': 'Personalize Your Experience',
@@ -212,6 +341,49 @@ const translations = {
     'userinfo.lifestyle.health': 'Lifestyle & Health',
     'userinfo.diet.preferences': 'Diet Preferences',
     'userinfo.select.diet': 'Select your diet preference',
+    
+    // Requirements Panel
+    'requirements.title': 'Email & Password Requirements',
+    'requirements.email.section': '📧 Email Format:',
+    'requirements.email.valid': '• Must be a valid email (e.g., user@gmail.com)',
+    'requirements.email.noSpaces': '• Cannot contain spaces',
+    'requirements.password.section': '🔒 Password Requirements:',
+    'requirements.password.length': '• At least 6 characters long',
+    'requirements.password.letter': '• Contains at least one letter (a-z, A-Z)',
+    'requirements.password.number': '• Contains at least one number (0-9)',
+    
+    // Common User
+    'common.user': 'User',
+    
+    // Gender Options
+    'gender.select': 'Select your gender',
+    'gender.male': 'Male',
+    'gender.female': 'Female',
+    'gender.other': 'Other',
+    
+    // Permission Modal
+    'permission.title': 'Welcome to PrimeForm! 🎉',
+    'permission.subtitle': 'To provide you with personalized diet and workout plans, we need to collect some information about you.',
+    'permission.start': 'Start',
+    'permission.cancel': 'Cancel',
+
+    // Profile Page
+    'profile.noProfile.title': 'Complete Your Profile',
+    'profile.noProfile.text': 'To get personalized diet and workout plans, we need some information about you.',
+    'profile.noProfile.button': 'Create Profile',
+    'profile.sections.personal': 'Personal Information',
+    'profile.sections.goals': 'Goals & Preferences',
+    'profile.sections.lifestyle': 'Lifestyle & Health',
+    'profile.fields.country': 'Country',
+    'profile.fields.age': 'Age',
+    'profile.fields.gender': 'Gender',
+    'profile.fields.height': 'Height',
+    'profile.fields.weight': 'Current Weight',
+    'profile.fields.bodyGoal': 'Body Goal',
+    'profile.fields.dietPreference': 'Diet Preference',
+    'profile.fields.occupation': 'Occupation',
+    'profile.fields.equipment': 'Available Equipment',
+    'profile.fields.medical': 'Medical Conditions',
   },
   ur: {
     // Auth screens
@@ -266,6 +438,7 @@ const translations = {
     'sidebar.logout': 'لاگ آؤٹ',
     'sidebar.language': 'زبان',
     'sidebar.version': 'ورژن 1.0.0',
+    'sidebar.profile.details': 'پروفائل کی تفصیلات',
     
     // Common
     'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
@@ -273,6 +446,9 @@ const translations = {
     'common.retry': 'دوبارہ کوشش',
     'common.cancel': 'منسوخ',
     'common.save': 'محفوظ',
+    
+    // Brand
+    'brand.primeform': 'پرائم فارم',
     
     // Validation messages
     'validation.name.required': 'نام ضروری ہے',
@@ -365,10 +541,7 @@ const translations = {
     'workout.page.comingSoon': 'ورکاؤٹ ٹریکنگ جلد آ رہی ہے!',
     'workout.page.comingSoonDesc': 'ہم آپ کی پیش رفت کو ٹریک کرنے اور آپ کے فٹنس اہداف کو حاصل کرنے میں مدد کے لیے شاندار ورکاؤٹ فیچرز بنا رہے ہیں۔',
     
-    // Diet Page
-    'diet.page.subtitle': 'اپنے کھانے کی منصوبہ بندی کریں اور غذائیت کو ٹریک کریں',
-    'diet.page.comingSoon': 'ڈائٹ پلاننگ جلد آ رہی ہے!',
-    'diet.page.comingSoonDesc': 'ہم آپ کو صحت مند اور متوازن غذائیت کے پلان کو برقرار رکھنے میں مدد کے لیے جامع ڈائٹ ٹریکنگ فیچرز بنا رہے ہیں۔',
+
     
     // User Info Modal
     'userinfo.title': 'اپنی تجربہ کو پروردہ کریں',
@@ -403,6 +576,146 @@ const translations = {
     'userinfo.lifestyle.health': 'لافک اور صحت',
     'userinfo.diet.preferences': 'خوراک پسندیاں',
     'userinfo.select.diet': 'اپنی خوراک پسندی دیکھیں',
+    
+    // Requirements Panel
+    'requirements.title': 'ای میل اور پاس ورڈ کی ضروریات',
+    'requirements.email.section': '📧 ای میل فارمیٹ:',
+    'requirements.email.valid': '• صحیح ای میل (جیسے user@gmail.com) ہونا چاہیے',
+    'requirements.email.noSpaces': '• فاصلے شامل نہیں ہونا چاہیے',
+    'requirements.password.section': '🔒 پاس ورڈ کی ضروریات:',
+    'requirements.password.length': '• کم از کم 6 حروف لمبا ہونا چاہیے',
+    'requirements.password.letter': '• کم از کم ایک لیٹر (a-z, A-Z) شامل ہونا چاہیے',
+    'requirements.password.number': '• کم از کم ایک نمبر (0-9) شامل ہونا چاہیے',
+    
+    // Common User
+    'common.user': 'صارف',
+    
+    // Gender Options
+    'gender.select': 'اپنا جنس منتخب کریں',
+    'gender.male': 'مرد',
+    'gender.female': 'خوراں',
+    'gender.other': 'دیگر',
+    
+    // Permission Modal
+    'permission.title': 'پرائم فارم میں خوش آمدید! 🎉',
+    'permission.subtitle': 'آپ کو صرف پروردہ خوراک اور ورکاؤٹ پلان کے لیے آپ کے لیے کچھ معلومات لےنا پڑے گی۔',
+    'permission.start': 'شروع کریں',
+    'permission.cancel': 'منسوخ',
+
+    // Profile Page
+    'profile.noProfile.title': 'اپنی پروفائل کو پروردہ کریں',
+    'profile.noProfile.text': 'آپ کو صرف پروردہ خوراک اور ورکاؤٹ پلان کے لیے آپ کے لیے کچھ معلومات لےنا پڑے گی۔',
+    'profile.noProfile.button': 'پروفائل بنائیں',
+    'profile.sections.personal': 'صرف پروفائل',
+    'profile.sections.goals': 'اعداد اور پسندیاں',
+    'profile.sections.lifestyle': 'لافک اور صحت',
+    'profile.fields.country': 'ممالک',
+    'profile.fields.age': 'عمر',
+    'profile.fields.gender': 'جنس',
+    'profile.fields.height': 'قد',
+    'profile.fields.weight': 'ابھی کی وزن',
+    'profile.fields.bodyGoal': 'جسم کا مقصد',
+    'profile.fields.dietPreference': 'خوراک پسندی',
+    'profile.fields.occupation': 'کام',
+    'profile.fields.equipment': 'موجودہ ادائیگی',
+    'profile.fields.medical': 'میڈیکل سمندریات',
+    
+    // Diet & Workout Page Content
+    'diet.hero.title': 'ذہین ڈائٹ پلاننگ',
+    'diet.hero.subtitle': 'آپ کے اہداف اور طرز زندگی کے مطابق ذاتی غذائی پلان',
+    'diet.generate.button': 'میرا ڈائٹ پلان بنائیں',
+    'diet.features.title': 'ہمارے ڈائٹ پلانز کیوں منتخب کریں؟',
+    'diet.features.personalized.title': 'ذاتی',
+    'diet.features.personalized.text': 'آپ کے جسم کی قسم، اہداف اور غذائی ترجیحات کے مطابق',
+    'diet.features.science.title': 'سائنس پر مبنی',
+    'diet.features.science.text': 'غذائیت کی سائنس اور ماہرین کی سفارشات کی حمایت',
+    'diet.features.delicious.title': 'لذیذ',
+    'diet.features.delicious.text': 'ذائقہ دار ترکیبیں جو صحت مند کھانے کو لطف اندوز بناتی ہیں',
+    'diet.features.tracking.title': 'آسان ٹریکنگ',
+    'diet.features.tracking.text': 'اپنی پیش رفت کی نگرانی کریں اور ذمہ دار رہیں',
+    'diet.magic.message': 'آپ جادو سے صرف ایک کلک دور ہیں! ✨',
+    
+    'workout.hero.title': 'ذہین ورکاؤٹ پلانز',
+    'workout.hero.subtitle': 'آپ کی فٹنس لیول اور اہداف کے لیے ڈیزائن کردہ ذاتی تربیتی پروگرام',
+    'workout.generate.button': 'میرا ورکاؤٹ پلان بنائیں',
+    'workout.features.title': 'ہمارے ورکاؤٹ پلانز کیوں منتخب کریں؟',
+    'workout.features.personalized.title': 'ذاتی',
+    'workout.features.personalized.text': 'آپ کی فٹنس لیول، اہداف اور دستیاب سامان کے مطابق',
+    'workout.features.progressive.title': 'ترقی پسند',
+    'workout.features.progressive.text': 'پلیٹیوز اور چوٹوں سے بچنے کے لیے شدت میں بتدریج اضافہ',
+    'workout.features.varied.title': 'متنوع',
+    'workout.features.varied.text': 'متوازن فٹنس کے لیے طاقت، کارڈیو اور لچک کا مکس',
+    'workout.features.trackable.title': 'ٹریک کرنے کے قابل',
+    'workout.features.trackable.text': 'تفصیلی تجزیات کے ساتھ پیش رفت کی نگرانی کریں اور حوصلہ برقرار رکھیں',
+    'workout.magic.message': 'آپ جادو سے صرف ایک کلک دور ہیں! ✨',
+    
+    // Dropdown Options
+    'dropdown.select.country': '🌍 اپنا ملک منتخب کریں',
+    'dropdown.select.gender': '👤 جنس منتخب کریں',
+    'dropdown.select.goal': '🎯 اپنا مقصد منتخب کریں',
+    'dropdown.select.occupation': '💼 کام کی قسم منتخب کریں',
+    'dropdown.select.equipment': '🏋️ دستیاب سامان منتخب کریں',
+    'dropdown.select.diet': '🥗 غذائی ترجیح منتخب کریں',
+    
+    // Body Goals
+    'goal.lose.fat': '🔥 چربی کم کریں',
+    'goal.gain.muscle': '💪 پٹھے بنائیں',
+    'goal.maintain.weight': '⚖️ وزن برقرار رکھیں',
+    'goal.general.training': '🏃‍♂️ عمومی تربیت',
+    'goal.improve.fitness': '🌟 فٹنس بہتر کریں',
+    
+    // Occupation Types
+    'occupation.sedentary': '🪑 بیٹھے ہوئے ڈیسک کا کام',
+    'occupation.active': '🏃‍♂️ متحرک کام',
+    'occupation.shift': '⏰ شفٹ ورکر',
+    'occupation.student': '📚 طالب علم',
+    'occupation.retired': '🌅 ریٹائرڈ',
+    'occupation.other': '🔧 دیگر',
+    
+    // Equipment Options
+    'equipment.none': '❌ کوئی نہیں',
+    'equipment.dumbbells': '💪 بنیادی ڈمبلز',
+    'equipment.bands': '🎯 مزاحمتی بینڈز',
+    'equipment.home.gym': '🏠 گھریلو جم',
+    'equipment.full.gym': '🏢 مکمل جم تک رسائی',
+    
+    // Diet Preferences
+    'diet.vegetarian': '🥬 سبزی خور',
+    'diet.non.vegetarian': '🍖 سبزی خور نہیں',
+    'diet.vegan': '🌱 ویگن',
+    'diet.flexitarian': '🥄 فلیکسیٹیرین',
+    'diet.pescatarian': '🐟 پیسکیٹیرین',
+    
+    // Validation Messages
+    'validation.country.required': 'برائے کرم اپنا ملک منتخب کریں',
+    'validation.age.required': 'برائے کرم اپنی عمر درج کریں',
+    'validation.gender.required': 'برائے کرم اپنی جنس منتخب کریں',
+    'validation.height.required': 'برائے کرم اپنی قد درج کریں',
+    'validation.weight.required': 'برائے کرم اپنا موجودہ وزن درج کریں',
+    'validation.goal.required': 'برائے کرم اپنا جسمانی مقصد منتخب کریں',
+    'validation.occupation.required': 'برائے کرم اپنی کام کی قسم منتخب کریں',
+    'validation.equipment.required': 'برائے کرم اپنا دستیاب سامان منتخب کریں',
+    'validation.diet.required': 'برائے کرم اپنی غذائی ترجیح منتخب کریں',
+    
+    // Step Titles
+    'step.personal.info': 'ذاتی معلومات',
+    'step.physical.info': 'جسمانی معلومات',
+    'step.lifestyle.health': 'طرز زندگی اور صحت',
+    'step.diet.preferences': 'غذائی ترجیحات',
+    
+    // Alert Messages
+    'alert.incomplete.title': 'نامکمل معلومات',
+    'alert.incomplete.message': 'برائے کرم جاری رکھنے سے پہلے {step} میں تمام ضروری فیلڈز پُر کریں۔',
+    'alert.missing.title': 'غائب معلومات',
+    'alert.missing.message': 'برائے کرم مکمل کرنے سے پہلے تمام ضروری فیلڈز پُر کریں۔',
+    'alert.invalid.age': 'غلط عمر',
+    'alert.invalid.age.message': 'برائے کرم 13 سے 120 سال کے درمیان صحیح عمر درج کریں۔',
+    
+    // Input Placeholders
+    'placeholder.height': '175 سینٹی میٹر یا 5\'8 انچ',
+    'placeholder.weight': '70 کلوگرام یا 154 پاؤنڈ',
+    'placeholder.age': '25',
+    'placeholder.medical': 'جیسے ذیابیطس، ہائی بلڈ پریشر، PCOS، دل کے مسائل (یا کوئی نہیں)',
   },
 };
 

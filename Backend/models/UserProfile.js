@@ -33,12 +33,14 @@ const userProfileSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  goalWeight: {
-    type: String
-  },
   bodyGoal: {
     type: String,
-    enum: ['Lose Fat', 'Gain Muscle', 'Maintain Weight', 'General Training', 'Improve Fitness'],
+    enum: [
+      // English values
+      'Lose Fat', 'Gain Muscle', 'Maintain Weight', 'General Training', 'Improve Fitness',
+      // Urdu values
+      'چربی کم کریں', 'پٹھے بنائیں', 'وزن برقرار رکھیں', 'عمومی تربیت', 'فٹنس بہتر کریں'
+    ],
     required: true
   },
   
@@ -49,17 +51,32 @@ const userProfileSchema = new mongoose.Schema({
   },
   occupationType: {
     type: String,
-    enum: ['Sedentary Desk Job', 'Active Job', 'Shift Worker', 'Student', 'Retired', 'Other']
+    enum: [
+      // English values
+      'Sedentary Desk Job', 'Active Job', 'Shift Worker', 'Student', 'Retired', 'Other',
+      // Urdu values
+      'بیٹھے ہوئے ڈیسک کا کام', 'متحرک کام', 'شفٹ ورکر', 'طالب علم', 'ریٹائرڈ', 'دیگر'
+    ]
   },
   availableEquipment: {
     type: String,
-    enum: ['None', 'Basic Dumbbells', 'Resistance Bands', 'Home Gym', 'Full Gym Access']
+    enum: [
+      // English values
+      'None', 'Basic Dumbbells', 'Resistance Bands', 'Home Gym', 'Full Gym Access',
+      // Urdu values
+      'کوئی نہیں', 'بنیادی ڈمبلز', 'مزاحمتی بینڈز', 'گھریلو جم', 'مکمل جم تک رسائی'
+    ]
   },
   
   // Diet Preferences
   dietPreference: {
     type: String,
-    enum: ['Vegetarian', 'Non-Vegetarian', 'Vegan', 'Flexitarian', 'Pescatarian']
+    enum: [
+      // English values
+      'Vegetarian', 'Non-Vegetarian', 'Vegan', 'Flexitarian', 'Pescatarian',
+      // Urdu values
+      'سبزی خور', 'سبزی خور نہیں', 'ویگن', 'فلیکسیٹیرین', 'پیسکیٹیرین'
+    ]
   },
   
   // Metadata

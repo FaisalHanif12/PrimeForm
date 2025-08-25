@@ -110,6 +110,59 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Text style={styles.userEmail}>{userEmail}</Text>
               </View>
             </View>
+            
+            {/* User Profile Details */}
+            {userInfo && (
+              <View style={styles.profileDetails}>
+                <Text style={styles.profileDetailsTitle}>{t('sidebar.profile.details')}</Text>
+                
+                {/* Personal Info */}
+                <View style={styles.detailRow}>
+                  <Ionicons name="location-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.country}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="calendar-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.age} {t('userinfo.years')}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="person-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.gender}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="resize-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.height}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="fitness-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.currentWeight}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="flag-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.bodyGoal}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="restaurant-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.dietPreference}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="briefcase-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.occupationType}</Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Ionicons name="barbell-outline" size={16} color={colors.gold} />
+                  <Text style={styles.detailText}>{userInfo.availableEquipment}</Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Menu Items */}
@@ -324,5 +377,31 @@ const styles = StyleSheet.create({
   },
   activeLanguageText: {
     color: colors.gold,
+  },
+  
+  // Profile Details Styles
+  profileDetails: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  profileDetailsTitle: {
+    fontSize: typography.subtitle,
+    fontWeight: '600',
+    color: colors.white,
+    marginBottom: spacing.sm,
+    fontFamily: fonts.heading,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  detailText: {
+    fontSize: typography.small,
+    color: colors.mutedText,
+    marginLeft: spacing.sm,
+    fontFamily: fonts.body,
+    flex: 1,
   },
 });

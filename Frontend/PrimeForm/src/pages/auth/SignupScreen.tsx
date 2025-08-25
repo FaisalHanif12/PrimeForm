@@ -362,24 +362,24 @@ export default function SignupScreen() {
               {showRequirements && (
                 <Animated.View entering={FadeInDown}>
                   <View style={styles.requirementsPanel}>
-                    <Text style={styles.requirementsTitle}>Email & Password Requirements</Text>
+                    <Text style={styles.requirementsTitle}>{t('requirements.title')}</Text>
 
                     <View style={styles.requirementSection}>
-                      <Text style={styles.sectionTitle}>📧 Email Format:</Text>
-                      <Text style={styles.requirementText}>• Must be a valid email (e.g., user@gmail.com)</Text>
-                      <Text style={styles.requirementText}>• Cannot contain spaces</Text>
+                      <Text style={styles.sectionTitle}>{t('requirements.email.section')}</Text>
+                      <Text style={styles.requirementText}>{t('requirements.email.valid')}</Text>
+                      <Text style={styles.requirementText}>{t('requirements.email.noSpaces')}</Text>
                     </View>
 
                     <View style={styles.requirementSection}>
-                      <Text style={styles.sectionTitle}>🔒 Password Requirements:</Text>
+                      <Text style={styles.sectionTitle}>{t('requirements.password.section')}</Text>
                       <Text style={[styles.requirementText, password.length >= 6 && styles.requirementMet]}>
-                        • At least 6 characters long
+                        {t('requirements.password.length')}
                       </Text>
                       <Text style={[styles.requirementText, /(?=.*[a-zA-Z])/.test(password) && styles.requirementMet]}>
-                        • Contains at least one letter (a-z, A-Z)
+                        {t('requirements.password.letter')}
                       </Text>
                       <Text style={[styles.requirementText, /(?=.*\d)/.test(password) && styles.requirementMet]}>
-                        • Contains at least one number (0-9)
+                        {t('requirements.password.number')}
                       </Text>
                     </View>
                   </View>
