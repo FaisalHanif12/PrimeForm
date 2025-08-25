@@ -106,7 +106,7 @@ exports.updateProfileField = async (req, res) => {
     
     // Validate field name
     const allowedFields = [
-      'country', 'age', 'gender', 'height', 'currentWeight', 'goalWeight',
+      'country', 'age', 'gender', 'height', 'currentWeight',
       'bodyGoal', 'medicalConditions', 'occupationType', 'availableEquipment', 'dietPreference'
     ];
     

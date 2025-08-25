@@ -1,132 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { colors, spacing, typography, fonts } from '../../src/theme/colors';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
+import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
-import DecorativeBackground from '../../src/components/DecorativeBackground';
+import userProfileService from '../../src/services/userProfileService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
-import OnboardingModal from '../../src/components/OnboardingModal';
-import UserInfoModal from '../../src/components/UserInfoModal';
 import Sidebar from '../../src/components/Sidebar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import UserInfoModal from '../../src/components/UserInfoModal';
+import DecorativeBackground from '../../src/components/DecorativeBackground';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function WorkoutScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
-  const [userInfo, setUserInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
-    checkOnboardingStatus();
     loadUserInfo();
-    checkUserInfoStatus();
   }, []);
-
-  // Check user info status every time page comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      checkUserInfoStatus();
-      return () => {
-        // Cleanup when page loses focus
-        // This ensures modal state is properly managed
-      };
-    }, [])
-  );
-
-  const checkOnboardingStatus = async () => {
-    try {
-      const hasSeenDashboardOnboarding = await AsyncStorage.getItem('primeform_dashboard_onboarding_seen');
-      const hasSeenWorkoutOnboarding = await AsyncStorage.getItem('primeform_workout_onboarding_seen');
-      
-      // Show modal if user cancelled dashboard onboarding AND hasn't started workout onboarding
-      if (hasSeenDashboardOnboarding === 'cancelled' && hasSeenWorkoutOnboarding !== 'started') {
-        setShowOnboarding(true);
-      }
-    } catch (error) {
-      console.error('Failed to check onboarding status:', error);
-    }
-  };
-
-  const checkUserInfoStatus = async () => {
-    try {
-      const userInfoCompleted = await AsyncStorage.getItem('primeform_user_info_completed');
-      const userInfoCancelled = await AsyncStorage.getItem('primeform_user_info_cancelled');
-      const permissionCancelled = await AsyncStorage.getItem('primeform_permission_modal_seen');
-      
-      // Show user info modal if:
-      // 1. User hasn't completed user info collection, AND
-      // 2. Either user previously cancelled user info collection OR user cancelled permission modal
-      if (!userInfoCompleted && (userInfoCancelled === 'true' || permissionCancelled === 'cancelled')) {
-        // Small delay to ensure smooth modal appearance
-        setTimeout(() => {
-          setShowUserInfoModal(true);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Failed to check user info status:', error);
-    }
-  };
-
-  const handleStartOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('primeform_workout_onboarding_seen', 'started');
-      setShowOnboarding(false);
-      // Show user info collection modal
-      setShowUserInfoModal(true);
-    } catch (error) {
-      console.error('Failed to save onboarding status:', error);
-    }
-  };
-
-  const handleCancelOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('primeform_workout_onboarding_seen', 'cancelled');
-      setShowOnboarding(false);
-      // After cancelling onboarding, check if we should show user info modal
-      checkUserInfoStatus();
-    } catch (error) {
-      console.error('Failed to save onboarding status:', error);
-    }
-  };
-
-  const handleCompleteUserInfo = async (userInfoData: any) => {
-    try {
-      // Save user info to AsyncStorage for now (will be replaced with API call)
-      await AsyncStorage.setItem('primeform_user_info', JSON.stringify(userInfoData));
-      await AsyncStorage.setItem('primeform_user_info_completed', 'true');
-      await AsyncStorage.removeItem('primeform_user_info_cancelled'); // Remove cancellation flag
-      setUserInfo(userInfoData);
-      setShowUserInfoModal(false);
-      console.log('User info completed:', userInfoData);
-    } catch (error) {
-      console.error('Failed to save user info:', error);
-    }
-  };
-
-  const handleCancelUserInfo = async () => {
-    try {
-      // Mark that user cancelled user info collection
-      await AsyncStorage.setItem('primeform_user_info_cancelled', 'true');
-      setShowUserInfoModal(false);
-    } catch (error) {
-      console.error('Failed to save cancellation status:', error);
-    }
-  };
-
-  const loadUserInfo = async () => {
-    try {
-      const savedUserInfo = await AsyncStorage.getItem('primeform_user_info');
-      if (savedUserInfo) {
-        setUserInfo(JSON.parse(savedUserInfo));
-      }
-    } catch (error) {
-      console.error('Failed to load user info:', error);
-    }
-  };
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
@@ -135,23 +32,90 @@ export default function WorkoutScreen() {
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        console.log('Profile - feature coming soon');
+        router.push('/(dashboard)');
         break;
       case 'edit_profile':
-        // Show user info modal for editing
         setShowUserInfoModal(true);
         break;
       case 'settings':
-        console.log('Settings - feature coming soon');
+        Alert.alert('Settings', 'Settings feature coming soon!');
         break;
       case 'subscription':
-        console.log('Subscription Plan - feature coming soon');
+        Alert.alert('Subscription', 'Subscription Plan feature coming soon!');
         break;
       case 'logout':
-        console.log('Logout - feature coming soon');
+        try {
+          const { authService } = await import('../../src/services/authService');
+          await authService.logout();
+          router.replace('/auth/login');
+        } catch (error) {
+          console.error('Logout failed:', error);
+          Alert.alert('Error', 'Failed to logout. Please try again.');
+        }
         break;
       default:
         console.log('Unknown action:', action);
+    }
+  };
+
+  const handleGenerateClick = () => {
+    if (userInfo) {
+      // User already has profile, show success message
+      Alert.alert('Success', 'Your workout plan is being generated! This feature will be available soon.');
+    } else {
+      // User needs to create profile first
+      setShowUserInfoModal(true);
+    }
+  };
+
+  const handleCompleteUserInfo = async (userInfoData: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(userInfoData);
+      
+      if (response.success) {
+        setUserInfo(userInfoData);
+        setShowUserInfoModal(false);
+        console.log('User profile saved to database:', response.data);
+        Alert.alert('Success', 'Profile created! Now generating your workout plan...');
+        // Here you would typically call the workout plan generation API
+        setTimeout(() => {
+          Alert.alert('Success', 'Your personalized workout plan is ready! This feature will be available soon.');
+        }, 2000);
+      } else {
+        console.error('Failed to save to database:', response.message);
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to save user info:', error);
+      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
+    }
+  };
+
+  const handleCancelUserInfo = async () => {
+    try {
+      setShowUserInfoModal(false);
+    } catch (error) {
+      console.error('Failed to handle cancellation:', error);
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      
+      if (response.success) {
+        if (response.data) {
+          setUserInfo(response.data);
+          console.log('User profile loaded:', response.data);
+        } else {
+          console.log('No profile found for new user:', response.message);
+          setUserInfo(null);
+        }
+      } else {
+        console.error('Failed to load user info from backend:', response.message);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
     }
   };
 
@@ -165,66 +129,123 @@ export default function WorkoutScreen() {
     }
   };
 
+
+
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
         <DashboardHeader 
-          userName="User"
+          userName={t('common.user')}
           onProfilePress={handleProfilePress}
           onNotificationPress={() => console.log('Notifications pressed')}
           notificationCount={0}
         />
 
-        {/* Content */}
         <ScrollView 
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Page Title */}
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.pageHeader}>
-            <Text style={styles.pageTitle}>{t('nav.workout')}</Text>
-            <Text style={styles.pageSubtitle}>{t('workout.page.subtitle')}</Text>
+          {/* Hero Section with Gradient */}
+          <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
+            <LinearGradient
+              colors={['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.05)']}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroContent}>
+                <View style={styles.heroIconContainer}>
+                  <Text style={styles.heroIcon}>🏋️</Text>
+                </View>
+                <Text style={styles.heroTitle}>{t('workout.hero.title')}</Text>
+                <Text style={styles.heroSubtitle}>
+                  {t('workout.hero.subtitle')}
+                </Text>
+              </View>
+            </LinearGradient>
           </Animated.View>
 
-          {/* Simple Content */}
-          <Animated.View entering={FadeInUp.delay(200)} style={styles.simpleContainer}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoEmoji}>🏋️</Text>
+          {/* Quick Actions */}
+          <Animated.View entering={FadeInUp.delay(200)} style={styles.quickActionsSection}>
+            <TouchableOpacity 
+              style={styles.generateButton}
+              onPress={handleGenerateClick}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.gold, colors.goldDark]}
+                style={styles.generateButtonGradient}
+              >
+                <Text style={styles.generateButtonIcon}>✨</Text>
+                <Text style={styles.generateButtonText}>{t('workout.generate.button')}</Text>
+                <Text style={styles.generateButtonArrow}>→</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Features Grid */}
+          <Animated.View entering={FadeInUp.delay(800)} style={styles.featuresSection}>
+            <Text style={styles.sectionTitle}>{t('workout.features.title')}</Text>
+            <View style={styles.featuresGrid}>
+              <Animated.View entering={FadeInLeft.delay(900)} style={styles.featureCard}>
+                <View style={[styles.featureIconContainer, { backgroundColor: '#FF6B6B' }]}>
+                  <Text style={styles.featureIcon}>🎯</Text>
+                </View>
+                <Text style={styles.featureTitle}>{t('workout.features.personalized.title')}</Text>
+                <Text style={styles.featureText}>
+                  {t('workout.features.personalized.text')}
+                </Text>
+              </Animated.View>
+              
+              <Animated.View entering={FadeInRight.delay(900)} style={styles.featureCard}>
+                <View style={[styles.featureIconContainer, { backgroundColor: '#4ECDC4' }]}>
+                  <Text style={styles.featureIcon}>📈</Text>
+                </View>
+                <Text style={styles.featureTitle}>{t('workout.features.progressive.title')}</Text>
+                <Text style={styles.featureText}>
+                  {t('workout.features.progressive.text')}
+                </Text>
+              </Animated.View>
+              
+              <Animated.View entering={FadeInLeft.delay(1000)} style={styles.featureCard}>
+                <View style={[styles.featureIconContainer, { backgroundColor: '#45B7D1' }]}>
+                  <Text style={styles.featureIcon}>🏃‍♂️</Text>
+                </View>
+                <Text style={styles.featureTitle}>{t('workout.features.varied.title')}</Text>
+                <Text style={styles.featureText}>
+                  {t('workout.features.varied.text')}
+                </Text>
+              </Animated.View>
+              
+              <Animated.View entering={FadeInRight.delay(1000)} style={styles.featureCard}>
+                <View style={[styles.featureIconContainer, { backgroundColor: '#96CEB4' }]}>
+                  <Text style={styles.featureIcon}>📱</Text>
+                </View>
+                <Text style={styles.featureTitle}>{t('workout.features.trackable.title')}</Text>
+                <Text style={styles.featureText}>
+                  {t('workout.features.trackable.text')}
+                </Text>
+              </Animated.View>
             </View>
           </Animated.View>
 
-          {/* Extra spacing for bottom navigation */}
+          {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
 
-        {/* Bottom Navigation */}
         <BottomNavigation 
           activeTab="workout"
           onTabPress={handleTabPress}
         />
 
-        {/* Sidebar */}
         <Sidebar
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
-          userName="User"
+          userName={t('common.user')}
           userEmail="user@example.com"
           userInfo={userInfo}
         />
 
-        {/* Onboarding Modal */}
-        <OnboardingModal
-          visible={showOnboarding}
-          onStart={handleStartOnboarding}
-          onCancel={handleCancelOnboarding}
-          title={t('onboarding.title')}
-          description={t('onboarding.description')}
-        />
-
-        {/* User Info Modal */}
         <UserInfoModal
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
@@ -246,50 +267,171 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: 0,
   },
-  pageHeader: {
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.sm,
+  bottomSpacing: {
+    height: 100,
   },
-  pageTitle: {
+  
+  // Hero Section
+  heroSection: {
+    marginBottom: spacing.xl,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  heroGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  heroContent: {
+    alignItems: 'center',
+  },
+  heroIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  heroIcon: {
+    fontSize: 40,
+  },
+  heroTitle: {
     color: colors.white,
     fontSize: 32,
     fontWeight: '700',
     fontFamily: fonts.heading,
+    textAlign: 'center',
     marginBottom: spacing.xs,
   },
-  pageSubtitle: {
-    color: colors.mutedText,
-    fontSize: typography.body,
-    fontFamily: fonts.body,
-    lineHeight: 22,
-  },
-  simpleContainer: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl * 2,
-  },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoEmoji: {
-    fontSize: 60,
-  },
-  simpleMessage: {
+  heroSubtitle: {
     color: colors.mutedText,
     fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
+    paddingHorizontal: spacing.sm,
+  },
+
+  // Quick Actions
+  quickActionsSection: {
+    marginBottom: spacing.xl,
+  },
+  generateButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    alignSelf: 'center',
+    width: '80%',
+  },
+  generateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  bottomSpacing: {
-    height: 100, // Space for bottom navigation
+  generateButtonIcon: {
+    fontSize: 20,
+  },
+  generateButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    flex: 1,
+    textAlign: 'center',
+  },
+  generateButtonArrow: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+
+
+  // Features Section
+  sectionTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  featuresSection: {
+    marginBottom: spacing.xl,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  featureCard: {
+    width: (screenWidth - spacing.lg * 2 - spacing.md) / 2,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    alignItems: 'center',
+    shadowColor: colors.background,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  featureIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  featureIcon: {
+    fontSize: 24,
+  },
+  featureTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  featureText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  
+  // New styles for simplified design
+  magicSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  magicText: {
+    fontSize: typography.subtitle,
+    color: colors.gold,
+    textAlign: 'center',
+    fontFamily: fonts.heading,
+    fontWeight: '600',
+  },
+  generateSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
 });

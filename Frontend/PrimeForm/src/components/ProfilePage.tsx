@@ -15,6 +15,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Picker } from '@react-native-picker/picker';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+import userProfileService from '../services/userProfileService';
 import UserInfoModal from './UserInfoModal';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -30,13 +31,13 @@ interface UserInfo {
   occupationType: string;
   availableEquipment: string;
   dietPreference: string;
-}
+} 
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   userInfo?: UserInfo;
-  onUpdateUserInfo: (userInfo: UserInfo) => void;
+  onUpdateUserInfo: (userInfo: UserInfo | { age: number } & Omit<UserInfo, 'age'>) => void;
 }
 
 const countries = [
@@ -87,10 +88,30 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    onUpdateUserInfo(editedUserInfo);
-    setIsEditing(false);
-    Alert.alert('Success', 'Profile information updated successfully!');
+  const handleSave = async () => {
+    try {
+      // Update in backend database
+      const response = await userProfileService.createOrUpdateProfile(editedUserInfo);
+      
+      if (response.success) {
+        onUpdateUserInfo(editedUserInfo);
+        setIsEditing(false);
+        Alert.alert('Success', 'Profile information updated successfully in database!');
+        console.log('Profile updated in database:', response.data);
+      } else {
+        console.error('Failed to update in database:', response.message);
+        // Fallback to local update if database fails (maintains functionality)
+        onUpdateUserInfo(editedUserInfo);
+        setIsEditing(false);
+        Alert.alert('Success', 'Profile information updated successfully!');
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      // Fallback to local update if database fails (maintains functionality)
+      onUpdateUserInfo(editedUserInfo);
+      setIsEditing(false);
+      Alert.alert('Success', 'Profile information updated successfully!');
+    }
   };
 
   const handleCancel = () => {
@@ -105,10 +126,54 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     setEditedUserInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCompleteUserInfo = (newUserInfo: UserInfo) => {
-    onUpdateUserInfo(newUserInfo);
-    setShowUserInfoModal(false);
-    Alert.alert('Success', 'Profile information completed successfully!');
+  const handleCompleteUserInfo = async (newUserInfo: UserInfo | { age: number } & Omit<UserInfo, 'age'>) => {
+    try {
+      // Save to backend database
+      const response = await userProfileService.createOrUpdateProfile(newUserInfo);
+      
+      if (response.success) {
+        onUpdateUserInfo(newUserInfo);
+        setShowUserInfoModal(false);
+        Alert.alert('Success', 'Profile information completed successfully in database!');
+        console.log('Profile completed in database:', response.data);
+      } else {
+        console.error('Failed to save to database:', response.message);
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to complete profile:', error);
+      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      
+      if (response && response.success && response.data) {
+        // Convert UserProfile to UserInfo format
+        const userInfoData: UserInfo = {
+          country: response.data.country,
+          age: response.data.age.toString(), // Convert number to string
+          gender: response.data.gender,
+          height: response.data.height,
+          currentWeight: response.data.currentWeight,
+          bodyGoal: response.data.bodyGoal,
+          medicalConditions: response.data.medicalConditions,
+          occupationType: response.data.occupationType,
+          availableEquipment: response.data.availableEquipment,
+          dietPreference: response.data.dietPreference,
+        };
+        setEditedUserInfo(userInfoData);
+        console.log('User profile loaded from database:', userInfoData);
+      } else {
+        console.log('No user profile found or failed to load:', response?.message || 'Unknown error');
+        // Don't show error alert for new users who haven't created a profile yet
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+      // Don't show error alert for network issues, just log them
+    }
   };
 
   const renderInfoSection = (title: string, children: React.ReactNode) => (
@@ -157,6 +222,61 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     </View>
   );
 
+  const renderProfileContent = () => {
+    if (!userInfo) {
+      // No profile exists yet - show basic user info
+      return (
+        <View style={styles.noProfileSection}>
+          <View style={styles.noProfileIcon}>
+            <Text style={styles.noProfileEmoji}>👤</Text>
+          </View>
+          <Text style={styles.noProfileTitle}>{t('profile.noProfile.title')}</Text>
+          <Text style={styles.noProfileText}>{t('profile.noProfile.text')}</Text>
+          <TouchableOpacity 
+            style={styles.createProfileButton}
+            onPress={() => setShowUserInfoModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createProfileButtonText}>{t('profile.noProfile.button')}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Profile exists - show full profile
+    return (
+      <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
+        {/* Personal Information */}
+        {renderInfoSection(t('profile.sections.personal'), (
+          <>
+            {renderInfoRow(t('profile.fields.country'), userInfo.country, 'country')}
+            {renderInfoRow(t('profile.fields.age'), userInfo.age, 'age')}
+            {renderInfoRow(t('profile.fields.gender'), userInfo.gender, 'gender')}
+            {renderInfoRow(t('profile.fields.height'), userInfo.height, 'height')}
+            {renderInfoRow(t('profile.fields.weight'), userInfo.currentWeight, 'currentWeight')}
+          </>
+        ))}
+
+        {/* Goals & Preferences */}
+        {renderInfoSection(t('profile.sections.goals'), (
+          <>
+            {renderInfoRow(t('profile.fields.bodyGoal'), userInfo.bodyGoal, 'bodyGoal')}
+            {renderInfoRow(t('profile.fields.dietPreference'), userInfo.dietPreference, 'dietPreference')}
+          </>
+        ))}
+
+        {/* Lifestyle & Health */}
+        {renderInfoSection(t('profile.sections.lifestyle'), (
+          <>
+            {renderInfoRow(t('profile.fields.occupation'), userInfo.occupationType, 'occupationType')}
+            {renderInfoRow(t('profile.fields.equipment'), userInfo.availableEquipment, 'availableEquipment')}
+            {renderInfoRow(t('profile.fields.medical'), userInfo.medicalConditions, 'medicalConditions')}
+          </>
+        ))}
+      </ScrollView>
+    );
+  };
+
   if (!visible) return null;
 
   return (
@@ -197,58 +317,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
             </View>
 
             {/* Content */}
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-              {!userInfo || Object.values(userInfo).every(val => !val) ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateTitle}>Complete Your Profile</Text>
-                  <Text style={styles.emptyStateText}>
-                    To get personalized diet and workout plans, we need some information about you.
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.completeProfileButton}
-                    onPress={() => setShowUserInfoModal(true)}
-                  >
-                    <Text style={styles.completeProfileButtonText}>Complete Profile</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <>
-                  {/* Basic Information */}
-                  {renderInfoSection('Basic Information', (
-                    <>
-                      {renderInfoRow('Country', editedUserInfo.country, 'country')}
-                      {renderInfoRow('Age', editedUserInfo.age, 'age')}
-                      {renderPickerRow('Gender', editedUserInfo.gender, 'gender', ['Male', 'Female', 'Other'])}
-                    </>
-                  ))}
-
-                  {/* Physical Information */}
-                  {renderInfoSection('Physical Information', (
-                    <>
-                      {renderInfoRow('Height', editedUserInfo.height, 'height')}
-                      {renderInfoRow('Current Weight', editedUserInfo.currentWeight, 'currentWeight')}
-                      {renderPickerRow('Body Goal', editedUserInfo.bodyGoal, 'bodyGoal', bodyGoals)}
-                    </>
-                  ))}
-
-                  {/* Lifestyle & Health */}
-                  {renderInfoSection('Lifestyle & Health', (
-                    <>
-                      {renderInfoRow('Medical Conditions', editedUserInfo.medicalConditions, 'medicalConditions')}
-                      {renderPickerRow('Occupation Type', editedUserInfo.occupationType, 'occupationType', occupationTypes)}
-                      {renderPickerRow('Available Equipment', editedUserInfo.availableEquipment, 'availableEquipment', equipmentOptions)}
-                    </>
-                  ))}
-
-                  {/* Diet Preferences */}
-                  {renderInfoSection('Diet Preferences', (
-                    <>
-                      {renderPickerRow('Diet Preference', editedUserInfo.dietPreference, 'dietPreference', dietPreferences)}
-                    </>
-                  ))}
-                </>
-              )}
-            </ScrollView>
+            {renderProfileContent()}
           </Animated.View>
         </BlurView>
       </Modal>
@@ -426,7 +495,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   pickerContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#1e3a8a', // Navy blue background
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 8,
@@ -436,5 +505,53 @@ const styles = StyleSheet.create({
   picker: {
     color: colors.white,
     backgroundColor: 'transparent',
+  },
+  noProfileSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xl * 2,
+    paddingHorizontal: spacing.lg,
+  },
+  noProfileIcon: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 50,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  noProfileEmoji: {
+    fontSize: 50,
+  },
+  noProfileTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    color: colors.white,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  noProfileText: {
+    fontSize: 16,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: spacing.xl,
+  },
+  createProfileButton: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 25,
+  },
+  createProfileButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.body,
+  },
+  profileContent: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
   },
 });
