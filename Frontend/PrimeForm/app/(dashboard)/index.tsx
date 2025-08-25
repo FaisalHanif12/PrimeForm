@@ -70,12 +70,20 @@ export default function DashboardScreen() {
       // For now, we'll use mock data since dashboard API is not implemented
       // This maintains the exact same functionality
       setDashboardData({
-        stats: mockStats,
-        workouts: mockWorkouts,
-        meals: mockMeals,
+        stats: {
+          totalWorkouts: 2,
+          totalCaloriesBurned: 1200,
+          currentStreak: 3,
+          achievements: []
+        },
+        quickActions: [],
         user: {
           fullName: user?.fullName || 'User',
-          email: user?.email || 'user@example.com'
+          email: user?.email || 'user@example.com',
+          isEmailVerified: true,
+          memberSince: new Date().toISOString(),
+          daysSinceJoining: 1,
+          lastLogin: new Date().toISOString()
         },
         notifications: []
       });
@@ -131,17 +139,23 @@ export default function DashboardScreen() {
       // Save to backend database
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
       
-      if (response.success) {
+      console.log('🔍 Full response from userProfileService:', response);
+      console.log('🔍 Response type:', typeof response);
+      console.log('🔍 Response.success:', response.success);
+      console.log('🔍 Response.data:', response.data);
+      
+      if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        console.log('User profile saved to database:', response.data);
+        console.log('✅ User profile saved to database:', response.data);
+        Alert.alert('Success', 'Profile created successfully!');
       } else {
-        console.error('Failed to save to database:', response.message);
+        console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         // Show error to user
         Alert.alert('Error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to save user info:', error);
+      console.error('💥 Exception in handleCompleteUserInfo:', error);
       // Show error to user
       Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
     }
@@ -159,10 +173,20 @@ export default function DashboardScreen() {
 
   const loadUserInfo = async () => {
     try {
-      // Removed AsyncStorage dependency
-      setUserInfo(null); // Clear user info on app load
+      // Load user profile from backend database
+      const response = await userProfileService.getUserProfile();
+      
+      if (response.success && response.data) {
+        setUserInfo(response.data);
+        console.log('User profile loaded from database:', response.data);
+      } else {
+        // No profile exists yet or failed to load
+        setUserInfo(null);
+        console.log('No user profile found or failed to load:', response.message);
+      }
     } catch (error) {
       console.error('Failed to load user info:', error);
+      setUserInfo(null);
     }
   };
 

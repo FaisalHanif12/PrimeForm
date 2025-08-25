@@ -76,6 +76,7 @@ const translations = {
     'sidebar.language': 'Language',
     'sidebar.version': 'Version 1.0.0',
     'sidebar.profile.details': 'Profile Details',
+    'sidebar.view.profile': 'View Full Profile',
     
     // Common
     'common.loading': 'Loading Prime Form...',
@@ -384,6 +385,10 @@ const translations = {
     'profile.fields.occupation': 'Occupation',
     'profile.fields.equipment': 'Available Equipment',
     'profile.fields.medical': 'Medical Conditions',
+    'profile.title': 'Profile',
+    'profile.edit': 'Edit',
+    'profile.cancel': 'Cancel',
+    'profile.save': 'Save',
   },
   ur: {
     // Auth screens
@@ -439,6 +444,7 @@ const translations = {
     'sidebar.language': 'زبان',
     'sidebar.version': 'ورژن 1.0.0',
     'sidebar.profile.details': 'پروفائل کی تفصیلات',
+    'sidebar.view.profile': 'مکمل پروفائل دیکھیں',
     
     // Common
     'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
@@ -716,6 +722,12 @@ const translations = {
     'placeholder.weight': '70 کلوگرام یا 154 پاؤنڈ',
     'placeholder.age': '25',
     'placeholder.medical': 'جیسے ذیابیطس، ہائی بلڈ پریشر، PCOS، دل کے مسائل (یا کوئی نہیں)',
+    
+    // Profile Actions
+    'profile.title': 'پروفائل',
+    'profile.edit': 'ترمیم',
+    'profile.cancel': 'منسوخ کریں',
+    'profile.save': 'محفوظ کریں',
   },
 };
 

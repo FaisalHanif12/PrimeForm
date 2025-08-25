@@ -265,6 +265,8 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
         ...userInfo,
         age: ageNumber,
         // Convert localized values back to English for backend compatibility
+        country: getEnglishValue(userInfo.country, countries),
+        gender: getEnglishValue(userInfo.gender, genderOptions),
         bodyGoal: getEnglishValue(userInfo.bodyGoal, bodyGoals),
         occupationType: getEnglishValue(userInfo.occupationType, occupationTypes),
         availableEquipment: getEnglishValue(userInfo.availableEquipment, equipmentOptions),
@@ -706,7 +708,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   pickerContainer: {
-    backgroundColor: '#1e3a8a', // Navy blue background
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 12,

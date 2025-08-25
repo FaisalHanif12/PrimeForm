@@ -73,21 +73,24 @@ export default function DietScreen() {
     try {
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
       
-      if (response.success) {
+      console.log('🔍 Diet Page - Full response:', response);
+      console.log('🔍 Diet Page - Response.success:', response?.success);
+      
+      if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        console.log('User profile saved to database:', response.data);
+        console.log('✅ User profile saved to database:', response.data);
         Alert.alert('Success', 'Profile created! Now generating your diet plan...');
         // Here you would typically call the diet plan generation API
         setTimeout(() => {
           Alert.alert('Success', 'Your personalized diet plan is ready! This feature will be available soon.');
         }, 2000);
       } else {
-        console.error('Failed to save to database:', response.message);
+        console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         Alert.alert('Error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to save user info:', error);
+      console.error('💥 Exception in diet page:', error);
       Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
