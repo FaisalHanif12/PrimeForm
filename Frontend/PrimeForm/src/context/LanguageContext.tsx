@@ -77,6 +77,10 @@ const translations = {
     'sidebar.version': 'Version 1.0.0',
     'sidebar.profile.details': 'Profile Details',
     'sidebar.view.profile': 'View Full Profile',
+    'sidebar.tapToChange': 'Tap to change',
+    'sidebar.upgrade': 'UPGRADE',
+    'sidebar.appName': 'PrimeForm',
+    'language.english': 'English',
     
     // Common
     'common.loading': 'Loading Prime Form...',
@@ -389,6 +393,8 @@ const translations = {
     'profile.edit': 'Edit',
     'profile.cancel': 'Cancel',
     'profile.save': 'Save',
+    'profile.notSpecified': 'Not specified',
+    'profile.select': 'Select...',
   },
   ur: {
     // Auth screens
@@ -445,6 +451,10 @@ const translations = {
     'sidebar.version': 'ورژن 1.0.0',
     'sidebar.profile.details': 'پروفائل کی تفصیلات',
     'sidebar.view.profile': 'مکمل پروفائل دیکھیں',
+    'sidebar.tapToChange': 'تبدیل کرنے کے لیے ٹیپ کریں',
+    'sidebar.upgrade': 'اپ گریڈ',
+    'sidebar.appName': 'پرائم فارم',
+    'language.english': 'English',
     
     // Common
     'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
@@ -728,6 +738,8 @@ const translations = {
     'profile.edit': 'ترمیم',
     'profile.cancel': 'منسوخ کریں',
     'profile.save': 'محفوظ کریں',
+    'profile.notSpecified': 'متعلق نہیں',
+    'profile.select': 'منتخب کریں...',
   },
 };
 

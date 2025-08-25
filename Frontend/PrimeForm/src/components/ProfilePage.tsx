@@ -106,6 +106,12 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     return language === 'ur' ? item.ur : item.en;
   };
 
+  // Helper function to convert English values to localized display text
+  const getLocalizedValue = (englishValue: string, options: { en: string; ur: string }[]) => {
+    const option = options.find(opt => opt.en === englishValue);
+    return option ? getLocalizedText(option) : englishValue;
+  };
+
   // Helper function to convert localized values back to English for backend
   const getEnglishValue = (localizedValue: string, items: { en: string; ur: string }[]) => {
     const item = items.find(item => item.en === localizedValue || item.ur === localizedValue);
@@ -266,7 +272,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           placeholderTextColor={colors.mutedText}
         />
       ) : (
-        <Text style={styles.infoValue}>{value || 'Not specified'}</Text>
+        <Text style={styles.infoValue}>{value || t('profile.notSpecified')}</Text>
       )}
     </View>
   );
@@ -281,14 +287,16 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
             onValueChange={(val) => handleUpdateField(field, val)}
             style={styles.picker}
           >
-            <Picker.Item label="Select..." value="" />
+            <Picker.Item label={t('profile.select')} value="" />
             {options.map(option => (
               <Picker.Item key={option.en} label={getLocalizedText(option)} value={getLocalizedText(option)} />
             ))}
           </Picker>
         </View>
       ) : (
-        <Text style={styles.infoValue}>{value || 'Not specified'}</Text>
+        <Text style={styles.infoValue}>
+          {value ? getLocalizedValue(value, options) : t('profile.notSpecified')}
+        </Text>
       )}
     </View>
   );
