@@ -15,8 +15,7 @@ export default function LogoMark({ subtitle }: Props) {
     <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/PrimeLogo.png')} style={styles.icon} />
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>PRIME</Text>
-        <Text style={styles.titleText}>FORM</Text>
+        <Text style={styles.titleText}>{t('brand.primeform')}</Text>
       </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </Animated.View>
@@ -35,7 +34,6 @@ const styles = StyleSheet.create({
     // Preserve original icon colors to match brand artwork
   },
   titleContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -54,6 +52,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    textAlign: 'center',
   },
   subtitle: {
     marginTop: 4,

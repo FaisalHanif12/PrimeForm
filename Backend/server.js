@@ -67,9 +67,15 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // In development, be more permissive
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
+      'http://192.168.0.117:8081', // Your specific IP address
       'http://192.168.1.100:8081', // Local network access
       process.env.FRONTEND_URL
     ].filter(Boolean);
