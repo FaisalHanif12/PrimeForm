@@ -41,28 +41,76 @@ interface Props {
 }
 
 const countries = [
-  'United States', 'Canada', 'United Kingdom', 'Australia', 'Germany', 'France', 'India', 'Pakistan',
-  'China', 'Japan', 'Brazil', 'Mexico', 'South Africa', 'Nigeria', 'Egypt', 'Saudi Arabia'
+  { en: 'United States', ur: 'ریاستہائے متحدہ' },
+  { en: 'Canada', ur: 'کینیڈا' },
+  { en: 'United Kingdom', ur: 'برطانیہ' },
+  { en: 'Australia', ur: 'آسٹریلیا' },
+  { en: 'Germany', ur: 'جرمنی' },
+  { en: 'France', ur: 'فرانس' },
+  { en: 'India', ur: 'بھارت' },
+  { en: 'Pakistan', ur: 'پاکستان' },
+  { en: 'China', ur: 'چین' },
+  { en: 'Japan', ur: 'جاپان' },
+  { en: 'Brazil', ur: 'برازیل' },
+  { en: 'Mexico', ur: 'میکسیکو' },
+  { en: 'South Africa', ur: 'جنوبی افریقہ' },
+  { en: 'Nigeria', ur: 'نائجیریا' },
+  { en: 'Egypt', ur: 'مصر' },
+  { en: 'Saudi Arabia', ur: 'سعودی عرب' }
 ];
 
 const bodyGoals = [
-  'Lose Fat', 'Gain Muscle', 'Maintain Weight', 'General Training', 'Improve Fitness'
+  { en: 'Lose Fat', ur: 'چربی کم کریں' },
+  { en: 'Gain Muscle', ur: 'پٹھے بنائیں' },
+  { en: 'Maintain Weight', ur: 'وزن برقرار رکھیں' },
+  { en: 'General Training', ur: 'عمومی تربیت' },
+  { en: 'Improve Fitness', ur: 'فٹنس بہتر کریں' }
 ];
 
 const occupationTypes = [
-  'Sedentary Desk Job', 'Active Job', 'Shift Worker', 'Student', 'Retired', 'Other'
+  { en: 'Sedentary Desk Job', ur: 'بیٹھے ہوئے ڈیسک کا کام' },
+  { en: 'Active Job', ur: 'متحرک کام' },
+  { en: 'Shift Worker', ur: 'شفٹ ورکر' },
+  { en: 'Student', ur: 'طالب علم' },
+  { en: 'Retired', ur: 'ریٹائرڈ' },
+  { en: 'Other', ur: 'دیگر' }
 ];
 
 const equipmentOptions = [
-  'None', 'Basic Dumbbells', 'Resistance Bands', 'Home Gym', 'Full Gym Access'
+  { en: 'None', ur: 'کوئی نہیں' },
+  { en: 'Basic Dumbbells', ur: 'بنیادی ڈمبلز' },
+  { en: 'Resistance Bands', ur: 'مزاحمتی بینڈز' },
+  { en: 'Home Gym', ur: 'گھریلو جم' },
+  { en: 'Full Gym Access', ur: 'مکمل جم تک رسائی' }
 ];
 
 const dietPreferences = [
-  'Vegetarian', 'Non-Vegetarian', 'Vegan', 'Flexitarian', 'Pescatarian'
+  { en: 'Vegetarian', ur: 'سبزی خور' },
+  { en: 'Non-Vegetarian', ur: 'سبزی خور نہیں' },
+  { en: 'Vegan', ur: 'ویگن' },
+  { en: 'Flexitarian', ur: 'فلیکسیٹیرین' },
+  { en: 'Pescatarian', ur: 'پیسکیٹیرین' }
+];
+
+const genderOptions = [
+  { en: 'male', ur: 'مرد' },
+  { en: 'female', ur: 'خواتین' },
+  { en: 'other', ur: 'دیگر' }
 ];
 
 export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserInfo }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+
+  // Helper function to get localized text
+  const getLocalizedText = (item: { en: string; ur: string }) => {
+    return language === 'ur' ? item.ur : item.en;
+  };
+
+  // Helper function to convert localized values back to English for backend
+  const getEnglishValue = (localizedValue: string, items: { en: string; ur: string }[]) => {
+    const item = items.find(item => item.en === localizedValue || item.ur === localizedValue);
+    return item ? item.en : localizedValue;
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [editedUserInfo, setEditedUserInfo] = useState<UserInfo>({
@@ -81,8 +129,18 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   useEffect(() => {
     if (userInfo) {
       setEditedUserInfo(userInfo);
+    } else {
+      // If no userInfo prop, try to load from database
+      loadUserInfo();
     }
   }, [userInfo]);
+
+  // Reload user info when ProfilePage becomes visible
+  useEffect(() => {
+    if (visible && !userInfo) {
+      loadUserInfo();
+    }
+  }, [visible]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -90,18 +148,29 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
   const handleSave = async () => {
     try {
+      // Convert localized values back to English for backend compatibility
+      const processedUserInfo = {
+        ...editedUserInfo,
+        country: getEnglishValue(editedUserInfo.country, countries),
+        gender: getEnglishValue(editedUserInfo.gender, genderOptions),
+        bodyGoal: getEnglishValue(editedUserInfo.bodyGoal, bodyGoals),
+        occupationType: getEnglishValue(editedUserInfo.occupationType, occupationTypes),
+        availableEquipment: getEnglishValue(editedUserInfo.availableEquipment, equipmentOptions),
+        dietPreference: getEnglishValue(editedUserInfo.dietPreference, dietPreferences)
+      };
+
       // Update in backend database
-      const response = await userProfileService.createOrUpdateProfile(editedUserInfo);
+      const response = await userProfileService.createOrUpdateProfile(processedUserInfo);
       
       if (response.success) {
-        onUpdateUserInfo(editedUserInfo);
+        onUpdateUserInfo(processedUserInfo);
         setIsEditing(false);
         Alert.alert('Success', 'Profile information updated successfully in database!');
         console.log('Profile updated in database:', response.data);
       } else {
         console.error('Failed to update in database:', response.message);
         // Fallback to local update if database fails (maintains functionality)
-        onUpdateUserInfo(editedUserInfo);
+        onUpdateUserInfo(processedUserInfo);
         setIsEditing(false);
         Alert.alert('Success', 'Profile information updated successfully!');
       }
@@ -148,7 +217,9 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
   const loadUserInfo = async () => {
     try {
+      console.log('🔍 ProfilePage - loadUserInfo called');
       const response = await userProfileService.getUserProfile();
+      console.log('🔍 ProfilePage - getUserProfile response:', response);
       
       if (response && response.success && response.data) {
         // Convert UserProfile to UserInfo format
@@ -165,13 +236,13 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           dietPreference: response.data.dietPreference,
         };
         setEditedUserInfo(userInfoData);
-        console.log('User profile loaded from database:', userInfoData);
+        console.log('✅ ProfilePage - User profile loaded from database:', userInfoData);
       } else {
-        console.log('No user profile found or failed to load:', response?.message || 'Unknown error');
+        console.log('❌ ProfilePage - No user profile found or failed to load:', response?.message || 'Unknown error');
         // Don't show error alert for new users who haven't created a profile yet
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      console.error('💥 ProfilePage - Failed to load user info:', error);
       // Don't show error alert for network issues, just log them
     }
   };
@@ -200,7 +271,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     </View>
   );
 
-  const renderPickerRow = (label: string, value: string, field: keyof UserInfo, options: string[]) => (
+  const renderPickerRow = (label: string, value: string, field: keyof UserInfo, options: { en: string; ur: string }[]) => (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
       {isEditing ? (
@@ -212,7 +283,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           >
             <Picker.Item label="Select..." value="" />
             {options.map(option => (
-              <Picker.Item key={option} label={option} value={option} />
+              <Picker.Item key={option.en} label={getLocalizedText(option)} value={getLocalizedText(option)} />
             ))}
           </Picker>
         </View>
@@ -223,8 +294,13 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   );
 
   const renderProfileContent = () => {
+    console.log('🔍 ProfilePage - renderProfileContent called');
+    console.log('🔍 ProfilePage - userInfo:', userInfo);
+    console.log('🔍 ProfilePage - editedUserInfo:', editedUserInfo);
+    
     if (!userInfo) {
       // No profile exists yet - show basic user info
+      console.log('🔍 ProfilePage - No userInfo, showing no profile section');
       return (
         <View style={styles.noProfileSection}>
           <View style={styles.noProfileIcon}>
@@ -249,9 +325,9 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         {/* Personal Information */}
         {renderInfoSection(t('profile.sections.personal'), (
           <>
-            {renderInfoRow(t('profile.fields.country'), userInfo.country, 'country')}
+            {renderPickerRow(t('profile.fields.country'), userInfo.country, 'country', countries)}
             {renderInfoRow(t('profile.fields.age'), userInfo.age, 'age')}
-            {renderInfoRow(t('profile.fields.gender'), userInfo.gender, 'gender')}
+            {renderPickerRow(t('profile.fields.gender'), userInfo.gender, 'gender', genderOptions)}
             {renderInfoRow(t('profile.fields.height'), userInfo.height, 'height')}
             {renderInfoRow(t('profile.fields.weight'), userInfo.currentWeight, 'currentWeight')}
           </>
@@ -260,16 +336,16 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         {/* Goals & Preferences */}
         {renderInfoSection(t('profile.sections.goals'), (
           <>
-            {renderInfoRow(t('profile.fields.bodyGoal'), userInfo.bodyGoal, 'bodyGoal')}
-            {renderInfoRow(t('profile.fields.dietPreference'), userInfo.dietPreference, 'dietPreference')}
+            {renderPickerRow(t('profile.fields.bodyGoal'), userInfo.bodyGoal, 'bodyGoal', bodyGoals)}
+            {renderPickerRow(t('profile.fields.dietPreference'), userInfo.dietPreference, 'dietPreference', dietPreferences)}
           </>
         ))}
 
         {/* Lifestyle & Health */}
         {renderInfoSection(t('profile.sections.lifestyle'), (
           <>
-            {renderInfoRow(t('profile.fields.occupation'), userInfo.occupationType, 'occupationType')}
-            {renderInfoRow(t('profile.fields.equipment'), userInfo.availableEquipment, 'availableEquipment')}
+            {renderPickerRow(t('profile.fields.occupation'), userInfo.occupationType, 'occupationType', occupationTypes)}
+            {renderPickerRow(t('profile.fields.equipment'), userInfo.availableEquipment, 'availableEquipment', equipmentOptions)}
             {renderInfoRow(t('profile.fields.medical'), userInfo.medicalConditions, 'medicalConditions')}
           </>
         ))}
@@ -297,19 +373,19 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Profile</Text>
+              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
               <View style={styles.headerActions}>
                 {!isEditing ? (
                   <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
-                    <Text style={styles.editButtonText}>Edit</Text>
+                    <Text style={styles.editButtonText}>{t('profile.edit')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.editActions}>
                     <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={styles.cancelButtonText}>{t('profile.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                      <Text style={styles.saveButtonText}>Save</Text>
+                      <Text style={styles.saveButtonText}>{t('profile.save')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -495,7 +571,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   pickerContainer: {
-    backgroundColor: '#1e3a8a', // Navy blue background
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 8,

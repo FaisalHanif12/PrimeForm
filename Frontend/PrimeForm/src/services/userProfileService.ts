@@ -45,8 +45,8 @@ class UserProfileService {
       const response = await api.get('/user-profile');
       
       // Check if response exists and has data
-      if (response && response.data) {
-        return response.data;
+      if (response && response.success) {
+        return response;
       } else {
         // Return a proper response object for new users without profiles
         return {
@@ -86,11 +86,22 @@ class UserProfileService {
         age: typeof userInfo.age === 'string' ? parseInt(userInfo.age, 10) : userInfo.age
       };
       
+      console.log('🔍 userProfileService - Sending data:', processedUserInfo);
+      
       const response = await api.post('/user-profile', processedUserInfo);
       
-      if (response && response.data) {
-        return response.data;
+      console.log('🔍 userProfileService - Raw API response:', response);
+      console.log('🔍 userProfileService - Response structure:', {
+        success: response?.success,
+        hasData: !!response?.data,
+        message: response?.message
+      });
+      
+      if (response && response.success) {
+        console.log('✅ userProfileService - Returning success response');
+        return response;
       } else {
+        console.log('❌ userProfileService - Invalid response structure');
         return {
           success: false,
           data: null,
@@ -98,7 +109,7 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error creating/updating user profile:', error);
+      console.error('💥 userProfileService - Exception:', error);
       
       return {
         success: false,
@@ -113,8 +124,8 @@ class UserProfileService {
     try {
       const response = await api.patch('/user-profile/field', { field, value });
       
-      if (response && response.data) {
-        return response.data;
+      if (response && response.success) {
+        return response;
       } else {
         return {
           success: false,
@@ -138,8 +149,8 @@ class UserProfileService {
     try {
       const response = await api.delete('/user-profile');
       
-      if (response && response.data) {
-        return response.data;
+      if (response && response.success) {
+        return response;
       } else {
         return {
           success: false,
@@ -161,8 +172,8 @@ class UserProfileService {
     try {
       const response = await api.get('/user-profile/completion');
       
-      if (response && response.data) {
-        return response.data;
+      if (response && response.success) {
+        return response;
       } else {
         return {
           success: false,

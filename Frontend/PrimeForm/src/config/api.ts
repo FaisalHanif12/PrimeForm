@@ -10,11 +10,18 @@ const getApiConfig = (): ApiConfig => {
   const isDevelopment = __DEV__;
   
   if (isDevelopment) {
-    // Use your machine's IP address for mobile development
-    // You can find this by running 'ipconfig' on Windows or 'ifconfig' on Mac/Linux
+    // Try multiple URLs to ensure connectivity
+    const possibleUrls = [
+      'http://192.168.0.117:5000/api', // Your specific IP
+      'http://localhost:5000/api',      // Localhost fallback
+      'http://127.0.0.1:5000/api'      // Loopback fallback
+    ];
+    
+    console.log('🔍 Available API URLs:', possibleUrls);
+    
     return {
-      baseURL: 'http://192.168.0.117:5000/api', // Your actual IP address
-      timeout: 10000, // Increased timeout for database operations
+      baseURL: possibleUrls[0], // Use your specific IP first
+      timeout: 15000, // Increased timeout for network issues
     };
   }
   
@@ -51,6 +58,9 @@ class ApiClient {
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
     
+    console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+    console.log(`🔑 Auth Token: ${await this.getAuthToken() ? 'Present' : 'None'}`);
+    
     // Get authentication token
     const token = await this.getAuthToken();
     
@@ -69,6 +79,11 @@ class ApiClient {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
+      console.log(`📤 Request Headers:`, headers);
+      if (options.body) {
+        console.log(`📦 Request Body:`, options.body);
+      }
+
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
@@ -77,14 +92,25 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
+      console.log(`📥 Response Status: ${response.status} ${response.statusText}`);
+      console.log(`📥 Response Headers:`, Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error(`❌ HTTP Error: ${response.status}`, errorData);
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const responseData = await response.json();
+      console.log(`✅ Response Data:`, responseData);
+      return responseData;
     } catch (error: any) {
       clearTimeout(timeoutId);
+      
+      console.error(`💥 API Error:`, error);
+      console.error(`💥 Error Type:`, error.constructor.name);
+      console.error(`💥 Error Message:`, error.message);
+      console.error(`💥 Error Stack:`, error.stack);
       
       if (error.name === 'AbortError') {
         throw new Error('Request timeout');
