@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Image, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
@@ -153,15 +153,26 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
-              <TouchableOpacity style={styles.avatarContainer} onPress={handleImageUpload}>
+              <TouchableOpacity 
+                style={styles.avatarContainer} 
+                onPress={handleImageUpload}
+                activeOpacity={0.8}
+              >
                 {userImage ? (
                   <Image source={{ uri: userImage }} style={styles.userAvatar} />
                 ) : (
                   <Ionicons name="person" size={32} color={colors.gold} />
                 )}
-                <View style={styles.uploadOverlay}>
-                  <Ionicons name="camera" size={16} color={colors.white} />
-                </View>
+                {!userImage && (
+                  <View style={styles.uploadOverlay}>
+                    <Ionicons name="camera" size={16} color={colors.white} />
+                  </View>
+                )}
+                {userImage && (
+                  <View style={styles.imageOverlay}>
+                    <Ionicons name="camera" size={14} color={colors.white} />
+                  </View>
+                )}
               </TouchableOpacity>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{userName}</Text>
@@ -192,7 +203,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                   <View style={styles.menuItemRight}>
                     {item.action === 'subscription' && (
                       <View style={styles.upgradeBadge}>
-                        <Text style={styles.upgradeText}>UPGRADE</Text>
+                        <Text style={styles.upgradeText}>{t('sidebar.upgrade')}</Text>
                       </View>
                     )}
                     <Ionicons 
@@ -211,7 +222,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                       onPress={() => handleLanguageChange('en')}
                     >
                       <Text style={[styles.languageText, language === 'en' && styles.activeLanguageText]}>
-                        English
+                        {t('language.english')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
@@ -230,7 +241,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.appName}>PrimeForm</Text>
+            <Text style={styles.appName}>{t('sidebar.appName')}</Text>
             <Text style={styles.version}>{t('sidebar.version')}</Text>
           </View>
         </Animated.View>
@@ -304,6 +315,20 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.white,
   },
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.white,
+  },
+
   userInfo: {
     flex: 1,
   },
