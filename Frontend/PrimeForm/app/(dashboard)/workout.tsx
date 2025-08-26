@@ -11,18 +11,83 @@ import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { useToast } from '../../src/context/ToastContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function WorkoutScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { user } = useAuthContext();
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { showToast } = useToast();
+
+  // Helper function to translate dynamic values (same approach as ProfilePage)
+  const translateValue = (value: string, type: 'goal' | 'occupation' | 'equipment') => {
+    console.log('🔍 Workout translateValue called with:', { value, type, language });
+    
+    if (language === 'ur' && value) {
+      // Use the same arrays as ProfilePage for consistency
+      const bodyGoals = [
+        { en: 'Lose Fat', ur: 'چربی کم کریں' },
+        { en: 'Gain Muscle', ur: 'پٹھے بنائیں' },
+        { en: 'Maintain Weight', ur: 'وزن برقرار رکھیں' },
+        { en: 'General Training', ur: 'عمومی تربیت' },
+        { en: 'Improve Fitness', ur: 'فٹنس بہتر کریں' }
+      ];
+      
+      const occupationTypes = [
+        { en: 'Sedentary Desk Job', ur: 'بیٹھے ہوئے ڈیسک کا کام' },
+        { en: 'Active Job', ur: 'متحرک کام' },
+        { en: 'Shift Worker', ur: 'شفٹ ورکر' },
+        { en: 'Student', ur: 'طالب علم' },
+        { en: 'Retired', ur: 'ریٹائرڈ' },
+        { en: 'Other', ur: 'دیگر' }
+      ];
+      
+      const equipmentOptions = [
+        { en: 'None', ur: 'کوئی نہیں' },
+        { en: 'Basic Dumbbells', ur: 'بنیادی ڈمبلز' },
+        { en: 'Resistance Bands', ur: 'مزاحمتی بینڈز' },
+        { en: 'Home Gym', ur: 'گھریلو جم' },
+        { en: 'Full Gym Access', ur: 'مکمل جم تک رسائی' }
+      ];
+      
+      let options: { en: string; ur: string }[];
+      if (type === 'goal') {
+        options = bodyGoals;
+      } else if (type === 'occupation') {
+        options = occupationTypes;
+      } else if (type === 'equipment') {
+        options = equipmentOptions;
+      } else {
+        return value;
+      }
+      
+      // Find the matching option and return Urdu text
+      const option = options.find(opt => opt.en === value);
+      if (option) {
+        console.log('🔍 Workout Found Urdu translation:', option.ur);
+        return option.ur;
+      }
+    }
+    return value;
+  };
 
   useEffect(() => {
-    loadUserInfo();
+    // Only load user info if we don't have cached data
+    const cachedData = userProfileService.getCachedData();
+    if (cachedData) {
+      setUserInfo(cachedData.data);
+      setIsLoading(false);
+      console.log('📦 Using cached user profile data in workout page');
+    } else {
+      loadUserInfo();
+    }
   }, []);
 
   const handleProfilePress = () => {
@@ -37,21 +102,21 @@ export default function WorkoutScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
-      case 'settings':
-        Alert.alert('Settings', 'Settings feature coming soon!');
-        break;
-      case 'subscription':
-        Alert.alert('Subscription', 'Subscription Plan feature coming soon!');
-        break;
+              case 'settings':
+          showToast('info', 'Settings feature coming soon!');
+          break;
+        case 'subscription':
+          showToast('info', 'Subscription Plan feature coming soon!');
+          break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');
           await authService.logout();
           router.replace('/auth/login');
-        } catch (error) {
-          console.error('Logout failed:', error);
-          Alert.alert('Error', 'Failed to logout. Please try again.');
-        }
+                  } catch (error) {
+            console.error('Logout failed:', error);
+            showToast('error', 'Failed to logout. Please try again.');
+          }
         break;
       default:
         console.log('Unknown action:', action);
@@ -59,13 +124,13 @@ export default function WorkoutScreen() {
   };
 
   const handleGenerateClick = () => {
-    if (userInfo) {
-      // User already has profile, show success message
-      Alert.alert('Success', 'Your workout plan is being generated! This feature will be available soon.');
-    } else {
-      // User needs to create profile first
-      setShowUserInfoModal(true);
-    }
+          if (userInfo) {
+        // User already has profile, show success message
+        showToast('success', 'Your workout plan is being generated! This feature will be available soon.');
+      } else {
+        // User needs to create profile first
+        setShowUserInfoModal(true);
+      }
   };
 
   const handleCompleteUserInfo = async (userInfoData: any) => {
@@ -74,21 +139,21 @@ export default function WorkoutScreen() {
       
       if (response.success) {
         setUserInfo(userInfoData);
-        setShowUserInfoModal(false);
-        console.log('User profile saved to database:', response.data);
-        Alert.alert('Success', 'Profile created! Now generating your workout plan...');
-        // Here you would typically call the workout plan generation API
-        setTimeout(() => {
-          Alert.alert('Success', 'Your personalized workout plan is ready! This feature will be available soon.');
-        }, 2000);
-      } else {
-        console.error('Failed to save to database:', response.message);
-        Alert.alert('Error', 'Failed to save profile. Please try again.');
+                  setShowUserInfoModal(false);
+          console.log('User profile saved to database:', response.data);
+          showToast('success', 'Profile created! Now generating your workout plan...');
+          // Here you would typically call the workout plan generation API
+          setTimeout(() => {
+            showToast('success', 'Your personalized workout plan is ready! This feature will be available soon.');
+          }, 2000);
+        } else {
+          console.error('Failed to save to database:', response.message);
+          showToast('error', 'Failed to save profile. Please try again.');
+        }
+      } catch (error) {
+        console.error('Failed to save user info:', error);
+        showToast('error', 'Failed to save profile. Please check your connection and try again.');
       }
-    } catch (error) {
-      console.error('Failed to save user info:', error);
-      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
-    }
   };
 
   const handleCancelUserInfo = async () => {
@@ -101,12 +166,13 @@ export default function WorkoutScreen() {
 
   const loadUserInfo = async () => {
     try {
+      console.log('🌐 Loading user info from API in workout page');
       const response = await userProfileService.getUserProfile();
       
       if (response.success) {
         if (response.data) {
           setUserInfo(response.data);
-          console.log('User profile loaded:', response.data);
+          console.log('User profile loaded from API:', response.data);
         } else {
           console.log('No profile found for new user:', response.message);
           setUserInfo(null);
@@ -116,6 +182,8 @@ export default function WorkoutScreen() {
       }
     } catch (error) {
       console.error('Failed to load user info:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,13 +197,81 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Render content based on user info status
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
+    }
 
+    if (userInfo) {
+      // User has profile - show profile summary and confirm button
+      return (
+        <View style={styles.profileSummaryContainer}>
+          <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
+          
+          <View style={styles.profileSummaryCard}>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
+              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.occupation')}</Text>
+              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.occupationType, 'occupation')}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.equipment')}</Text>
+              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.availableEquipment, 'equipment')}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.medical.conditions')}</Text>
+              <Text style={styles.profileSummaryValue}>{userInfo.medicalConditions || t('profile.summary.none')}</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.confirmGenerateButton} onPress={handleGenerateClick}>
+            <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // User has no profile - show beautiful start card
+    return (
+      <View style={styles.startCardContainer}>
+        <View style={styles.startCard}>
+          <View style={styles.startCardIconContainer}>
+            <Text style={styles.startCardIcon}>🏋️</Text>
+          </View>
+          
+          <Text style={styles.startCardTitle}>
+            {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی ورکاؤٹ پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized workout through AI?'}
+          </Text>
+          
+          <Text style={styles.startCardSubtitle}>
+            {t('workout.hero.subtitle')}
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.startButton} 
+            onPress={() => setShowUserInfoModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startButtonText}>{t('onboarding.start')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
         <DashboardHeader 
-          userName={t('common.user')}
+          userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
           onNotificationPress={() => console.log('Notifications pressed')}
           notificationCount={0}
@@ -146,87 +282,7 @@ export default function WorkoutScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section with Gradient */}
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
-            <LinearGradient
-              colors={['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.05)']}
-              style={styles.heroGradient}
-            >
-              <View style={styles.heroContent}>
-                <View style={styles.heroIconContainer}>
-                  <Text style={styles.heroIcon}>🏋️</Text>
-                </View>
-                <Text style={styles.heroTitle}>{t('workout.hero.title')}</Text>
-                <Text style={styles.heroSubtitle}>
-                  {t('workout.hero.subtitle')}
-                </Text>
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Quick Actions */}
-          <Animated.View entering={FadeInUp.delay(200)} style={styles.quickActionsSection}>
-            <TouchableOpacity 
-              style={styles.generateButton}
-              onPress={handleGenerateClick}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[colors.gold, colors.goldDark]}
-                style={styles.generateButtonGradient}
-              >
-                <Text style={styles.generateButtonIcon}>✨</Text>
-                <Text style={styles.generateButtonText}>{t('workout.generate.button')}</Text>
-                <Text style={styles.generateButtonArrow}>→</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* Features Grid */}
-          <Animated.View entering={FadeInUp.delay(800)} style={styles.featuresSection}>
-            <Text style={styles.sectionTitle}>{t('workout.features.title')}</Text>
-            <View style={styles.featuresGrid}>
-              <Animated.View entering={FadeInLeft.delay(900)} style={styles.featureCard}>
-                <View style={[styles.featureIconContainer, { backgroundColor: '#FF6B6B' }]}>
-                  <Text style={styles.featureIcon}>🎯</Text>
-                </View>
-                <Text style={styles.featureTitle}>{t('workout.features.personalized.title')}</Text>
-                <Text style={styles.featureText}>
-                  {t('workout.features.personalized.text')}
-                </Text>
-              </Animated.View>
-              
-              <Animated.View entering={FadeInRight.delay(900)} style={styles.featureCard}>
-                <View style={[styles.featureIconContainer, { backgroundColor: '#4ECDC4' }]}>
-                  <Text style={styles.featureIcon}>📈</Text>
-                </View>
-                <Text style={styles.featureTitle}>{t('workout.features.progressive.title')}</Text>
-                <Text style={styles.featureText}>
-                  {t('workout.features.progressive.text')}
-                </Text>
-              </Animated.View>
-              
-              <Animated.View entering={FadeInLeft.delay(1000)} style={styles.featureCard}>
-                <View style={[styles.featureIconContainer, { backgroundColor: '#45B7D1' }]}>
-                  <Text style={styles.featureIcon}>🏃‍♂️</Text>
-                </View>
-                <Text style={styles.featureTitle}>{t('workout.features.varied.title')}</Text>
-                <Text style={styles.featureText}>
-                  {t('workout.features.varied.text')}
-                </Text>
-              </Animated.View>
-              
-              <Animated.View entering={FadeInRight.delay(1000)} style={styles.featureCard}>
-                <View style={[styles.featureIconContainer, { backgroundColor: '#96CEB4' }]}>
-                  <Text style={styles.featureIcon}>📱</Text>
-                </View>
-                <Text style={styles.featureTitle}>{t('workout.features.trackable.title')}</Text>
-                <Text style={styles.featureText}>
-                  {t('workout.features.trackable.text')}
-                </Text>
-              </Animated.View>
-            </View>
-          </Animated.View>
+          {renderContent()}
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
@@ -241,8 +297,8 @@ export default function WorkoutScreen() {
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
-          userName={t('common.user')}
-          userEmail="user@example.com"
+          userName={user?.fullName || t('common.user')}
+          userEmail={user?.email || 'user@example.com'}
           userInfo={userInfo}
         />
 
@@ -271,7 +327,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   
-  // Hero Section
+  // Hero Section (for onboarding)
   heroSection: {
     marginBottom: spacing.xl,
     borderRadius: radius.lg,
@@ -318,10 +374,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
 
-  // Quick Actions
+
+
+  // Magic Message
+  magicSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  magicText: {
+    fontSize: typography.subtitle,
+    color: colors.gold,
+    textAlign: 'center',
+    fontFamily: fonts.heading,
+    fontWeight: '600',
+  },
+
+  // Quick Actions Section (for onboarding)
   quickActionsSection: {
     marginBottom: spacing.xl,
   },
+
+
+
+  // Generate Button (for onboarding)
   generateButton: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -359,7 +435,7 @@ const styles = StyleSheet.create({
 
 
 
-  // Features Section
+  // Features Section (for onboarding)
   sectionTitle: {
     color: colors.white,
     fontSize: 24,
@@ -416,22 +492,171 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   
-  // New styles for simplified design
-  magicSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  magicText: {
-    fontSize: typography.subtitle,
-    color: colors.gold,
-    textAlign: 'center',
+  // Profile Summary Section
+  profileSummaryTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
     fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  profileSummaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
+  },
+  profileSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  profileSummaryLabel: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    fontWeight: '500',
+  },
+  profileSummaryValue: {
+    color: colors.white,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
     fontWeight: '600',
   },
-  generateSection: {
+  // New styles for the simple UI
+  confirmGenerateSection: {
     alignItems: 'center',
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
+  },
+  confirmGenerateButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    alignSelf: 'center',
+    width: '80%',
+    maxWidth: 300,
+    backgroundColor: colors.gold,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmGenerateButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    flexShrink: 1,
+    flexWrap: 'nowrap', // Prevent text wrapping
+  },
+
+  loadingSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  loadingText: {
+    fontSize: typography.body,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+  },
+  // New styles for the new UI
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  profileSummaryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  startCardContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  startCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: colors.background,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  startCardIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  startCardIcon: {
+    fontSize: 40,
+  },
+  startCardTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+    lineHeight: 32,
+  },
+  startCardSubtitle: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: spacing.xl,
+  },
+  startButton: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.gold,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  startButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
 });

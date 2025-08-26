@@ -16,6 +16,7 @@ import StatsCard from '../../src/components/StatsCard';
 import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
 import MealPlanCard from '../../src/components/MealPlanCard';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import { useToast } from '../../src/context/ToastContext';
 
 
 interface DashboardData {
@@ -62,6 +63,7 @@ export default function DashboardScreen() {
   // Removed permission modal state
   const [backendAvailable, setBackendAvailable] = useState(false); // Start with backend unavailable
   const [offlineMode, setOfflineMode] = useState(true); // Start in offline mode
+  const { showToast } = useToast();
 
 
   const loadDashboard = async () => {
@@ -148,16 +150,16 @@ export default function DashboardScreen() {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
         console.log('✅ User profile saved to database:', response.data);
-        Alert.alert('Success', 'Profile created successfully!');
+        showToast('success', 'Profile created successfully!');
       } else {
         console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         // Show error to user
-        Alert.alert('Error', 'Failed to save profile. Please try again.');
+        showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
       console.error('💥 Exception in handleCompleteUserInfo:', error);
       // Show error to user
-      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
+      showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
 
@@ -200,14 +202,14 @@ export default function DashboardScreen() {
       if (response.success) {
         setUserInfo(updatedUserInfo);
         console.log('User profile updated in database:', response.data);
-      } else {
-        console.error('Failed to update in database:', response.message);
-        Alert.alert('Error', 'Failed to update profile. Please try again.');
+              } else {
+          console.error('Failed to update in database:', response.message);
+          showToast('error', 'Failed to update profile. Please try again.');
+        }
+      } catch (error) {
+        console.error('Failed to update user info:', error);
+        showToast('error', 'Failed to update profile. Please check your connection and try again.');
       }
-    } catch (error) {
-      console.error('Failed to update user info:', error);
-      Alert.alert('Error', 'Failed to update profile. Please check your connection and try again.');
-    }
   };
 
 
@@ -256,21 +258,21 @@ export default function DashboardScreen() {
         // Show user info modal for editing
         setShowUserInfoModal(true);
         break;
-      case 'settings':
-        Alert.alert('Settings', 'Settings feature coming soon!');
-        break;
-      case 'subscription':
-        Alert.alert('Subscription', 'Subscription Plan feature coming soon!');
-        break;
+              case 'settings':
+          showToast('info', 'Settings feature coming soon!');
+          break;
+        case 'subscription':
+          showToast('info', 'Subscription Plan feature coming soon!');
+          break;
       case 'logout':
         // Actually perform logout
         try {
           await authLogout();
           router.replace('/auth/login');
-        } catch (error) {
-          console.error('Logout failed:', error);
-          Alert.alert('Error', 'Failed to logout. Please try again.');
-        }
+                  } catch (error) {
+            console.error('Logout failed:', error);
+            showToast('error', 'Failed to logout. Please try again.');
+          }
         break;
       default:
         console.log('Unknown action:', action);

@@ -37,6 +37,10 @@ exports.createOrUpdateProfile = async (req, res) => {
     const userId = req.user.id;
     const profileData = req.body;
     
+    console.log('🔍 createOrUpdateProfile - Request from user ID:', userId);
+    console.log('🔍 createOrUpdateProfile - User email:', req.user.email);
+    console.log('🔍 createOrUpdateProfile - Profile data received:', profileData);
+    
     // Validate required fields
     const requiredFields = ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'];
     const missingFields = requiredFields.filter(field => !profileData[field]);
@@ -62,19 +66,28 @@ exports.createOrUpdateProfile = async (req, res) => {
     // Find existing profile or create new one
     let userProfile = await UserProfile.findOne({ userId });
     
+    console.log('🔍 createOrUpdateProfile - Existing profile found:', userProfile ? 'Yes' : 'No');
+    if (userProfile) {
+      console.log('🔍 createOrUpdateProfile - Existing profile userId:', userProfile.userId);
+    }
+    
     if (userProfile) {
       // Update existing profile
       Object.assign(userProfile, profileData);
       userProfile.lastUpdated = new Date();
+      console.log('🔍 createOrUpdateProfile - Updating existing profile');
     } else {
       // Create new profile
       userProfile = new UserProfile({
         userId,
         ...profileData
       });
+      console.log('🔍 createOrUpdateProfile - Creating new profile with userId:', userId);
     }
     
     await userProfile.save();
+    
+    console.log('🔍 createOrUpdateProfile - Profile saved successfully with userId:', userProfile.userId);
     
     res.status(200).json({
       success: true,
