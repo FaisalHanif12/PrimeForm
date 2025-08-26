@@ -4,6 +4,8 @@ import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useAuthContext } from '../../src/context/AuthContext';
+import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
@@ -16,11 +18,54 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function DietScreen() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const router = useRouter();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true); // Added loading state
+  const { showToast } = useToast();
+
+  // Helper function to translate dynamic values (same approach as ProfilePage)
+  const translateValue = (value: string, type: 'goal' | 'diet') => {
+    console.log('🔍 Diet translateValue called with:', { value, type, language });
+    
+    if (language === 'ur' && value) {
+      // Use the same arrays as ProfilePage for consistency
+      const bodyGoals = [
+        { en: 'Lose Fat', ur: 'چربی کم کریں' },
+        { en: 'Gain Muscle', ur: 'پٹھے بنائیں' },
+        { en: 'Maintain Weight', ur: 'وزن برقرار رکھیں' },
+        { en: 'General Training', ur: 'عمومی تربیت' },
+        { en: 'Improve Fitness', ur: 'فٹنس بہتر کریں' }
+      ];
+      
+      const dietPreferences = [
+        { en: 'Vegetarian', ur: 'سبزی خور' },
+        { en: 'Non-Vegetarian', ur: 'سبزی خور نہیں' },
+        { en: 'Vegan', ur: 'ویگن' },
+        { en: 'Flexitarian', ur: 'فلیکسیٹیرین' },
+        { en: 'Pescatarian', ur: 'پیسکیٹیرین' }
+      ];
+      
+      let options: { en: string; ur: string }[];
+      if (type === 'goal') {
+        options = bodyGoals;
+      } else if (type === 'diet') {
+        options = dietPreferences;
+      } else {
+        return value;
+      }
+      
+      // Find the matching option and return Urdu text
+      const option = options.find(opt => opt.en === value);
+      if (option) {
+        console.log('🔍 Diet Found Urdu translation:', option.ur);
+        return option.ur;
+      }
+    }
+    return value;
+  };
 
   useEffect(() => {
     loadUserInfo();
@@ -38,21 +83,21 @@ export default function DietScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
-      case 'settings':
-        Alert.alert('Settings', 'Settings feature coming soon!');
-        break;
-      case 'subscription':
-        Alert.alert('Subscription', 'Subscription Plan feature coming soon!');
-        break;
+              case 'settings':
+          showToast('info', 'Settings feature coming soon!');
+          break;
+        case 'subscription':
+          showToast('info', 'Subscription Plan feature coming soon!');
+          break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');
           await authService.logout();
           router.replace('/auth/login');
-        } catch (error) {
-          console.error('Logout failed:', error);
-          Alert.alert('Error', 'Failed to logout. Please try again.');
-        }
+                  } catch (error) {
+            console.error('Logout failed:', error);
+            showToast('error', 'Failed to logout. Please try again.');
+          }
         break;
       default:
         console.log('Unknown action:', action);
@@ -60,13 +105,13 @@ export default function DietScreen() {
   };
 
   const handleGenerateClick = () => {
-    if (userInfo) {
-      // User already has profile, show success message
-      Alert.alert('Success', 'Your diet plan is being generated! This feature will be available soon.');
-    } else {
-      // User needs to create profile first
-      setShowUserInfoModal(true);
-    }
+          if (userInfo) {
+        // User already has profile, show success message
+        showToast('success', 'Your diet plan is being generated! This feature will be available soon.');
+      } else {
+        // User needs to create profile first
+        setShowUserInfoModal(true);
+      }
   };
 
   const handleCompleteUserInfo = async (userInfoData: any) => {
@@ -80,18 +125,18 @@ export default function DietScreen() {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
         console.log('✅ User profile saved to database:', response.data);
-        Alert.alert('Success', 'Profile created! Now generating your diet plan...');
+        showToast('Success', 'Profile created! Now generating your diet plan...');
         // Here you would typically call the diet plan generation API
         setTimeout(() => {
-          Alert.alert('Success', 'Your personalized diet plan is ready! This feature will be available soon.');
+          showToast('Success', 'Your personalized diet plan is ready! This feature will be available soon.');
         }, 2000);
       } else {
         console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
-        Alert.alert('Error', 'Failed to save profile. Please try again.');
+        showToast('Error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
       console.error('💥 Exception in diet page:', error);
-      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
+      showToast('Error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
 
@@ -120,6 +165,8 @@ export default function DietScreen() {
       }
     } catch (error) {
       console.error('Failed to load user info:', error);
+    } finally {
+      setIsLoading(false); // Set loading to false after data is loaded
     }
   };
 
@@ -133,7 +180,75 @@ export default function DietScreen() {
     }
   };
 
+  // Render content based on user info status
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      );
+    }
 
+    if (userInfo) {
+      // User has profile - show profile summary and confirm button
+      return (
+        <View style={styles.profileSummaryContainer}>
+          <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
+          
+          <View style={styles.profileSummaryCard}>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
+              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.diet.preference')}</Text>
+              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.dietPreference, 'diet')}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.current.weight')}</Text>
+              <Text style={styles.profileSummaryValue}>{userInfo.currentWeight} kg</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.target.weight')}</Text>
+              <Text style={styles.profileSummaryValue}>{userInfo.targetWeight || 'Not set'} kg</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.confirmGenerateButton} onPress={handleGenerateClick}>
+            <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // User has no profile - show beautiful start card
+    return (
+      <View style={styles.startCardContainer}>
+        <View style={styles.startCard}>
+          <View style={styles.startCardIconContainer}>
+            <Text style={styles.startCardIcon}>🥗</Text>
+          </View>
+          
+          <Text style={styles.startCardTitle}>
+            {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی غذائی پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized diet through AI?'}
+          </Text>
+          
+          <Text style={styles.startCardSubtitle}>
+            {t('diet.hero.subtitle')}
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.startButton} 
+            onPress={() => setShowUserInfoModal(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startButtonText}>{t('onboarding.start')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <DecorativeBackground>
@@ -150,47 +265,7 @@ export default function DietScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section with Gradient */}
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
-            <LinearGradient
-              colors={['rgba(245, 158, 11, 0.2)', 'rgba(245, 158, 11, 0.05)']}
-              style={styles.heroGradient}
-            >
-              <View style={styles.heroContent}>
-                <View style={styles.heroIconContainer}>
-                  <Text style={styles.heroIcon}>🥗</Text>
-                </View>
-                <Text style={styles.heroTitle}>{t('diet.hero.title')}</Text>
-                <Text style={styles.heroSubtitle}>
-                  {t('diet.hero.subtitle')}
-                </Text>
-              </View>
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Magic Message */}
-          <Animated.View entering={FadeInUp.delay(300)} style={styles.magicSection}>
-            <Text style={styles.magicText}>{t('diet.magic.message')}</Text>
-          </Animated.View>
-
-          {/* Generate Button */}
-          <Animated.View entering={FadeInUp.delay(500)} style={styles.generateSection}>
-            <TouchableOpacity 
-              style={styles.generateButton}
-              onPress={handleGenerateClick}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={[colors.gold, colors.goldDark]}
-                style={styles.generateButtonGradient}
-              >
-                <Text style={styles.generateButtonIcon}>🚀</Text>
-                <Text style={styles.generateButtonText}>{t('diet.generate.button')}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-
-
+          {renderContent()}
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
@@ -235,7 +310,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   
-  // Hero Section
+  // Hero Section (for onboarding)
   heroSection: {
     marginBottom: spacing.xl,
     borderRadius: radius.lg,
@@ -282,10 +357,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
 
-  // Quick Actions
-  quickActionsSection: {
+
+
+  // Magic Message
+  magicSection: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
+  magicText: {
+    fontSize: typography.subtitle,
+    color: colors.gold,
+    textAlign: 'center',
+    fontFamily: fonts.heading,
+    fontWeight: '600',
+  },
+
+  // Generate Section (for onboarding)
+  generateSection: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+
+
+
+  // Generate Button (for onboarding)
   generateButton: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -315,87 +412,169 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-  generateButtonArrow: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
-  },
 
 
 
-  // Features Section
-  sectionTitle: {
+  // Profile Summary Section
+  profileSummaryTitle: {
     color: colors.white,
     fontSize: 24,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: spacing.md,
     textAlign: 'center',
+    marginBottom: spacing.lg,
   },
-  featuresSection: {
-    marginBottom: spacing.xl,
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  featureCard: {
-    width: (screenWidth - spacing.lg * 2 - spacing.md) / 2,
+  profileSummaryCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    alignItems: 'center',
-    shadowColor: colors.background,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.xl,
+    width: '100%',
+    maxWidth: 400,
   },
-  featureIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  profileSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  profileSummaryLabel: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    fontWeight: '500',
+  },
+  profileSummaryValue: {
+    color: colors.white,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    fontWeight: '600',
+  },
+
+  // Simple Confirm Generate Button
+  confirmGenerateButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    alignSelf: 'center',
+    width: '80%',
+    maxWidth: 300,
+    backgroundColor: colors.gold,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmGenerateButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+
+  // Loading Section
+  loadingSection: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  loadingText: {
+    fontSize: typography.subtitle,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+  },
+
+  // New styles for the new UI
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  profileSummaryContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  startCardContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  startCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+  },
+  startCardIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.gold,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  featureIcon: {
-    fontSize: 24,
+  startCardIcon: {
+    fontSize: 40,
   },
-  featureTitle: {
+  startCardTitle: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
     textAlign: 'center',
+    marginBottom: spacing.md,
+    lineHeight: 32,
   },
-  featureText: {
+  startCardSubtitle: {
     color: colors.mutedText,
-    fontSize: 13,
+    fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
-    lineHeight: 18,
-  },
-  
-  // New styles for simplified design
-  magicSection: {
-    alignItems: 'center',
+    lineHeight: 24,
     marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
   },
-  magicText: {
-    fontSize: typography.subtitle,
-    color: colors.gold,
-    textAlign: 'center',
+  startButton: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.gold,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+
+  startButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
     fontFamily: fonts.heading,
-    fontWeight: '600',
-  },
-  generateSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
   },
 });

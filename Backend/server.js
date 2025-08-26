@@ -76,7 +76,9 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
       'http://192.168.0.117:8081', // Your specific IP address
-      'http://192.168.1.100:8081', // Local network access
+      'http://192.168.0.117:5000', // Your API IP
+      'exp://192.168.0.117:8081',  // Expo protocol
+      'exp://localhost:8081',       // Expo localhost
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -110,6 +112,21 @@ app.get('/health', (req, res) => {
     message: 'PrimeForm API is running!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Base API route
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: '🏃‍♂️ PrimeForm API is running!',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      auth: '/api/auth',
+      dashboard: '/api/dashboard',
+      userProfile: '/api/user-profile'
+    }
   });
 });
 
