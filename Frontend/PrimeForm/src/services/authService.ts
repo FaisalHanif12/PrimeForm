@@ -102,6 +102,50 @@ class AuthService {
     await AsyncStorage.removeItem('authToken');
   }
 
+  // Clear all user-related data
+  async clearAllUserData(): Promise<void> {
+    try {
+      // Clear auth token
+      await this.clearToken();
+      
+      // Clear any cached user profile data
+      await AsyncStorage.removeItem('userProfileData');
+      await AsyncStorage.removeItem('userProfileImage'); // Clear profile image
+      await AsyncStorage.removeItem('primeform_user_info_completed');
+      await AsyncStorage.removeItem('primeform_user_info_cancelled');
+      await AsyncStorage.removeItem('primeform_permission_modal_seen');
+      
+      // Clear any other user-specific data
+      const keys = await AsyncStorage.getAllKeys();
+      const userDataKeys = keys.filter(key => 
+        key.includes('user') || 
+        key.includes('profile') || 
+        key.includes('primeform') ||
+        key.includes('image') ||
+        key.includes('avatar') ||
+        key.includes('photo')
+      );
+      
+      if (userDataKeys.length > 0) {
+        await AsyncStorage.multiRemove(userDataKeys);
+        console.log('Cleared user data keys:', userDataKeys);
+      }
+      
+      // Clear user profile service cache
+      try {
+        const { default: userProfileService } = await import('./userProfileService');
+        userProfileService.clearCache();
+        console.log('✅ User profile service cache cleared');
+      } catch (error) {
+        console.log('User profile service not available for cache clearing');
+      }
+      
+      console.log('✅ All user data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing user data:', error);
+    }
+  }
+
   // Login method
   async login(email: string, password: string): Promise<LoginResponse> {
     try {
@@ -113,6 +157,10 @@ class AuthService {
       console.log('Login API Response:', response);
 
       if (response.success && response.token) {
+        // Clear any existing user data before storing new token
+        await this.clearAllUserData();
+        
+        // Store new token
         await this.storeToken(response.token);
         return response;
       }
@@ -151,6 +199,8 @@ class AuthService {
       const response = await this.apiCall('/auth/signup', 'POST', payload);
 
       if (response.success && response.token) {
+        // Clear any existing user data before storing new token
+        await this.clearAllUserData();
         await this.storeToken(response.token);
       }
 
@@ -277,7 +327,7 @@ class AuthService {
       // Continue with logout even if API call fails
       console.warn('Logout API call failed:', error);
     } finally {
-      await this.clearToken();
+      await this.clearAllUserData();
     }
   }
 

@@ -15,6 +15,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Picker } from '@react-native-picker/picker';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { useToast } from '../context/ToastContext';
 import userProfileService from '../services/userProfileService';
 import UserInfoModal from './UserInfoModal';
 
@@ -100,6 +101,7 @@ const genderOptions = [
 
 export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserInfo }: Props) {
   const { t, language } = useLanguage();
+  const { showToast } = useToast();
 
   // Helper function to get localized text
   const getLocalizedText = (item: { en: string; ur: string }) => {
@@ -132,21 +134,15 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     dietPreference: ''
   });
 
+  // Load user info when component mounts or userInfo prop changes
   useEffect(() => {
     if (userInfo) {
       setEditedUserInfo(userInfo);
-    } else {
-      // If no userInfo prop, try to load from database
+    } else if (visible) {
+      // Only load if visible and no userInfo
       loadUserInfo();
     }
-  }, [userInfo]);
-
-  // Reload user info when ProfilePage becomes visible
-  useEffect(() => {
-    if (visible && !userInfo) {
-      loadUserInfo();
-    }
-  }, [visible]);
+  }, [userInfo, visible]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -171,21 +167,21 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       if (response.success) {
         onUpdateUserInfo(processedUserInfo);
         setIsEditing(false);
-        Alert.alert('Success', 'Profile information updated successfully in database!');
+        showToast('success', 'Profile information updated successfully in database!');
         console.log('Profile updated in database:', response.data);
       } else {
         console.error('Failed to update in database:', response.message);
         // Fallback to local update if database fails (maintains functionality)
         onUpdateUserInfo(processedUserInfo);
         setIsEditing(false);
-        Alert.alert('Success', 'Profile information updated successfully!');
+        showToast('success', 'Profile information updated successfully!');
       }
     } catch (error) {
       console.error('Failed to update profile:', error);
       // Fallback to local update if database fails (maintains functionality)
       onUpdateUserInfo(editedUserInfo);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile information updated successfully!');
+      showToast('success', 'Profile information updated successfully!');
     }
   };
 
@@ -209,15 +205,15 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       if (response.success) {
         onUpdateUserInfo(newUserInfo);
         setShowUserInfoModal(false);
-        Alert.alert('Success', 'Profile information completed successfully in database!');
+        showToast('success', 'Profile information completed successfully in database!');
         console.log('Profile completed in database:', response.data);
       } else {
         console.error('Failed to save to database:', response.message);
-        Alert.alert('Error', 'Failed to save profile. Please try again.');
+        showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
       console.error('Failed to complete profile:', error);
-      Alert.alert('Error', 'Failed to save profile. Please check your connection and try again.');
+      showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
 

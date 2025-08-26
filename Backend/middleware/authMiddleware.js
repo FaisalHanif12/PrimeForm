@@ -22,18 +22,30 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
+      console.log('🔐 protect - JWT token decoded successfully');
+      console.log('🔐 protect - Decoded token payload:', decoded);
+      console.log('🔐 protect - User ID from token:', decoded.id);
+      
       // Get user from token and add to request object
       const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
+        console.log('❌ protect - No user found with ID:', decoded.id);
         return res.status(401).json({
           success: false,
           message: 'No user found with this token'
         });
       }
 
+      console.log('✅ protect - User found:', {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName
+      });
+
       // Check if user account is active
       if (!user.isActive) {
+        console.log('❌ protect - User account is deactivated:', user.email);
         return res.status(401).json({
           success: false,
           message: 'Your account has been deactivated'
@@ -41,14 +53,20 @@ const protect = async (req, res, next) => {
       }
 
       req.user = user;
+      console.log('🔐 protect - User added to request object:', {
+        id: req.user.id,
+        email: req.user.email
+      });
       next();
     } catch (error) {
+      console.error('❌ protect - JWT verification failed:', error.message);
       return res.status(401).json({
         success: false,
         message: 'Not authorized to access this route'
       });
     }
   } catch (error) {
+    console.error('❌ protect - Middleware error:', error);
     return res.status(500).json({
       success: false,
       message: 'Server error'
