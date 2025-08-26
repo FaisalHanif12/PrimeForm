@@ -39,9 +39,68 @@ export interface ProfileCompletionStatus {
 }
 
 class UserProfileService {
-  // Get user profile
-  async getUserProfile(): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
+  private cache: { data: any; timestamp: number } | null = null;
+  private cacheTimeout = 300000; // 5 minutes cache
+  private isLoading = false;
+  private pendingCall: Promise<any> | null = null;
+  private hasInitialized = false;
+
+  // Clear cache when user changes (called from auth service)
+  clearCache() {
+    this.cache = null;
+    this.currentUserId = null;
+    console.log('🗑️ User profile cache cleared');
+  }
+
+  // Get user profile with caching and debouncing
+  async getUserProfile(forceRefresh = false): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
+    // If not forcing refresh and we have cached data, return it
+    if (!forceRefresh && this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      console.log('📦 Using cached user profile data');
+      return this.cache.data;
+    }
+
+    // If already loading, return the pending call
+    if (this.isLoading && this.pendingCall) {
+      console.log('⏳ Returning pending API call');
+      return this.pendingCall;
+    }
+
+    // Set loading state
+    this.isLoading = true;
+    
+    // Create the API call
+    this.pendingCall = this._getUserProfile();
+    
     try {
+      const result = await this.pendingCall;
+      // Cache the successful result
+      this.cache = { data: result, timestamp: Date.now() };
+      this.hasInitialized = true;
+      return result;
+    } finally {
+      this.isLoading = false;
+      this.pendingCall = null;
+    }
+  }
+
+  // Check if we have cached data without making API call
+  hasCachedData(): boolean {
+    return this.cache !== null && Date.now() - this.cache.timestamp < this.cacheTimeout;
+  }
+
+  // Get cached data without API call
+  getCachedData(): { success: boolean; data: UserProfile | null; message: string } | null {
+    if (this.hasCachedData()) {
+      return this.cache!.data;
+    }
+    return null;
+  }
+
+  // Private method for actual API call with retry logic
+  private async _getUserProfile(retryCount = 0): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
+    try {
+      console.log(`🌐 Making API call to getUserProfile (attempt ${retryCount + 1})`);
       const response = await api.get('/user-profile');
       
       // Check if response exists and has data
@@ -56,7 +115,30 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error getting user profile:', error);
+      console.error(`Error getting user profile (attempt ${retryCount + 1}):`, error);
+      
+      // Check if it's a rate limiting error and we can retry
+      if (error.message && error.message.includes('Too many requests') && retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+        console.log(`⏳ Rate limited, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this._getUserProfile(retryCount + 1);
+      }
+      
+      // Check if it's a rate limiting error
+      if (error.message && error.message.includes('Too many requests')) {
+        console.warn('⚠️ Rate limit exceeded, using cached data if available');
+        // Return cached data if available, otherwise return error
+        if (this.cache) {
+          console.log('📦 Returning cached data due to rate limiting');
+          return this.cache.data;
+        }
+        return {
+          success: false,
+          data: null,
+          message: 'Too many requests. Please wait a moment and try again.'
+        };
+      }
       
       // Check if it's a 404 (no profile found) or other error
       if (error.response?.status === 404) {
@@ -99,6 +181,8 @@ class UserProfileService {
       
       if (response && response.success) {
         console.log('✅ userProfileService - Returning success response');
+        // Clear cache when profile is updated
+        this.clearCache();
         return response;
       } else {
         console.log('❌ userProfileService - Invalid response structure');
@@ -189,6 +273,39 @@ class UserProfileService {
         data: null,
         message: error.response?.data?.message || 'Failed to check profile completion'
       };
+    }
+  }
+
+  // Clear cache for current user or all users
+  clearCache(userId?: string) {
+    if (userId) {
+      // Clear cache for specific user
+      delete this.cache[userId];
+      console.log('🗑️ Cleared cache for user:', userId);
+    } else {
+      // Clear all cache
+      this.cache = {};
+      this.currentUserId = null;
+      console.log('🗑️ Cleared all user cache');
+    }
+  }
+
+  // Get current user ID from auth context or local storage
+  private async getCurrentUserId(): Promise<string | null> {
+    try {
+      // Try to get from AsyncStorage first
+      const AsyncStorage = await import('@react-native-async-storage/async-storage');
+      const userId = await AsyncStorage.default.getItem('primeform_user_id');
+      if (userId) {
+        return userId;
+      }
+      
+      // If not in storage, try to get from auth context
+      // This will be handled by the component calling this service
+      return this.currentUserId;
+    } catch (error) {
+      console.error('Error getting current user ID:', error);
+      return this.currentUserId;
     }
   }
 }

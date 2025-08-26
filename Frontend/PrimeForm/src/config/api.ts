@@ -5,22 +5,26 @@ interface ApiConfig {
 }
 
 const getApiConfig = (): ApiConfig => {
-  // For development, use localhost or your machine's IP address
+  // For development, try multiple URLs with fallback
   // For production, use your actual domain
   const isDevelopment = __DEV__;
   
   if (isDevelopment) {
-    // Try multiple URLs to ensure connectivity
+    // Try your network IP first, then fall back to localhost
     const possibleUrls = [
-      'http://192.168.0.117:5000/api', // Your specific IP
-      'http://localhost:5000/api',      // Localhost fallback
-      'http://127.0.0.1:5000/api'      // Loopback fallback
+      'http://192.168.0.117:5000/api', // Primary: your network IP
+      'http://localhost:5000/api',      // Fallback: localhost
+      'http://127.0.0.1:5000/api',     // Alternative: loopback
     ];
     
-    console.log('🔍 Available API URLs:', possibleUrls);
+    // Use the first URL (localhost) as primary
+    const baseURL = possibleUrls[0];
+    
+    console.log('🔍 Primary API URL:', baseURL);
+    console.log('🔄 Fallback URLs:', possibleUrls.slice(1));
     
     return {
-      baseURL: possibleUrls[0], // Use your specific IP first
+      baseURL,
       timeout: 15000, // Increased timeout for network issues
     };
   }
