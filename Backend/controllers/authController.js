@@ -2,6 +2,7 @@ const User = require('../models/User');
 const { sendTokenResponse } = require('../middleware/authMiddleware');
 const { sendOTPEmail, sendWelcomeEmail } = require('../utils/emailService');
 const { asyncHandler } = require('../middleware/errorMiddleware');
+const NotificationService = require('../services/notificationService');
 
 // @desc    Register user
 // @route   POST /api/auth/signup
@@ -44,6 +45,15 @@ const signup = asyncHandler(async (req, res) => {
     })
     .catch(error => {
       console.log('⚠️ Welcome email error (non-blocking):', error.message);
+    });
+
+  // Create welcome notification in background
+  NotificationService.createWelcomeNotification(user._id, fullName)
+    .then(() => {
+      console.log('✅ Welcome notification created successfully');
+    })
+    .catch(error => {
+      console.log('⚠️ Welcome notification error (non-blocking):', error.message);
     });
 
   // Send token response
