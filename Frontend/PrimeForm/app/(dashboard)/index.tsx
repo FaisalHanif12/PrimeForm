@@ -16,6 +16,7 @@ import StatsCard from '../../src/components/StatsCard';
 import WorkoutPlanCard from '../../src/components/WorkoutPlanCard';
 import MealPlanCard from '../../src/components/MealPlanCard';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import NotificationModal from '../../src/components/NotificationModal';
 import { useToast } from '../../src/context/ToastContext';
 
 
@@ -59,6 +60,7 @@ export default function DashboardScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   // Removed permission modal state
   const [backendAvailable, setBackendAvailable] = useState(false); // Start with backend unavailable
@@ -234,7 +236,8 @@ export default function DashboardScreen() {
   };
 
   const handleNotificationPress = () => {
-    console.log('Notifications pressed - feature coming soon');
+    console.log('Notifications pressed');
+    setShowNotificationModal(true);
   };
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
@@ -243,6 +246,8 @@ export default function DashboardScreen() {
       router.push('/(dashboard)/workout');
     } else if (tab === 'diet') {
       router.push('/(dashboard)/diet');
+    } else if (tab === 'gym') {
+      router.push('/(dashboard)/gym');
     } else {
       console.log('Feature coming soon:', tab);
     }
@@ -413,6 +418,12 @@ export default function DashboardScreen() {
           onClose={() => setShowProfilePage(false)}
           userInfo={userInfo}
           onUpdateUserInfo={handleUpdateUserInfo}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
         />
       </SafeAreaView>
     </DecorativeBackground>

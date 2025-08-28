@@ -255,7 +255,7 @@ const translations = {
     'profile.summary.equipment': 'Equipment:',
     'profile.summary.medical.conditions': 'Medical Conditions:',
     'profile.summary.none': 'None',
-    'profile.summary.confirm.generate': 'Confirm Generate AI Plan',
+    'profile.summary.confirm.generate': 'Confirm Generate',
     
     // Dropdown Options
     'dropdown.select.country': '🌍 Select your country',
@@ -478,9 +478,9 @@ const translations = {
     
     // Navigation
     'nav.home': 'ہوم',
-    'nav.diet': 'AI ڈائٹ',
+    'nav.diet': 'ذہین ڈائٹ',
     'nav.gym': 'جم',
-    'nav.workout': 'AI ورکاؤٹ',
+    'nav.workout': 'ذہین ورکاؤٹ',
     'nav.progress': 'پیش قدمی',
     
     // Sidebar

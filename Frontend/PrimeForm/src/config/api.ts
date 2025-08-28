@@ -37,6 +37,7 @@ const getApiConfig = (): ApiConfig => {
 };
 
 export const apiConfig = getApiConfig();
+export const API_BASE_URL = apiConfig.baseURL;
 
 // Create API client with proper authentication handling
 class ApiClient {
