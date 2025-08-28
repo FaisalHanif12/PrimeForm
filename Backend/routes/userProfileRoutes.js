@@ -21,4 +21,7 @@ router.delete('/', userProfileController.deleteProfile);
 // Check profile completion status
 router.get('/completion', userProfileController.checkProfileCompletion);
 
+// Save push notification token
+router.post('/push-token', userProfileController.savePushToken);
+
 module.exports = router;

@@ -1,22 +1,39 @@
 {
   "expo": {
     "name": "PrimeForm",
-    "slug": "PrimeForm",
+    "slug": "primeform",
     "version": "1.0.0",
+    "projectId": "ed01c701-6e7b-4790-9466-6305dabab35d",
     "orientation": "portrait",
+    "developmentClient": {
+      "silentLaunch": true
+    },
     "icon": "assets/images/PrimeIcon1.png",
     "scheme": "primeform",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "entitlements": {
+        "aps-environment": "development"
+      }
+    },
+    "notification": {
+      "icon": "./assets/images/PrimeIcon1.png",
+      "color": "#6366F1",
+      "androidMode": "default",
+      "androidCollapsedTitle": "PrimeForm"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "assets/images/PrimeIcon1.png",
         "backgroundColor": "#1a1a2e"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "notification": {
+        "icon": "./assets/images/notification-icon.png",
+        "color": "#6366F1"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -24,10 +41,25 @@
       "favicon": "assets/images/PrimeIcon1.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/PrimeIcon1.png",
+          "color": "#6366F1",
+          "defaultChannel": "primeform-notifications"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ed01c701-6e7b-4790-9466-6305dabab35d"
+      }
+    },
+    "owner": "mehrfaisal111"
   }
 }

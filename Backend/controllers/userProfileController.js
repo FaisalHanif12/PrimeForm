@@ -1,5 +1,6 @@
 const UserProfile = require('../models/UserProfile');
 const User = require('../models/User');
+const NotificationService = require('../services/notificationService');
 
 // Get user profile
 exports.getUserProfile = async (req, res) => {
@@ -30,6 +31,40 @@ exports.getUserProfile = async (req, res) => {
     });
   }
 };
+
+// Save push notification token
+exports.savePushToken = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Push token is required'
+      });
+    }
+
+    // Update user with push token
+    await User.findByIdAndUpdate(userId, { pushToken });
+
+    // Check for pending notifications and send them
+    await NotificationService.sendPendingNotifications(userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Push token saved successfully'
+    });
+  } catch (error) {
+    console.error('Error saving push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
 
 // Create or update user profile
 exports.createOrUpdateProfile = async (req, res) => {
@@ -88,6 +123,18 @@ exports.createOrUpdateProfile = async (req, res) => {
     await userProfile.save();
     
     console.log('🔍 createOrUpdateProfile - Profile saved successfully with userId:', userProfile.userId);
+    
+    // Send plan creation notifications (non-blocking)
+    if (userProfile.isProfileComplete) {
+      try {
+        await NotificationService.createDietPlanNotification(userId);
+        await NotificationService.createWorkoutPlanNotification(userId);
+        console.log('✅ Plan creation notifications sent for user:', userId);
+      } catch (notificationError) {
+        console.error('⚠️ Failed to send plan notifications:', notificationError.message);
+        // Don't fail the main request if notifications fail
+      }
+    }
     
     res.status(200).json({
       success: true,

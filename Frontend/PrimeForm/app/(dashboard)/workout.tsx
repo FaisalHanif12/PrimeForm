@@ -192,6 +192,8 @@ export default function WorkoutScreen() {
       router.push('/(dashboard)');
     } else if (tab === 'diet') {
       router.push('/(dashboard)/diet');
+    } else if (tab === 'gym') {
+      router.push('/(dashboard)/gym');
     } else {
       console.log('Feature coming soon:', tab);
     }

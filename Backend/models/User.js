@@ -84,6 +84,12 @@ const userSchema = new mongoose.Schema({
     }
   },
   
+  // Push notification token
+  pushToken: {
+    type: String,
+    default: null
+  },
+  
   // Authentication tracking
   lastLogin: Date,
   loginAttempts: {
