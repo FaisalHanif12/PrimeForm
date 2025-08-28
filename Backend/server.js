@@ -14,6 +14,7 @@ const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -125,7 +126,8 @@ app.get('/api', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       dashboard: '/api/dashboard',
-      userProfile: '/api/user-profile'
+      userProfile: '/api/user-profile',
+      notifications: '/api/notifications'
     }
   });
 });
@@ -134,6 +136,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user-profile', userProfileRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
