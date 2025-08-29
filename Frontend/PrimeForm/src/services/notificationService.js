@@ -285,6 +285,71 @@ class NotificationService {
     }
   }
 
+  // Create a new notification
+  async createNotification(notificationData) {
+    try {
+      const headers = await this.createHeaders();
+      const response = await fetch(this.baseURL, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(notificationData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create notification');
+      }
+
+      return {
+        success: true,
+        notification: data.data.notification
+      };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  // Send welcome notification for new user account creation
+  async sendWelcomeNotification(userEmail) {
+    try {
+      const headers = await this.createHeaders();
+      const response = await fetch(`${this.baseURL}/welcome`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          userEmail,
+          type: 'welcome',
+          title: 'Welcome to PrimeForm! 🎉',
+          message: 'Your account has been created successfully. Start your fitness journey today!',
+          priority: 'high',
+          metadata: { isWelcome: true }
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send welcome notification');
+      }
+
+      return {
+        success: true,
+        notification: data.data.notification
+      };
+    } catch (error) {
+      console.error('Error sending welcome notification:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
   // Format notification time for display
   formatNotificationTime(timestamp) {
     try {

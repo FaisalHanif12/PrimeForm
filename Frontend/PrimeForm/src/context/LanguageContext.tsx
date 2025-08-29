@@ -12,6 +12,7 @@ interface LanguageContextType {
   transliterateText: (text: string) => string;
   transliterateName: (name: string) => string;
   transliterateNumbers: (text: string) => string;
+  hasSelectedLanguage: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -171,12 +172,80 @@ const translations = {
     // App Branding
     'app.name': 'Prime Form',
     
+    // Gym Section
+    'gym.title': 'Gym Exercises',
+    'gym.subtitle': 'Choose your section and start your fitness journey',
+    'gym.men': 'MEN',
+    'gym.women': 'WOMEN',
+    
+    // Exercise Names
+    'exercise.pushups': 'Push-ups',
+    'exercise.pullups': 'Pull-ups',
+    'exercise.squats': 'Squats',
+    'exercise.deadlifts': 'Deadlifts',
+    'exercise.benchpress': 'Bench Press',
+    'exercise.bicepCurls': 'Bicep Curls',
+    'exercise.shoulderPress': 'Shoulder Press',
+    'exercise.planks': 'Planks',
+    'exercise.cycling': 'Cycling',
+    'exercise.rowing': 'Rowing',
+    'exercise.jumping_jacks': 'Jumping Jacks',
+    'exercise.dumbbell_rows': 'Dumbbell Rows',
+    'exercise.lunges': 'Lunges',
+    'exercise.glute_bridges': 'Glute Bridges',
+    'exercise.mountain_climbers': 'Mountain Climbers',
+    'exercise.tricep_dips': 'Tricep Dips',
+    'exercise.burpees': 'Burpees',
+    'exercise.yoga': 'Yoga',
+    'exercise.pilates': 'Pilates',
+    'exercise.dance_cardio': 'Dance Cardio',
+    
+    // Exercise Categories
+    'category.chest': 'chest',
+    'category.back': 'back',
+    'category.legs': 'legs',
+    'category.arms': 'arms',
+    'category.shoulders': 'shoulders',
+    'category.core': 'core',
+    'category.cardio': 'cardio',
+    'category.full_body': 'full body',
+    'category.glutes': 'glutes',
+    'category.flexibility': 'flexibility',
+    
+    // Muscle Groups
+    'muscle.chest': 'chest',
+    'muscle.triceps': 'triceps',
+    'muscle.shoulders': 'shoulders',
+    'muscle.back': 'back',
+    'muscle.biceps': 'biceps',
+    'muscle.quadriceps': 'quadriceps',
+    'muscle.glutes': 'glutes',
+    'muscle.hamstrings': 'hamstrings',
+    'muscle.core': 'core',
+    'muscle.legs': 'legs',
+    'muscle.arms': 'arms',
+    'muscle.full_body': 'full body',
+    'muscle.flexibility': 'flexibility',
+
+    // Exercise Detail Page
+    'exercise.detail.targetMuscles': 'Target Muscles',
+    'exercise.detail.demonstration': 'Exercise Demonstration',
+    'exercise.detail.tapToPlay': 'Tap to play demonstration',
+    'exercise.detail.chooseLevel': 'Choose Your Level',
+    'exercise.detail.duration': 'Duration',
+    'exercise.detail.reps': 'Reps',
+    'exercise.detail.sets': 'Sets',
+    'exercise.detail.proTips': '💡 Pro Tips',
+    'exercise.detail.startWorkout': 'Start Workout',
+    'exercise.detail.beginner': 'BEGINNER',
+    'exercise.detail.medium': 'MEDIUM',
+    'exercise.detail.advanced': 'ADVANCED',
+
     // Onboarding
     'onboarding.title': 'Are you ready for AI driven questions to personalize your AI diet and workout plan?',
     'onboarding.description': '',
     'onboarding.start': 'Start',
     'onboarding.cancel': 'Cancel',
-    'onboarding.workout.title': 'Are you ready for AI-driven questions to personalize your workout plan?',
     
     // Workout Page
     
@@ -272,13 +341,6 @@ const translations = {
     'goal.general.training': '🏃‍♂️ General Training',
     'goal.improve.fitness': '🌟 Improve Fitness',
     
-    // Body Goals (Urdu)
-    'goal.lose.fat.ur': '🔥 چربی کم کریں',
-    'goal.gain.muscle.ur': '💪 پٹھے بنائیں',
-    'goal.maintain.weight.ur': '⚖️ وزن برقرار رکھیں',
-    'goal.general.training.ur': '🏃‍♂️ عمومی تربیت',
-    'goal.improve.fitness.ur': '🌟 فٹنس بہتر کریں',
-    
     // Occupation Types
     'occupation.sedentary': '🪑 Sedentary Desk Job',
     'occupation.active': '🏃‍♂️ Active Job',
@@ -287,14 +349,6 @@ const translations = {
     'occupation.retired': '🌅 Retired',
     'occupation.other': '🔧 Other',
     
-    // Occupation Types (Urdu)
-    'occupation.sedentary.ur': '🪑 بیٹھے ہوئے ڈیسک کا کام',
-    'occupation.active.ur': '🏃‍♂️ متحرک کام',
-    'occupation.shift.ur': '⏰ شفٹ ورکر',
-    'occupation.student.ur': '📚 طالب علم',
-    'occupation.retired.ur': '🌅 ریٹائرڈ',
-    'occupation.other.ur': '🔧 دیگر',
-    
     // Equipment Options
     'equipment.none': '❌ None',
     'equipment.dumbbells': '💪 Basic Dumbbells',
@@ -302,26 +356,12 @@ const translations = {
     'equipment.home.gym': '🏠 Home Gym',
     'equipment.full.gym': '🏢 Full Gym Access',
     
-    // Equipment Options (Urdu)
-    'equipment.none.ur': '❌ کوئی نہیں',
-    'equipment.dumbbells.ur': '💪 بنیادی ڈمبلز',
-    'equipment.bands.ur': '🎯 مزاحمتی بینڈز',
-    'equipment.home.gym.ur': '🏠 گھریلو جم',
-    'equipment.full.gym.ur': '🏢 مکمل جم تک رسائی',
-    
     // Diet Preferences
     'diet.vegetarian': '🥬 Vegetarian',
     'diet.non.vegetarian': '🍖 Non-Vegetarian',
     'diet.vegan': '🌱 Vegan',
     'diet.flexitarian': '🥄 Flexitarian',
     'diet.pescatarian': '🐟 Pescatarian',
-    
-    // Diet Preferences (Urdu)
-    'diet.vegetarian.ur': '🥬 سبزی خور',
-    'diet.non.vegetarian.ur': '🍖 سبزی خور نہیں',
-    'diet.vegan.ur': '🌱 ویگن',
-    'diet.flexitarian.ur': '🥄 فلیکسیٹیرین',
-    'diet.pescatarian.ur': '🐟 پیسکیٹیرین',
     
     // Validation Messages
     'validation.country.required': 'Please select your country',
@@ -420,7 +460,7 @@ const translations = {
     'profile.sections.personal': 'AI Personal Information',
     'profile.sections.goals': 'AI Goals & Preferences',
     'profile.sections.lifestyle': 'AI Lifestyle & Health',
-    'profile.fields.country': 'Country',
+    'profile.fields.country': 'Country', 
     'profile.fields.age': 'Age',
     'profile.fields.gender': 'Gender',
     'profile.fields.height': 'Height',
@@ -431,9 +471,9 @@ const translations = {
     'profile.fields.equipment': 'AI Available Equipment',
     'profile.fields.medical': 'AI Medical Conditions',
     'profile.title': 'AI Profile',
-    'profile.edit': 'Edit AI Profile',
+    'profile.edit': 'Edit Profile',
     'profile.cancel': 'Cancel',
-    'profile.save': 'Save AI Profile',
+    'profile.save': 'Save Profile',
     'profile.notSpecified': 'Not specified',
     'profile.select': 'AI Select...',
   },
@@ -828,11 +868,81 @@ const translations = {
     'profile.save': 'محفوظ کریں',
     'profile.notSpecified': 'متعلق نہیں',
     'profile.select': 'منتخب کریں...',
+    
+    // Gym Section
+    'gym.title': '💪 جم ایکسرسائز',
+    'gym.subtitle': 'اپنا سیکشن منتخب کریں اور اپنا فٹنس سفر شروع کریں',
+    'gym.men': 'مرد',
+    'gym.women': 'خواتین',
+    
+    // Exercise Names
+    'exercise.pushups': 'پش اپس',
+    'exercise.pullups': 'پل اپس',
+    'exercise.squats': 'اسکواٹس',
+    'exercise.deadlifts': 'ڈیڈ لفٹس',
+    'exercise.benchpress': 'بینچ پریس',
+    'exercise.bicepCurls': 'بائسپ کرلز',
+    'exercise.shoulderPress': 'شولڈر پریس',
+    'exercise.planks': 'پلانکس',
+    'exercise.cycling': 'سائیکلنگ',
+    'exercise.rowing': 'رونگ',
+    'exercise.jumping_jacks': 'جمپنگ جیکس',
+    'exercise.dumbbell_rows': 'ڈمبل رو',
+    'exercise.lunges': 'لنجز',
+    'exercise.glute_bridges': 'گلوٹ برجز',
+    'exercise.mountain_climbers': 'ماؤنٹین کلائمبرز',
+    'exercise.tricep_dips': 'ٹرائسپ ڈپس',
+    'exercise.burpees': 'برپیز',
+    'exercise.yoga': 'یوگا',
+    'exercise.pilates': 'پائلیٹس',
+    'exercise.dance_cardio': 'ڈانس کارڈیو',
+    
+    // Exercise Categories
+    'category.chest': 'سینہ',
+    'category.back': 'کمر',
+    'category.legs': 'ٹانگیں',
+    'category.arms': 'بازو',
+    'category.shoulders': 'کندھے',
+    'category.core': 'پیٹ',
+    'category.cardio': 'کارڈیو',
+    'category.full_body': 'پورا جسم',
+    'category.glutes': 'کولہے',
+    'category.flexibility': 'لچک',
+    
+    // Muscle Groups
+    'muscle.chest': 'سینہ',
+    'muscle.triceps': 'ٹرائسپس',
+    'muscle.shoulders': 'کندھے',
+    'muscle.back': 'کمر',
+    'muscle.biceps': 'بائسپس',
+    'muscle.quadriceps': 'کواڈرسپس',
+    'muscle.glutes': 'کولہے',
+    'muscle.hamstrings': 'ہیمسٹرنگز',
+    'muscle.core': 'پیٹ',
+    'muscle.legs': 'ٹانگیں',
+    'muscle.arms': 'بازو',
+    'muscle.full_body': 'پورا جسم',
+    'muscle.flexibility': 'لچک',
+
+    // Exercise Detail Page
+    'exercise.detail.targetMuscles': 'ہدف کے پٹھے',
+    'exercise.detail.demonstration': 'ورزش کا مظاہرہ',
+    'exercise.detail.tapToPlay': 'مظاہرہ چلانے کے لیے ٹیپ کریں',
+    'exercise.detail.chooseLevel': 'اپنا لیول منتخب کریں',
+    'exercise.detail.duration': 'مدت',
+    'exercise.detail.reps': 'بار',
+    'exercise.detail.sets': 'سیٹس',
+    'exercise.detail.proTips': '💡 پرو ٹپس',
+    'exercise.detail.startWorkout': 'ورکاؤٹ شروع کریں',
+    'exercise.detail.beginner': 'ابتدائی',
+    'exercise.detail.medium': 'درمیانہ',
+    'exercise.detail.advanced': 'ایڈوانس',
   },
 };
 
 export const LanguageProvider = ({ children }: LanguageProviderProps) => {
   const [language, setLanguage] = useState<Language>('en');
+  const [hasSelectedLanguage, setHasSelectedLanguage] = useState<boolean>(false);
 
   useEffect(() => {
     const loadLanguage = async () => {
@@ -840,9 +950,17 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
         const savedLanguage = await AsyncStorage.getItem('primeform_language_selected');
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) {
           setLanguage(savedLanguage);
+          setHasSelectedLanguage(true);
+        } else {
+          // If no language is saved, set default to English and mark as not selected
+          setLanguage('en');
+          setHasSelectedLanguage(false);
         }
       } catch (error) {
         console.error('Failed to load language:', error);
+        // Fallback to English
+        setLanguage('en');
+        setHasSelectedLanguage(false);
       }
     };
     loadLanguage();
@@ -852,6 +970,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     try {
       await AsyncStorage.setItem('primeform_language_selected', lang);
       setLanguage(lang);
+      setHasSelectedLanguage(true);
     } catch (error) {
       console.error('Failed to save language:', error);
     }
@@ -874,8 +993,6 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     return transliterationService.transliterateNumbers(text, language);
   };
 
-
-
   const value: LanguageContextType = {
     language,
     changeLanguage,
@@ -884,6 +1001,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     transliterateText,
     transliterateName,
     transliterateNumbers,
+    hasSelectedLanguage,
   };
 
   return (
