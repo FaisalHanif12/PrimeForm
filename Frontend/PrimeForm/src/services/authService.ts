@@ -1,8 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiConfig from '../config/api';
-
-// Backend API configuration
-const API_BASE_URL = apiConfig.baseURL;
+import { API_BASE_URL } from '../config/api';
 
 interface LoginResponse {
   success: boolean;
@@ -202,6 +199,24 @@ class AuthService {
         // Clear any existing user data before storing new token
         await this.clearAllUserData();
         await this.storeToken(response.token);
+        
+        // Check if this is the first time this user has signed up
+        const hasSignedUpBefore = await AsyncStorage.getItem(`user_${payload.email}_has_signed_up`);
+        
+        if (!hasSignedUpBefore) {
+          // This is the first time this user has signed up
+          // Send welcome notification for new user
+          await this.sendWelcomeNotification(payload.email);
+          
+          // Mark that this user has received their welcome notification
+          await AsyncStorage.setItem(`user_${payload.email}_welcome_sent`, 'true');
+          
+          // Mark that this user has signed up before
+          await AsyncStorage.setItem(`user_${payload.email}_has_signed_up`, 'true');
+          
+          // Mark that user has ever signed up (for app-wide tracking)
+          await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
+        }
       }
 
       return response;
@@ -216,6 +231,24 @@ class AuthService {
         success: false,
         message: 'Signup failed. Please try again.',
       };
+    }
+  }
+
+  // Send welcome notification for new user
+  private async sendWelcomeNotification(userEmail: string): Promise<void> {
+    try {
+      // Import notification service dynamically to avoid circular dependencies
+      const { default: notificationService } = await import('./notificationService');
+      
+      const result = await notificationService.sendWelcomeNotification(userEmail);
+      if (result.success) {
+        console.log('✅ Welcome notification sent for new user:', userEmail);
+      } else {
+        console.log('❌ Failed to send welcome notification:', result.error);
+      }
+    } catch (error) {
+      console.error('Error sending welcome notification:', error);
+      // Don't fail signup if notification fails
     }
   }
 

@@ -97,11 +97,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         
         // Update unread count
         setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        // Show success message
+        showToast('success', 'Notification marked as read');
       } else {
-        showToast(result.error || 'Failed to mark notification as read', 'error');
+        showToast('error', result.error || 'Failed to mark notification as read');
       }
     } catch (err: any) {
-      showToast(err.message || 'An error occurred', 'error');
+      showToast('error', err.message || 'An error occurred');
     }
   };
 
@@ -116,12 +119,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           prev.map(notification => ({ ...notification, isRead: true }))
         );
         setUnreadCount(0);
-        showToast('All notifications marked as read', 'success');
+        showToast('success', 'All notifications marked as read');
       } else {
-        showToast(result.error || 'Failed to mark all notifications as read', 'error');
+        showToast('error', result.error || 'Failed to mark all notifications as read');
       }
     } catch (err: any) {
-      showToast(err.message || 'An error occurred', 'error');
+      showToast('error', err.message || 'An error occurred');
     }
   };
 
@@ -142,12 +145,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           setUnreadCount(prev => Math.max(0, prev - 1));
         }
         
-        showToast('Notification deleted', 'success');
+        showToast('success', 'Notification deleted');
       } else {
-        showToast(result.error || 'Failed to delete notification', 'error');
+        showToast('error', result.error || 'Failed to delete notification');
       }
     } catch (err: any) {
-      showToast(err.message || 'An error occurred', 'error');
+      showToast('error', err.message || 'An error occurred');
     }
   };
 

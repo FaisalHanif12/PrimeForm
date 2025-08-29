@@ -33,6 +33,7 @@ interface Props {
   userName: string;
   userEmail: string;
   userInfo?: UserInfo | null;
+  isGuest?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -43,7 +44,7 @@ const menuItems: MenuItem[] = [
   { icon: 'log-out-outline', label: 'Log Out', action: 'logout', color: colors.error },
 ];
 
-export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo }: Props) {
+export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false }: Props) {
   const { t, language, changeLanguage } = useLanguage();
   const [showLanguageToggle, setShowLanguageToggle] = useState(false);
 
@@ -114,51 +115,53 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
 
           {/* Menu Items */}
           <View style={styles.menuContainer}>
-            {menuItems.map((item, index) => (
-              <View key={item.action}>
-                <TouchableOpacity
-                  style={styles.menuItem}
-                  onPress={() => handleMenuPress(item.action)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.menuItemContent}>
-                    <Ionicons 
-                      name={item.icon} 
-                      size={22} 
-                      color={item.color || colors.white} 
-                    />
-                    <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
-                      {t(`sidebar.${item.action}`)}
-                    </Text>
-                  </View>
-                  <View style={styles.menuItemRight}>
-                    <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
-                  </View>
-                </TouchableOpacity>
-                
-                {/* Language Toggle Options */}
-                {item.action === 'language' && showLanguageToggle && (
-                  <View style={styles.languageOptions}>
-                    <TouchableOpacity 
-                      style={[styles.languageOption, language === 'en' && styles.activeLanguage]}
-                      onPress={() => handleLanguageChange('en')}
-                    >
-                      <Text style={[styles.languageText, language === 'en' && styles.activeLanguageText]}>
-                        English
+            {menuItems
+              .filter(item => !isGuest || item.action !== 'logout') // Hide logout for guests
+              .map((item, index) => (
+                <View key={item.action}>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => handleMenuPress(item.action)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.menuItemContent}>
+                      <Ionicons 
+                        name={item.icon} 
+                        size={22} 
+                        color={item.color || colors.white} 
+                      />
+                      <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
+                        {t(`sidebar.${item.action}`)}
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.languageOption, language === 'ur' && styles.activeLanguage]}
-                      onPress={() => handleLanguageChange('ur')}
-                    >
-                      <Text style={[styles.languageText, language === 'ur' && styles.activeLanguageText]}>
-                        اردو
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            ))}
+                    </View>
+                    <View style={styles.menuItemRight}>
+                      <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {/* Language Toggle Options */}
+                  {item.action === 'language' && showLanguageToggle && (
+                    <View style={styles.languageOptions}>
+                      <TouchableOpacity 
+                        style={[styles.languageOption, language === 'en' && styles.activeLanguage]}
+                        onPress={() => handleLanguageChange('en')}
+                      >
+                        <Text style={[styles.languageText, language === 'en' && styles.activeLanguageText]}>
+                          English
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.languageOption, language === 'ur' && styles.activeLanguage]}
+                        onPress={() => handleLanguageChange('ur')}
+                      >
+                        <Text style={[styles.languageText, language === 'ur' && styles.activeLanguageText]}>
+                          اردو
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
           </View>
 
           {/* Footer */}

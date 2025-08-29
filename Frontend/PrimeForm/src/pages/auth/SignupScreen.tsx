@@ -185,6 +185,12 @@ export default function SignupScreen() {
           setAuthUser(response.data.user);
         }
 
+        // Mark that user has ever signed up (for future app launches)
+        await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
+        
+        // Mark that user has completed signup (for current session access)
+        await AsyncStorage.setItem('primeform_signup_completed', 'true');
+
         showToast('success', t('toast.signup.success'));
 
         // Auto-navigate to dashboard after toast

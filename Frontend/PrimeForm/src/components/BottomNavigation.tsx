@@ -81,14 +81,14 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    backgroundColor: '#0F1424', // Deep navy blue
     borderRadius: 20,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xl + spacing.md, // Increased bottom margin
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
     position: 'relative',
   },
   // Removed indicator styling
