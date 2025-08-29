@@ -173,6 +173,39 @@ class PushNotificationService {
     }
   }
 
+  // Send a notification to the server (only when explicitly requested)
+  async sendNotification(notificationData) {
+    try {
+      if (!this.expoPushToken) {
+        console.log('❌ No push token available');
+        return false;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/notifications/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await AsyncStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          pushToken: this.expoPushToken,
+          ...notificationData
+        }),
+      });
+
+      if (response.ok) {
+        console.log('✅ Notification sent to server');
+        return true;
+      } else {
+        console.error('❌ Failed to send notification to server');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error sending notification:', error);
+      return false;
+    }
+  }
+
   // Get current push token
   getPushToken() {
     return this.expoPushToken;

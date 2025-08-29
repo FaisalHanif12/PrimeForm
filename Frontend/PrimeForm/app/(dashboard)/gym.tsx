@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -17,39 +16,39 @@ const { width: screenWidth } = Dimensions.get('window');
 interface Exercise {
   id: string;
   name: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  emoji: string;
   category: string;
   targetMuscles: string[];
 }
 
 const menExercises: Exercise[] = [
-  { id: 'pushups', name: 'Push-ups', icon: 'fitness-outline', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
-  { id: 'pullups', name: 'Pull-ups', icon: 'barbell-outline', category: 'back', targetMuscles: ['back', 'biceps'] },
-  { id: 'squats', name: 'Squats', icon: 'body-outline', category: 'legs', targetMuscles: ['quadriceps', 'glutes'] },
-  { id: 'deadlifts', name: 'Deadlifts', icon: 'flash-outline', category: 'back', targetMuscles: ['back', 'hamstrings', 'glutes'] },
-  { id: 'benchpress', name: 'Bench Press', icon: 'barbell', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
-  { id: 'bicepCurls', name: 'Bicep Curls', icon: 'fitness', category: 'arms', targetMuscles: ['biceps'] },
-  { id: 'shoulderPress', name: 'Shoulder Press', icon: 'flame-outline', category: 'shoulders', targetMuscles: ['shoulders', 'triceps'] },
-  { id: 'planks', name: 'Planks', icon: 'timer-outline', category: 'core', targetMuscles: ['core', 'shoulders'] },
-  { id: 'cycling', name: 'Cycling', icon: 'bicycle-outline', category: 'cardio', targetMuscles: ['legs', 'glutes', 'core'] },
-  { id: 'rowing', name: 'Rowing', icon: 'boat-outline', category: 'full_body', targetMuscles: ['back', 'arms', 'legs'] },
-  { id: 'jumping_jacks', name: 'Jumping Jacks', icon: 'walk-outline', category: 'cardio', targetMuscles: ['full body'] },
-  { id: 'dumbbell_rows', name: 'Dumbbell Rows', icon: 'hardware-chip-outline', category: 'back', targetMuscles: ['back', 'biceps'] },
+  { id: 'pushups', name: 'Push-ups', emoji: '🏃‍♂️', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
+  { id: 'pullups', name: 'Pull-ups', emoji: '🏋️‍♂️', category: 'back', targetMuscles: ['back', 'biceps'] },
+  { id: 'squats', name: 'Squats', emoji: '🏋️‍♂️', category: 'legs', targetMuscles: ['quadriceps', 'glutes'] },
+  { id: 'deadlifts', name: 'Deadlifts', emoji: '🏋️‍♂️', category: 'back', targetMuscles: ['back', 'hamstrings', 'glutes'] },
+  { id: 'benchpress', name: 'Bench Press', emoji: '🏋️‍♂️', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
+  { id: 'bicepCurls', name: 'Bicep Curls', emoji: '💪‍♂️', category: 'arms', targetMuscles: ['biceps'] },
+  { id: 'shoulderPress', name: 'Shoulder Press', emoji: '🏋️‍♂️', category: 'shoulders', targetMuscles: ['shoulders', 'triceps'] },
+  { id: 'planks', name: 'Planks', emoji: '🧘‍♂️', category: 'core', targetMuscles: ['core', 'shoulders'] },
+  { id: 'cycling', name: 'Cycling', emoji: '🚴‍♂️', category: 'cardio', targetMuscles: ['legs', 'glutes', 'core'] },
+  { id: 'rowing', name: 'Rowing', emoji: '🚣‍♂️', category: 'full_body', targetMuscles: ['back', 'arms', 'legs'] },
+  { id: 'jumping_jacks', name: 'Jumping Jacks', emoji: '🤸‍♂️', category: 'cardio', targetMuscles: ['full_body'] },
+  { id: 'dumbbell_rows', name: 'Dumbbell Rows', emoji: '🏋️‍♂️', category: 'back', targetMuscles: ['back', 'biceps'] },
 ];
 
 const womenExercises: Exercise[] = [
-  { id: 'squats', name: 'Squats', icon: 'body-outline', category: 'legs', targetMuscles: ['quadriceps', 'glutes'] },
-  { id: 'lunges', name: 'Lunges', icon: 'walk', category: 'legs', targetMuscles: ['quadriceps', 'glutes', 'hamstrings'] },
-  { id: 'glute_bridges', name: 'Glute Bridges', icon: 'trending-up-outline', category: 'glutes', targetMuscles: ['glutes', 'hamstrings'] },
-  { id: 'pushups', name: 'Push-ups', icon: 'fitness-outline', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
-  { id: 'planks', name: 'Planks', icon: 'timer-outline', category: 'core', targetMuscles: ['core', 'shoulders'] },
-  { id: 'mountain_climbers', name: 'Mountain Climbers', icon: 'triangle-outline', category: 'cardio', targetMuscles: ['core', 'legs', 'shoulders'] },
-  { id: 'tricep_dips', name: 'Tricep Dips', icon: 'remove-outline', category: 'arms', targetMuscles: ['triceps', 'shoulders'] },
-  { id: 'burpees', name: 'Burpees', icon: 'flame', category: 'full_body', targetMuscles: ['full body'] },
-  { id: 'yoga', name: 'Yoga', icon: 'leaf-outline', category: 'flexibility', targetMuscles: ['full body'] },
-  { id: 'pilates', name: 'Pilates', icon: 'flower-outline', category: 'core', targetMuscles: ['core', 'flexibility'] },
-  { id: 'cycling', name: 'Cycling', icon: 'bicycle-outline', category: 'cardio', targetMuscles: ['legs', 'glutes', 'core'] },
-  { id: 'dance_cardio', name: 'Dance Cardio', icon: 'musical-notes-outline', category: 'cardio', targetMuscles: ['full body'] },
+  { id: 'squats', name: 'Squats', emoji: '🏋️‍♀️', category: 'legs', targetMuscles: ['quadriceps', 'glutes'] },
+  { id: 'lunges', name: 'Lunges', emoji: '🚶‍♀️', category: 'legs', targetMuscles: ['quadriceps', 'glutes', 'hamstrings'] },
+  { id: 'glute_bridges', name: 'Glute Bridges', emoji: '🧘‍♀️', category: 'glutes', targetMuscles: ['glutes', 'hamstrings'] },
+  { id: 'pushups', name: 'Push-ups', emoji: '🤸‍♀️', category: 'chest', targetMuscles: ['chest', 'triceps', 'shoulders'] },
+  { id: 'planks', name: 'Planks', emoji: '🧘‍♀️', category: 'core', targetMuscles: ['core', 'shoulders'] },
+  { id: 'mountain_climbers', name: 'Mountain Climbers', emoji: '🏃‍♀️', category: 'cardio', targetMuscles: ['core', 'legs', 'shoulders'] },
+  { id: 'tricep_dips', name: 'Tricep Dips', emoji: '💪‍♀️', category: 'arms', targetMuscles: ['triceps', 'shoulders'] },
+  { id: 'burpees', name: 'Burpees', emoji: '🤸‍♀️', category: 'full_body', targetMuscles: ['full_body'] },
+  { id: 'yoga', name: 'Yoga', emoji: '🧘‍♀️', category: 'flexibility', targetMuscles: ['full_body'] },
+  { id: 'pilates', name: 'Pilates', emoji: '🧘‍♀️', category: 'core', targetMuscles: ['core', 'flexibility'] },
+  { id: 'cycling', name: 'Cycling', emoji: '🚴‍♀️', category: 'cardio', targetMuscles: ['legs', 'glutes', 'core'] },
+  { id: 'dance_cardio', name: 'Dance Cardio', emoji: '💃', category: 'cardio', targetMuscles: ['full_body'] },
 ];
 
 export default function GymScreen() {
@@ -123,7 +122,7 @@ export default function GymScreen() {
       params: {
         exerciseId: exercise.id,
         exerciseName: exercise.name,
-        exerciseIcon: exercise.icon,
+        exerciseEmoji: exercise.emoji,
         category: exercise.category,
         targetMuscles: JSON.stringify(exercise.targetMuscles),
       },
@@ -142,16 +141,16 @@ export default function GymScreen() {
         activeOpacity={0.8}
       >
         <View style={styles.exerciseEmojiContainer}>
-          <Ionicons name={exercise.icon} size={28} color={colors.white} />
+          <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
         </View>
-        <Text style={styles.exerciseName}>{exercise.name}</Text>
-        <Text style={styles.exerciseCategory}>{exercise.category.toUpperCase()}</Text>
+        <Text style={styles.exerciseName}>{t(`exercise.${exercise.id}`)}</Text>
+        <Text style={styles.exerciseCategory}>{t(`category.${exercise.category}`).toUpperCase()}</Text>
         <View style={styles.targetMusclesContainer}>
           {exercise.targetMuscles.slice(0, 2).map((muscle, idx) => (
             <Text key={idx} style={styles.targetMuscle}>
-              {muscle}
+              {t(`muscle.${muscle}`)}
             </Text>
-          ))}
+          ))} 
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -176,9 +175,9 @@ export default function GymScreen() {
         >
           {/* Header Section */}
           <Animated.View entering={FadeInUp} style={styles.headerSection}>
-            <Text style={styles.title}>💪 Gym Exercises</Text>
+            <Text style={styles.title}>{t('gym.title')}</Text>
             <Text style={styles.subtitle}>
-              Choose your section and start your fitness journey
+              {t('gym.subtitle')}
             </Text>
           </Animated.View>
 
@@ -206,16 +205,17 @@ export default function GymScreen() {
                       styles.modernIconWrapper,
                       selectedSection === 'men' && styles.modernIconWrapperActive
                     ]}>
-                      <Ionicons 
-                        name="flame" 
-                        size={selectedSection === 'men' ? 18 : 16} 
-                        color={selectedSection === 'men' ? colors.white : 'rgba(255, 255, 255, 0.7)'} 
-                      />
+                                          <Text style={[
+                      styles.toggleEmoji,
+                      selectedSection === 'men' && styles.toggleEmojiActive
+                    ]}>
+                      🏋️‍♂️
+                    </Text>
                     </View>
                     <Text style={[
                       styles.modernToggleLabel,
                       selectedSection === 'men' && styles.modernToggleLabelActive
-                    ]}>MEN</Text>
+                    ]}>{t('gym.men')}</Text>
                   </View>
                 </TouchableOpacity>
                 
@@ -232,16 +232,17 @@ export default function GymScreen() {
                       styles.modernIconWrapper,
                       selectedSection === 'women' && styles.modernIconWrapperActive
                     ]}>
-                      <Ionicons 
-                        name="diamond" 
-                        size={selectedSection === 'women' ? 18 : 16} 
-                        color={selectedSection === 'women' ? colors.white : 'rgba(255, 255, 255, 0.7)'} 
-                      />
+                                          <Text style={[
+                      styles.toggleEmoji,
+                      selectedSection === 'women' && styles.toggleEmojiActive
+                    ]}>
+                      🏃‍♀️
+                    </Text>
                     </View>
                     <Text style={[
                       styles.modernToggleLabel,
                       selectedSection === 'women' && styles.modernToggleLabelActive
-                    ]}>WOMEN</Text>
+                    ]}>{t('gym.women')}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -379,6 +380,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
   },
+  toggleEmoji: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  toggleEmojiActive: {
+    fontSize: 18,
+    color: colors.white,
+  },
   exercisesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -405,6 +414,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
+  },
+  exerciseEmoji: {
+    fontSize: 32,
+    textAlign: 'center',
   },
   
   exerciseName: {

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { Video, ResizeMode } from 'expo-av';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -120,6 +120,570 @@ const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
         tips: ['Start with light weight', 'Maintain form', 'Full range of motion', 'Rest 45 seconds between sets'],
         emoji: '🔴'
       }
+    ],
+    bicepCurls: [
+      {
+        level: 'beginner',
+        title: 'Dumbbell Bicep Curls',
+        duration: '10-15 minutes',
+        reps: '10-12',
+        sets: '2-3',
+        description: 'Basic bicep curls to build arm strength and definition.',
+        tips: [
+          'Stand with feet shoulder-width apart, dumbbells at sides',
+          'Keep your elbows close to your body throughout',
+          'Curl dumbbells up to shoulder level, not higher',
+          'Lower dumbbells slowly to full arm extension'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Alternating Bicep Curls',
+        duration: '15-20 minutes',
+        reps: '12-15 each arm',
+        sets: '3-4',
+        description: 'Alternate arms to increase focus and control.',
+        tips: [
+          'Curl one arm while keeping the other at your side',
+          'Maintain controlled movement on both up and down',
+          'Keep your core engaged to prevent body sway',
+          'Focus on bicep contraction at the top of each curl'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Hammer Curls',
+        duration: '20-25 minutes',
+        reps: '10-12',
+        sets: '4-5',
+        description: 'Target both biceps and forearms with hammer grip.',
+        tips: [
+          'Hold dumbbells with palms facing each other',
+          'Keep your wrists straight throughout the movement',
+          'Curl both arms simultaneously for maximum intensity',
+          'Lower dumbbells slowly to maximize muscle engagement'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    shoulderPress: [
+      {
+        level: 'beginner',
+        title: 'Dumbbell Shoulder Press',
+        duration: '15-20 minutes',
+        reps: '8-10',
+        sets: '2-3',
+        description: 'Build shoulder strength with proper pressing form.',
+        tips: [
+          'Sit with back straight, dumbbells at shoulder level',
+          'Press dumbbells up until arms are fully extended',
+          'Keep your core engaged to prevent back arching',
+          'Lower dumbbells slowly back to starting position'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Standing Shoulder Press',
+        duration: '20-25 minutes',
+        reps: '8-12',
+        sets: '3-4',
+        description: 'Standing variation for core engagement and stability.',
+        tips: [
+          'Stand with feet shoulder-width apart, core tight',
+          'Press dumbbells up in a straight line overhead',
+          'Keep your head forward, not leaning back',
+          'Control the descent to maintain shoulder stability'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Arnold Press',
+        duration: '25-30 minutes',
+        reps: '8-10',
+        sets: '4-5',
+        description: 'Advanced variation with rotation for full shoulder development.',
+        tips: [
+          'Start with dumbbells at chest level, palms facing you',
+          'Rotate palms forward as you press up',
+          'Rotate palms back as you lower dumbbells',
+          'Focus on smooth rotation throughout the movement'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    planks: [
+      {
+        level: 'beginner',
+        title: 'Knee Planks',
+        duration: '10-15 minutes',
+        reps: '3 x 20 seconds',
+        sets: '2-3',
+        description: 'Build core strength with modified plank position.',
+        tips: [
+          'Start on your knees with forearms on the ground',
+          'Keep your body straight from knees to head',
+          'Engage your core muscles throughout the hold',
+          'Breathe steadily and maintain the position'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Standard Planks',
+        duration: '15-20 minutes',
+        reps: '3 x 45 seconds',
+        sets: '3-4',
+        description: 'Classic plank for core and shoulder stability.',
+        tips: [
+          'Hold body in straight line from head to heels',
+          'Keep your core tight and glutes engaged',
+          'Don\'t let your hips sag or rise',
+          'Focus on breathing steadily throughout the hold'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Side Planks',
+        duration: '20-25 minutes',
+        reps: '3 x 30 seconds each side',
+        sets: '4-5',
+        description: 'Target obliques and improve lateral stability.',
+        tips: [
+          'Stack your feet and lift your hips high',
+          'Keep your body in a straight line from head to feet',
+          'Engage your obliques to maintain position',
+          'Hold each side for equal time to maintain balance'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    cycling: [
+      {
+        level: 'beginner',
+        title: 'Stationary Cycling',
+        duration: '20-30 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Low-impact cardio to build endurance and leg strength.',
+        tips: [
+          'Adjust seat height so knee is slightly bent at bottom',
+          'Keep your back straight and shoulders relaxed',
+          'Pedal at a comfortable, steady pace',
+          'Focus on smooth, circular pedaling motion'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Interval Cycling',
+        duration: '25-35 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Alternate between high and low intensity for cardio fitness.',
+        tips: [
+          'Warm up for 5 minutes at easy pace',
+          'Alternate 2 minutes hard, 1 minute easy',
+          'Keep your core engaged during high-intensity intervals',
+          'Cool down for 5 minutes at easy pace'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Hill Climbing',
+        duration: '30-45 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Simulate hill climbing for maximum leg strength and endurance.',
+        tips: [
+          'Increase resistance to simulate uphill climbs',
+          'Maintain steady cadence even with high resistance',
+          'Keep your upper body still and relaxed',
+          'Focus on pushing through your legs and glutes'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    deadlifts: [
+      {
+        level: 'beginner',
+        title: 'Bodyweight Deadlifts',
+        duration: '15-20 minutes',
+        reps: '8-12',
+        sets: '2-3',
+        description: 'Learn proper hip hinge movement without weight.',
+        tips: [
+          'Stand with feet hip-width apart, knees slightly bent',
+          'Hinge at your hips, pushing your butt back',
+          'Keep your back straight and chest up throughout',
+          'Return to standing by squeezing your glutes'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Dumbbell Deadlifts',
+        duration: '20-25 minutes',
+        reps: '8-12',
+        sets: '3-4',
+        description: 'Add weight while maintaining perfect form.',
+        tips: [
+          'Hold dumbbells in front of your thighs',
+          'Hinge at hips, keeping dumbbells close to your legs',
+          'Lower until you feel a stretch in your hamstrings',
+          'Drive through your heels to return to standing'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Barbell Deadlifts',
+        duration: '25-30 minutes',
+        reps: '5-8',
+        sets: '4-5',
+        description: 'Full barbell deadlifts for maximum strength gains.',
+        tips: [
+          'Bar should be over mid-foot, close to your shins',
+          'Grip bar with hands shoulder-width apart',
+          'Keep bar close to your body throughout the lift',
+          'Drive through your heels and squeeze glutes at the top'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    benchpress: [
+      {
+        level: 'beginner',
+        title: 'Dumbbell Bench Press',
+        duration: '15-20 minutes',
+        reps: '8-12',
+        sets: '2-3',
+        description: 'Learn proper pressing form with dumbbells.',
+        tips: [
+          'Lie on bench with feet flat on the ground',
+          'Hold dumbbells at chest level, palms facing forward',
+          'Press dumbbells up until arms are fully extended',
+          'Lower dumbbells slowly back to starting position'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Barbell Bench Press',
+        duration: '20-25 minutes',
+        reps: '6-10',
+        sets: '3-4',
+        description: 'Classic barbell bench press for chest development.',
+        tips: [
+          'Grip bar slightly wider than shoulder width',
+          'Keep your shoulder blades retracted throughout',
+          'Lower bar to your mid-chest, not your neck',
+          'Press bar up in a straight line over your chest'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Incline Bench Press',
+        duration: '25-30 minutes',
+        reps: '6-10',
+        sets: '4-5',
+        description: 'Target upper chest with inclined bench press.',
+        tips: [
+          'Set bench to 30-45 degree incline',
+          'Focus on upper chest activation',
+          'Keep your core tight and feet planted',
+          'Control the weight throughout the movement'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    lunges: [
+      {
+        level: 'beginner',
+        title: 'Stationary Lunges',
+        duration: '15-20 minutes',
+        reps: '8-10 each leg',
+        sets: '2-3',
+        description: 'Basic lunge movement to build leg strength and balance.',
+        tips: [
+          'Step forward with one leg, keeping back leg stationary',
+          'Lower until both knees are at 90-degree angles',
+          'Keep your front knee aligned with your toes',
+          'Push back to starting position using your front leg'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Walking Lunges',
+        duration: '20-25 minutes',
+        reps: '10-12 each leg',
+        sets: '3-4',
+        description: 'Dynamic lunges to improve coordination and strength.',
+        tips: [
+          'Take a step forward and lower into lunge position',
+          'Keep your torso upright and core engaged',
+          'Push off your back foot to step forward',
+          'Maintain steady rhythm and controlled movement'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Jumping Lunges',
+        duration: '25-30 minutes',
+        reps: '8-10 each leg',
+        sets: '4-5',
+        description: 'Explosive lunges for power and cardiovascular fitness.',
+        tips: [
+          'Start in lunge position with both knees bent',
+          'Explode upward, switching leg positions mid-air',
+          'Land softly in opposite lunge position',
+          'Immediately go into next jump without pausing'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    mountain_climbers: [
+      {
+        level: 'beginner',
+        title: 'Slow Mountain Climbers',
+        duration: '10-15 minutes',
+        reps: '20-30 total',
+        sets: '2-3',
+        description: 'Build core strength with controlled mountain climber movement.',
+        tips: [
+          'Start in plank position with hands under shoulders',
+          'Bring one knee toward your chest slowly',
+          'Keep your core engaged and hips level',
+          'Return to plank and repeat with other leg'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Standard Mountain Climbers',
+        duration: '15-20 minutes',
+        reps: '30-40 total',
+        sets: '3-4',
+        description: 'Classic mountain climbers for cardio and core strength.',
+        tips: [
+          'Maintain plank position throughout the movement',
+          'Alternate legs in a running motion',
+          'Keep your hips level and core tight',
+          'Increase speed while maintaining form'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Cross-Body Mountain Climbers',
+        duration: '20-25 minutes',
+        reps: '40-50 total',
+        sets: '4-5',
+        description: 'Advanced variation targeting obliques and coordination.',
+        tips: [
+          'Bring knee toward opposite elbow across your body',
+          'Engage your obliques during the cross-body movement',
+          'Keep your hips stable and core engaged',
+          'Maintain steady rhythm and controlled movement'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    tricep_dips: [
+      {
+        level: 'beginner',
+        title: 'Chair Dips',
+        duration: '10-15 minutes',
+        reps: '5-8',
+        sets: '2-3',
+        description: 'Basic tricep dips using a chair or bench for support.',
+        tips: [
+          'Sit on edge of chair with hands gripping the seat',
+          'Slide your butt off the chair, keeping hands in place',
+          'Lower your body by bending your elbows to 90 degrees',
+          'Push back up using your triceps, not your legs'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Parallel Bar Dips',
+        duration: '15-20 minutes',
+        reps: '8-12',
+        sets: '3-4',
+        description: 'Classic tricep dips on parallel bars or dip station.',
+        tips: [
+          'Grip parallel bars with arms fully extended',
+          'Lower your body by bending your elbows',
+          'Keep your body upright and core engaged',
+          'Push back up to starting position using triceps'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Weighted Dips',
+        duration: '20-25 minutes',
+        reps: '6-10',
+        sets: '4-5',
+        description: 'Add weight for increased tricep strength and development.',
+        tips: [
+          'Attach weight belt or hold dumbbell between your feet',
+          'Maintain strict form throughout the movement',
+          'Lower slowly and control the descent',
+          'Focus on tricep engagement during the push-up phase'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    burpees: [
+      {
+        level: 'beginner',
+        title: 'Modified Burpees',
+        duration: '15-20 minutes',
+        reps: '5-8',
+        sets: '2-3',
+        description: 'Simplified burpees to build endurance and coordination.',
+        tips: [
+          'Start standing, then squat down and place hands on ground',
+          'Step back one leg at a time to plank position',
+          'Step forward one leg at a time, then stand up',
+          'Add a small jump at the end for full movement'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Standard Burpees',
+        duration: '20-25 minutes',
+        reps: '8-12',
+        sets: '3-4',
+        description: 'Full burpees with push-up and explosive jump.',
+        tips: [
+          'Drop to plank position and do a push-up',
+          'Jump your feet forward to squat position',
+          'Explode upward with a vertical jump',
+          'Land softly and immediately go into next rep'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Burpee Pull-ups',
+        duration: '25-30 minutes',
+        reps: '6-10',
+        sets: '4-5',
+        description: 'Advanced burpees combined with pull-ups for maximum intensity.',
+        tips: [
+          'Complete full burpee with push-up and jump',
+          'Grab pull-up bar and perform a pull-up',
+          'Drop down and immediately start next burpee',
+          'Maintain explosive power throughout the set'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    yoga: [
+      {
+        level: 'beginner',
+        title: 'Basic Yoga Flow',
+        duration: '20-30 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Gentle yoga sequence for flexibility and relaxation.',
+        tips: [
+          'Start with simple poses like child\'s pose and cat-cow',
+          'Focus on breathing deeply throughout each pose',
+          'Hold each pose for 3-5 breaths',
+          'Listen to your body and don\'t force any positions'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Vinyasa Flow',
+        duration: '30-45 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Dynamic yoga flow connecting breath with movement.',
+        tips: [
+          'Flow smoothly from one pose to the next',
+          'Coordinate your breath with each movement',
+          'Maintain steady rhythm and controlled transitions',
+          'Focus on building heat and increasing flexibility'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Power Yoga',
+        duration: '45-60 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Intense yoga practice for strength and endurance.',
+        tips: [
+          'Combine strength poses with dynamic movements',
+          'Hold challenging poses for extended periods',
+          'Focus on building both strength and flexibility',
+          'Maintain steady breathing during intense sequences'
+        ],
+        emoji: '🔴'
+      }
+    ],
+    pilates: [
+      {
+        level: 'beginner',
+        title: 'Mat Pilates Basics',
+        duration: '20-30 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Fundamental Pilates movements on the mat.',
+        tips: [
+          'Focus on engaging your core throughout each exercise',
+          'Move slowly and with control',
+          'Keep your spine neutral and pelvis stable',
+          'Breathe deeply and rhythmically'
+        ],
+        emoji: '🟢'
+      },
+      {
+        level: 'medium',
+        title: 'Intermediate Mat Work',
+        duration: '30-45 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'More challenging Pilates exercises for core strength.',
+        tips: [
+          'Combine multiple movements in flowing sequences',
+          'Focus on precision and control',
+          'Engage multiple muscle groups simultaneously',
+          'Maintain proper alignment throughout'
+        ],
+        emoji: '🟡'
+      },
+      {
+        level: 'advanced',
+        title: 'Advanced Pilates',
+        duration: '45-60 minutes',
+        reps: 'N/A',
+        sets: '1',
+        description: 'Complex Pilates movements for advanced practitioners.',
+        tips: [
+          'Execute complex movements with perfect form',
+          'Focus on mind-body connection',
+          'Challenge your balance and coordination',
+          'Maintain control throughout advanced sequences'
+        ],
+        emoji: '🔴'
+      }
     ]
   };
 
@@ -150,12 +714,13 @@ const getExerciseVideo = (exerciseId: string): string => {
 export default function ExerciseDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { t } = useLanguage();
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('beginner');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const exerciseId = params.exerciseId as string;
   const exerciseName = params.exerciseName as string;
-  const exerciseIcon = params.exerciseIcon as string;
+  const exerciseEmoji = params.exerciseEmoji as string;
   const category = params.category as string;
   const targetMuscles = JSON.parse(params.targetMuscles as string || '[]');
 
@@ -190,7 +755,7 @@ export default function ExerciseDetailScreen() {
           styles.difficultySubtext,
           isSelected && styles.difficultySubtextActive
         ]}>
-          {level.level.toUpperCase()}
+          {t(`exercise.detail.${level.level}`)}
         </Text>
       </TouchableOpacity>
     );
@@ -202,18 +767,18 @@ export default function ExerciseDetailScreen() {
         {/* Header */}
         <Animated.View entering={FadeInDown} style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
+            <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
         </Animated.View>
         
         {/* Exercise Header Info */}
         <Animated.View entering={FadeInUp.delay(100)} style={styles.exerciseHeader}>
           <View style={styles.exerciseEmojiContainer}>
-            <Ionicons name={exerciseIcon as any} size={28} color={colors.gold} />
+            <Text style={styles.exerciseEmoji}>{exerciseEmoji}</Text>
           </View>
           <View style={styles.exerciseInfo}>
-            <Text style={styles.headerTitle}>{exerciseName}</Text>
-            <Text style={styles.headerCategory}>{category.toUpperCase()}</Text>
+            <Text style={styles.headerTitle}>{t(`exercise.${exerciseId}`)}</Text>
+            <Text style={styles.headerCategory}>{t(`category.${category}`)}</Text>
           </View>
         </Animated.View>
 
@@ -224,11 +789,11 @@ export default function ExerciseDetailScreen() {
         >
           {/* Target Muscles */}
           <Animated.View entering={FadeInUp.delay(200)} style={styles.musclesSection}>
-            <Text style={styles.sectionTitle}>Target Muscles</Text>
+            <Text style={styles.sectionTitle}>{t('exercise.detail.targetMuscles')}</Text>
             <View style={styles.musclesContainer}>
               {targetMuscles.map((muscle: string, index: number) => (
                 <View key={index} style={styles.muscleTag}>
-                  <Text style={styles.muscleText}>{muscle}</Text>
+                  <Text style={styles.muscleText}>{t(`muscle.${muscle}`)}</Text>
                 </View>
               ))}
             </View>
@@ -236,7 +801,7 @@ export default function ExerciseDetailScreen() {
 
           {/* Video Player */}
           <Animated.View entering={FadeInUp.delay(300)} style={styles.videoSection}>
-            <Text style={styles.sectionTitle}>Exercise Demonstration</Text>
+            <Text style={styles.sectionTitle}>{t('exercise.detail.demonstration')}</Text>
             <View style={styles.videoContainer}>
               <Video
                 source={{ uri: videoUrl }}
@@ -257,8 +822,8 @@ export default function ExerciseDetailScreen() {
                   onPress={() => setIsVideoPlaying(true)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="play-circle" size={60} color={colors.gold} />
-                  <Text style={styles.videoText}>Tap to play demonstration</Text>
+                  <Text style={styles.playButton}>▶️</Text>
+                  <Text style={styles.videoText}>{t('exercise.detail.tapToPlay')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -266,7 +831,7 @@ export default function ExerciseDetailScreen() {
 
           {/* Difficulty Levels */}
           <Animated.View entering={FadeInUp.delay(400)} style={styles.difficultySection}>
-            <Text style={styles.sectionTitle}>Choose Your Level</Text>
+            <Text style={styles.sectionTitle}>{t('exercise.detail.chooseLevel')}</Text>
             <View style={styles.difficultyButtons}>
               {exerciseLevels.map(renderDifficultyButton)}
             </View>
@@ -284,22 +849,22 @@ export default function ExerciseDetailScreen() {
             {/* Stats */}
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Duration</Text>
+                <Text style={styles.statLabel}>{t('exercise.detail.duration')}</Text>
                 <Text style={styles.statValue}>{currentLevel.duration}</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Reps</Text>
+                <Text style={styles.statLabel}>{t('exercise.detail.reps')}</Text>
                 <Text style={styles.statValue}>{currentLevel.reps}</Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Sets</Text>
+                <Text style={styles.statLabel}>{t('exercise.detail.sets')}</Text>
                 <Text style={styles.statValue}>{currentLevel.sets}</Text>
               </View>
             </View>
 
             {/* Tips */}
             <View style={styles.tipsSection}>
-              <Text style={styles.tipsTitle}>💡 Pro Tips</Text>
+              <Text style={styles.tipsTitle}>{t('exercise.detail.proTips')}</Text>
               {currentLevel.tips.map((tip, index) => (
                 <View key={index} style={styles.tipItem}>
                   <Text style={styles.tipBullet}>•</Text>
@@ -312,8 +877,8 @@ export default function ExerciseDetailScreen() {
           {/* Start Workout Button */}
           <Animated.View entering={FadeInUp.delay(600)} style={styles.startSection}>
             <TouchableOpacity style={styles.startButton} activeOpacity={0.8}>
-              <Text style={styles.startButtonText}>Start Workout</Text>
-              <Ionicons name="fitness" size={20} color={colors.white} />
+              <Text style={styles.startButtonText}>{t('exercise.detail.startWorkout')}</Text>
+              <Text style={styles.fitnessIcon}>💪</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -362,6 +927,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+  },
+  exerciseEmoji: {
+    fontSize: 32,
+    textAlign: 'center',
   },
   exerciseInfo: {
     flex: 1,
@@ -597,5 +1166,18 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 50,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: colors.white,
+    fontWeight: 'bold',
+  },
+  playButton: {
+    fontSize: 60,
+    textAlign: 'center',
+  },
+  fitnessIcon: {
+    fontSize: 20,
+    color: colors.white,
   },
 });

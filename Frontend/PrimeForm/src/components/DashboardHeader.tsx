@@ -16,7 +16,7 @@ export default function DashboardHeader({
   userName, 
   onProfilePress, 
   onNotificationPress, 
-  notificationCount = 0 
+  notificationCount = 0
 }: Props) {
   const { t } = useLanguage();
   return (
