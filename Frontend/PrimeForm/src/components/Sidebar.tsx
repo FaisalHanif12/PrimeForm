@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
@@ -38,9 +38,9 @@ interface Props {
 
 const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
-  { icon: 'settings-outline', label: 'Settings', action: 'settings' },
-  { icon: 'language-outline', label: 'Language', action: 'language' },
   { icon: 'card-outline', label: 'Subscription Plan', action: 'subscription' },
+  { icon: 'language-outline', label: 'Language', action: 'language' },
+  { icon: 'settings-outline', label: 'Settings', action: 'settings' },
   { icon: 'log-out-outline', label: 'Log Out', action: 'logout', color: colors.error },
 ];
 
@@ -114,13 +114,20 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           </View>
 
           {/* Menu Items */}
-          <View style={styles.menuContainer}>
+          <ScrollView 
+            style={styles.menuContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.menuContent}
+          >
             {menuItems
               .filter(item => !isGuest || item.action !== 'logout') // Hide logout for guests
               .map((item, index) => (
                 <View key={item.action}>
                   <TouchableOpacity
-                    style={styles.menuItem}
+                    style={[
+                      styles.menuItem,
+                      item.action === 'language' && showLanguageToggle && styles.languageMenuItemActive
+                    ]}
                     onPress={() => handleMenuPress(item.action)}
                     activeOpacity={0.7}
                   >
@@ -130,39 +137,98 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                         size={22} 
                         color={item.color || colors.white} 
                       />
-                      <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
-                        {t(`sidebar.${item.action}`)}
-                      </Text>
+                      <View style={styles.menuItemTextContainer}>
+                        <View style={styles.menuItemTextRow}>
+                          <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
+                            {t(`sidebar.${item.action}`)}
+                          </Text>
+                          {item.action === 'subscription' && (
+                            <View style={styles.upgradeTag}>
+                              <Text style={styles.upgradeTagText}>
+                                {language === 'en' ? 'UPGRADE' : 'اپ گریڈ'}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
                     </View>
                     <View style={styles.menuItemRight}>
-                      <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                      {item.action === 'language' ? (
+                        <Ionicons 
+                          name={showLanguageToggle ? "chevron-up" : "chevron-down"} 
+                          size={20} 
+                          color={colors.mutedText} 
+                        />
+                      ) : (
+                        <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                      )}
                     </View>
                   </TouchableOpacity>
                   
                   {/* Language Toggle Options */}
                   {item.action === 'language' && showLanguageToggle && (
-                    <View style={styles.languageOptions}>
-                      <TouchableOpacity 
-                        style={[styles.languageOption, language === 'en' && styles.activeLanguage]}
-                        onPress={() => handleLanguageChange('en')}
-                      >
-                        <Text style={[styles.languageText, language === 'en' && styles.activeLanguageText]}>
-                          English
+                    <Animated.View 
+                      entering={FadeIn.duration(200)}
+                      exiting={FadeOut.duration(200)}
+                      style={styles.languageToggleContainer}
+                    >
+                      <View style={styles.languageToggleHeader}>
+                        <Text style={styles.languageToggleTitle}>
+                          {t('language.choose')}
                         </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.languageOption, language === 'ur' && styles.activeLanguage]}
-                        onPress={() => handleLanguageChange('ur')}
-                      >
-                        <Text style={[styles.languageText, language === 'ur' && styles.activeLanguageText]}>
-                          اردو
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                      </View>
+                      <View style={styles.languageToggleSwitch}>
+                        <TouchableOpacity 
+                          style={[
+                            styles.languageToggleOption, 
+                            language === 'en' && styles.languageToggleActive
+                          ]}
+                          onPress={() => handleLanguageChange('en')}
+                        >
+                          <View style={styles.languageToggleContent}>
+                            <Text style={styles.languageToggleFlag}>🇺🇸</Text>
+                            <Text style={[
+                              styles.languageToggleText, 
+                              language === 'en' && styles.languageToggleTextActive
+                            ]}>
+                              English
+                            </Text>
+                          </View>
+                          {language === 'en' && (
+                            <View style={styles.languageToggleCheckmark}>
+                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                          style={[
+                            styles.languageToggleOption, 
+                            language === 'ur' && styles.languageToggleActive
+                          ]}
+                          onPress={() => handleLanguageChange('ur')}
+                        >
+                          <View style={styles.languageToggleContent}>
+                            <Text style={styles.languageToggleFlag}>🇵🇰</Text>
+                            <Text style={[
+                              styles.languageToggleText, 
+                              language === 'ur' && styles.languageToggleTextActive
+                            ]}>
+                              اردو
+                            </Text>
+                          </View>
+                          {language === 'ur' && (
+                            <View style={styles.languageToggleCheckmark}>
+                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </Animated.View>
                   )}
                 </View>
               ))}
-          </View>
+          </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -252,12 +318,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
   },
+  menuContent: {
+    paddingBottom: spacing.xl,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     backgroundColor: colors.cardBackground,
     borderRadius: radius.md,
@@ -275,8 +344,39 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginLeft: spacing.md,
   },
+  menuItemTextContainer: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  menuItemTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  menuItemSubtext: {
+    color: colors.mutedText,
+    fontSize: typography.small,
+    fontFamily: fonts.body,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+  upgradeTag: {
+    backgroundColor: colors.gold,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
+  upgradeTagText: {
+    color: colors.background,
+    fontSize: typography.small,
+    fontFamily: fonts.body,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
   menuItemRight: {
     alignItems: 'center',
+    marginRight: spacing.md,
   },
   languageOptions: {
     marginLeft: spacing.xl,
@@ -309,6 +409,69 @@ const styles = StyleSheet.create({
   activeLanguageText: {
     color: colors.gold,
     fontWeight: '600',
+  },
+  // New Language Toggle Styles
+  languageToggleContainer: {
+    marginLeft: spacing.xl,
+    marginBottom: spacing.sm,
+    paddingLeft: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.cardBorder,
+  },
+  languageToggleHeader: {
+    marginBottom: spacing.sm,
+  },
+  languageToggleTitle: {
+    color: colors.mutedText,
+    fontSize: typography.small,
+    fontFamily: fonts.body,
+    fontWeight: '500',
+  },
+  languageToggleSwitch: {
+    gap: spacing.xs,
+  },
+  languageToggleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    minHeight: 48,
+  },
+  languageToggleActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderColor: colors.gold,
+    borderWidth: 2,
+  },
+  languageToggleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  languageToggleFlag: {
+    fontSize: 24,
+    marginRight: spacing.md,
+  },
+  languageToggleText: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    fontWeight: '500',
+  },
+  languageToggleTextActive: {
+    color: colors.gold,
+    fontWeight: '600',
+  },
+  languageToggleCheckmark: {
+    marginLeft: spacing.sm,
+  },
+  languageMenuItemActive: {
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    borderColor: colors.gold,
   },
   footer: {
     padding: spacing.lg,
