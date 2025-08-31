@@ -360,10 +360,10 @@ export default function DashboardScreen() {
         setShowUserInfoModal(true);
         break;
       case 'settings':
-        showToast('info', 'Settings feature coming soon!');
+        router.push('/(dashboard)/settings');
         break;
       case 'subscription':
-        showToast('info', 'Subscription Plan feature coming soon!');
+        router.push('/(dashboard)/subscription');
         break;
       case 'logout':
         if (isAuthenticated) {
