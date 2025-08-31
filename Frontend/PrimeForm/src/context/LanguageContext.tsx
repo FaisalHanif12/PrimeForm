@@ -73,6 +73,7 @@ const translations = {
     'sidebar.profile': 'Profile',
     'sidebar.settings': 'Settings',
     'sidebar.subscription': 'Subscription Plan',
+    'sidebar.subscription.description': 'Get AI workout plans, diet plans & more',
     'sidebar.logout': 'Log Out',
     'sidebar.language': 'Language',
     'sidebar.version': 'Version 1.0.0',
@@ -91,6 +92,36 @@ const translations = {
     
     // Brand
     'brand.primeform': 'PRIMEFORM',
+    
+    // Settings Page
+    'settings.notification.preferences': 'Notification Preferences',
+    'settings.push.notifications': 'Push Notifications',
+    'settings.push.notifications.desc': 'Receive notifications on your device',
+    'settings.workout.reminders': 'Workout Reminders',
+    'settings.workout.reminders.desc': 'Get reminded about your workout schedule',
+    'settings.diet.reminders': 'Diet Reminders',
+    'settings.diet.reminders.desc': 'Get reminded about meal times and nutrition',
+    'settings.progress.updates': 'Progress Updates',
+    'settings.progress.updates.desc': 'Get notified about your fitness progress',
+    'settings.software.updates': 'Software Updates',
+    'settings.software.updates.desc': 'Get notified about app updates',
+
+    'settings.current.version': 'Current Version: 1.0.0',
+    'settings.update.available': 'Update Available:',
+    'settings.update.size': 'Size:',
+    'settings.update.date': 'Release Date:',
+    'settings.update.now': 'Update Now',
+    'settings.up.to.date': 'Up to Date',
+    'settings.updating': 'Updating...',
+    'settings.open.app.store': 'Open App Store',
+    'settings.app.information': 'App Information',
+    'settings.app.name': 'App Name',
+    'settings.app.version': 'Version',
+    'settings.app.build': 'Build',
+    'settings.app.platform': 'Platform',
+    'settings.app.language': 'Language',
+    'settings.app.language.english': 'English',
+    'settings.app.language.urdu': 'اردو',
     
     // Validation messages
     'validation.name.required': 'Name is required',
@@ -527,6 +558,7 @@ const translations = {
     'sidebar.profile': 'پروفائل',
     'sidebar.settings': 'سیٹنگز',
     'sidebar.subscription': 'سبسکرپشن پلان',
+    'sidebar.subscription.description': 'AI ورکاؤٹ پلانز، ڈائٹ پلانز اور مزید حاصل کریں',
     'sidebar.logout': 'لاگ آؤٹ',
     'sidebar.language': 'زبان',
     'sidebar.version': 'ورژن 1.0.0',
@@ -545,6 +577,36 @@ const translations = {
     
     // Brand
     'brand.primeform': 'پرائم فارم',
+    
+    // Settings Page
+    'settings.notification.preferences': 'نوٹیفیکیشن کی ترجیحات',
+    'settings.push.notifications': 'پش نوٹیفیکیشنز',
+    'settings.push.notifications.desc': 'اپنے ڈیوائس پر نوٹیفیکیشنز وصول کریں',
+    'settings.workout.reminders': 'ورکاؤٹ یاد دہانیاں',
+    'settings.workout.reminders.desc': 'اپنے ورکاؤٹ شیڈول کے بارے میں یاد دہانی حاصل کریں',
+    'settings.diet.reminders': 'کھانے کی یاد دہانیاں',
+    'settings.diet.reminders.desc': 'کھانے کے اوقات اور غذائیت کے بارے میں یاد دہانی حاصل کریں',
+    'settings.progress.updates': 'پیش قدمی کی اپ ڈیٹس',
+    'settings.progress.updates.desc': 'اپنی فٹنس پیش قدمی کے بارے میں مطلع کریں',
+    'settings.software.updates': 'سافٹ ویئر اپ ڈیٹس',
+    'settings.software.updates.desc': 'ایپ اپ ڈیٹس کے بارے میں مطلع کریں',
+
+    'settings.current.version': 'موجودہ ورژن: 1.0.0',
+    'settings.update.available': 'اپ ڈیٹ دستیاب:',
+    'settings.update.size': 'سائز:',
+    'settings.update.date': 'ریلیز کی تاریخ:',
+    'settings.update.now': 'اب اپ ڈیٹ کریں',
+    'settings.up.to.date': 'تازہ ترین',
+    'settings.updating': 'اپ ڈیٹ ہو رہا ہے...',
+    'settings.open.app.store': 'ایپ اسٹور کھولیں',
+    'settings.app.information': 'ایپ کی معلومات',
+    'settings.app.name': 'ایپ کا نام',
+    'settings.app.version': 'ورژن',
+    'settings.app.build': 'بلڈ',
+    'settings.app.platform': 'پلیٹ فارم',
+    'settings.app.language': 'زبان',
+    'settings.app.language.english': 'انگریزی',
+    'settings.app.language.urdu': 'اردو',
     
     // Validation messages
     'validation.name.required': 'نام ضروری ہے',
