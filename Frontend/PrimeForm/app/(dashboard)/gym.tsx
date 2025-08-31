@@ -83,7 +83,7 @@ export default function GymScreen() {
         showToast('info', 'Edit profile feature coming soon!');
         break;
       case 'settings':
-        showToast('info', 'Settings feature coming soon!');
+        router.push('/(dashboard)/settings');
         break;
       case 'subscription':
         showToast('info', 'Subscription Plan feature coming soon!');

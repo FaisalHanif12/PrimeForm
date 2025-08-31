@@ -102,12 +102,12 @@ export default function WorkoutScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
-              case 'settings':
-          showToast('info', 'Settings feature coming soon!');
-          break;
-        case 'subscription':
-          showToast('info', 'Subscription Plan feature coming soon!');
-          break;
+                    case 'settings':
+        router.push('/(dashboard)/settings');
+        break;
+              case 'subscription':
+        router.push('/(dashboard)/subscription');
+        break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');
