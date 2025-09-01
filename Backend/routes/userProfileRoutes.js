@@ -21,6 +21,9 @@ router.delete('/', userProfileController.deleteProfile);
 // Check profile completion status
 router.get('/completion', userProfileController.checkProfileCompletion);
 
+// Get user badges
+router.get('/badges', userProfileController.getUserBadges);
+
 // Save push notification token
 router.post('/push-token', userProfileController.savePushToken);
 

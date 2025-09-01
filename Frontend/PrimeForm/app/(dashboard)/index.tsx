@@ -80,13 +80,25 @@ export default function DashboardScreen() {
   useEffect(() => {
     const checkAppState = async () => {
       try {
-        // Only show language modal if user has never selected a language
-        // AND this is their first time using the app
-        if (!hasSelectedLanguage) {
-          const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
-          if (isFirstLaunch === 'true') {
-            setShowLanguageModal(true);
-          }
+        // Check if this is the first time the app has ever been launched
+        const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
+        console.log('🔍 App State Check:', {
+          isFirstLaunch,
+          hasSelectedLanguage,
+          isAuthenticated
+        });
+        
+        // If this is the first launch and user hasn't selected a language, show language modal
+        if (isFirstLaunch === null && !hasSelectedLanguage) {
+          console.log('🌍 First launch detected - showing language modal');
+          // Mark as first launch
+          await AsyncStorage.setItem('primeform_first_launch', 'false');
+          setShowLanguageModal(true);
+        } else {
+          console.log('✅ Language modal conditions not met:', {
+            isFirstLaunch,
+            hasSelectedLanguage
+          });
         }
 
         // Check if user has completed signup - check both authentication and signup completion
@@ -97,6 +109,8 @@ export default function DashboardScreen() {
           // User is authenticated - mark signup as completed
           setHasCompletedSignup(true);
           await AsyncStorage.setItem('primeform_signup_completed', 'true');
+          await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
+          console.log('✅ User authenticated - signup marked as completed');
         } else if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
           // User has completed signup but might not be authenticated
           // This could happen if token expired but user hasn't logged out
@@ -411,8 +425,12 @@ export default function DashboardScreen() {
 
   const handleLanguageSelect = async (language: 'en' | 'ur') => {
     try {
+      console.log('🌍 Language selected:', language);
       await changeLanguage(language);
-      // The modal will automatically close when hasSelectedLanguage becomes true
+      // Close the modal and mark first launch as complete
+      setShowLanguageModal(false);
+      await AsyncStorage.setItem('primeform_first_launch', 'false');
+      console.log('✅ Language modal closed and first launch marked as complete');
       showToast('success', 'Language updated successfully!');
     } catch (error) {
       console.error('Failed to change language:', error);
@@ -642,6 +660,7 @@ export default function DashboardScreen() {
           userEmail={user?.email || dashboardData.user.email}
           userInfo={userInfo}
           isGuest={!isAuthenticated && !hasCompletedSignup}
+          badges={userInfo?.badges || []}
         />
 
         {/* Permission Modal */}
@@ -672,9 +691,14 @@ export default function DashboardScreen() {
         <LanguageSelectionModal
           visible={showLanguageModal}
           onLanguageSelect={handleLanguageSelect}
-          onBack={() => {
-            // When user goes back, set English as default and close modal
-            changeLanguage('en');
+          onBack={async () => {
+            console.log('🔙 Language modal back button pressed - setting English as default');
+            // When user goes back, set English as default, close modal, and mark first launch as complete
+            await changeLanguage('en');
+            setShowLanguageModal(false);
+            // Mark that first launch is complete (even if user didn't explicitly choose)
+            await AsyncStorage.setItem('primeform_first_launch', 'false');
+            console.log('✅ Language modal closed with English default and first launch marked as complete');
           }}
         />
 
