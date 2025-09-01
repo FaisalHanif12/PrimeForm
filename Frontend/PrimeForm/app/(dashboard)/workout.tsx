@@ -108,6 +108,9 @@ export default function WorkoutScreen() {
               case 'subscription':
         router.push('/(dashboard)/subscription');
         break;
+      case 'contact':
+        router.push('/(dashboard)/contact');
+        break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');
@@ -302,6 +305,7 @@ export default function WorkoutScreen() {
           userName={user?.fullName || t('common.user')}
           userEmail={user?.email || 'user@example.com'}
           userInfo={userInfo}
+          badges={userInfo?.badges || []}
         />
 
         <UserInfoModal

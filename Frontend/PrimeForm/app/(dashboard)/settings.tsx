@@ -7,8 +7,6 @@ import {
   StyleSheet,
   Switch,
   Alert,
-  Linking,
-  Platform,
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,8 +21,6 @@ interface NotificationSettings {
   pushNotifications: boolean;
   workoutReminders: boolean;
   dietReminders: boolean;
-  progressUpdates: boolean;
-  softwareUpdates: boolean;
 }
 
 interface SoftwareUpdate {
@@ -44,12 +40,10 @@ export default function SettingsPage() {
     pushNotifications: true,
     workoutReminders: true,
     dietReminders: true,
-    progressUpdates: true,
-    softwareUpdates: true,
   });
 
   const [softwareUpdate, setSoftwareUpdate] = useState<SoftwareUpdate>({
-    version: '1.0.1',
+    version: '1.0',
     available: true,
     size: '15.2 MB',
     releaseDate: '2024-01-15',
@@ -57,6 +51,11 @@ export default function SettingsPage() {
   });
 
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Handle back navigation - return to sidebar menu
+  const handleBack = () => {
+    router.back();
+  };
 
   // Load saved notification settings
   useEffect(() => {
@@ -123,21 +122,13 @@ export default function SettingsPage() {
     );
   };
 
-  const openAppStore = () => {
-    const storeUrl = Platform.OS === 'ios' 
-      ? 'https://apps.apple.com/app/primeform/id123456789'
-      : 'https://play.google.com/store/apps/details?id=com.primeform.app';
     
-    Linking.openURL(storeUrl).catch(() => {
-      showToast('error', 'Failed to open app store');
-    });
-  };
 
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity 
         style={styles.backButton}
-        onPress={() => router.back()}
+        onPress={handleBack}
       >
         <Ionicons name="arrow-back" size={24} color={colors.gold} />
       </TouchableOpacity>
@@ -194,33 +185,7 @@ export default function SettingsPage() {
         />
       </View>
 
-      <View style={styles.settingItem}>
-        <View style={styles.settingInfo}>
-          <Text style={styles.settingLabel}>{t('settings.progress.updates')}</Text>
-          <Text style={styles.settingDescription}>{t('settings.progress.updates.desc')}</Text>
-        </View>
-        <Switch
-          value={notificationSettings.progressUpdates}
-          onValueChange={(value) => handleNotificationToggle('progressUpdates', value)}
-          trackColor={{ false: colors.cardBorder, true: colors.gold }}
-          thumbColor={notificationSettings.progressUpdates ? colors.white : colors.mutedText}
-          disabled={!notificationSettings.pushNotifications}
-        />
-      </View>
 
-      <View style={styles.settingItem}>
-        <View style={styles.settingInfo}>
-          <Text style={styles.settingLabel}>{t('settings.software.updates')}</Text>
-          <Text style={styles.settingDescription}>{t('settings.software.updates.desc')}</Text>
-        </View>
-        <Switch
-          value={notificationSettings.softwareUpdates}
-          onValueChange={(value) => handleNotificationToggle('softwareUpdates', value)}
-          trackColor={{ false: colors.cardBorder, true: colors.gold }}
-          thumbColor={notificationSettings.softwareUpdates ? colors.white : colors.mutedText}
-          disabled={!notificationSettings.pushNotifications}
-        />
-      </View>
     </View>
   );
 
@@ -233,7 +198,7 @@ export default function SettingsPage() {
       
       <View style={styles.updateCard}>
         <View style={styles.updateInfo}>
-          <Text style={styles.updateVersion}>{t('settings.current.version')}</Text>
+          <Text style={styles.updateVersion}>Current Version: 1.0</Text>
           {softwareUpdate.available && (
             <>
                              <Text style={styles.updateAvailable}>{t('settings.update.available')} {softwareUpdate.version}</Text>
@@ -263,10 +228,7 @@ export default function SettingsPage() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.storeButton} onPress={openAppStore}>
-        <Ionicons name="storefront" size={20} color={colors.white} />
-        <Text style={styles.storeButtonText}>{t('settings.open.app.store')}</Text>
-      </TouchableOpacity>
+
     </View>
   );
 
@@ -285,7 +247,7 @@ export default function SettingsPage() {
         
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t('settings.app.version')}</Text>
-          <Text style={styles.infoValue}>1.0.0</Text>
+          <Text style={styles.infoValue}>1.0</Text>
         </View>
         
         <View style={styles.infoRow}>
@@ -295,12 +257,12 @@ export default function SettingsPage() {
         
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t('settings.app.platform')}</Text>
-          <Text style={styles.infoValue}>{Platform.OS === 'ios' ? 'iOS' : 'Android'}</Text>
+          <Text style={styles.infoValue}>Android/iOS</Text>
         </View>
         
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t('settings.app.language')}</Text>
-          <Text style={styles.infoValue}>{language === 'en' ? t('settings.app.language.english') : t('settings.app.language.urdu')}</Text>
+          <Text style={styles.infoValue}>English/Urdu</Text>
         </View>
       </View>
     </View>
