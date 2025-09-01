@@ -108,6 +108,9 @@ export default function WorkoutScreen() {
               case 'subscription':
         router.push('/(dashboard)/subscription');
         break;
+      case 'contact':
+        router.push('/(dashboard)/contact');
+        break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');

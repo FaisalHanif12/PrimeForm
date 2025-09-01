@@ -674,6 +674,9 @@ export default function GymScreen() {
       case 'subscription':
         showToast('info', 'Subscription Plan feature coming soon!');
         break;
+      case 'contact':
+        router.push('/(dashboard)/contact');
+        break;
       case 'logout':
         try {
           const { authService } = await import('../../src/services/authService');

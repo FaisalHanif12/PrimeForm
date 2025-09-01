@@ -379,6 +379,9 @@ export default function DashboardScreen() {
       case 'subscription':
         router.push('/(dashboard)/subscription');
         break;
+      case 'contact':
+        router.push('/(dashboard)/contact');
+        break;
       case 'logout':
         if (isAuthenticated) {
           // Actually perform logout

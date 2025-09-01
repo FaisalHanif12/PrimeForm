@@ -34,7 +34,10 @@ export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-
+  // Handle back navigation - return to sidebar menu
+  const handleBack = () => {
+    router.back();
+  };
 
   // Pricing plans
   const pricingPlans: PricingPlan[] = [
@@ -113,7 +116,7 @@ export default function SubscriptionPage() {
     <View style={styles.header}>
       <TouchableOpacity 
         style={styles.backButton}
-        onPress={() => router.back()}
+        onPress={handleBack}
       >
         <Ionicons name="arrow-back" size={24} color={colors.gold} />
       </TouchableOpacity>

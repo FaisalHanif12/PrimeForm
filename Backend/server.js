@@ -15,6 +15,7 @@ const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -137,6 +138,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user-profile', userProfileRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
