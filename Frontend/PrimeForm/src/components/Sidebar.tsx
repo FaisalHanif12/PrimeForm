@@ -42,8 +42,8 @@ const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
   { icon: 'card-outline', label: 'Subscription Plan', action: 'subscription' },
   { icon: 'language-outline', label: 'Language', action: 'language' },
+  { icon: 'mail-outline', label: 'Contact Us', action: 'contact' },
   { icon: 'settings-outline', label: 'Settings', action: 'settings' },
-  { icon: 'log-out-outline', label: 'Log Out', action: 'logout', color: colors.error },
 ];
 
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
@@ -58,6 +58,12 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
     if (action === 'profile') {
       // Navigate to profile page instead of showing dropdown
       onMenuItemPress('profile');
+      onClose();
+      return;
+    }
+    if (action === 'contact') {
+      // Navigate to contact page
+      onMenuItemPress('contact');
       onClose();
       return;
     }
@@ -119,7 +125,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
               <View style={styles.badgeSection}>
                 <Badge type="profile_completion" size="small" showLabel={false} />
                 <Text style={styles.badgeText}>
-                  {language === 'en' ? 'Profile Complete!' : 'پروفائل مکمل!'}
+                  {language === 'en' ? 'Profile Completed!' : 'پروفائل مکمل!'}
                 </Text>
               </View>
             )}
@@ -132,7 +138,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
             contentContainerStyle={styles.menuContent}
           >
             {menuItems
-              .filter(item => !isGuest || item.action !== 'logout') // Hide logout for guests
+              .filter(item => !isGuest || item.action !== 'logout') // Hide logout for guests (though logout is now in footer)
               .map((item, index) => (
                 <View key={item.action}>
                   <TouchableOpacity
@@ -151,9 +157,9 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                       />
                       <View style={styles.menuItemTextContainer}>
                         <View style={styles.menuItemTextRow}>
-                          <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
-                            {t(`sidebar.${item.action}`)}
-                          </Text>
+                                                  <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
+                          {item.label}
+                        </Text>
                           {item.action === 'subscription' && (
                             <View style={styles.upgradeTag}>
                               <Text style={styles.upgradeTagText}>
@@ -244,8 +250,14 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.appName}>PrimeForm</Text>
-            <Text style={styles.version}>v1.0.0</Text>
+            <TouchableOpacity 
+              style={styles.logoutButton}
+              onPress={() => handleMenuPress('logout')}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={20} color={colors.error} />
+              <Text style={styles.logoutButtonText}>Log Out</Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -486,23 +498,32 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
   },
   footer: {
-    padding: spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
+    minHeight: 60,
+  },
+  logoutButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
-  appName: {
-    color: colors.gold,
-    fontSize: typography.body,
-    fontWeight: '600',
-    fontFamily: fonts.brand,
-    marginBottom: spacing.xs,
-  },
-  version: {
-    color: colors.mutedText,
+  logoutButtonText: {
+    color: colors.error,
     fontSize: typography.small,
+    fontWeight: '600',
     fontFamily: fonts.body,
+    marginLeft: spacing.xs,
   },
+
+
   // Badge styles
   badgeSection: {
     flexDirection: 'row',

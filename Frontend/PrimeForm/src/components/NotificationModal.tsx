@@ -323,7 +323,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.cardBorder,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   retryButtonText: {
-    color: '#1a1a2e',
+    color: colors.background,
     fontWeight: 'bold',
   },
   emptyContainer: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   emptyMessage: {
-    color: '#999',
+    color: colors.mutedText,
     textAlign: 'center',
     marginTop: 10,
     fontSize: 16,
@@ -434,17 +434,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notificationItem: {
-    backgroundColor: '#16213e',
+    backgroundColor: colors.cardBackground,
     marginHorizontal: 15,
     marginVertical: 5,
     borderRadius: 12,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.cardBorder,
   },
   unreadNotification: {
     borderColor: colors.gold,
-    backgroundColor: '#1a1f3a',
+    backgroundColor: colors.surface,
   },
   selectedNotification: {
     borderColor: '#4ECDC4',
