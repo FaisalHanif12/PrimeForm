@@ -766,8 +766,10 @@ export default function ExerciseDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <Animated.View entering={FadeInDown} style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backArrow}>←</Text>
+          <TouchableOpacity style={styles.backButtonRight} onPress={handleBack}>
+            <View style={styles.backButtonIconContainer}>
+              <Text style={styles.backArrow}>←</Text>
+            </View>
           </TouchableOpacity>
         </Animated.View>
         
@@ -901,11 +903,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     justifyContent: 'flex-start',
   },
-  backButton: {
+  backButtonRight: {
+    position: 'absolute',
+    top: 55,
+    right: spacing.lg,
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
+    zIndex: 10,
+  },
+  backButtonIconContainer: {
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1171,6 +1181,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.white,
     fontWeight: 'bold',
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: 24,
   },
   playButton: {
     fontSize: 60,

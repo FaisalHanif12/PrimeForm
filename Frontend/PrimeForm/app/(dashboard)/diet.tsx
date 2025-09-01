@@ -125,18 +125,18 @@ export default function DietScreen() {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
         console.log('✅ User profile saved to database:', response.data);
-        showToast('Success', 'Profile created! Now generating your diet plan...');
+        showToast('success', 'Profile created! Now generating your diet plan...');
         // Here you would typically call the diet plan generation API
         setTimeout(() => {
-          showToast('Success', 'Your personalized diet plan is ready! This feature will be available soon.');
+          showToast('success', 'Your personalized diet plan is ready! This feature will be available soon.');
         }, 2000);
       } else {
         console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
-        showToast('Error', 'Failed to save profile. Please try again.');
+        showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
       console.error('💥 Exception in diet page:', error);
-      showToast('Error', 'Failed to save profile. Please check your connection and try again.');
+      showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
 
@@ -285,6 +285,7 @@ export default function DietScreen() {
           userName={t('common.user')}
           userEmail="user@example.com"
           userInfo={userInfo}
+          badges={userInfo?.badges || []}
         />
 
         <UserInfoModal

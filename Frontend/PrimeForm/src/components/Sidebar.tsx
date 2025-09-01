@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+import Badge from './Badge';
 
 interface UserInfo {
   country: string;
@@ -34,6 +35,7 @@ interface Props {
   userEmail: string;
   userInfo?: UserInfo | null;
   isGuest?: boolean;
+  badges?: string[];
 }
 
 const menuItems: MenuItem[] = [
@@ -44,7 +46,7 @@ const menuItems: MenuItem[] = [
   { icon: 'log-out-outline', label: 'Log Out', action: 'logout', color: colors.error },
 ];
 
-export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false }: Props) {
+export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
   const { t, language, changeLanguage } = useLanguage();
   const [showLanguageToggle, setShowLanguageToggle] = useState(false);
 
@@ -111,6 +113,16 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Text style={styles.userEmail}>{userEmail}</Text>
               </View>
             </View>
+            
+            {/* Badge Display */}
+            {badges && badges.includes('profile_completion') && (
+              <View style={styles.badgeSection}>
+                <Badge type="profile_completion" size="small" showLabel={false} />
+                <Text style={styles.badgeText}>
+                  {language === 'en' ? 'Profile Complete!' : 'پروفائل مکمل!'}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Menu Items */}
@@ -490,5 +502,25 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     fontSize: typography.small,
     fontFamily: fonts.body,
+  },
+  // Badge styles
+  badgeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  badgeText: {
+    color: colors.gold,
+    fontSize: typography.small,
+    fontFamily: fonts.body,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
   },
 });

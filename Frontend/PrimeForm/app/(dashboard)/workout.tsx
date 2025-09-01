@@ -302,6 +302,7 @@ export default function WorkoutScreen() {
           userName={user?.fullName || t('common.user')}
           userEmail={user?.email || 'user@example.com'}
           userInfo={userInfo}
+          badges={userInfo?.badges || []}
         />
 
         <UserInfoModal

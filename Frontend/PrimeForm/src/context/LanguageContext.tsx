@@ -208,6 +208,10 @@ const translations = {
     'gym.subtitle': 'Choose your section and start your fitness journey',
     'gym.men': 'MEN',
     'gym.women': 'WOMEN',
+    'gym.filterBy': 'Filter by Target Area',
+    'gym.filterByLocation': 'Filter by Location',
+    'gym.noExercises': 'No exercises found',
+    'gym.noExercisesSubtitle': 'Try selecting a different target area or section',
     
     // Exercise Names
     'exercise.pushups': 'Push-ups',
@@ -346,7 +350,7 @@ const translations = {
     'workout.magic.message': 'You are one click away from AI magic! ✨',
     
     // Profile Summary
-    'profile.summary.title': 'Your AI Profile Summary',
+    'profile.summary.title': 'Your Profile Summary',
     'profile.summary.goal': 'Goal:',
     'profile.summary.diet.preference': 'Diet Preference:',
     'profile.summary.current.weight': 'Current Weight:',
@@ -507,6 +511,11 @@ const translations = {
     'profile.save': 'Save Profile',
     'profile.notSpecified': 'Not specified',
     'profile.select': 'AI Select...',
+    
+    // Location Labels
+    'location.home': 'Home',
+    'location.gym': 'Gym',
+    'location.both': 'Both',
   },
   ur: {
     // Auth screens
@@ -936,6 +945,10 @@ const translations = {
     'gym.subtitle': 'اپنا سیکشن منتخب کریں اور اپنا فٹنس سفر شروع کریں',
     'gym.men': 'مرد',
     'gym.women': 'خواتین',
+    'gym.filterBy': 'ٹارگٹ ایریا کے مطابق فلٹر کریں',
+    'gym.filterByLocation': 'مقام کے مطابق فلٹر کریں',
+    'gym.noExercises': 'کوئی ورزش نہیں ملی',
+    'gym.noExercisesSubtitle': 'مختلف ٹارگٹ ایریا یا سیکشن منتخب کرنے کی کوشش کریں',
     
     // Exercise Names
     'exercise.pushups': 'پش اپس',
@@ -999,6 +1012,11 @@ const translations = {
     'exercise.detail.beginner': 'ابتدائی',
     'exercise.detail.medium': 'درمیانہ',
     'exercise.detail.advanced': 'ایڈوانس',
+    
+    // Location Labels
+    'location.home': 'Home',
+    'location.gym': 'Gym',
+    'location.both': 'Both',
   },
 };
 
@@ -1010,13 +1028,17 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     const loadLanguage = async () => {
       try {
         const savedLanguage = await AsyncStorage.getItem('primeform_language_selected');
+        console.log('🌍 LanguageContext: Loading language from storage:', savedLanguage);
+        
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) {
           setLanguage(savedLanguage);
           setHasSelectedLanguage(true);
+          console.log('✅ LanguageContext: Language loaded and marked as selected');
         } else {
           // If no language is saved, set default to English and mark as not selected
           setLanguage('en');
           setHasSelectedLanguage(false);
+          console.log('🌍 LanguageContext: No saved language, defaulting to English');
         }
       } catch (error) {
         console.error('Failed to load language:', error);

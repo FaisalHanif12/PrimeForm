@@ -23,8 +23,6 @@ interface NotificationSettings {
   pushNotifications: boolean;
   workoutReminders: boolean;
   dietReminders: boolean;
-  progressUpdates: boolean;
-  softwareUpdates: boolean;
 }
 
 interface SoftwareUpdate {
@@ -44,8 +42,6 @@ export default function SettingsPage() {
     pushNotifications: true,
     workoutReminders: true,
     dietReminders: true,
-    progressUpdates: true,
-    softwareUpdates: true,
   });
 
   const [softwareUpdate, setSoftwareUpdate] = useState<SoftwareUpdate>({

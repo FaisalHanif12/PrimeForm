@@ -20,6 +20,10 @@ const notificationTranslations = {
     general: {
       title: 'Notification',
       message: 'You have a new notification from PrimeForm.'
+    },
+    profile_completion_badge: {
+      title: 'Profile Completion Badge Earned! 🏆',
+      message: (name) => `Congratulations ${name}! You've earned the Profile Completion Badge! Your profile is now complete and ready for personalized plans.`
     }
   },
   ur: {
@@ -38,6 +42,10 @@ const notificationTranslations = {
     general: {
       title: 'اطلاع',
       message: 'آپ کو پرائم فارم سے ایک نئی اطلاع ہے۔'
+    },
+    profile_completion_badge: {
+      title: 'پروفائل مکمل کرنے کا بیج حاصل! 🏆',
+      message: (name) => `مبارک ہو ${name}! آپ نے پروفائل مکمل کرنے کا بیج حاصل کیا ہے! آپ کا پروفائل اب مکمل ہے اور ذاتی منصوبوں کے لیے تیار ہے۔`
     }
   }
 };
@@ -277,6 +285,45 @@ class NotificationService {
       return notification;
     } catch (error) {
       console.error('Error creating general notification:', error);
+      throw error;
+    }
+  }
+
+  // Create profile completion badge notification
+  static async createProfileCompletionBadgeNotification(userId, userFullName) {
+    try {
+      const userLanguage = await getUserLanguage(userId);
+      const { title, message } = getTranslatedContent('profile_completion_badge', userLanguage, userFullName);
+      
+      const notification = await Notification.createNotification({
+        userId,
+        type: 'badge_earned',
+        title,
+        message,
+        priority: 'high',
+        metadata: {
+          hasAppLogo: true,
+          actionType: 'badge_earned',
+          badgeType: 'profile_completion',
+          language: userLanguage
+        }
+      });
+
+      // Send push notification
+      await pushNotificationService.sendToUser(userId, {
+        title,
+        body: message,
+        data: { 
+          type: 'badge_earned', 
+          notificationId: notification._id.toString(), 
+          badgeType: 'profile_completion',
+          language: userLanguage 
+        }
+      });
+
+      return notification;
+    } catch (error) {
+      console.error('Error creating profile completion badge notification:', error);
       throw error;
     }
   }

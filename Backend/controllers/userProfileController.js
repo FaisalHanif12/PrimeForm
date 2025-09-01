@@ -80,6 +80,11 @@ exports.createOrUpdateProfile = async (req, res) => {
     const requiredFields = ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'];
     const missingFields = requiredFields.filter(field => !profileData[field]);
     
+    // Conditionally require targetWeight for weight-related goals
+    if ((profileData.bodyGoal === 'Lose Fat' || profileData.bodyGoal === 'Gain Muscle') && !profileData.targetWeight) {
+      missingFields.push('targetWeight');
+    }
+    
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,
@@ -124,17 +129,9 @@ exports.createOrUpdateProfile = async (req, res) => {
     
     console.log('🔍 createOrUpdateProfile - Profile saved successfully with userId:', userProfile.userId);
     
-    // Send plan creation notifications (non-blocking)
-    if (userProfile.isProfileComplete) {
-      try {
-        await NotificationService.createDietPlanNotification(userId);
-        await NotificationService.createWorkoutPlanNotification(userId);
-        console.log('✅ Plan creation notifications sent for user:', userId);
-      } catch (notificationError) {
-        console.error('⚠️ Failed to send plan notifications:', notificationError.message);
-        // Don't fail the main request if notifications fail
-      }
-    }
+    // Removed automatic plan creation notifications when user fills out profile
+    // These notifications will be sent separately when plans are actually generated
+    console.log('✅ Profile saved successfully - no automatic notifications sent');
     
     res.status(200).json({
       success: true,
@@ -166,7 +163,7 @@ exports.updateProfileField = async (req, res) => {
     
     // Validate field name
     const allowedFields = [
-      'country', 'age', 'gender', 'height', 'currentWeight',
+      'country', 'age', 'gender', 'height', 'currentWeight', 'targetWeight',
       'bodyGoal', 'medicalConditions', 'occupationType', 'availableEquipment', 'dietPreference'
     ];
     
@@ -195,6 +192,16 @@ exports.updateProfileField = async (req, res) => {
         success: false,
         message: 'Profile not found. Please create a profile first.'
       });
+    }
+    
+    // Special validation for bodyGoal changes - require targetWeight if switching to weight-related goals
+    if (field === 'bodyGoal' && (value === 'Lose Fat' || value === 'Gain Muscle')) {
+      if (!userProfile.targetWeight) {
+        return res.status(400).json({
+          success: false,
+          message: 'Target weight is required for weight loss or muscle gain goals'
+        });
+      }
     }
     
     userProfile[field] = value;
@@ -257,7 +264,8 @@ exports.checkProfileCompletion = async (req, res) => {
         success: true,
         data: {
           isComplete: false,
-          missingFields: ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal']
+          missingFields: ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'],
+          badges: []
         },
         message: 'No profile found'
       });
@@ -271,12 +279,50 @@ exports.checkProfileCompletion = async (req, res) => {
       data: {
         isComplete: userProfile.isProfileComplete,
         missingFields,
+        badges: userProfile.badges || [],
         profile: userProfile
       },
       message: 'Profile completion status retrieved'
     });
   } catch (error) {
     console.error('Error checking profile completion:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Get user badges
+exports.getUserBadges = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const userProfile = await UserProfile.findOne({ userId });
+    
+    if (!userProfile) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          badges: [],
+          hasProfileCompletionBadge: false
+        },
+        message: 'No profile found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        badges: userProfile.badges || [],
+        hasProfileCompletionBadge: userProfile.badges.includes('profile_completion'),
+        profile: userProfile
+      },
+      message: 'User badges retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting user badges:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

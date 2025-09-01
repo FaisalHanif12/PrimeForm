@@ -27,6 +27,7 @@ interface UserInfo {
   gender: string;
   height: string;
   currentWeight: string;
+  targetWeight: string;
   bodyGoal: string;
   medicalConditions: string;
   occupationType: string;
@@ -127,6 +128,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     gender: '',
     height: '',
     currentWeight: '',
+    targetWeight: '',
     bodyGoal: '',
     medicalConditions: '',
     occupationType: '',
@@ -187,7 +189,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
   const handleCancel = () => {
     setEditedUserInfo(userInfo || {
-      country: '', age: '', gender: '', height: '', currentWeight: '',
+      country: '', age: '', gender: '', height: '', currentWeight: '', targetWeight: '',
       bodyGoal: '', medicalConditions: '', occupationType: '', availableEquipment: '', dietPreference: ''
     });
     setIsEditing(false);
@@ -231,6 +233,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           gender: response.data.gender,
           height: response.data.height,
           currentWeight: response.data.currentWeight,
+          targetWeight: response.data.targetWeight || '',
           bodyGoal: response.data.bodyGoal,
           medicalConditions: response.data.medicalConditions,
           occupationType: response.data.occupationType,
@@ -268,7 +271,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           placeholderTextColor={colors.mutedText}
         />
       ) : (
-        <Text style={styles.infoValue}>{value || t('profile.notSpecified')}</Text>
+        <Text style={styles.infoValue}>{value || 'Not specified'}</Text>
       )}
     </View>
   );
@@ -283,7 +286,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
             onValueChange={(val) => handleUpdateField(field, val)}
             style={styles.picker}
           >
-            <Picker.Item label={t('profile.select')} value="" />
+            <Picker.Item label="Select..." value="" />
             {options.map(option => (
               <Picker.Item key={option.en} label={getLocalizedText(option)} value={getLocalizedText(option)} />
             ))}
@@ -291,7 +294,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         </View>
       ) : (
         <Text style={styles.infoValue}>
-          {value ? getLocalizedValue(value, options) : t('profile.notSpecified')}
+          {value ? getLocalizedValue(value, options) : 'Not specified'}
         </Text>
       )}
     </View>
@@ -310,14 +313,14 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           <View style={styles.noProfileIcon}>
             <Text style={styles.noProfileEmoji}>👤</Text>
           </View>
-          <Text style={styles.noProfileTitle}>{t('profile.noProfile.title')}</Text>
-          <Text style={styles.noProfileText}>{t('profile.noProfile.text')}</Text>
+          <Text style={styles.noProfileTitle}>Complete Your Profile</Text>
+          <Text style={styles.noProfileText}>Create your personalized profile to get started with AI-powered fitness plans tailored just for you.</Text>
           <TouchableOpacity 
             style={styles.createProfileButton}
             onPress={() => setShowUserInfoModal(true)}
             activeOpacity={0.8}
           >
-            <Text style={styles.createProfileButtonText}>{t('profile.noProfile.button')}</Text>
+            <Text style={styles.createProfileButtonText}>Create Profile</Text>
           </TouchableOpacity>
         </View>
       );
@@ -327,30 +330,34 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     return (
       <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
         {/* Personal Information */}
-        {renderInfoSection(t('profile.sections.personal'), (
+        {renderInfoSection('Personal Information', (
           <>
-            {renderPickerRow(t('profile.fields.country'), userInfo.country, 'country', countries)}
-            {renderInfoRow(t('profile.fields.age'), userInfo.age, 'age')}
-            {renderPickerRow(t('profile.fields.gender'), userInfo.gender, 'gender', genderOptions)}
-            {renderInfoRow(t('profile.fields.height'), userInfo.height, 'height')}
-            {renderInfoRow(t('profile.fields.weight'), userInfo.currentWeight, 'currentWeight')}
+            {renderPickerRow('Country', userInfo.country, 'country', countries)}
+            {renderInfoRow('Age', userInfo.age, 'age')}
+            {renderPickerRow('Gender', userInfo.gender, 'gender', genderOptions)}
+            {renderInfoRow('Height', userInfo.height, 'height')}
+            {renderInfoRow('Current Weight', userInfo.currentWeight, 'currentWeight')}
+            {/* Show target weight field if body goal requires it */}
+            {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
+              renderInfoRow('Target Weight', userInfo.targetWeight || '', 'targetWeight')
+            )}
           </>
         ))}
 
         {/* Goals & Preferences */}
-        {renderInfoSection(t('profile.sections.goals'), (
+        {renderInfoSection('Goals & Preferences', (
           <>
-            {renderPickerRow(t('profile.fields.bodyGoal'), userInfo.bodyGoal, 'bodyGoal', bodyGoals)}
-            {renderPickerRow(t('profile.fields.dietPreference'), userInfo.dietPreference, 'dietPreference', dietPreferences)}
+            {renderPickerRow('Body Goal', userInfo.bodyGoal, 'bodyGoal', bodyGoals)}
+            {renderPickerRow('Diet Preference', userInfo.dietPreference, 'dietPreference', dietPreferences)}
           </>
         ))}
 
         {/* Lifestyle & Health */}
-        {renderInfoSection(t('profile.sections.lifestyle'), (
+        {renderInfoSection('Lifestyle & Health', (
           <>
-            {renderPickerRow(t('profile.fields.occupation'), userInfo.occupationType, 'occupationType', occupationTypes)}
-            {renderPickerRow(t('profile.fields.equipment'), userInfo.availableEquipment, 'availableEquipment', equipmentOptions)}
-            {renderInfoRow(t('profile.fields.medical'), userInfo.medicalConditions, 'medicalConditions')}
+            {renderPickerRow('Occupation', userInfo.occupationType, 'occupationType', occupationTypes)}
+            {renderPickerRow('Available Equipment', userInfo.availableEquipment, 'availableEquipment', equipmentOptions)}
+            {renderInfoRow('Medical Conditions', userInfo.medicalConditions, 'medicalConditions')}
           </>
         ))}
       </ScrollView>
@@ -377,19 +384,19 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+              <Text style={styles.headerTitle}>Profile</Text>
               <View style={styles.headerActions}>
                 {!isEditing ? (
                   <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
-                    <Text style={styles.editButtonText}>{t('profile.edit')}</Text>
+                    <Text style={styles.editButtonText}>Edit Profile</Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.editActions}>
                     <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                      <Text style={styles.cancelButtonText}>{t('profile.cancel')}</Text>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                      <Text style={styles.saveButtonText}>{t('profile.save')}</Text>
+                      <Text style={styles.saveButtonText}>Save</Text>
                     </TouchableOpacity>
                   </View>
                 )}

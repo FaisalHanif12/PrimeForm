@@ -6,6 +6,7 @@ export interface UserInfo {
   gender: string;
   height: string;
   currentWeight: string;
+  targetWeight: string;
   bodyGoal: string;
   medicalConditions: string;
   occupationType: string;
@@ -21,12 +22,14 @@ export interface UserProfile {
   gender: string;
   height: string;
   currentWeight: string;
+  targetWeight: string;
   bodyGoal: string;
   medicalConditions: string;
   occupationType: string;
   availableEquipment: string;
   dietPreference: string;
   isProfileComplete: boolean;
+  badges: string[];
   lastUpdated: string;
   createdAt: string;
   updatedAt: string;
@@ -35,6 +38,7 @@ export interface UserProfile {
 export interface ProfileCompletionStatus {
   isComplete: boolean;
   missingFields: string[];
+  badges: string[];
   profile?: UserProfile;
 }
 
@@ -48,7 +52,6 @@ class UserProfileService {
   // Clear cache when user changes (called from auth service)
   clearCache() {
     this.cache = null;
-    this.currentUserId = null;
     console.log('🗑️ User profile cache cleared');
   }
 
@@ -276,38 +279,32 @@ class UserProfileService {
     }
   }
 
-  // Clear cache for current user or all users
-  clearCache(userId?: string) {
-    if (userId) {
-      // Clear cache for specific user
-      delete this.cache[userId];
-      console.log('🗑️ Cleared cache for user:', userId);
-    } else {
-      // Clear all cache
-      this.cache = {};
-      this.currentUserId = null;
-      console.log('🗑️ Cleared all user cache');
+  // Get user badges
+  async getUserBadges(): Promise<{ success: boolean; data: { badges: string[]; hasProfileCompletionBadge: boolean } | null; message: string }> {
+    try {
+      const response = await api.get('/user-profile/badges');
+      
+      if (response && response.success) {
+        return response;
+      } else {
+        return {
+          success: false,
+          data: null,
+          message: 'Invalid response from server'
+        };
+      }
+    } catch (error: any) {
+      console.error('Error getting user badges:', error);
+      
+      return {
+        success: false,
+        data: null,
+        message: error.response?.data?.message || 'Failed to get user badges'
+      };
     }
   }
 
-  // Get current user ID from auth context or local storage
-  private async getCurrentUserId(): Promise<string | null> {
-    try {
-      // Try to get from AsyncStorage first
-      const AsyncStorage = await import('@react-native-async-storage/async-storage');
-      const userId = await AsyncStorage.default.getItem('primeform_user_id');
-      if (userId) {
-        return userId;
-      }
-      
-      // If not in storage, try to get from auth context
-      // This will be handled by the component calling this service
-      return this.currentUserId;
-    } catch (error) {
-      console.error('Error getting current user ID:', error);
-      return this.currentUserId;
-    }
-  }
+
 }
 
 export default new UserProfileService();
