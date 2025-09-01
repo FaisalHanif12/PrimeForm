@@ -24,6 +24,7 @@ interface UserInfo {
   gender: string;
   height: string;
   currentWeight: string;
+  targetWeight: string;
   bodyGoal: string;
   medicalConditions: string;
   occupationType: string;
@@ -178,6 +179,7 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
     gender: '',
     height: '',
     currentWeight: '',
+    targetWeight: '',
     bodyGoal: '',
     medicalConditions: '',
     occupationType: '',
@@ -220,6 +222,10 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
       case 2:
         if (!userInfo.currentWeight) errors.currentWeight = true;
         if (!userInfo.bodyGoal) errors.bodyGoal = true;
+        // Validate target weight only if body goal requires it
+        if ((userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && !userInfo.targetWeight) {
+          errors.targetWeight = true;
+        }
         break;
       case 3:
         if (!userInfo.occupationType) errors.occupationType = true;
@@ -394,6 +400,24 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
           <Text style={styles.errorText}>{t('validation.goal.required')}</Text>
         )}
       </View>
+
+      {/* Conditional Target Weight Field */}
+      {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>{t('userinfo.target.weight')} *</Text>
+          <TextInput
+            style={[styles.textInput, validationErrors.targetWeight && styles.inputError]}
+            value={userInfo.targetWeight}
+            onChangeText={(value) => updateUserInfo('targetWeight', value)}
+            placeholder={t('placeholder.target.weight')}
+            placeholderTextColor={colors.mutedText}
+            keyboardType="numeric"
+          />
+          {validationErrors.targetWeight && (
+            <Text style={styles.errorText}>{t('validation.target.weight.required')}</Text>
+          )}
+        </View>
+      )}
     </View>
   );
 

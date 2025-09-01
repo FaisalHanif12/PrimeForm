@@ -38,6 +38,10 @@ const userProfileSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  targetWeight: {
+    type: String,
+    required: false
+  },
   bodyGoal: {
     type: String,
     enum: [
@@ -89,6 +93,10 @@ const userProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  badges: {
+    type: [String],
+    default: []
+  },
   lastUpdated: {
     type: Date,
     default: Date.now
@@ -97,11 +105,45 @@ const userProfileSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Update isProfileComplete when required fields are filled
+// Update isProfileComplete and add badges when required fields are filled
 userProfileSchema.pre('save', function(next) {
   const requiredFields = ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'];
   this.isProfileComplete = requiredFields.every(field => this[field]);
+  
+  // Add profile completion badge if profile is complete and doesn't already have it
+  if (this.isProfileComplete && !this.badges.includes('profile_completion')) {
+    this.badges.push('profile_completion');
+  }
+  
   next();
+});
+
+// Post-save middleware to send notifications when badge is earned
+userProfileSchema.post('save', async function(doc) {
+  try {
+    // Check if this is a new profile completion badge
+    if (doc.isProfileComplete && doc.badges.includes('profile_completion')) {
+      // Get the user details for the notification
+      const User = require('./User');
+      const user = await User.findById(doc.userId);
+      
+      if (user) {
+        // Import and call the notification service
+        const NotificationService = require('../services/notificationService');
+        
+        // Send profile completion badge notification
+        await NotificationService.createProfileCompletionBadgeNotification(
+          doc.userId,
+          user.fullName
+        );
+        
+        console.log('🏆 Profile completion badge notification sent for user:', user.email);
+      }
+    }
+  } catch (error) {
+    console.error('⚠️ Error sending profile completion notification:', error.message);
+    // Don't throw error to avoid breaking the save operation
+  }
 });
 
 module.exports = mongoose.model('UserProfile', userProfileSchema);
