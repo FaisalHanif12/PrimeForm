@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as MailComposer from 'expo-mail-composer';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import api from '../../src/config/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -77,48 +77,22 @@ export default function ContactPage() {
     setIsSubmitting(true);
     
     try {
-      // Check if device can send emails
-      const isAvailable = await MailComposer.isAvailableAsync();
-      
-      if (!isAvailable) {
-        showToast('error', 'Email is not available on this device');
-        return;
-      }
+      // Call backend to send email (server handles SMTP)
+      const response = await api.post('/contact/send-email', {
+        name: formData.name,
+        email: formData.email,
+        problem: formData.problem,
+      });
 
-      // Prepare email data
-      const emailData = {
-        recipients: ['mehrfaisal111@gmail.com'],
-        subject: `PrimeForm Contact Form - ${formData.name}`,
-        body: `
-Name: ${formData.name}
-Email: ${formData.email}
-Problem: ${formData.problem}
-
-This message was sent from the PrimeForm app contact form.
-        `.trim(),
-        isHtml: false,
-      };
-
-      // Open email composer
-      const result = await MailComposer.composeAsync(emailData);
-      
-      if (result.status === 'sent') {
+      if (response && response.success) {
         showToast('success', 'Message sent successfully! We\'ll get back to you soon.');
-        
-        // Clear form data
-        setFormData({
-          name: '',
-          email: '',
-          problem: ''
-        });
-      } else if (result.status === 'cancelled') {
-        showToast('info', 'Email cancelled');
+        setFormData({ name: '', email: '', problem: '' });
       } else {
-        showToast('error', 'Failed to send email. Please try again.');
+        showToast('error', response?.message || 'Failed to send email. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending contact form:', error);
-      showToast('error', 'Failed to send message. Please try again later.');
+      showToast('error', error?.message || 'Failed to send message. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
@@ -233,9 +207,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
-    flex: 1,
-  },
+
   content: {
     padding: spacing.lg,
     paddingTop: spacing.xl,
@@ -246,10 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.md,
   },
-  formContainer: {
-    marginTop: spacing.xl,
-  },
-  formHeader: {
+   formHeader: {
     alignItems: 'center',
     marginBottom: spacing.xl,
   },
