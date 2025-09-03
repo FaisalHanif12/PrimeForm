@@ -81,7 +81,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#0F1424', // Deep navy blue
+    backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.xl + spacing.md, // Increased bottom margin
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   activeTabLabel: {
-    color: colors.gold,
+    color: colors.primary,
     fontWeight: '600',
   },
 });

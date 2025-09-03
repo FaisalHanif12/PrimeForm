@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     maxHeight: screenHeight * 0.95,
   },
   modalContent: {
-    backgroundColor: 'rgba(26, 31, 46, 0.95)',
+    backgroundColor: 'rgba(19, 25, 34, 0.95)',
     borderRadius: 28,
     padding: spacing.xl + 12,
     borderWidth: 1,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: colors.gold,
+    backgroundColor: colors.primary,
     borderRadius: 3,
   },
   content: {
@@ -754,17 +754,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   summaryContainer: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: 'rgba(0, 201, 124, 0.1)',
     padding: spacing.md,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: 'rgba(0, 201, 124, 0.3)',
   },
   summaryTitle: {
     fontSize: 18,
     fontWeight: '600',
     fontFamily: fonts.heading,
-    color: colors.gold,
+    color: colors.primary,
     marginBottom: spacing.xs,
   },
   summaryText: {
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flex: 1,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md + 4,
     paddingHorizontal: spacing.lg,
     borderRadius: 16,

@@ -1,32 +1,40 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  // Dark navy + gold glassmorphism theme - Updated to match provided UI
-  background: '#0A0E1A',
-  surface: '#1A1F2E',
-  text: '#FFFFFF',
-  mutedText: '#6B7280',
+  // New color theme - Dark navy with green accents
+  background: '#0A0F1A', // Very dark navy/black
+  surface: '#131922', // Dark gray-blue for card backgrounds
+  text: '#FFFFFF', // White text for headings
+  mutedText: '#9DA8B6', // Gray text for labels and secondary text
   white: '#FFFFFF',
-  // Gold accents - More vibrant to match the image
-  gold: '#F59E0B',
-  goldDark: '#D97706',
-  goldSoft: 'rgba(245, 158, 11, 0.7)',
-  // Glass surfaces - Darker and more subtle
-  inputBackground: 'rgba(26, 31, 46, 0.6)',
-  inputFill: 'rgba(26, 31, 46, 0.8)',
+  // Primary Accent Green - Replacing gold colors
+  primary: '#00C97C', // Primary Accent Green
+  primaryDark: '#00A86B', // Darker shade of primary green
+  primarySoft: 'rgba(0, 201, 124, 0.7)', // Soft version of primary green
+  // Inactive elements
+  inactive: '#212833', // Muted dark gray for inactive buttons
+  // Glass surfaces - Updated to match new theme
+  inputBackground: 'rgba(19, 25, 34, 0.6)',
+  inputFill: 'rgba(19, 25, 34, 0.8)',
   inputBorder: 'rgba(255, 255, 255, 0.1)',
-  cardBackground: 'rgba(26, 31, 46, 0.4)',
+  cardBackground: 'rgba(19, 25, 34, 0.4)',
   cardBorder: 'rgba(255, 255, 255, 0.08)',
-  // Additional colors from the image
+  // Icon and stroke colors
+  iconStroke: '#D1D5DB', // Light gray stroke for workout icons
+  // Additional colors
   blue: '#3B82F6',
   green: '#10B981',
   purple: '#8B5CF6',
   // Feedback
   error: '#EF4444',
-  // Legacy gradient tokens
-  gradientStart: '#0A0E1A',
+  // Legacy gradient tokens - Updated to match new background
+  gradientStart: '#0A0F1A',
   gradientMid: '#0F1419',
   gradientEnd: '#020617',
+  // Legacy gold references - now pointing to primary green
+  gold: '#00C97C',
+  goldDark: '#00A86B',
+  goldSoft: 'rgba(0, 201, 124, 0.7)',
 };
 
 export const spacing = {

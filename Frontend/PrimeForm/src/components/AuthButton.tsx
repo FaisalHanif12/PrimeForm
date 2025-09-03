@@ -30,7 +30,7 @@ export default function AuthButton({ label, onPress, loading, disabled, style }:
         <LinearGradient
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          colors={[ '#E7C873', '#2C3C54', '#0A1829' ]}
+          colors={[ colors.primary, '#2C3C54', '#0A0F1A' ]}
           style={styles.button}
         >
           {loading ? (

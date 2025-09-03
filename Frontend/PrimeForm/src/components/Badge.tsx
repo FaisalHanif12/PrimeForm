@@ -15,8 +15,8 @@ const Badge: React.FC<BadgeProps> = ({ type, size = 'medium', showLabel = true }
         return {
           icon: '🏆',
           label: 'Profile Complete',
-          color: colors.gold,
-          bgColor: 'rgba(245, 158, 11, 0.15)'
+          color: colors.primary,
+          bgColor: 'transparent'
         };
       default:
         return {

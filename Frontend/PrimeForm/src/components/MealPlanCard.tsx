@@ -58,7 +58,7 @@ export default function MealPlanCard({ title, meals, totalCalories, onPress, del
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
                 <Text style={styles.viewAllText}>{t('dashboard.view.full.meal')}</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.gold} />
+                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -92,13 +92,13 @@ const styles = StyleSheet.create({
   },
   calorieContainer: {
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(0, 201, 124, 0.15)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
   },
   calorieCount: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   mealCalories: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
   },
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   viewAllText: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,

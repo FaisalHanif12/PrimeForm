@@ -242,18 +242,18 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: 'rgba(0, 201, 124, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: 'rgba(0, 201, 124, 0.3)',
   },
   logoImage: {
     width: 70,
     height: 70,
   },
   welcomeText: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: 18,
     fontWeight: '600',
     fontFamily: fonts.body,
@@ -296,9 +296,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   languageButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
     paddingVertical: spacing.md + 6,
     paddingHorizontal: spacing.lg,
     borderRadius: 20,
@@ -307,14 +306,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     minHeight: 80,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   languageButtonContent: {
     flex: 1,
@@ -337,7 +328,7 @@ const styles = StyleSheet.create({
   },
   languageButtonDisabled: {
     opacity: 0.6,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'transparent',
   },
   bottomAccent: {
     width: 60,
