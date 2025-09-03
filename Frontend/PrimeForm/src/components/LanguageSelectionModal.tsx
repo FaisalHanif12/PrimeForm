@@ -140,7 +140,7 @@ export default function LanguageSelectionModal({
             <View style={styles.logoContainer}>
               <View style={styles.logoBackground}>
                 <Image 
-                  source={require('../../assets/images/PrimeLogo.png')} 
+                  source={require('../../assets/images/Primelogo1.png')} 
                   style={styles.logoImage}
                   resizeMode="contain"
                 />
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   bottomAccent: {
     width: 60,
     height: 3,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.primary,
     borderRadius: 2,
     opacity: 0.6,
   },

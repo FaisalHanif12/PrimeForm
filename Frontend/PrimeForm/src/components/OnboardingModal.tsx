@@ -113,7 +113,7 @@ export default function OnboardingModal({
             <Animated.View style={[styles.logoContainer, animatedLogoStyle]}>
               <View style={styles.logoBackground}>
                 <Image 
-                  source={require('../../assets/images/PrimeLogo.png')} 
+                  source={require('../../assets/images/Primelogo1.png')} 
                   style={styles.logoImage}
                   resizeMode="contain"
                 />
