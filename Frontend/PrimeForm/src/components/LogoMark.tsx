@@ -13,7 +13,7 @@ export default function LogoMark({ subtitle }: Props) {
   
   return (
     <Animated.View entering={FadeIn} style={styles.container}>
-      <Image source={require('../../assets/images/PrimeLogo.png')} style={styles.icon} />
+      <Image source={require('../../assets/images/Primelogo1.png')} style={styles.icon} />
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>{t('brand.primeform')}</Text>
       </View>
