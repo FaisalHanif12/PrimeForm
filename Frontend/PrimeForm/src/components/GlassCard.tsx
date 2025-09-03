@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
     borderRadius: CARD_RADIUS,
     // Avoid overflow clipping on Android to prevent TextInput caret rendering issues
     overflow: Platform.OS === 'ios' ? 'hidden' : 'visible',
-    shadowColor: '#0A0F1C',
+    shadowColor: '#0A0F1A',
     shadowOpacity: 0.55,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 10 },

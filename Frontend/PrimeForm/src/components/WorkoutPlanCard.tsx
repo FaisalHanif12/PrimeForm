@@ -32,7 +32,7 @@ export default function WorkoutPlanCard({ title, workouts, onPress, delay = 0 }:
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>
               <View style={styles.iconContainer}>
-                <Ionicons name="fitness" size={20} color={colors.gold} />
+                <Ionicons name="fitness" size={20} color={colors.primary} />
               </View>
             </View>
             
@@ -62,7 +62,7 @@ export default function WorkoutPlanCard({ title, workouts, onPress, delay = 0 }:
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
                 <Text style={styles.viewAllText}>{t('dashboard.view.full.workout')}</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.gold} />
+                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(0, 201, 124, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   workoutSets: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
   },
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   viewAllText: {
-    color: colors.gold,
+    color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,

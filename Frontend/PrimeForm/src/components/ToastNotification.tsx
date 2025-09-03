@@ -36,15 +36,15 @@ const getToastConfig = (type: ToastType) => {
       };
     case 'info':
       return {
-        backgroundColor: colors.gold,
+        backgroundColor: colors.primary,
         icon: 'information-circle' as const,
-        textColor: '#000000'
+        textColor: '#FFFFFF'
       };
     default:
       return {
-        backgroundColor: colors.gold,
+        backgroundColor: colors.primary,
         icon: 'information-circle' as const,
-        textColor: '#000000'
+        textColor: '#FFFFFF'
       };
   }
 };
