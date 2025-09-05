@@ -1,166 +1,103 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
-import { useLanguage } from '../context/LanguageContext';
+import { WorkoutExercise } from '../services/aiWorkoutService';
 
-interface WorkoutItem {
-  name: string;
-  sets: string;
-  reps?: string;
-  weight?: string;
-}
-
-interface Props {
-  title: string;
-  workouts: WorkoutItem[];
+interface WorkoutPlanCardProps {
+  exercise: WorkoutExercise;
   onPress?: () => void;
-  delay?: number;
 }
 
-export default function WorkoutPlanCard({ title, workouts, onPress, delay = 0 }: Props) {
-  const { t } = useLanguage();
+export default function WorkoutPlanCard({ exercise, onPress }: WorkoutPlanCardProps) {
+  // Add safety checks and fallback values
+  if (!exercise) {
+    return null;
+  }
+
+  const safeExercise = {
+    name: exercise.name || 'Exercise',
+    emoji: exercise.emoji || '💪',
+    sets: exercise.sets || 0,
+    reps: exercise.reps || 0,
+    caloriesBurned: exercise.caloriesBurned || 0,
+    targetMuscles: Array.isArray(exercise.targetMuscles) ? exercise.targetMuscles : ['General']
+  };
+
   return (
-    <Animated.View 
-      entering={FadeInDown.delay(delay)} 
-      style={styles.container}
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={onPress}
+      activeOpacity={0.8}
     >
-      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-        <View style={styles.card}>
-            <View style={styles.header}>
-              <Text style={styles.title}>{title}</Text>
-              <View style={styles.iconContainer}>
-                <Ionicons name="fitness" size={20} color={colors.primary} />
-              </View>
-            </View>
-            
-            <View style={styles.workoutList}>
-              {workouts.map((workout, index) => (
-                <View key={index} style={styles.workoutItem}>
-                  <View style={styles.workoutIcon}>
-                    <Ionicons name="barbell" size={16} color={colors.mutedText} />
-                  </View>
-                  
-                  <View style={styles.workoutContent}>
-                    <Text style={styles.workoutName}>{workout.name}</Text>
-                    <View style={styles.workoutDetails}>
-                      <Text style={styles.workoutSets}>{workout.sets}</Text>
-                      {workout.reps && (
-                        <Text style={styles.workoutReps}>{workout.reps}</Text>
-                      )}
-                      {workout.weight && (
-                        <Text style={styles.workoutWeight}>{workout.weight}</Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-            
-            {onPress && (
-              <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
-                <Text style={styles.viewAllText}>{t('dashboard.view.full.workout')}</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
-      </TouchableOpacity>
-    </Animated.View>
+      <View style={styles.iconContainer}>
+        <Text style={styles.icon}>{safeExercise.emoji}</Text>
+      </View>
+      
+      <View style={styles.content}>
+        <Text style={styles.exerciseName}>{safeExercise.name}</Text>
+        <Text style={styles.setsReps}>
+          {safeExercise.sets} sets, {safeExercise.reps} reps
+        </Text>
+        <Text style={styles.calories}>
+          {safeExercise.caloriesBurned} kcal
+        </Text>
+        <Text style={styles.targetMuscles}>
+          {safeExercise.targetMuscles.join(', ')}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.lg,
-  },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.lg,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  title: {
-    color: colors.white,
-    fontSize: typography.subtitle,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
-  },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0, 201, 124, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  workoutList: {
-    marginBottom: spacing.md,
-  },
-  workoutItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  workoutIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  workoutContent: {
+  icon: {
+    fontSize: 24,
+  },
+  content: {
     flex: 1,
   },
-  workoutName: {
+  exerciseName: {
     color: colors.white,
     fontSize: typography.body,
-    fontWeight: '500',
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  setsReps: {
+    color: colors.mutedText,
+    fontSize: typography.small,
     fontFamily: fonts.body,
-    marginBottom: 2,
+    marginBottom: spacing.xs,
   },
-  workoutDetails: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  workoutSets: {
+  calories: {
     color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
+    fontFamily: fonts.body,
+    marginBottom: spacing.xs,
   },
-  workoutReps: {
+  targetMuscles: {
     color: colors.mutedText,
-    fontSize: typography.small,
-  },
-  workoutWeight: {
-    color: colors.mutedText,
-    fontSize: typography.small,
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  viewAllText: {
-    color: colors.primary,
-    fontSize: typography.small,
-    fontWeight: '600',
+    fontSize: 11,
     fontFamily: fonts.body,
   },
 });
-
