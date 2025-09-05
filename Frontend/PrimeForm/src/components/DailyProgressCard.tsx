@@ -20,37 +20,42 @@ export default function DailyProgressCard({
       case 'completed':
         return {
           backgroundColor: colors.green,
-          icon: '✅',
+          icon: '✓',
           label: 'Done',
-          textColor: colors.white
+          textColor: colors.white,
+          borderColor: colors.green
         };
       case 'rest':
         return {
           backgroundColor: colors.surface,
           icon: '😴',
           label: 'Rest',
-          textColor: colors.white
+          textColor: colors.white,
+          borderColor: colors.cardBorder
         };
       case 'upcoming':
         return {
           backgroundColor: colors.surface,
           icon: '',
           label: 'Upc',
-          textColor: colors.white
+          textColor: colors.white,
+          borderColor: colors.cardBorder
         };
       case 'missed':
         return {
           backgroundColor: colors.error,
-          icon: '❌',
+          icon: '✗',
           label: 'Missed',
-          textColor: colors.white
+          textColor: colors.white,
+          borderColor: colors.error
         };
       default:
         return {
           backgroundColor: colors.surface,
           icon: '',
           label: 'Upc',
-          textColor: colors.white
+          textColor: colors.white,
+          borderColor: colors.cardBorder
         };
     }
   };
@@ -59,22 +64,32 @@ export default function DailyProgressCard({
 
   return (
     <TouchableOpacity 
-      style={[styles.card, { backgroundColor: config.backgroundColor }]} 
+      style={[
+        styles.card, 
+        { 
+          backgroundColor: config.backgroundColor,
+          borderColor: config.borderColor
+        }
+      ]} 
       onPress={onPress}
       activeOpacity={0.8}
     >
+      {/* Icon at the top */}
       <View style={styles.iconContainer}>
         <Text style={styles.icon}>{config.icon}</Text>
       </View>
       
+      {/* Status label */}
       <Text style={[styles.label, { color: config.textColor }]}>
         {config.label}
       </Text>
       
+      {/* Day name */}
       <Text style={[styles.dayName, { color: config.textColor }]}>
         {dayName}
       </Text>
       
+      {/* Date */}
       <Text style={[styles.date, { color: config.textColor }]}>
         {date}
       </Text>
@@ -90,30 +105,44 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   iconContainer: {
     marginBottom: spacing.xs,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   icon: {
     fontSize: 16,
+    fontWeight: '700',
   },
   label: {
     fontSize: 10,
     fontFamily: fonts.body,
     fontWeight: '500',
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   dayName: {
-    fontSize: typography.body,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: fonts.heading,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   date: {
     fontSize: 10,
     fontFamily: fonts.body,
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });
