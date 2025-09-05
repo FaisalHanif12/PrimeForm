@@ -1,4 +1,5 @@
 import { UserProfile } from './userProfileService';
+import workoutPlanService from './workoutPlanService';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -51,8 +52,9 @@ Target: ${userProfile.targetWeight || 'Not specified'}
 Health: ${userProfile.medicalConditions || 'None'}, Equipment: ${userProfile.availableEquipment}
 
 REQUIREMENTS:
-- Analyze health conditions and determine safe timeline (could be 6-12 months)
+- Analyze health conditions and determine safe timeline (could be 3-6-12 months)
 - Create progressive plan: Split into weeks, each week Day 1-7
+- The same Excercise can not be continue in all 7  Day,s In same week. give different different suitable Excercise based on user goal.
 - Each day: exercises, sets, reps, rest, target muscles, calories burned
 - One rest day per week only
 - Progression: Intermediate → Advanced
@@ -85,7 +87,9 @@ Keep motivating and Intermediate-friendly.`;
       }
       
       const prompt = this.generatePrompt(userProfile);
+      console.log('📝 Prompt length:', prompt.length, 'characters');
       
+      const startTime = Date.now();
       console.log('🚀 Calling OpenRouter API with DeepSeek R1 0528 model...');
       
       const response = await fetch(OPENROUTER_API_URL, {
@@ -104,9 +108,11 @@ Keep motivating and Intermediate-friendly.`;
               content: prompt
             }
           ],
-          temperature: 0.4, // Balanced for creativity and speed
-          max_tokens: 3000, // Optimal for detailed workout plans
-          stream: false, // Ensure non-streaming for faster response
+          temperature: 0.3, // Reduced for faster response
+          max_tokens: 2000, // Reduced for faster response
+          stream: false,
+          top_p: 0.9, // Added for better performance
+          frequency_penalty: 0.1, // Added for better performance
         }),
       });
 
@@ -117,6 +123,9 @@ Keep motivating and Intermediate-friendly.`;
       }
 
       const data = await response.json();
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+      console.log(`⚡ API Response time: ${responseTime}ms (${(responseTime/1000).toFixed(2)}s)`);
       console.log('🤖 OpenRouter AI Response received:', data);
 
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
@@ -129,10 +138,19 @@ Keep motivating and Intermediate-friendly.`;
       // Parse the AI response into structured data
       const workoutPlan = this.parseAIResponse(aiResponse, userProfile);
       
+      // Store the response in database for persistence
+      try {
+        await workoutPlanService.createWorkoutPlan(workoutPlan);
+        console.log('💾 Workout plan saved to database');
+      } catch (error) {
+        console.warn('⚠️ Could not save workout plan to database:', error);
+        // Continue with the response even if database save fails
+      }
+      
       return {
         success: true,
         data: workoutPlan,
-        message: 'Workout plan generated successfully with DeepSeek R1 0528'
+        message: `Workout plan generated successfully in ${(responseTime/1000).toFixed(2)}s`
       };
 
     } catch (error) {
@@ -140,6 +158,30 @@ Keep motivating and Intermediate-friendly.`;
       
       // Re-throw the error to be handled by the calling component
       throw error;
+    }
+  }
+
+  // Load workout plan from database
+  async loadWorkoutPlanFromDatabase(): Promise<WorkoutPlan | null> {
+    try {
+      const response = await workoutPlanService.getActiveWorkoutPlan();
+      if (response.success && response.data) {
+        console.log('📱 Loading workout plan from database');
+        return response.data;
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load workout plan from database:', error);
+    }
+    return null;
+  }
+
+  // Clear workout plan from database
+  async clearWorkoutPlanFromDatabase(): Promise<void> {
+    try {
+      await workoutPlanService.clearAllWorkoutPlans();
+      console.log('🗑️ Workout plans cleared from database');
+    } catch (error) {
+      console.warn('⚠️ Could not clear workout plans from database:', error);
     }
   }
 

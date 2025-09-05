@@ -16,6 +16,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const workoutPlanRoutes = require('./routes/workoutPlanRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -139,6 +140,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user-profile', userProfileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/workout-plans', workoutPlanRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
