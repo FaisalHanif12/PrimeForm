@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import userProfileService from '../../src/services/userProfileService';
+import aiWorkoutService, { WorkoutPlan } from '../../src/services/aiWorkoutService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
+import WorkoutPlanDisplay from '../../src/components/WorkoutPlanDisplay';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../src/context/AuthContext';
@@ -24,6 +26,8 @@ export default function WorkoutScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -126,10 +130,25 @@ export default function WorkoutScreen() {
     }
   };
 
-  const handleGenerateClick = () => {
+  const handleGenerateClick = async () => {
           if (userInfo) {
-        // User already has profile, show success message
-        showToast('success', 'Your workout plan is being generated! This feature will be available soon.');
+      // User already has profile, generate AI workout plan
+      setIsGeneratingPlan(true);
+      try {
+        const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
+        
+        if (response.success && response.data) {
+          setWorkoutPlan(response.data);
+          showToast('success', 'Your personalized workout plan is ready!');
+        } else {
+          showToast('error', response.message || 'Failed to generate workout plan');
+        }
+      } catch (error) {
+        console.error('Error generating workout plan:', error);
+        showToast('error', 'Failed to generate workout plan. Please try again.');
+      } finally {
+        setIsGeneratingPlan(false);
+      }
       } else {
         // User needs to create profile first
         setShowUserInfoModal(true);
@@ -212,6 +231,23 @@ export default function WorkoutScreen() {
       );
     }
 
+    if (workoutPlan) {
+      // Show workout plan display
+      return (
+        <WorkoutPlanDisplay 
+          workoutPlan={workoutPlan}
+          onExercisePress={(exercise) => {
+            console.log('Exercise pressed:', exercise);
+            // Handle exercise press - could show exercise details modal
+          }}
+          onDayPress={(day) => {
+            console.log('Day pressed:', day);
+            // Handle day press - could show day details
+          }}
+        />
+      );
+    }
+
     if (userInfo) {
       // User has profile - show profile summary and confirm button
       return (
@@ -237,8 +273,19 @@ export default function WorkoutScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.confirmGenerateButton} onPress={handleGenerateClick}>
+          <TouchableOpacity 
+            style={[styles.confirmGenerateButton, isGeneratingPlan && styles.confirmGenerateButtonDisabled]} 
+            onPress={handleGenerateClick}
+            disabled={isGeneratingPlan}
+          >
+            {isGeneratingPlan ? (
+              <View style={styles.loadingButtonContent}>
+                <ActivityIndicator color={colors.white} size="small" />
+                <Text style={styles.confirmGenerateButtonText}>Generating...</Text>
+              </View>
+            ) : (
             <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
+            )}
           </TouchableOpacity>
         </View>
       );
@@ -568,6 +615,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flexShrink: 1,
     flexWrap: 'nowrap', // Prevent text wrapping
+  },
+  confirmGenerateButtonDisabled: {
+    opacity: 0.7,
+  },
+  loadingButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   loadingSection: {
