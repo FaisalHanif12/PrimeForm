@@ -7,11 +7,13 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
+import aiDietService from '../../src/services/aiDietService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import DietPlanDisplay from '../../src/components/DietPlanDisplay';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -23,7 +25,9 @@ export default function DietScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true); // Added loading state
+  const [isLoading, setIsLoading] = useState(true);
+  const [dietPlan, setDietPlan] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -69,6 +73,7 @@ export default function DietScreen() {
 
   useEffect(() => {
     loadUserInfo();
+    loadDietPlan();
   }, []);
 
   const handleProfilePress = () => {
@@ -107,14 +112,30 @@ export default function DietScreen() {
     }
   };
 
-  const handleGenerateClick = () => {
-          if (userInfo) {
-        // User already has profile, show success message
-        showToast('success', 'Your diet plan is being generated! This feature will be available soon.');
-      } else {
-        // User needs to create profile first
-        setShowUserInfoModal(true);
+  const handleGenerateClick = async () => {
+    if (userInfo) {
+      // User already has profile, generate diet plan
+      setIsGenerating(true);
+      try {
+        showToast('info', 'Generating your personalized diet plan...');
+        const response = await aiDietService.generateDietPlan(userInfo);
+        
+        if (response.success && response.data) {
+          setDietPlan(response.data);
+          showToast('success', 'Your personalized diet plan is ready!');
+        } else {
+          showToast('error', 'Failed to generate diet plan. Please try again.');
+        }
+      } catch (error) {
+        console.error('Diet generation failed:', error);
+        showToast('error', 'Failed to generate diet plan. Please check your connection and try again.');
+      } finally {
+        setIsGenerating(false);
       }
+    } else {
+      // User needs to create profile first
+      setShowUserInfoModal(true);
+    }
   };
 
   const handleCompleteUserInfo = async (userInfoData: any) => {
@@ -129,10 +150,24 @@ export default function DietScreen() {
         setShowUserInfoModal(false);
         console.log('✅ User profile saved to database:', response.data);
         showToast('success', 'Profile created! Now generating your diet plan...');
-        // Here you would typically call the diet plan generation API
-        setTimeout(() => {
-          showToast('success', 'Your personalized diet plan is ready! This feature will be available soon.');
-        }, 2000);
+        
+        // Automatically generate diet plan after profile creation
+        try {
+          setIsGenerating(true);
+          const dietResponse = await aiDietService.generateDietPlan(userInfoData);
+          
+          if (dietResponse.success && dietResponse.data) {
+            setDietPlan(dietResponse.data);
+            showToast('success', 'Your personalized diet plan is ready!');
+          } else {
+            showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
+          }
+        } catch (error) {
+          console.error('Diet generation after profile creation failed:', error);
+          showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
+        } finally {
+          setIsGenerating(false);
+        }
       } else {
         console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         showToast('error', 'Failed to save profile. Please try again.');
@@ -169,7 +204,19 @@ export default function DietScreen() {
     } catch (error) {
       console.error('Failed to load user info:', error);
     } finally {
-      setIsLoading(false); // Set loading to false after data is loaded
+      setIsLoading(false);
+    }
+  };
+
+  const loadDietPlan = async () => {
+    try {
+      const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase();
+      if (dietPlanFromDB) {
+        setDietPlan(dietPlanFromDB);
+        console.log('Diet plan loaded:', dietPlanFromDB);
+      }
+    } catch (error) {
+      console.error('Failed to load diet plan:', error);
     }
   };
 
@@ -185,7 +232,7 @@ export default function DietScreen() {
     }
   };
 
-  // Render content based on user info status
+  // Render content based on user info and diet plan status
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -195,8 +242,28 @@ export default function DietScreen() {
       );
     }
 
+    // If user has diet plan, show the diet plan display
+    if (dietPlan && userInfo) {
+      return (
+        <DietPlanDisplay
+          dietPlan={dietPlan}
+          onGenerateNew={async () => {
+            try {
+              await aiDietService.clearDietPlanFromDatabase();
+              setDietPlan(null);
+              showToast('info', 'Previous diet plan cleared. You can now generate a new one.');
+            } catch (error) {
+              console.error('Failed to clear diet plan:', error);
+              showToast('error', 'Failed to clear previous plan. Please try again.');
+            }
+          }}
+          isGeneratingNew={isGenerating}
+        />
+      );
+    }
+
     if (userInfo) {
-      // User has profile - show profile summary and confirm button
+      // User has profile but no diet plan - show profile summary and generate button
       return (
         <View style={styles.profileSummaryContainer}>
           <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
@@ -220,8 +287,14 @@ export default function DietScreen() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.confirmGenerateButton} onPress={handleGenerateClick}>
-            <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
+          <TouchableOpacity 
+            style={[styles.confirmGenerateButton, isGenerating && styles.confirmGenerateButtonDisabled]} 
+            onPress={handleGenerateClick}
+            disabled={isGenerating}
+          >
+            <Text style={styles.confirmGenerateButtonText}>
+              {isGenerating ? 'Generating Diet Plan...' : t('profile.summary.confirm.generate')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -486,6 +559,10 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading,
     textAlign: 'center',
     flexShrink: 1,
+  },
+  confirmGenerateButtonDisabled: {
+    backgroundColor: colors.mutedText,
+    opacity: 0.7,
   },
 
   // Loading Section
