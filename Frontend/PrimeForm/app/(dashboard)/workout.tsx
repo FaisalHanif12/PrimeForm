@@ -29,6 +29,7 @@ export default function WorkoutScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [showExerciseDetail, setShowExerciseDetail] = useState(false);
   const { showToast } = useToast();
@@ -99,13 +100,17 @@ export default function WorkoutScreen() {
     // Try to load workout plan from database
     const loadWorkoutPlan = async () => {
       try {
+        console.log('📱 Attempting to load workout plan from database...');
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
         if (plan) {
           setWorkoutPlan(plan);
-          console.log('📱 Loaded workout plan from database');
+          console.log('✅ Loaded workout plan from database successfully');
+        } else {
+          console.log('ℹ️ No workout plan found in database');
         }
       } catch (error) {
         console.warn('⚠️ Could not load workout plan from database:', error);
+        // Don't show error to user for this, just log it
       }
     };
     
@@ -149,28 +154,41 @@ export default function WorkoutScreen() {
   };
 
   const handleGenerateClick = async () => {
-          if (userInfo) {
+    if (userInfo) {
       // User already has profile, generate AI workout plan
       setIsGeneratingPlan(true);
+      setGenerationProgress('Analyzing your profile...');
+      
       try {
+        console.log('🚀 Starting workout plan generation...');
+        
+        // Update progress
+        setTimeout(() => setGenerationProgress('Creating your workout plan...'), 1000);
+        
         const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
         
         if (response.success && response.data) {
           setWorkoutPlan(response.data);
           showToast('success', 'Your personalized workout plan is ready!');
+          console.log('✅ Workout plan generated and saved successfully');
         } else {
+          console.error('❌ Workout plan generation failed:', response.message);
           showToast('error', response.message || 'Failed to generate workout plan');
         }
       } catch (error) {
-        console.error('Error generating workout plan:', error);
-        showToast('error', 'Failed to generate workout plan. Please try again.');
+        console.error('❌ Error generating workout plan:', error);
+        
+        // Show red alert for any error
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        showToast('error', `Error: ${errorMessage}`);
       } finally {
         setIsGeneratingPlan(false);
+        setGenerationProgress('');
       }
-      } else {
-        // User needs to create profile first
-        setShowUserInfoModal(true);
-      }
+    } else {
+      // User needs to create profile first
+      setShowUserInfoModal(true);
+    }
   };
 
   const handleCompleteUserInfo = async (userInfoData: any) => {
@@ -256,31 +274,51 @@ export default function WorkoutScreen() {
   };
 
   const handleGenerateNewPlan = async () => {
-    // Clear existing plans from database
-    try {
-      await aiWorkoutService.clearWorkoutPlanFromDatabase();
-      setWorkoutPlan(null);
-    } catch (error) {
-      console.warn('Could not clear existing plans:', error);
+    if (!userInfo) {
+      showToast('error', 'Profile information not found. Please refresh and try again.');
+      return;
     }
+
+    setIsGeneratingPlan(true);
+    setGenerationProgress('Preparing new plan...');
     
-    // Generate new plan
-    if (userInfo) {
-      setIsGeneratingPlan(true);
+    try {
+      console.log('🔄 Generating new workout plan...');
+      
+      // Clear existing plans from database
       try {
-        const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
-        if (response.success && response.data) {
-          setWorkoutPlan(response.data);
-          showToast('success', 'New workout plan generated successfully!');
-        } else {
-          showToast('error', 'Failed to generate new workout plan. Please try again.');
-        }
+        await aiWorkoutService.clearWorkoutPlanFromDatabase();
+        console.log('🗑️ Cleared existing plans');
       } catch (error) {
-        console.error('Error generating new workout plan:', error);
-        showToast('error', 'Failed to generate new workout plan. Please try again.');
-      } finally {
-        setIsGeneratingPlan(false);
+        console.warn('⚠️ Could not clear existing plans:', error);
+        // Continue anyway
       }
+      
+      // Clear current plan from UI
+      setWorkoutPlan(null);
+      
+      // Update progress
+      setGenerationProgress('Creating your new workout plan...');
+      
+      // Generate new plan
+      const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
+      if (response.success && response.data) {
+        setWorkoutPlan(response.data);
+        showToast('success', 'New workout plan generated successfully!');
+        console.log('✅ New workout plan generated and saved');
+      } else {
+        console.error('❌ Failed to generate new workout plan:', response.message);
+        showToast('error', response.message || 'Failed to generate new workout plan. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ Error generating new workout plan:', error);
+      
+      // Show red alert for any error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      showToast('error', `Error: ${errorMessage}`);
+    } finally {
+      setIsGeneratingPlan(false);
+      setGenerationProgress('');
     }
   };
 
@@ -343,7 +381,9 @@ export default function WorkoutScreen() {
             {isGeneratingPlan ? (
               <View style={styles.loadingButtonContent}>
                 <ActivityIndicator color={colors.white} size="small" />
-                <Text style={styles.confirmGenerateButtonText}>Generating...</Text>
+                <Text style={styles.confirmGenerateButtonText}>
+                  {generationProgress || 'Creating your plan...'}
+                </Text>
               </View>
             ) : (
             <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>

@@ -5,7 +5,7 @@ const NotificationService = require('../services/notificationService');
 // Get user profile
 exports.getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     
     let userProfile = await UserProfile.findOne({ userId });
     
@@ -35,7 +35,7 @@ exports.getUserProfile = async (req, res) => {
 // Save push notification token
 exports.savePushToken = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { pushToken } = req.body;
 
     if (!pushToken) {
@@ -69,7 +69,7 @@ exports.savePushToken = async (req, res) => {
 // Create or update user profile
 exports.createOrUpdateProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const profileData = req.body;
     
     console.log('🔍 createOrUpdateProfile - Request from user ID:', userId);
@@ -151,7 +151,7 @@ exports.createOrUpdateProfile = async (req, res) => {
 // Update specific profile fields
 exports.updateProfileField = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { field, value } = req.body;
     
     if (!field || value === undefined) {
@@ -227,7 +227,7 @@ exports.updateProfileField = async (req, res) => {
 // Delete user profile
 exports.deleteProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     
     const userProfile = await UserProfile.findOneAndDelete({ userId });
     
@@ -255,7 +255,7 @@ exports.deleteProfile = async (req, res) => {
 // Check if user profile is complete
 exports.checkProfileCompletion = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     
     const userProfile = await UserProfile.findOne({ userId });
     
@@ -297,7 +297,7 @@ exports.checkProfileCompletion = async (req, res) => {
 // Get user badges
 exports.getUserBadges = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     
     const userProfile = await UserProfile.findOne({ userId });
     

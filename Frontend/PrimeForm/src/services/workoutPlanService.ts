@@ -1,6 +1,6 @@
 import { WorkoutPlan, WorkoutExercise } from './aiWorkoutService';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+import Storage from '../utils/storage';
+import { api } from '../config/api';
 
 export interface WorkoutPlanResponse {
   success: boolean;
@@ -39,36 +39,12 @@ export interface WorkoutStatsResponse {
 }
 
 class WorkoutPlanService {
-  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const token = localStorage.getItem('authToken');
-    
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  }
 
   // Create or update workout plan
   async createWorkoutPlan(workoutPlan: WorkoutPlan): Promise<WorkoutPlanResponse> {
     try {
       console.log('💾 Saving workout plan to database...');
-      const response = await this.makeRequest('/workout-plans', {
-        method: 'POST',
-        body: JSON.stringify(workoutPlan),
-      });
+      const response = await api.post('/workout-plans', workoutPlan);
       
       console.log('✅ Workout plan saved to database');
       return response;
@@ -82,7 +58,7 @@ class WorkoutPlanService {
   async getActiveWorkoutPlan(): Promise<WorkoutPlanResponse> {
     try {
       console.log('📱 Loading workout plan from database...');
-      const response = await this.makeRequest('/workout-plans/active');
+      const response = await api.get('/workout-plans/active');
       
       if (response.success && response.data) {
         console.log('✅ Workout plan loaded from database');
@@ -100,7 +76,7 @@ class WorkoutPlanService {
   // Get all workout plans for user
   async getUserWorkoutPlans(page: number = 1, limit: number = 10): Promise<WorkoutPlanListResponse> {
     try {
-      const response = await this.makeRequest(`/workout-plans?page=${page}&limit=${limit}`);
+      const response = await api.get(`/workout-plans?page=${page}&limit=${limit}`);
       return response;
     } catch (error) {
       console.error('❌ Error loading workout plans:', error);
@@ -112,10 +88,7 @@ class WorkoutPlanService {
   async markExerciseCompleted(exerciseId: string, day: number, week: number): Promise<WorkoutPlanResponse> {
     try {
       console.log(`✅ Marking exercise ${exerciseId} as completed (Day ${day}, Week ${week})`);
-      const response = await this.makeRequest('/workout-plans/exercise/complete', {
-        method: 'POST',
-        body: JSON.stringify({ exerciseId, day, week }),
-      });
+      const response = await api.post('/workout-plans/exercise/complete', { exerciseId, day, week });
       
       console.log('✅ Exercise marked as completed in database');
       return response;
@@ -129,10 +102,7 @@ class WorkoutPlanService {
   async markDayCompleted(day: number, week: number): Promise<WorkoutPlanResponse> {
     try {
       console.log(`✅ Marking day ${day} as completed (Week ${week})`);
-      const response = await this.makeRequest('/workout-plans/day/complete', {
-        method: 'POST',
-        body: JSON.stringify({ day, week }),
-      });
+      const response = await api.post('/workout-plans/day/complete', { day, week });
       
       console.log('✅ Day marked as completed in database');
       return response;
@@ -145,7 +115,7 @@ class WorkoutPlanService {
   // Get workout statistics
   async getWorkoutStats(): Promise<WorkoutStatsResponse> {
     try {
-      const response = await this.makeRequest('/workout-plans/stats');
+      const response = await api.get('/workout-plans/stats');
       return response;
     } catch (error) {
       console.error('❌ Error loading workout stats:', error);
@@ -157,9 +127,7 @@ class WorkoutPlanService {
   async deleteWorkoutPlan(planId: string): Promise<WorkoutPlanResponse> {
     try {
       console.log(`🗑️ Deleting workout plan ${planId}`);
-      const response = await this.makeRequest(`/workout-plans/${planId}`, {
-        method: 'DELETE',
-      });
+      const response = await api.delete(`/workout-plans/${planId}`);
       
       console.log('✅ Workout plan deleted from database');
       return response;
@@ -178,7 +146,11 @@ class WorkoutPlanService {
       if (plansResponse.success && plansResponse.data) {
         const plans = plansResponse.data.workoutPlans;
         for (const plan of plans) {
-          await this.deleteWorkoutPlan(plan._id);
+          // Use the plan's _id or id field
+          const planId = plan._id || plan.id;
+          if (planId) {
+            await this.deleteWorkoutPlan(planId);
+          }
         }
         console.log('✅ All workout plans cleared');
       }

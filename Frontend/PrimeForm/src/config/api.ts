@@ -25,14 +25,14 @@ const getApiConfig = (): ApiConfig => {
     
     return {
       baseURL,
-      timeout: 15000, // Increased timeout for network issues
+      timeout: 30000, // Increased timeout for heavy operations like workout plan generation
     };
   }
   
   // Production configuration
   return {
     baseURL: 'https://your-production-domain.com/api', // Replace with your actual domain
-    timeout: 15000,
+    timeout: 30000,
   };
 };
 

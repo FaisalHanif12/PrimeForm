@@ -9,10 +9,10 @@ const {
   deleteWorkoutPlan,
   getWorkoutStats
 } = require('../controllers/workoutPlanController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 
 // Apply authentication middleware to all routes
-router.use(authMiddleware);
+router.use(protect);
 
 // Create workout plan
 router.post('/', createWorkoutPlan);
