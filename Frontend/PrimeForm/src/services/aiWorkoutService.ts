@@ -73,22 +73,27 @@ Generate a safe, motivating, and structured **7-day workout plan** based on the 
    - If user has **home/no equipment** → provide only bodyweight or home-friendly exercises.  
 
 3. The 7-day plan must include:  
-   - **6 workout days** + **1 day running**.  
+   - **6 workout days** + **1 active recovery day (running, yoga, or light cardio)**.  
    - Each workout day should have a **different focus** (Full Body, Upper, Lower, Core/Cardio, Circuit, etc.).  
    - For each exercise, list:  
      - **Name**  
      - **Sets × Reps**  
      - **Rest (seconds)**  
      - **Target Muscles**  
-     - **Calories Burned (estimate)**  
+     - **Calories Burned (estimate)**
 
 4. Always include:  
    - **Warm-up** (5–10 mins light cardio/dynamic stretching).  
    - **Cool-down** (5–10 mins static stretching).  
 
-5. Keep the plan progressive, and safe for health conditions**.  
+5. **IMPORTANT: Make this BEGINNER-FRIENDLY**:
+   - Start with basic exercises and lighter intensity
+   - Use bodyweight exercises when possible for beginners
+   - Progress gradually over weeks for tougher excercise
+   - Include modifications for different fitness levels
+   - Keep rest periods appropriate for beginners (60-90s)
 
-6. Tone should be **clear, motivating, and easy to follow**.  
+6. Tone should be **encouraging, motivating, and easy to follow for beginners**.
 
 7. Output format (must follow exactly):  
 
@@ -107,9 +112,10 @@ Generate a safe, motivating, and structured **7-day workout plan** based on the 
 
 ---
 
-**Day 2: Rest 🛌**  
-- Simple yoga optional  
-- simple running 20 minutes 
+**Day 2: Active Recovery 🏃‍♂️**  
+- Light jogging or brisk walking: 20-30 minutes
+- Yoga or stretching: 15-20 minutes
+- Focus on mobility and flexibility
 ---
 
 **Day 3: [Workout Focus + Icon]**  
@@ -363,8 +369,8 @@ Generate the **final personalized plan now.**
         const headerLine = lines.find(l => /\*\*day\s+\d+:/i.test(l)) || '';
         const headerLower = headerLine.toLowerCase();
         
-        // Check if it's a rest day
-        const isRestDay = headerLower.includes('rest') || headerLower.includes('recovery') || headerLower.includes('🛌');
+        // Check if it's a rest/recovery day
+        const isRestDay = headerLower.includes('rest') || headerLower.includes('recovery') || headerLower.includes('🛌') || headerLower.includes('🏃‍♂️');
         
         if (isRestDay) {
           weeklyPlan.push({

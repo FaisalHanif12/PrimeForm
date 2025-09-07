@@ -5,7 +5,7 @@ import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 interface DailyProgressCardProps {
   dayName: string;
   date: string;
-  status: 'completed' | 'rest' | 'upcoming' | 'missed';
+  status: 'completed' | 'rest' | 'upcoming' | 'missed' | 'in_progress';
   onPress?: () => void;
 }
 
@@ -25,18 +25,26 @@ export default function DailyProgressCard({
           textColor: colors.white,
           borderColor: colors.green
         };
+      case 'in_progress':
+        return {
+          backgroundColor: colors.primary,
+          icon: '🔥',
+          label: 'Today',
+          textColor: colors.white,
+          borderColor: colors.primary
+        };
       case 'rest':
         return {
-          backgroundColor: colors.surface,
-          icon: '😴',
-          label: 'Rest',
+          backgroundColor: '#4A5568',
+          icon: '🏃‍♂️',
+          label: 'Active',
           textColor: colors.white,
-          borderColor: colors.cardBorder
+          borderColor: '#4A5568'
         };
       case 'upcoming':
         return {
           backgroundColor: colors.surface,
-          icon: '',
+          icon: '📅',
           label: 'Next',
           textColor: colors.white,
           borderColor: colors.cardBorder
