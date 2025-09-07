@@ -16,6 +16,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const userProfileRoutes = require('./routes/userProfileRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const workoutPlanRoutes = require('./routes/workoutPlanRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -139,6 +140,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user-profile', userProfileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/workout-plans', workoutPlanRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -165,11 +167,13 @@ app.use(errorHandler);
 
 // Server configuration
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, async () => {
+const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
+const server = app.listen(PORT, HOST, async () => {
   console.log('🚀 ================================');
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
+  console.log(`🌐 Network: http://192.168.0.117:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
   

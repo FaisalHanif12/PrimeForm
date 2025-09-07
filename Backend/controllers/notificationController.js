@@ -3,7 +3,7 @@ const NotificationService = require('../services/notificationService');
 // Get all notifications for the authenticated user
 exports.getNotifications = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const {
       page = 1,
       limit = 20,
@@ -45,7 +45,7 @@ exports.getNotifications = async (req, res) => {
 // Get unread notification count
 exports.getUnreadCount = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const unreadCount = await NotificationService.getUnreadCount(userId);
 
     res.status(200).json({
@@ -68,7 +68,7 @@ exports.getUnreadCount = async (req, res) => {
 exports.markAsRead = async (req, res) => {
   try {
     const { notificationId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
 
     if (!notificationId) {
       return res.status(400).json({
@@ -98,7 +98,7 @@ exports.markAsRead = async (req, res) => {
 // Mark all notifications as read
 exports.markAllAsRead = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     
     await NotificationService.markAllAsRead(userId);
     const unreadCount = await NotificationService.getUnreadCount(userId);
@@ -124,7 +124,7 @@ exports.markAllAsRead = async (req, res) => {
 exports.deleteNotification = async (req, res) => {
   try {
     const { notificationId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
 
     if (!notificationId) {
       return res.status(400).json({
@@ -154,7 +154,7 @@ exports.deleteNotification = async (req, res) => {
 // Get notification statistics
 exports.getNotificationStats = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const stats = await NotificationService.getNotificationStats(userId);
 
     res.status(200).json({
@@ -176,7 +176,7 @@ exports.getNotificationStats = async (req, res) => {
 // Create a test notification (for development/testing)
 exports.createTestNotification = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { title, message, type = 'general', priority = 'medium' } = req.body;
 
     if (!title || !message) {
@@ -221,7 +221,7 @@ exports.createTestNotification = async (req, res) => {
 // Bulk operations for notifications
 exports.bulkOperations = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { action, notificationIds } = req.body;
 
     if (!action || !Array.isArray(notificationIds)) {
