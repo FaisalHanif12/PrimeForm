@@ -17,6 +17,7 @@ const userProfileRoutes = require('./routes/userProfileRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const workoutPlanRoutes = require('./routes/workoutPlanRoutes');
+const dietPlanRoutes = require('./routes/dietPlanRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -129,7 +130,9 @@ app.get('/api', (req, res) => {
       auth: '/api/auth',
       dashboard: '/api/dashboard',
       userProfile: '/api/user-profile',
-      notifications: '/api/notifications'
+      notifications: '/api/notifications',
+      workoutPlans: '/api/workout-plans',
+      dietPlans: '/api/diet-plans'
     }
   });
 });
@@ -141,6 +144,7 @@ app.use('/api/user-profile', userProfileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/workout-plans', workoutPlanRoutes);
+app.use('/api/diet-plans', dietPlanRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -153,8 +157,8 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       user: '/api/users',
-      workouts: '/api/workouts',
-      nutrition: '/api/nutrition'
+      workouts: '/api/workout-plans',
+      nutrition: '/api/diet-plans'
     }
   });
 });
