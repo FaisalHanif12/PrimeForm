@@ -37,7 +37,7 @@ export default function DailyProgressCard({
         return {
           backgroundColor: colors.surface,
           icon: '',
-          label: 'Upc',
+          label: 'Next',
           textColor: colors.white,
           borderColor: colors.cardBorder
         };

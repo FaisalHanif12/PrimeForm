@@ -44,48 +44,120 @@ export default function WorkoutPlanDisplay({
   }
 
   useEffect(() => {
-    // Set the first non-rest day as selected by default
-    const firstWorkoutDay = workoutPlan.weeklyPlan.find(day => !day.isRestDay);
+    // Load completion states and set initial day
+    loadCompletionStates();
+    
+    // Get current week days and find today
+    const currentWeekDays = getCurrentWeekDays();
+    const today = new Date().toDateString();
+    const todaysDay = currentWeekDays.find(day => new Date(day.date).toDateString() === today);
+    
+    if (todaysDay) {
+      setSelectedDay(todaysDay);
+      return;
+    }
+
+    // Fallback to first workout day of current week
+    const firstWorkoutDay = currentWeekDays.find(day => !day.isRestDay);
     if (firstWorkoutDay) {
       setSelectedDay(firstWorkoutDay);
+    } else {
+      // Ultimate fallback - set to first day of current week
+      setSelectedDay(currentWeekDays[0]);
     }
   }, [workoutPlan]);
+
+  const loadCompletionStates = async () => {
+    try {
+      // Load completion states from backend
+      const stats = await workoutPlanService.getWorkoutStats();
+      if (stats.success && stats.data) {
+        // Load completed exercises and days from backend
+        // This would be implemented when backend completion tracking is ready
+        console.log('📊 Loaded workout stats:', stats.data);
+      }
+    } catch (error) {
+      console.warn('Could not load completion states:', error);
+      
+      // Try to load from local storage as fallback
+      try {
+        const Storage = await import('../utils/storage');
+        const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
+        const cachedCompletedDays = await Storage.default.getItem('completed_days');
+        
+        if (cachedCompletedExercises) {
+          setCompletedExercises(new Set(JSON.parse(cachedCompletedExercises)));
+        }
+        if (cachedCompletedDays) {
+          setCompletedDays(new Set(JSON.parse(cachedCompletedDays)));
+        }
+      } catch (storageError) {
+        console.warn('Could not load from local storage:', storageError);
+      }
+    }
+  };
 
   const getCurrentWeek = (): number => {
     const today = new Date();
     const startDate = new Date(workoutPlan.startDate);
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(1, Math.min(Math.ceil(daysDiff / 7), getTotalWeeks()));
+    return Math.max(1, Math.min(Math.floor(daysDiff / 7) + 1, getTotalWeeks()));
   };
 
   const getTotalWeeks = (): number => {
+    // Use totalWeeks from workout plan if available, otherwise calculate from dates
+    if (workoutPlan.totalWeeks) {
+      return workoutPlan.totalWeeks;
+    }
     const startDate = new Date(workoutPlan.startDate);
     const endDate = new Date(workoutPlan.endDate);
     const daysDiff = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.ceil(daysDiff / 7);
+    return Math.max(1, Math.ceil(daysDiff / 7));
   };
 
   const getProgressPercentage = (): number => {
+    // Calculate progress based on time elapsed in the plan
+    const start = new Date(workoutPlan.startDate).getTime();
+    const end = new Date(workoutPlan.endDate).getTime();
+    const now = Date.now();
+    
+    if (end <= start) return 0;
+    
+    const timeProgress = Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+    
+    // For now, use time-based progress since completion tracking needs backend integration
+    return Math.round(timeProgress);
+  };
+
+  // Expand the 7-day weekly pattern for the current week
+  const getCurrentWeekDays = () => {
     const currentWeek = getCurrentWeek();
-    const totalWeeks = getTotalWeeks();
-    return Math.min((currentWeek / totalWeeks) * 100, 100);
+    const startDate = new Date(workoutPlan.startDate);
+    const weekStartDate = new Date(startDate);
+    weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
+    
+    return workoutPlan.weeklyPlan.map((day, index) => ({
+      ...day,
+      date: new Date(weekStartDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+      day: ((currentWeek - 1) * 7) + (index + 1) // Absolute day number for tracking
+    }));
   };
 
   const getDayStatus = (day: WorkoutDay, index: number): 'completed' | 'rest' | 'upcoming' | 'missed' => {
     if (day.isRestDay) return 'rest';
     
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
     const dayDate = new Date(day.date);
-    const todayString = today.toDateString();
-    const dayString = dayDate.toDateString();
+    dayDate.setHours(0, 0, 0, 0);
     
     // Check if day is completed
     if (completedDays.has(day.date)) {
       return 'completed';
     }
     
-    // Current day - show as in progress
-    if (dayString === todayString) {
+    // Current day - show as upcoming (in progress)
+    if (dayDate.getTime() === today.getTime()) {
       return 'upcoming';
     }
     
@@ -116,25 +188,41 @@ export default function WorkoutPlanDisplay({
     const week = Math.ceil(selectedDay.day / 7);
     
     try {
+      // Optimistically update local state first for better UX
+      const newCompletedExercises = new Set([...completedExercises, exerciseId]);
+      setCompletedExercises(newCompletedExercises);
+      
+      // Save to local storage immediately
+      const Storage = await import('../utils/storage');
+      await Storage.default.setItem('completed_exercises', JSON.stringify([...newCompletedExercises]));
+      
       // Mark exercise as completed in database
       await workoutPlanService.markExerciseCompleted(exerciseId, selectedDay.day, week);
       
-      // Update local state
-      setCompletedExercises(prev => new Set([...prev, exerciseId]));
-      
       // Check if all exercises for the day are completed
       const allExercisesCompleted = selectedDay.exercises.every(ex => 
-        completedExercises.has(`${selectedDay.date}-${ex.name}`) || 
-        exercise.name === ex.name
+        newCompletedExercises.has(`${selectedDay.date}-${ex.name}`)
       );
       
       if (allExercisesCompleted) {
         // Mark day as completed in database
         await workoutPlanService.markDayCompleted(selectedDay.day, week);
-        setCompletedDays(prev => new Set([...prev, selectedDay.date]));
+        const newCompletedDays = new Set([...completedDays, selectedDay.date]);
+        setCompletedDays(newCompletedDays);
+        
+        // Save to local storage
+        await Storage.default.setItem('completed_days', JSON.stringify([...newCompletedDays]));
+        
+        console.log(`🎉 Day ${selectedDay.day} completed! All exercises finished.`);
       }
     } catch (error) {
       console.error('Error marking exercise completed:', error);
+      // Revert optimistic update on error
+      setCompletedExercises(prev => {
+        const reverted = new Set(prev);
+        reverted.delete(exerciseId);
+        return reverted;
+      });
     }
   };
 
@@ -143,136 +231,76 @@ export default function WorkoutPlanDisplay({
     onDayPress?.(day);
   };
 
-  const renderWeekCards = () => {
-    const totalWeeks = getTotalWeeks();
-    const currentWeek = getCurrentWeek();
-    
-    return (
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.weekCardsContainer}
-        contentContainerStyle={styles.weekCardsContent}
-      >
-        {Array.from({ length: totalWeeks }, (_, index) => {
-          const weekNumber = index + 1;
-          const isCompleted = weekNumber < currentWeek;
-          const isCurrent = weekNumber === currentWeek;
-          
-          return (
-            <View key={weekNumber} style={styles.weekCard}>
-              <View style={[
-                styles.weekCardContent,
-                isCompleted && styles.weekCardCompleted,
-                isCurrent && styles.weekCardCurrent
-              ]}>
-                <Text style={[
-                  styles.weekNumber,
-                  isCompleted && styles.weekNumberCompleted,
-                  isCurrent && styles.weekNumberCurrent
-                ]}>
-                  {weekNumber}
-                </Text>
-                <Text style={[
-                  styles.weekLabel,
-                  isCompleted && styles.weekLabelCompleted,
-                  isCurrent && styles.weekLabelCurrent
-                ]}>
-                  Week
-                </Text>
-              </View>
-              {isCompleted && (
-                <View style={styles.checkmarkContainer}>
-                  <Text style={styles.checkmark}>✓</Text>
-                </View>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-    );
-  };
+  // Removed week cards per new design
 
-  const renderProgressLine = () => {
-    const progressPercentage = getProgressPercentage();
-    
-    return (
-      <View style={styles.progressLineContainer}>
-        <View style={styles.progressLine}>
-          <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-        </View>
-        <Text style={styles.progressText}>{Math.round(progressPercentage)}%</Text>
-      </View>
-    );
-  };
 
   return (
     <View style={styles.container}>
-      {/* Header Section - Goal and Duration */}
+      {/* Header Section - redesigned to match the image */}
       <View style={styles.header}>
-        <View style={styles.goalSection}>
+        <View style={styles.headerContent}>
           <Text style={styles.goalTitle}>{workoutPlan.goal}</Text>
-          <Text style={styles.durationLabel}>Duration</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${getProgressPercentage()}%` }]} />
+            </View>
+            <Text style={styles.progressPercentage}>{getProgressPercentage()}%</Text>
+          </View>
         </View>
-        
-        <View style={styles.durationSection}>
-          {renderProgressLine()}
-          <Text style={styles.durationValue}>{workoutPlan.duration}</Text>
-          {onGenerateNew && (
-            <TouchableOpacity 
-              style={[styles.generateNewButton, isGeneratingNew && styles.generateNewButtonDisabled]}
-              onPress={onGenerateNew}
-              disabled={isGeneratingNew}
-            >
-              <Text style={styles.generateNewButtonText}>
-                {isGeneratingNew ? 'Generating...' : 'Generate New'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Week Cards Section */}
-      <View style={styles.weekSection}>
-        <Text style={styles.weekSectionTitle}>Workout Progress</Text>
-        {renderWeekCards()}
+        <TouchableOpacity 
+          style={[styles.generateButton, isGeneratingNew && styles.generateButtonDisabled]}
+          onPress={onGenerateNew}
+          disabled={isGeneratingNew}
+        >
+          <Text style={styles.generateButtonText}>
+            {isGeneratingNew ? 'Generating…' : 'Generate New'}
+          </Text>
+          <Text style={styles.durationText}>{workoutPlan.duration}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Daily Calendar Section */}
       <View style={styles.calendarSection}>
-        <Text style={styles.calendarTitle}>Daily Progress</Text>
+        <Text style={styles.calendarTitle}>Daily Progress — Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
           style={styles.calendarContainer}
           contentContainerStyle={styles.calendarContent}
         >
-          {workoutPlan.weeklyPlan.map((day, index) => (
-            <View key={day.day} style={styles.dayCardWrapper}>
-              {isCurrentDay(day) && (
-                <View style={styles.todayIndicator}>
-                  <Text style={styles.todayText}>TODAY</Text>
-                </View>
-              )}
-              <DailyProgressCard
-                dayName={day.dayName.substring(0, 3)}
-                date={formatDate(day.date)}
-                status={getDayStatus(day, index)}
-                onPress={() => handleDayPress(day)}
-              />
-            </View>
-          ))}
+          {getCurrentWeekDays().map((day, index) => {
+            const status = getDayStatus(day, index);
+            const isToday = isCurrentDay(day);
+            
+            return (
+              <View key={day.day} style={styles.dayCardWrapper}>
+                {isToday && (
+                  <View style={styles.todayIndicator}>
+                    <Text style={styles.todayText}>TODAY</Text>
+                  </View>
+                )}
+                <DailyProgressCard
+                  dayName={day.dayName.substring(0, 3)}
+                  date={formatDate(day.date)}
+                  status={status}
+                  onPress={() => handleDayPress(day)}
+                />
+              </View>
+            );
+          })}
         </ScrollView>
       </View>
 
       {/* Today's Workout Section */}
       <View style={styles.workoutSection}>
         <Text style={styles.workoutTitle}>
-          {selectedDay?.isRestDay ? 'Rest Day' : "Today's Workout"}
+          {selectedDay?.isRestDay ? 'Rest Day' : 
+           isCurrentDay(selectedDay!) ? "Today's Workout" : 
+           `${selectedDay?.dayName}'s Workout`}
         </Text>
         
         {selectedDay && !selectedDay.isRestDay && (
-          <View style={styles.exercisesContainer}>
+          <ScrollView style={styles.exercisesContainer} showsVerticalScrollIndicator={false}>
             {selectedDay.exercises && selectedDay.exercises.length > 0 ? (
               selectedDay.exercises.map((exercise, index) => {
                 const exerciseId = `${selectedDay.date}-${exercise.name}`;
@@ -282,7 +310,12 @@ export default function WorkoutPlanDisplay({
                   <TouchableOpacity
                     key={index}
                     style={[styles.exerciseCard, isCompleted && styles.exerciseCardCompleted]}
-                    onPress={() => onExercisePress?.(exercise)}
+                    onPress={() => {
+                      if (!isCompleted) {
+                        handleExerciseComplete(exercise);
+                      }
+                      onExercisePress?.(exercise);
+                    }}
                     activeOpacity={0.8}
                   >
                     <View style={styles.exerciseIcon}>
@@ -290,17 +323,32 @@ export default function WorkoutPlanDisplay({
                     </View>
                     
                     <View style={styles.exerciseInfo}>
-                      <Text style={styles.exerciseName}>{exercise.name}</Text>
-                      <Text style={styles.exerciseDetails}>
-                        {exercise.sets} sets, {exercise.reps} reps
+                      <Text style={[styles.exerciseName, isCompleted && styles.exerciseNameCompleted]}>
+                        {exercise.name}
                       </Text>
-                      <Text style={styles.exerciseMuscles}>
+                      <Text style={[styles.exerciseDetails, isCompleted && styles.exerciseDetailsCompleted]}>
+                        {exercise.sets} × {exercise.reps} • Rest {exercise.rest}
+                      </Text>
+                      <Text style={[styles.exerciseMuscles, isCompleted && styles.exerciseMusclesCompleted]}>
                         {exercise.targetMuscles.join(', ')}
                       </Text>
                     </View>
                     
-                    <View style={styles.exerciseCalories}>
-                      <Text style={styles.caloriesText}>{exercise.caloriesBurned} kcal</Text>
+                    <View style={styles.exerciseRightSection}>
+                      <Text style={[styles.caloriesText, isCompleted && styles.caloriesTextCompleted]}>
+                        {exercise.caloriesBurned} kcal
+                      </Text>
+                      {!isCompleted && (
+                        <TouchableOpacity 
+                          style={styles.completeButton}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleExerciseComplete(exercise);
+                          }}
+                        >
+                          <Text style={styles.completeButtonText}>Complete</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                     
                     {isCompleted && (
@@ -316,7 +364,7 @@ export default function WorkoutPlanDisplay({
                 <Text style={styles.noExercisesText}>No exercises planned for this day</Text>
               </View>
             )}
-          </View>
+          </ScrollView>
         )}
         
         {selectedDay?.isRestDay && (
@@ -348,69 +396,65 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     backgroundColor: colors.surface,
     marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    marginHorizontal: spacing.md,
   },
-  goalSection: {
+  headerContent: {
     flex: 1,
   },
   goalTitle: {
     color: colors.white,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  durationLabel: {
-    color: colors.mutedText,
-    fontSize: typography.small,
-    fontFamily: fonts.body,
-  },
-  durationSection: {
-    alignItems: 'flex-end',
-  },
-  progressLineContainer: {
+  progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    gap: spacing.sm,
   },
-  progressLine: {
-    width: 120,
-    height: 8,
+  progressBar: {
+    flex: 1,
+    height: 6,
     backgroundColor: colors.cardBorder,
-    borderRadius: 4,
-    marginRight: spacing.sm,
+    borderRadius: 3,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  progressText: {
+  progressPercentage: {
     color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+    minWidth: 35,
   },
-  durationValue: {
-    color: colors.white,
-    fontSize: typography.body,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  generateNewButton: {
+  generateButton: {
     backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginTop: spacing.xs,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    minWidth: 100,
   },
-  generateNewButtonDisabled: {
+  generateButtonDisabled: {
     backgroundColor: colors.mutedText,
   },
-  generateNewButtonText: {
+  generateButtonText: {
     color: colors.white,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  durationText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginTop: 2,
   },
 
   // Week Cards Styles
@@ -598,14 +642,40 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontFamily: fonts.body,
   },
-  exerciseCalories: {
+  exerciseRightSection: {
     alignItems: 'flex-end',
+    gap: spacing.xs,
   },
   caloriesText: {
     color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  caloriesTextCompleted: {
+    color: colors.mutedText,
+  },
+  completeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  completeButtonText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  exerciseNameCompleted: {
+    textDecorationLine: 'line-through',
+    color: colors.mutedText,
+  },
+  exerciseDetailsCompleted: {
+    color: colors.mutedText,
+  },
+  exerciseMusclesCompleted: {
+    color: colors.mutedText,
   },
   completedBadge: {
     position: 'absolute',

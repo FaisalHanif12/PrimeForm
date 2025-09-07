@@ -215,3 +215,6 @@ workoutPlanSchema.statics.deactivateOldPlans = function(userId) {
 const WorkoutPlan = mongoose.model('WorkoutPlan', workoutPlanSchema);
 
 module.exports = WorkoutPlan;
+
+
+

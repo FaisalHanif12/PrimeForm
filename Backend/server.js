@@ -167,11 +167,13 @@ app.use(errorHandler);
 
 // Server configuration
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, async () => {
+const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
+const server = app.listen(PORT, HOST, async () => {
   console.log('🚀 ================================');
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
+  console.log(`🌐 Network: http://192.168.0.117:${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
   

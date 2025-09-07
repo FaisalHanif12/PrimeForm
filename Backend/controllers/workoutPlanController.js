@@ -4,8 +4,32 @@ const User = require('../models/User');
 // Create or update workout plan
 const createWorkoutPlan = async (req, res) => {
   try {
-    const { userId } = req.user;
+    // Ensure we have a valid user object
+    if (!req.user) {
+      console.log('❌ createWorkoutPlan - No user object found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Extract userId - MongoDB uses _id, but we need to handle both cases
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const workoutPlanData = req.body;
+
+    console.log('🔍 createWorkoutPlan - User ID:', userId);
+    console.log('🔍 createWorkoutPlan - User object keys:', Object.keys(req.user));
+    console.log('🔍 createWorkoutPlan - User _id:', req.user._id);
+    console.log('🔍 createWorkoutPlan - User id:', req.user.id);
+
+    // Validate that we have a userId
+    if (!userId) {
+      console.log('❌ createWorkoutPlan - No valid user ID found');
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user authentication'
+      });
+    }
 
     // Validate required fields
     if (!workoutPlanData.goal || !workoutPlanData.duration || !workoutPlanData.weeklyPlan) {
@@ -45,7 +69,7 @@ const createWorkoutPlan = async (req, res) => {
 // Get active workout plan for user
 const getActiveWorkoutPlan = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
 
     const workoutPlan = await WorkoutPlan.getActiveWorkoutPlan(userId);
 
@@ -75,7 +99,7 @@ const getActiveWorkoutPlan = async (req, res) => {
 // Get all workout plans for user
 const getUserWorkoutPlans = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
     const workoutPlans = await WorkoutPlan.find({ userId })
@@ -114,7 +138,7 @@ const getUserWorkoutPlans = async (req, res) => {
 // Mark exercise as completed
 const markExerciseCompleted = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { exerciseId, day, week } = req.body;
 
     if (!exerciseId || !day || !week) {
@@ -154,7 +178,7 @@ const markExerciseCompleted = async (req, res) => {
 // Mark day as completed
 const markDayCompleted = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { day, week } = req.body;
 
     if (!day || !week) {
@@ -194,7 +218,7 @@ const markDayCompleted = async (req, res) => {
 // Delete workout plan
 const deleteWorkoutPlan = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { planId } = req.params;
 
     const workoutPlan = await WorkoutPlan.findOneAndDelete({
@@ -227,7 +251,7 @@ const deleteWorkoutPlan = async (req, res) => {
 // Get workout plan statistics
 const getWorkoutStats = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
 
     const workoutPlan = await WorkoutPlan.getActiveWorkoutPlan(userId);
 
@@ -274,3 +298,6 @@ module.exports = {
   deleteWorkoutPlan,
   getWorkoutStats
 };
+
+
+
