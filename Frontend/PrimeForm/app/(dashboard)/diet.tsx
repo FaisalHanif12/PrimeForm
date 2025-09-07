@@ -14,6 +14,7 @@ import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DietPlanDisplay from '../../src/components/DietPlanDisplay';
+import LoadingModal from '../../src/components/LoadingModal';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -117,7 +118,6 @@ export default function DietScreen() {
       // User already has profile, generate diet plan
       setIsGenerating(true);
       try {
-        showToast('info', 'Generating your personalized diet plan...');
         const response = await aiDietService.generateDietPlan(userInfo);
         
         if (response.success && response.data) {
@@ -128,7 +128,17 @@ export default function DietScreen() {
         }
       } catch (error) {
         console.error('Diet generation failed:', error);
-        showToast('error', 'Failed to generate diet plan. Please check your connection and try again.');
+        
+        // Show interactive error alert instead of console logging
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+        
+        if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+          showToast('error', 'Network issue detected. Please check your connection and try again.');
+        } else if (errorMessage.includes('API')) {
+          showToast('error', 'AI service is temporarily busy. Please try again in a moment.');
+        } else {
+          showToast('error', 'Unable to generate diet plan. Please try again.');
+        }
       } finally {
         setIsGenerating(false);
       }
@@ -368,6 +378,14 @@ export default function DietScreen() {
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
           onCancel={handleCancelUserInfo}
+        />
+
+        {/* Beautiful Loading Modal */}
+        <LoadingModal
+          visible={isGenerating}
+          title="Creating Your Diet Plan"
+          subtitle="Analyzing your profile and generating personalized meals"
+          type="diet"
         />
       </SafeAreaView>
     </DecorativeBackground>
