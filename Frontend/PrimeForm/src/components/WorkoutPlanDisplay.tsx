@@ -262,69 +262,176 @@ export default function WorkoutPlanDisplay({
 
   // Removed week cards per new design
 
-
-  return (
+    
+    return (
     <View style={styles.container}>
-      {/* Header Section - Beautiful redesign */}
-      <View style={styles.header}>
-        <View style={styles.headerGradient}>
-          <View style={styles.headerContent}>
-            <View style={styles.goalSection}>
-              <Text style={styles.goalTitle}>{workoutPlan.goal}</Text>
-              <Text style={styles.durationText}>{workoutPlan.duration}</Text>
-            </View>
+      {/* Hero Header Section - Extraordinary redesign */}
+      <View style={styles.heroSection}>
+        <View style={styles.heroBackground}>
+          <View style={styles.heroContent}>
+            {/* Goal Badge */}
+            <View style={styles.goalBadge}>
+              <Text style={styles.goalBadgeText}>🎯 {workoutPlan.goal}</Text>
+        </View>
             
-            <View style={styles.progressSection}>
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${getProgressPercentage()}%` }]} />
-                </View>
-                <Text style={styles.progressPercentage}>{getProgressPercentage()}%</Text>
+            {/* Main Title */}
+            <Text style={styles.heroTitle}>Your Fitness Journey</Text>
+            <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {workoutPlan.duration}</Text>
+            
+            {/* Progress Circle */}
+            <View style={styles.progressCircleContainer}>
+              <View style={styles.progressCircle}>
+                <View style={[styles.progressCircleFill, { 
+                  transform: [{ rotate: `${(getProgressPercentage() / 100) * 360}deg` }] 
+                }]} />
+                <View style={styles.progressCircleInner}>
+                  <Text style={styles.progressCircleText}>{getProgressPercentage()}%</Text>
+                  <Text style={styles.progressCircleLabel}>Complete</Text>
+      </View>
               </View>
             </View>
           </View>
         </View>
       </View>
 
-      {/* Daily Calendar Section */}
-      <View style={styles.calendarSection}>
-        <Text style={styles.calendarTitle}>Daily Progress — Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
+      {/* Weekly Calendar Section - Premium Redesign */}
+      <View style={styles.premiumCalendarSection}>
+        <View style={styles.calendarHeader}>
+          <View style={styles.calendarHeaderLeft}>
+            <Text style={styles.calendarTitle}>This Week's Plan</Text>
+            <Text style={styles.calendarSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
+            </View>
+          <View style={styles.weekIndicator}>
+            <Text style={styles.weekIndicatorText}>W{getCurrentWeek()}</Text>
+          </View>
+        </View>
+        
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false}
-          style={styles.calendarContainer}
-          contentContainerStyle={styles.calendarContent}
+          style={styles.calendarScrollView}
+          contentContainerStyle={styles.calendarScrollContent}
         >
           {getCurrentWeekDays().map((day, index) => {
             const status = getDayStatus(day, index);
             const isToday = isCurrentDay(day);
+            const isSelected = selectedDay?.day === day.day;
             
             return (
-              <View key={day.day} style={styles.dayCardWrapper}>
+          <TouchableOpacity 
+                key={day.day}
+                style={[
+                  styles.premiumDayCard,
+                  isToday && styles.premiumDayCardToday,
+                  isSelected && styles.premiumDayCardSelected,
+                  status === 'completed' && styles.premiumDayCardCompleted,
+                  status === 'missed' && styles.premiumDayCardMissed,
+                ]}
+                onPress={() => handleDayPress(day)}
+                activeOpacity={0.8}
+              >
+                {/* Background Glow Effect */}
+                {isToday && <View style={styles.todayGlow} />}
+                
+                {/* Status Badge */}
+                <View style={[styles.premiumStatusBadge, 
+                  status === 'in_progress' && styles.premiumStatusBadgeProgress,
+                  status === 'completed' && styles.premiumStatusBadgeCompleted,
+                  status === 'missed' && styles.premiumStatusBadgeMissed,
+                  status === 'rest' && styles.premiumStatusBadgeRest,
+                ]}>
+                  <Text style={[styles.premiumStatusIcon, 
+                    status === 'in_progress' && styles.premiumStatusIconProgress,
+                    status === 'completed' && styles.premiumStatusIconCompleted,
+                  ]}>
+                    {status === 'in_progress' ? '🔥' : 
+                     status === 'completed' ? '✓' : 
+                     status === 'missed' ? '✗' : 
+                     status === 'rest' ? '🏃‍♂️' : '📅'}
+            </Text>
+                </View>
+                
+                {/* Day Info */}
+                <View style={styles.dayInfo}>
+                  <Text style={[styles.premiumDayName, isToday && styles.premiumDayNameToday]}>
+                    {day.dayName.substring(0, 3)}
+                  </Text>
+                  <Text style={[styles.premiumDayDate, isToday && styles.premiumDayDateToday]}>
+                    {formatDate(day.date)}
+                  </Text>
+                </View>
+                
+                {/* Exercise Info */}
+                <View style={styles.exerciseInfoSection}>
+                  {!day.isRestDay ? (
+                    <>
+                      <Text style={[styles.premiumExerciseCount, isToday && styles.premiumExerciseCountToday]}>
+                        {day.exercises.length}
+                      </Text>
+                      <Text style={[styles.premiumExerciseLabel, isToday && styles.premiumExerciseLabelToday]}>
+                        exercises
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={[styles.premiumExerciseCount, isToday && styles.premiumExerciseCountToday]}>
+                        Active
+                      </Text>
+                      <Text style={[styles.premiumExerciseLabel, isToday && styles.premiumExerciseLabelToday]}>
+                        recovery
+                      </Text>
+                    </>
+        )}
+      </View>
+
+                {/* Today Pulse Animation */}
                 {isToday && (
-                  <View style={styles.todayIndicator}>
-                    <Text style={styles.todayText}>TODAY</Text>
-                  </View>
+                  <View style={styles.todayPulseContainer}>
+                    <View style={styles.todayPulseRing} />
+                    <View style={styles.todayPulseDot} />
+                </View>
+              )}
+                
+                {/* Selection Indicator */}
+                {isSelected && (
+                  <View style={styles.selectionIndicator}>
+                    <View style={styles.selectionDot} />
+            </View>
                 )}
-                <DailyProgressCard
-                  dayName={day.dayName.substring(0, 3)}
-                  date={formatDate(day.date)}
-                  status={status}
-                  onPress={() => handleDayPress(day)}
-                />
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Today's Workout Section */}
-      <View style={styles.workoutSection}>
+      {/* Workout Details Section - Completely Redesigned */}
+      <View style={styles.workoutDetailsSection}>
+        <View style={styles.workoutHeader}>
+          <View style={styles.workoutHeaderLeft}>
         <Text style={styles.workoutTitle}>
-          {selectedDay?.isRestDay ? 'Rest Day' : 
-           selectedDay && isCurrentDay(selectedDay) ? "Today's Workout" : 
-           selectedDay ? `${selectedDay.dayName}'s Workout` : 'Select a Day'}
+              {selectedDay?.isRestDay ? 'Active Recovery' : 
+               selectedDay && isCurrentDay(selectedDay) ? "Today's Workout" : 
+               selectedDay ? `${selectedDay.dayName}'s Workout` : 'Select a Day'}
         </Text>
+            {selectedDay && !selectedDay.isRestDay && (
+              <Text style={styles.workoutSubtitle}>
+                {selectedDay.exercises.length} exercises • {selectedDay.totalCalories} kcal
+              </Text>
+            )}
+          </View>
+        
+        {selectedDay && !selectedDay.isRestDay && (
+            <View style={styles.workoutProgress}>
+              <Text style={styles.workoutProgressText}>
+                {selectedDay.exercises.filter(exercise => {
+                  const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${selectedDay.exercises.indexOf(exercise)}`;
+                  return completedExercises.has(exerciseId);
+                }).length}/{selectedDay.exercises.length}
+              </Text>
+              <Text style={styles.workoutProgressLabel}>Complete</Text>
+            </View>
+          )}
+        </View>
         
         {selectedDay && !selectedDay.isRestDay && (
           <ScrollView style={styles.exercisesContainer} showsVerticalScrollIndicator={false}>
@@ -332,70 +439,101 @@ export default function WorkoutPlanDisplay({
               selectedDay.exercises.map((exercise, index) => {
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
                 const isCompleted = completedExercises.has(exerciseId);
+                const dayStatus = getDayStatus(selectedDay, 0);
                 
                 return (
                   <TouchableOpacity
                     key={index}
-                    style={[styles.exerciseCard, isCompleted && styles.exerciseCardCompleted]}
+                    style={[
+                      styles.modernExerciseCard,
+                      isCompleted && styles.modernExerciseCardCompleted,
+                      dayStatus === 'missed' && styles.modernExerciseCardDisabled,
+                    ]}
                     onPress={() => {
-                      // Only allow interaction with current day exercises or view-only for upcoming
-                      const dayStatus = getDayStatus(selectedDay, 0);
-                      if (dayStatus === 'missed') {
-                        return; // No interaction for missed days
-                      }
-                      if (dayStatus === 'in_progress' && !isCompleted) {
-                        handleExerciseComplete(exercise);
-                      }
+                      if (dayStatus === 'missed') return;
                       handleExercisePress(exercise);
                     }}
                     activeOpacity={0.8}
-                    disabled={getDayStatus(selectedDay, 0) === 'missed'}
+                    disabled={dayStatus === 'missed'}
                   >
-                    <View style={styles.exerciseHeader}>
-                      <View style={styles.exerciseIcon}>
-                        <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
-                      </View>
-                      
-                      <View style={styles.exerciseInfo}>
-                        <Text style={[styles.exerciseName, isCompleted && styles.exerciseNameCompleted]}>
-                          {exercise.name}
-                        </Text>
-                        <Text style={[styles.exerciseDetails, isCompleted && styles.exerciseDetailsCompleted]}>
-                          {exercise.sets} × {exercise.reps} • Rest {exercise.rest}
-                        </Text>
-                      </View>
-
-                      {isCompleted ? (
-                        <View style={styles.completedBadge}>
-                          <Text style={styles.completedCheckmark}>✓</Text>
-                        </View>
-                      ) : getDayStatus(selectedDay, 0) === 'in_progress' ? (
-                        <TouchableOpacity 
-                          style={styles.completeButton}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleExerciseComplete(exercise);
-                          }}
-                        >
-                          <Text style={styles.completeButtonText}>✓</Text>
-                        </TouchableOpacity>
-                      ) : null}
+                    {/* Exercise Number Badge */}
+                    <View style={[styles.exerciseNumber, isCompleted && styles.exerciseNumberCompleted]}>
+                      <Text style={[styles.exerciseNumberText, isCompleted && styles.exerciseNumberTextCompleted]}>
+                        {index + 1}
+                      </Text>
                     </View>
                     
-                    <View style={styles.exerciseFooter}>
-                      <Text style={[styles.exerciseMuscles, isCompleted && styles.exerciseMusclesCompleted]}>
-                        {exercise.targetMuscles.join(', ')}
+                    {/* Exercise Content */}
+                    <View style={styles.modernExerciseContent}>
+                      <View style={styles.modernExerciseHeader}>
+                        <View style={styles.modernExerciseIcon}>
+                          <Text style={styles.modernExerciseEmoji}>{exercise.emoji}</Text>
+                        </View>
+                        
+                        <View style={styles.modernExerciseInfo}>
+                          <Text style={[styles.modernExerciseName, isCompleted && styles.modernExerciseNameCompleted]}>
+                            {exercise.name}
                       </Text>
-                      <Text style={[styles.caloriesText, isCompleted && styles.caloriesTextCompleted]}>
-                        {exercise.caloriesBurned} kcal
+                          <Text style={[styles.modernExerciseStats, isCompleted && styles.modernExerciseStatsCompleted]}>
+                            {exercise.sets} sets × {exercise.reps} reps
                       </Text>
                     </View>
+                    
+                        {/* Action Button */}
+                        <View style={styles.exerciseAction}>
+                          {isCompleted ? (
+                            <View style={styles.modernCompletedBadge}>
+                              <Text style={styles.modernCompletedIcon}>✓</Text>
+                            </View>
+                          ) : dayStatus === 'in_progress' ? (
+                            <TouchableOpacity 
+                              style={styles.modernStartButton}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleExercisePress(exercise);
+                              }}
+                            >
+                              <Text style={styles.modernStartButtonText}>START</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.modernViewButton}>
+                              <Text style={styles.modernViewButtonText}>VIEW</Text>
+                            </View>
+                          )}
+                        </View>
+                    </View>
+                    
+                      {/* Exercise Details */}
+                      <View style={styles.modernExerciseDetails}>
+                        <View style={styles.modernDetailItem}>
+                          <Text style={styles.modernDetailIcon}>⏱️</Text>
+                          <Text style={styles.modernDetailText}>{exercise.rest} rest</Text>
+                        </View>
+                        <View style={styles.modernDetailItem}>
+                          <Text style={styles.modernDetailIcon}>🎯</Text>
+                          <Text style={styles.modernDetailText}>{exercise.targetMuscles.slice(0, 2).join(', ')}</Text>
+                        </View>
+                        <View style={styles.modernDetailItem}>
+                          <Text style={styles.modernDetailIcon}>🔥</Text>
+                          <Text style={styles.modernDetailText}>{exercise.caloriesBurned} kcal</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Progress Bar */}
+                    {isCompleted && (
+                      <View style={styles.exerciseProgressBar}>
+                        <View style={styles.exerciseProgressFill} />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })
             ) : (
-              <View style={styles.noExercisesContainer}>
-                <Text style={styles.noExercisesText}>No exercises planned for this day</Text>
+              <View style={styles.emptyExercisesCard}>
+                <Text style={styles.emptyExercisesIcon}>💪</Text>
+                <Text style={styles.emptyExercisesTitle}>No exercises planned</Text>
+                <Text style={styles.emptyExercisesText}>This day doesn't have any exercises scheduled</Text>
               </View>
             )}
           </ScrollView>
@@ -428,7 +566,7 @@ export default function WorkoutPlanDisplay({
         {!selectedDay && (
           <View style={styles.noDaySelectedContainer}>
             <Text style={styles.noDaySelectedText}>Please select a day from the calendar above</Text>
-          </View>
+      </View>
         )}
       </View>
 
@@ -455,72 +593,102 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   
-  // Header Styles - Beautiful redesign
-  header: {
+  // Hero Section - Extraordinary Design
+  heroSection: {
     marginHorizontal: spacing.md,
-    marginBottom: spacing.lg,
-    borderRadius: radius.lg,
+    marginBottom: spacing.xl,
+    borderRadius: 24,
     overflow: 'hidden',
-    elevation: 8,
+    elevation: 12,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
-  headerGradient: {
+  heroBackground: {
     backgroundColor: colors.surface,
-    padding: spacing.xl,
+    position: 'relative',
   },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  heroContent: {
+    padding: spacing.xl,
     alignItems: 'center',
   },
-  goalSection: {
-    flex: 1,
+  goalBadge: {
+    backgroundColor: colors.primary + '20',
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
   },
-  goalTitle: {
-    color: colors.white,
-    fontSize: 28,
-    fontWeight: '800',
+  goalBadgeText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+  heroTitle: {
+    color: colors.white,
+    fontSize: 32,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
     marginBottom: spacing.xs,
     letterSpacing: 0.5,
   },
-  durationText: {
-    color: colors.primary,
+  heroSubtitle: {
+    color: colors.mutedText,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: fonts.body,
-    opacity: 0.9,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
-  progressSection: {
-    alignItems: 'flex-end',
-    minWidth: 120,
-  },
-  progressContainer: {
-    flexDirection: 'row',
+  progressCircleContainer: {
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
-  progressBar: {
-    width: 80,
-    height: 8,
-    backgroundColor: colors.cardBorder,
-    borderRadius: 4,
-    overflow: 'hidden',
+  progressCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.cardBorder + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
+  progressCircleFill: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 6,
+    borderColor: colors.primary,
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
   },
-  progressPercentage: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
+  progressCircleInner: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+  },
+  progressCircleText: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '900',
     fontFamily: fonts.heading,
-    minWidth: 30,
+  },
+  progressCircleLabel: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginTop: 2,
   },
 
   // Week Cards Styles
@@ -604,78 +772,454 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Calendar Styles
-  calendarSection: {
+  // Premium Calendar Section - Extraordinary Design
+  premiumCalendarSection: {
     paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.lg,
+  },
+  calendarHeaderLeft: {
+    flex: 1,
   },
   calendarTitle: {
     color: colors.white,
-    fontSize: typography.h4,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '800',
     fontFamily: fonts.heading,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
   },
-  calendarContainer: {
-    marginBottom: spacing.sm,
-  },
-  calendarContent: {
-    paddingRight: spacing.lg,
-  },
-  dayCardWrapper: {
-    position: 'relative',
-    marginRight: spacing.sm,
-  },
-  todayIndicator: {
-    position: 'absolute',
-    top: -8,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    zIndex: 1,
-    alignItems: 'center',
-  },
-  todayText: {
-    color: colors.white,
-    fontSize: 8,
-    fontWeight: '700',
+  calendarSubtitle: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '500',
     fontFamily: fonts.body,
   },
-
-  // Workout Section Styles
-  workoutSection: {
+  weekIndicator: {
+    backgroundColor: colors.primary + '20',
+    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  weekIndicatorText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  calendarScrollView: {
+    marginHorizontal: -spacing.lg,
+  },
+  calendarScrollContent: {
     paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  
+  // Premium Day Cards
+  premiumDayCard: {
+    width: 100,
+    height: 140,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    position: 'relative',
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  premiumDayCardToday: {
+    backgroundColor: colors.primary + '10',
+    borderColor: colors.primary,
+    borderWidth: 2,
+    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  premiumDayCardSelected: {
+    backgroundColor: colors.primary + '08',
+    borderColor: colors.primary + '60',
+    borderWidth: 2,
+  },
+  premiumDayCardCompleted: {
+    backgroundColor: colors.green + '10',
+    borderColor: colors.green + '40',
+  },
+  premiumDayCardMissed: {
+    backgroundColor: colors.error + '10',
+    borderColor: colors.error + '40',
+  },
+  
+  // Today Glow Effect
+  todayGlow: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    backgroundColor: colors.primary + '20',
+    borderRadius: 24,
+    zIndex: -1,
+  },
+  
+  // Premium Status Badge
+  premiumStatusBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.cardBorder + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    elevation: 2,
+  },
+  premiumStatusBadgeProgress: {
+    backgroundColor: colors.primary,
+  },
+  premiumStatusBadgeCompleted: {
+    backgroundColor: colors.green,
+  },
+  premiumStatusBadgeMissed: {
+    backgroundColor: colors.error,
+  },
+  premiumStatusBadgeRest: {
+    backgroundColor: '#4A5568',
+  },
+  premiumStatusIcon: {
+    fontSize: 16,
+  },
+  premiumStatusIconProgress: {
+    fontSize: 18,
+  },
+  premiumStatusIconCompleted: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  
+  // Day Info Section
+  dayInfo: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  premiumDayName: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  premiumDayNameToday: {
+    color: colors.primary,
+  },
+  premiumDayDate: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  premiumDayDateToday: {
+    color: colors.primary + 'AA',
+  },
+  
+  // Exercise Info Section
+  exerciseInfoSection: {
+    alignItems: 'center',
+  },
+  premiumExerciseCount: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  premiumExerciseCountToday: {
+    color: colors.primary,
+  },
+  premiumExerciseLabel: {
+    color: colors.mutedText,
+    fontSize: 10,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  premiumExerciseLabelToday: {
+    color: colors.primary + '80',
+  },
+  
+  // Today Pulse Animation
+  todayPulseContainer: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayPulseRing: {
+    position: 'absolute',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary + '40',
+  },
+  todayPulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  
+  // Selection Indicator
+  selectionIndicator: {
+    position: 'absolute',
+    bottom: -4,
+    left: '50%',
+    marginLeft: -6,
+    width: 12,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+  selectionDot: {
+    width: 12,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
+  },
+
+  // Workout Details Section - Modern Design
+  workoutDetailsSection: {
+    paddingHorizontal: spacing.lg,
+    flex: 1,
+  },
+  workoutHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  workoutHeaderLeft: {
     flex: 1,
   },
   workoutTitle: {
     color: colors.white,
-    fontSize: typography.h3,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     fontFamily: fonts.heading,
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  workoutSubtitle: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  workoutProgress: {
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  workoutProgressText: {
+    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+  },
+  workoutProgressLabel: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
   },
   exercisesContainer: {
     flex: 1,
   },
-  exerciseCard: {
+  
+  // Modern Exercise Cards
+  modernExerciseCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: 20,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    position: 'relative',
+    overflow: 'hidden',
   },
-  exerciseCardCompleted: {
-    backgroundColor: colors.green + '15',
-    borderColor: colors.green + '50',
+  modernExerciseCardCompleted: {
+    backgroundColor: colors.green + '10',
+    borderColor: colors.green + '40',
+  },
+  modernExerciseCardDisabled: {
+    backgroundColor: colors.cardBorder + '20',
+    borderColor: colors.cardBorder,
+    opacity: 0.6,
+  },
+  exerciseNumber: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  exerciseNumberCompleted: {
+    backgroundColor: colors.green,
+  },
+  exerciseNumberText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+  },
+  exerciseNumberTextCompleted: {
+    color: colors.white,
+  },
+  modernExerciseContent: {
+    padding: spacing.lg,
+    paddingLeft: spacing.lg + 40,
+  },
+  modernExerciseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modernExerciseIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  modernExerciseEmoji: {
+    fontSize: 24,
+  },
+  modernExerciseInfo: {
+    flex: 1,
+  },
+  modernExerciseName: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.3,
+  },
+  modernExerciseNameCompleted: {
+    color: colors.mutedText,
+    textDecorationLine: 'line-through',
+  },
+  modernExerciseStats: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  modernExerciseStatsCompleted: {
+    color: colors.mutedText,
+    opacity: 0.7,
+  },
+  exerciseAction: {
+    alignItems: 'center',
+  },
+  modernCompletedBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modernCompletedIcon: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  modernStartButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  modernStartButtonText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    letterSpacing: 0.5,
+  },
+  modernViewButton: {
+    backgroundColor: colors.cardBorder + '40',
+    borderRadius: 18,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  modernViewButtonText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  modernExerciseDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder + '30',
+  },
+  modernDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modernDetailIcon: {
+    fontSize: 14,
+    marginRight: spacing.xs,
+  },
+  modernDetailText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    flex: 1,
+  },
+  exerciseProgressBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: colors.cardBorder + '30',
+  },
+  exerciseProgressFill: {
+    height: '100%',
+    backgroundColor: colors.green,
+    width: '100%',
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -860,21 +1404,39 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // No Exercises Styles
-  noExercisesContainer: {
+  // Empty Exercises Card - Modern Design
+  emptyExercisesCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: 20,
+    padding: spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
     marginBottom: spacing.md,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  noExercisesText: {
+  emptyExercisesIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptyExercisesTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  emptyExercisesText: {
     color: colors.mutedText,
-    fontSize: typography.body,
+    fontSize: 14,
     fontFamily: fonts.body,
     textAlign: 'center',
+    lineHeight: 20,
   },
 
   // No Day Selected Styles
