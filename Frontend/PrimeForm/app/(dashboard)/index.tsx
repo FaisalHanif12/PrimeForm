@@ -373,6 +373,12 @@ export default function DashboardScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
       case 'settings':
         router.push('/(dashboard)/settings');
         break;
