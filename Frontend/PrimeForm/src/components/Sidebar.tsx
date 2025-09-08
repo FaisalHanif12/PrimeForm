@@ -40,6 +40,8 @@ interface Props {
 
 const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
+  { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak', color: colors.gold },
+  { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer', color: colors.primary },
   { icon: 'card-outline', label: 'Subscription Plan', action: 'subscription' },
   { icon: 'language-outline', label: 'Language', action: 'language' },
   { icon: 'mail-outline', label: 'Contact Us', action: 'contact' },
@@ -160,6 +162,13 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                                                   <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
                           {item.label}
                         </Text>
+                          {(item.action === 'streak' || item.action === 'ai-trainer') && (
+                            <View style={styles.premiumTag}>
+                              <Text style={styles.premiumTagText}>
+                                {language === 'en' ? 'PREMIUM' : 'پریمیم'}
+                              </Text>
+                            </View>
+                          )}
                           {item.action === 'subscription' && (
                             <View style={styles.upgradeTag}>
                               <Text style={styles.upgradeTagText}>
@@ -543,5 +552,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontWeight: '600',
     marginLeft: spacing.sm,
+  },
+  
+  // Premium tag styles
+  premiumTag: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: spacing.xs,
+  },
+  premiumTagText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
   },
 });

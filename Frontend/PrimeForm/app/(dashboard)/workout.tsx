@@ -13,6 +13,7 @@ import UserInfoModal from '../../src/components/UserInfoModal';
 import WorkoutPlanDisplay from '../../src/components/WorkoutPlanDisplay';
 import ExerciseDetailScreen from '../../src/components/ExerciseDetailScreen';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import LoadingModal from '../../src/components/LoadingModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
@@ -157,13 +158,9 @@ export default function WorkoutScreen() {
     if (userInfo) {
       // User already has profile, generate AI workout plan
       setIsGeneratingPlan(true);
-      setGenerationProgress('Analyzing your profile...');
       
       try {
         console.log('🚀 Starting workout plan generation...');
-        
-        // Update progress
-        setTimeout(() => setGenerationProgress('Creating your workout plan...'), 1000);
         
         const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
         
@@ -178,12 +175,18 @@ export default function WorkoutScreen() {
       } catch (error) {
         console.error('❌ Error generating workout plan:', error);
         
-        // Show red alert for any error
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        showToast('error', `Error: ${errorMessage}`);
+        // Show interactive error alert instead of console logging
+        const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+        
+        if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+          showToast('error', 'Network issue detected. Please check your connection and try again.');
+        } else if (errorMessage.includes('API')) {
+          showToast('error', 'AI service is temporarily busy. Please try again in a moment.');
+        } else {
+          showToast('error', 'Unable to generate workout plan. Please try again.');
+        }
       } finally {
         setIsGeneratingPlan(false);
-        setGenerationProgress('');
       }
     } else {
       // User needs to create profile first
@@ -466,10 +469,19 @@ export default function WorkoutScreen() {
         {showExerciseDetail && selectedExercise && (
           <ExerciseDetailScreen
             exercise={selectedExercise}
-            onComplete={handleExerciseComplete}
-            onBack={handleExerciseBack}
+            visible={showExerciseDetail}
+            onClose={handleExerciseBack}
+            onComplete={() => handleExerciseComplete(selectedExercise)}
           />
         )}
+
+        {/* Beautiful Loading Modal */}
+        <LoadingModal
+          visible={isGeneratingPlan}
+          title="Creating Your Workout Plan"
+          subtitle="Analyzing your profile and generating personalized exercises"
+          type="workout"
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
