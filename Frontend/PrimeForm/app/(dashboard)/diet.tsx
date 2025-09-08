@@ -237,6 +237,8 @@ export default function DietScreen() {
       router.push('/(dashboard)/workout');
     } else if (tab === 'gym') {
       router.push('/(dashboard)/gym');
+    } else if (tab === 'progress') {
+      router.push('/(dashboard)/progress');
     } else {
       console.log('Feature coming soon:', tab);
     }

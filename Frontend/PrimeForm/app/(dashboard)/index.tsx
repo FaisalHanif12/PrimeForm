@@ -351,7 +351,7 @@ export default function DashboardScreen() {
         router.push('/(dashboard)/workout');
         break;
       case 'progress':
-        // Handle progress page
+        router.push('/(dashboard)/progress');
         break;
       default:
         break;
