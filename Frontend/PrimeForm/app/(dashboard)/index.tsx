@@ -351,7 +351,7 @@ export default function DashboardScreen() {
         router.push('/(dashboard)/workout');
         break;
       case 'progress':
-        // Handle progress page
+        router.push('/(dashboard)/progress');
         break;
       default:
         break;
@@ -372,6 +372,12 @@ export default function DashboardScreen() {
         break;
       case 'edit_profile':
         setShowUserInfoModal(true);
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');

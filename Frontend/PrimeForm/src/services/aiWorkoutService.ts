@@ -151,39 +151,31 @@ Generate the **final personalized plan now.**
       const startTime = Date.now();
       console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
-      // Create timeout promise - increased to 45 seconds for better reliability
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('API request timed out after 45 seconds')), 45000);
-      });
-
-      // Race between fetch and timeout
-      const response = await Promise.race([
-        fetch(OPENROUTER_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': SITE_URL,
-            'X-Title': SITE_NAME,
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.0-flash-001',
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.3, // Optimal for Gemini
-            max_tokens: 2000, // Gemini handles more tokens efficiently
-            stream: false,
-            top_p: 0.9, // Good for Gemini
-            frequency_penalty: 0.0,
-            presence_penalty: 0.0,
-          }),
+      // Make API call without timeout - let it take as long as needed for better UX
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': SITE_URL,
+          'X-Title': SITE_NAME,
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.0-flash-001',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3, // Optimal for Gemini
+          max_tokens: 2000, // Gemini handles more tokens efficiently
+          stream: false,
+          top_p: 0.9, // Good for Gemini
+          frequency_penalty: 0.0,
+          presence_penalty: 0.0,
         }),
-        timeoutPromise
-      ]) as Response;
+      });
 
       if (!response.ok) {
         const errorText = await response.text();

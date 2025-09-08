@@ -77,7 +77,7 @@ Generate a highly personalized **7-day diet plan** based on the following profil
 - Diet Preference: ${userProfile.dietPreference || 'No specific preference'}
 - Country: ${userProfile.country || 'Not specified'}
 - Medical Conditions: ${userProfile.medicalConditions || 'None'}
-- Activity Level: ${userProfile.activityLevel || 'Moderate'}
+- Activity Level: Moderate
 
 ### Requirements
 1. **Duration Analysis**: 
@@ -197,39 +197,31 @@ Generate the **complete personalized 7-day diet plan now.**
       const startTime = Date.now();
       console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
-      // Create timeout promise - 45 seconds for diet plan generation
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('API request timed out after 45 seconds')), 45000);
-      });
-
-      // Race between fetch and timeout
-      const response = await Promise.race([
-        fetch(OPENROUTER_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-            'HTTP-Referer': SITE_URL,
-            'X-Title': SITE_NAME,
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.0-flash-001',
-            messages: [
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            temperature: 0.3, // Optimal for Gemini
-            max_tokens: 3000, // More tokens for detailed diet plans
-            stream: false,
-            top_p: 0.9,
-            frequency_penalty: 0.0,
-            presence_penalty: 0.0,
-          }),
+      // Make API call without timeout - let it take as long as needed for better UX
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': SITE_URL,
+          'X-Title': SITE_NAME,
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.0-flash-001',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.3, // Optimal for Gemini
+          max_tokens: 3000, // More tokens for detailed diet plans
+          stream: false,
+          top_p: 0.9,
+          frequency_penalty: 0.0,
+          presence_penalty: 0.0,
         }),
-        timeoutPromise
-      ]) as Response;
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -301,13 +293,14 @@ Generate the **complete personalized 7-day diet plan now.**
     }
   }
 
+
   // Load diet plan from database
   async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
     try {
-      const response = await dietPlanService.getActiveDietPlan();
-      if (response.success && response.data) {
+      const response = await dietPlanService.getUserDietPlans();
+      if (response.success && response.data && response.data.dietPlans.length > 0) {
         console.log('📱 Loading diet plan from database');
-        return response.data;
+        return response.data.dietPlans[0]; // Return the first (most recent) diet plan
       }
     } catch (error) {
       console.warn('⚠️ Could not load diet plan from database:', error);
