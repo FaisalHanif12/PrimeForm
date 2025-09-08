@@ -77,7 +77,7 @@ Generate a highly personalized **7-day diet plan** based on the following profil
 - Diet Preference: ${userProfile.dietPreference || 'No specific preference'}
 - Country: ${userProfile.country || 'Not specified'}
 - Medical Conditions: ${userProfile.medicalConditions || 'None'}
-- Activity Level: ${userProfile.activityLevel || 'Moderate'}
+- Activity Level: Moderate
 
 ### Requirements
 1. **Duration Analysis**: 
@@ -293,13 +293,14 @@ Generate the **complete personalized 7-day diet plan now.**
     }
   }
 
+
   // Load diet plan from database
   async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
     try {
-      const response = await dietPlanService.getActiveDietPlan();
-      if (response.success && response.data) {
+      const response = await dietPlanService.getUserDietPlans();
+      if (response.success && response.data && response.data.dietPlans.length > 0) {
         console.log('📱 Loading diet plan from database');
-        return response.data;
+        return response.data.dietPlans[0]; // Return the first (most recent) diet plan
       }
     } catch (error) {
       console.warn('⚠️ Could not load diet plan from database:', error);

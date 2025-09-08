@@ -33,6 +33,12 @@ export default function DashboardLayout() {
         }}
       />
       <Stack.Screen 
+        name="progress" 
+        options={{
+          title: 'Progress',
+        }}
+      />
+      <Stack.Screen 
         name="settings" 
         options={{
           title: 'Settings',
