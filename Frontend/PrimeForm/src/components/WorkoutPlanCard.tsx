@@ -1,150 +1,168 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
 
 interface WorkoutPlanCardProps {
-  exercise: WorkoutExercise;
-  onPress?: (exercise: WorkoutExercise) => void;
-  isCompleted?: boolean;
+  title: string;
+  workouts: WorkoutExercise[];
+  onPress?: () => void;
+  delay?: number;
 }
 
 export default function WorkoutPlanCard({ 
-  exercise, 
-  onPress,
-  isCompleted = false 
+  title, 
+  workouts, 
+  onPress, 
+  delay = 0 
 }: WorkoutPlanCardProps) {
-  // Safety checks for exercise data
-  const safeExercise = {
-    name: exercise?.name || 'Exercise',
-    emoji: exercise?.emoji || '💪',
-    sets: exercise?.sets || 3,
-    reps: exercise?.reps || 10,
-    rest: exercise?.rest || '60s',
-    targetMuscles: Array.isArray(exercise?.targetMuscles) ? exercise.targetMuscles : ['General'],
-    caloriesBurned: exercise?.caloriesBurned || 50
-  };
+  const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
 
   return (
-    <TouchableOpacity 
-      style={[
-        styles.card,
-        isCompleted && styles.cardCompleted
-      ]} 
-      onPress={() => onPress?.(safeExercise)}
-      activeOpacity={0.8}
+    <Animated.View 
+      entering={FadeInDown.delay(delay)} 
+      style={styles.container}
     >
-      {/* Exercise Icon */}
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{safeExercise.emoji}</Text>
-      </View>
-      
-      {/* Exercise Info */}
-      <View style={styles.exerciseInfo}>
-        <Text style={styles.exerciseName}>{safeExercise.name}</Text>
-        <Text style={styles.exerciseDetails}>
-          {safeExercise.sets} sets, {safeExercise.reps} reps
-        </Text>
-        <Text style={styles.exerciseMuscles}>
-          {safeExercise.targetMuscles.join(', ')}
-        </Text>
-      </View>
-      
-      {/* Calories */}
-      <View style={styles.caloriesContainer}>
-        <Text style={styles.caloriesText}>{safeExercise.caloriesBurned} kcal</Text>
-      </View>
-      
-      {/* Completion Badge */}
-      {isCompleted && (
-        <View style={styles.completedBadge}>
-          <Text style={styles.completedCheckmark}>✓</Text>
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <View style={styles.card}>
+          <View style={styles.header}>
+            <Text style={styles.title}>{title}</Text>
+            <View style={styles.calorieContainer}>
+              <Text style={styles.calorieCount}>{totalCalories}</Text>
+              <Text style={styles.calorieLabel}>kcal</Text>
+            </View>
+          </View>
+          
+          <View style={styles.workoutList}>
+            {workouts.slice(0, 3).map((workout, index) => (
+              <View key={index} style={styles.workoutItem}>
+                <View style={styles.workoutIcon}>
+                  <Text style={styles.workoutEmoji}>{workout.emoji}</Text>
+                </View>
+                
+                <View style={styles.workoutContent}>
+                  <Text style={styles.workoutName}>{workout.name}</Text>
+                  <View style={styles.workoutDetails}>
+                    <Text style={styles.workoutStats}>{workout.sets} sets × {workout.reps} reps</Text>
+                    <Text style={styles.workoutCalories}>{workout.caloriesBurned} kcal</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+          
+          {onPress && (
+            <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
+              <Text style={styles.viewAllText}>View Full AI Workout Plan</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginBottom: spacing.lg,
+  },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    borderRadius: 16,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    position: 'relative',
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  cardCompleted: {
-    backgroundColor: colors.green + '20',
-    borderColor: colors.green,
-  },
-  iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primary + '20',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
+    marginBottom: spacing.lg,
   },
-  icon: {
-    fontSize: 24,
-  },
-  exerciseInfo: {
-    flex: 1,
-  },
-  exerciseName: {
+  title: {
     color: colors.white,
-    fontSize: typography.body,
+    fontSize: typography.subtitle,
     fontWeight: '600',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
   },
-  exerciseDetails: {
+  calorieContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 201, 124, 0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+  },
+  calorieCount: {
+    color: colors.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  calorieLabel: {
+    color: colors.mutedText,
+    fontSize: 10,
+    fontFamily: fonts.body,
+  },
+  workoutList: {
+    marginBottom: spacing.md,
+  },
+  workoutItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  workoutIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  workoutEmoji: {
+    fontSize: 18,
+  },
+  workoutContent: {
+    flex: 1,
+  },
+  workoutName: {
+    color: colors.white,
+    fontSize: typography.body,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginBottom: 2,
+  },
+  workoutDetails: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  workoutStats: {
+    color: colors.primary,
+    fontSize: typography.small,
+    fontWeight: '600',
+  },
+  workoutCalories: {
     color: colors.mutedText,
     fontSize: typography.small,
-    fontFamily: fonts.body,
-    marginBottom: spacing.xs,
   },
-  exerciseMuscles: {
-    color: colors.mutedText,
-    fontSize: typography.small,
-    fontFamily: fonts.body,
+  viewAllButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
   },
-  caloriesContainer: {
-    alignItems: 'flex-end',
-  },
-  caloriesText: {
+  viewAllText: {
     color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
-  },
-  completedBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completedCheckmark: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
   },
 });

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   TouchableOpacity,
-  Dimensions 
+  Dimensions
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutPlan, WorkoutDay, WorkoutExercise } from '../services/aiWorkoutService';
@@ -24,8 +24,8 @@ interface WorkoutPlanDisplayProps {
   isGeneratingNew?: boolean;
 }
 
-export default function WorkoutPlanDisplay({ 
-  workoutPlan, 
+export default function WorkoutPlanDisplay({
+  workoutPlan,
   onExercisePress,
   onDayPress,
   onGenerateNew,
@@ -70,12 +70,12 @@ export default function WorkoutPlanDisplay({
     if (!workoutPlan.weeklyPlan || workoutPlan.weeklyPlan.length === 0) {
       return [];
     }
-    
+
     const currentWeek = getCurrentWeek();
     const startDate = new Date(workoutPlan.startDate);
     const weekStartDate = new Date(startDate);
     weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
-    
+
     return workoutPlan.weeklyPlan.map((day, index) => ({
       ...day,
       date: new Date(weekStartDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
@@ -86,18 +86,18 @@ export default function WorkoutPlanDisplay({
   useEffect(() => {
     // Load completion states and set initial day
     loadCompletionStates();
-    
+
     // Get current week days and find today
     const currentWeekDays = getCurrentWeekDays();
-    
+
     if (currentWeekDays.length === 0) {
       console.warn('No days available in current week');
       return;
     }
-    
+
     const today = new Date().toDateString();
     const todaysDay = currentWeekDays.find(day => new Date(day.date).toDateString() === today);
-    
+
     if (todaysDay) {
       setSelectedDay(todaysDay);
       return;
@@ -124,13 +124,13 @@ export default function WorkoutPlanDisplay({
       }
     } catch (error) {
       console.warn('Could not load completion states:', error);
-      
+
       // Try to load from local storage as fallback
       try {
         const Storage = await import('../utils/storage');
         const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
         const cachedCompletedDays = await Storage.default.getItem('completed_days');
-        
+
         if (cachedCompletedExercises) {
           setCompletedExercises(new Set(JSON.parse(cachedCompletedExercises)));
         }
@@ -144,42 +144,65 @@ export default function WorkoutPlanDisplay({
   };
 
   const getProgressPercentage = (): number => {
-    // Calculate progress based on time elapsed in the plan
+    // Calculate progress based on actual weeks completed vs total weeks
+    const totalWeeks = getTotalWeeks();
+    const currentWeek = getCurrentWeek();
+
+    if (totalWeeks <= 0) return 0;
+
+    // Calculate actual completion progress based on completed days
+    const completedWeeksCount = Math.floor(completedDays.size / 7);
+    const partialWeekProgress = (completedDays.size % 7) / 7;
+    const actualProgress = ((completedWeeksCount + partialWeekProgress) / totalWeeks) * 100;
+
+    // Calculate time-based progress for reference
     const start = new Date(workoutPlan.startDate).getTime();
     const end = new Date(workoutPlan.endDate).getTime();
     const now = Date.now();
-    
-    if (end <= start) return 0;
-    
-    const timeProgress = Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
-    
-    // For now, use time-based progress since completion tracking needs backend integration
-    return Math.round(timeProgress);
+    const timeProgress = end <= start ? 0 : Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+
+    // Use the higher of actual progress or time progress, but cap at time progress + 10%
+    const finalProgress = Math.min(Math.max(actualProgress, timeProgress), timeProgress + 10);
+
+    return Math.round(finalProgress);
   };
 
   const getDayStatus = (day: WorkoutDay, index: number): 'completed' | 'rest' | 'upcoming' | 'missed' | 'in_progress' => {
     if (day.isRestDay) return 'rest';
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
     const dayDate = new Date(day.date);
     dayDate.setHours(0, 0, 0, 0);
-    
+    const planStartDate = new Date(workoutPlan.startDate);
+    planStartDate.setHours(0, 0, 0, 0);
+
     // Check if day is completed
     if (completedDays.has(day.date)) {
       return 'completed';
     }
-    
+
     // Current day - show as in progress
     if (dayDate.getTime() === today.getTime()) {
       return 'in_progress';
     }
-    
-    // Past days - missed if not completed
-    if (dayDate < today) {
-      return 'missed';
+
+    // Plan generation day should be in_progress if it's today or in the past but within plan range
+    if (dayDate.getTime() === planStartDate.getTime() && dayDate <= today) {
+      return 'in_progress';
     }
-    
+
+    // Past days - check completion percentage
+    if (dayDate < today && dayDate >= planStartDate) {
+      // Check completion percentage for the day
+      const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
+      const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
+      const completionPercentage = (completedExercisesCount / dayExercises.length) * 100;
+
+      // If 50% or more completed, consider it completed, otherwise missed
+      return completionPercentage >= 50 ? 'completed' : 'missed';
+    }
+
     // Future days
     return 'upcoming';
   };
@@ -200,36 +223,42 @@ export default function WorkoutPlanDisplay({
       console.warn('Cannot complete exercise: selectedDay or selectedDay.date is null');
       return;
     }
-    
+
     const exerciseId = `${selectedDay.date}-${exercise.name}`;
     const week = Math.ceil(selectedDay.day / 7);
-    
+
+    // Prevent double-clicking by checking if already completed
+    if (completedExercises.has(exerciseId)) {
+      console.log('Exercise already completed, ignoring duplicate completion');
+      return;
+    }
+
     try {
       // Optimistically update local state first for better UX
       const newCompletedExercises = new Set([...completedExercises, exerciseId]);
       setCompletedExercises(newCompletedExercises);
-      
+
       // Save to local storage immediately
       const Storage = await import('../utils/storage');
       await Storage.default.setItem('completed_exercises', JSON.stringify([...newCompletedExercises]));
-      
+
       // Mark exercise as completed in database
       await workoutPlanService.markExerciseCompleted(exerciseId, selectedDay.day, week);
-      
+
       // Check if all exercises for the day are completed
-      const allExercisesCompleted = selectedDay.exercises.every(ex => 
+      const allExercisesCompleted = selectedDay.exercises.every(ex =>
         newCompletedExercises.has(`${selectedDay.date}-${ex.name}`)
       );
-      
+
       if (allExercisesCompleted) {
         // Mark day as completed in database
         await workoutPlanService.markDayCompleted(selectedDay.day, week);
         const newCompletedDays = new Set([...completedDays, selectedDay.date]);
         setCompletedDays(newCompletedDays);
-        
+
         // Save to local storage
         await Storage.default.setItem('completed_days', JSON.stringify([...newCompletedDays]));
-        
+
         console.log(`🎉 Day ${selectedDay.day} completed! All exercises finished.`);
       }
     } catch (error) {
@@ -262,8 +291,8 @@ export default function WorkoutPlanDisplay({
 
   // Removed week cards per new design
 
-    
-    return (
+
+  return (
     <View style={styles.container}>
       {/* Hero Header Section - Extraordinary redesign */}
       <View style={styles.heroSection}>
@@ -272,22 +301,21 @@ export default function WorkoutPlanDisplay({
             {/* Goal Badge */}
             <View style={styles.goalBadge}>
               <Text style={styles.goalBadgeText}>🎯 {workoutPlan.goal}</Text>
-        </View>
-            
+            </View>
+
             {/* Main Title */}
-            <Text style={styles.heroTitle}>Your Fitness Journey</Text>
             <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {workoutPlan.duration}</Text>
-            
+
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircle}>
-                <View style={[styles.progressCircleFill, { 
-                  transform: [{ rotate: `${(getProgressPercentage() / 100) * 360}deg` }] 
+                <View style={[styles.progressCircleFill, {
+                  transform: [{ rotate: `${(getProgressPercentage() / 100) * 360}deg` }]
                 }]} />
                 <View style={styles.progressCircleInner}>
                   <Text style={styles.progressCircleText}>{getProgressPercentage()}%</Text>
                   <Text style={styles.progressCircleLabel}>Complete</Text>
-      </View>
+                </View>
               </View>
             </View>
           </View>
@@ -300,14 +328,14 @@ export default function WorkoutPlanDisplay({
           <View style={styles.calendarHeaderLeft}>
             <Text style={styles.calendarTitle}>This Week's Plan</Text>
             <Text style={styles.calendarSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
-            </View>
+          </View>
           <View style={styles.weekIndicator}>
             <Text style={styles.weekIndicatorText}>W{getCurrentWeek()}</Text>
           </View>
         </View>
-        
-        <ScrollView 
-          horizontal 
+
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.calendarScrollView}
           contentContainerStyle={styles.calendarScrollContent}
@@ -316,9 +344,9 @@ export default function WorkoutPlanDisplay({
             const status = getDayStatus(day, index);
             const isToday = isCurrentDay(day);
             const isSelected = selectedDay?.day === day.day;
-            
+
             return (
-          <TouchableOpacity 
+              <TouchableOpacity
                 key={day.day}
                 style={[
                   styles.premiumDayCard,
@@ -332,25 +360,25 @@ export default function WorkoutPlanDisplay({
               >
                 {/* Background Glow Effect */}
                 {isToday && <View style={styles.todayGlow} />}
-                
+
                 {/* Status Badge */}
-                <View style={[styles.premiumStatusBadge, 
-                  status === 'in_progress' && styles.premiumStatusBadgeProgress,
-                  status === 'completed' && styles.premiumStatusBadgeCompleted,
-                  status === 'missed' && styles.premiumStatusBadgeMissed,
-                  status === 'rest' && styles.premiumStatusBadgeRest,
+                <View style={[styles.premiumStatusBadge,
+                status === 'in_progress' && styles.premiumStatusBadgeProgress,
+                status === 'completed' && styles.premiumStatusBadgeCompleted,
+                status === 'missed' && styles.premiumStatusBadgeMissed,
+                status === 'rest' && styles.premiumStatusBadgeRest,
                 ]}>
-                  <Text style={[styles.premiumStatusIcon, 
-                    status === 'in_progress' && styles.premiumStatusIconProgress,
-                    status === 'completed' && styles.premiumStatusIconCompleted,
+                  <Text style={[styles.premiumStatusIcon,
+                  status === 'in_progress' && styles.premiumStatusIconProgress,
+                  status === 'completed' && styles.premiumStatusIconCompleted,
                   ]}>
-                    {status === 'in_progress' ? '🔥' : 
-                     status === 'completed' ? '✓' : 
-                     status === 'missed' ? '✗' : 
-                     status === 'rest' ? '🏃‍♂️' : '📅'}
-            </Text>
+                    {status === 'in_progress' ? '🔥' :
+                      status === 'completed' ? '✓' :
+                        status === 'missed' ? '✗' :
+                          status === 'rest' ? '🏃‍♂️' : '📅'}
+                  </Text>
                 </View>
-                
+
                 {/* Day Info */}
                 <View style={styles.dayInfo}>
                   <Text style={[styles.premiumDayName, isToday && styles.premiumDayNameToday]}>
@@ -360,7 +388,7 @@ export default function WorkoutPlanDisplay({
                     {formatDate(day.date)}
                   </Text>
                 </View>
-                
+
                 {/* Exercise Info */}
                 <View style={styles.exerciseInfoSection}>
                   {!day.isRestDay ? (
@@ -381,22 +409,22 @@ export default function WorkoutPlanDisplay({
                         recovery
                       </Text>
                     </>
-        )}
-      </View>
+                  )}
+                </View>
 
                 {/* Today Pulse Animation */}
                 {isToday && (
                   <View style={styles.todayPulseContainer}>
                     <View style={styles.todayPulseRing} />
                     <View style={styles.todayPulseDot} />
-                </View>
-              )}
-                
+                  </View>
+                )}
+
                 {/* Selection Indicator */}
                 {isSelected && (
                   <View style={styles.selectionIndicator}>
                     <View style={styles.selectionDot} />
-            </View>
+                  </View>
                 )}
               </TouchableOpacity>
             );
@@ -408,19 +436,19 @@ export default function WorkoutPlanDisplay({
       <View style={styles.workoutDetailsSection}>
         <View style={styles.workoutHeader}>
           <View style={styles.workoutHeaderLeft}>
-        <Text style={styles.workoutTitle}>
-              {selectedDay?.isRestDay ? 'Active Recovery' : 
-               selectedDay && isCurrentDay(selectedDay) ? "Today's Workout" : 
-               selectedDay ? `${selectedDay.dayName}'s Workout` : 'Select a Day'}
-        </Text>
+            <Text style={styles.workoutTitle}>
+              {selectedDay?.isRestDay ? 'Active Recovery' :
+                selectedDay && isCurrentDay(selectedDay) ? "Today's Workout" :
+                  selectedDay ? `${selectedDay.dayName}'s Workout` : 'Select a Day'}
+            </Text>
             {selectedDay && !selectedDay.isRestDay && (
               <Text style={styles.workoutSubtitle}>
                 {selectedDay.exercises.length} exercises • {selectedDay.totalCalories} kcal
               </Text>
             )}
           </View>
-        
-        {selectedDay && !selectedDay.isRestDay && (
+
+          {selectedDay && !selectedDay.isRestDay && (
             <View style={styles.workoutProgress}>
               <Text style={styles.workoutProgressText}>
                 {selectedDay.exercises.filter(exercise => {
@@ -432,7 +460,7 @@ export default function WorkoutPlanDisplay({
             </View>
           )}
         </View>
-        
+
         {selectedDay && !selectedDay.isRestDay && (
           <ScrollView style={styles.exercisesContainer} showsVerticalScrollIndicator={false}>
             {selectedDay.exercises && selectedDay.exercises.length > 0 ? (
@@ -440,7 +468,7 @@ export default function WorkoutPlanDisplay({
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
                 const isCompleted = completedExercises.has(exerciseId);
                 const dayStatus = getDayStatus(selectedDay, 0);
-                
+
                 return (
                   <TouchableOpacity
                     key={index}
@@ -462,23 +490,23 @@ export default function WorkoutPlanDisplay({
                         {index + 1}
                       </Text>
                     </View>
-                    
+
                     {/* Exercise Content */}
                     <View style={styles.modernExerciseContent}>
                       <View style={styles.modernExerciseHeader}>
                         <View style={styles.modernExerciseIcon}>
                           <Text style={styles.modernExerciseEmoji}>{exercise.emoji}</Text>
                         </View>
-                        
+
                         <View style={styles.modernExerciseInfo}>
                           <Text style={[styles.modernExerciseName, isCompleted && styles.modernExerciseNameCompleted]}>
                             {exercise.name}
-                      </Text>
+                          </Text>
                           <Text style={[styles.modernExerciseStats, isCompleted && styles.modernExerciseStatsCompleted]}>
                             {exercise.sets} sets × {exercise.reps} reps
-                      </Text>
-                    </View>
-                    
+                          </Text>
+                        </View>
+
                         {/* Action Button */}
                         <View style={styles.exerciseAction}>
                           {isCompleted ? (
@@ -486,7 +514,7 @@ export default function WorkoutPlanDisplay({
                               <Text style={styles.modernCompletedIcon}>✓</Text>
                             </View>
                           ) : dayStatus === 'in_progress' ? (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               style={styles.modernStartButton}
                               onPress={(e) => {
                                 e.stopPropagation();
@@ -501,8 +529,8 @@ export default function WorkoutPlanDisplay({
                             </View>
                           )}
                         </View>
-                    </View>
-                    
+                      </View>
+
                       {/* Exercise Details */}
                       <View style={styles.modernExerciseDetails}>
                         <View style={styles.modernDetailItem}>
@@ -538,7 +566,7 @@ export default function WorkoutPlanDisplay({
             )}
           </ScrollView>
         )}
-        
+
         {selectedDay?.isRestDay && (
           <View style={styles.restDayContainer}>
             <Text style={styles.restDayIcon}>🏃‍♂️</Text>
@@ -566,7 +594,7 @@ export default function WorkoutPlanDisplay({
         {!selectedDay && (
           <View style={styles.noDaySelectedContainer}>
             <Text style={styles.noDaySelectedText}>Please select a day from the calendar above</Text>
-      </View>
+          </View>
         )}
       </View>
 
@@ -579,7 +607,7 @@ export default function WorkoutPlanDisplay({
           setSelectedExercise(null);
         }}
         onComplete={handleExerciseModalComplete}
-        isCompleted={selectedExercise && selectedDay ? 
+        isCompleted={selectedExercise && selectedDay ?
           completedExercises.has(`${selectedDay.date}-${selectedExercise.name}`) : false}
         canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
       />
@@ -592,7 +620,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  
+
   // Hero Section - Extraordinary Design
   heroSection: {
     marginHorizontal: spacing.md,
@@ -820,7 +848,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
-  
+
   // Premium Day Cards
   premiumDayCard: {
     width: 100,
@@ -859,7 +887,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error + '10',
     borderColor: colors.error + '40',
   },
-  
+
   // Today Glow Effect
   todayGlow: {
     position: 'absolute',
@@ -871,7 +899,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     zIndex: -1,
   },
-  
+
   // Premium Status Badge
   premiumStatusBadge: {
     width: 36,
@@ -906,7 +934,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
   },
-  
+
   // Day Info Section
   dayInfo: {
     alignItems: 'center',
@@ -932,7 +960,7 @@ const styles = StyleSheet.create({
   premiumDayDateToday: {
     color: colors.primary + 'AA',
   },
-  
+
   // Exercise Info Section
   exerciseInfoSection: {
     alignItems: 'center',
@@ -956,7 +984,7 @@ const styles = StyleSheet.create({
   premiumExerciseLabelToday: {
     color: colors.primary + '80',
   },
-  
+
   // Today Pulse Animation
   todayPulseContainer: {
     position: 'absolute',
@@ -980,7 +1008,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
   },
-  
+
   // Selection Indicator
   selectionIndicator: {
     position: 'absolute',
@@ -1049,7 +1077,7 @@ const styles = StyleSheet.create({
   exercisesContainer: {
     flex: 1,
   },
-  
+
   // Modern Exercise Cards
   modernExerciseCard: {
     backgroundColor: colors.surface,

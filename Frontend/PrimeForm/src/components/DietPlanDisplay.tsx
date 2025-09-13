@@ -65,14 +65,27 @@ export default function DietPlanDisplay({
   };
 
   const getProgressPercentage = (): number => {
+    // Calculate progress based on actual weeks completed vs total weeks
+    const totalWeeks = getTotalWeeks();
+    const currentWeek = getCurrentWeek();
+    
+    if (totalWeeks <= 0) return 0;
+    
+    // Calculate actual completion progress based on completed days
+    const completedWeeksCount = Math.floor(completedDays.size / 7);
+    const partialWeekProgress = (completedDays.size % 7) / 7;
+    const actualProgress = ((completedWeeksCount + partialWeekProgress) / totalWeeks) * 100;
+    
+    // Calculate time-based progress for reference
     const start = new Date(dietPlan.startDate).getTime();
     const end = new Date(dietPlan.endDate).getTime();
     const now = Date.now();
+    const timeProgress = end <= start ? 0 : Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
     
-    if (end <= start) return 0;
+    // Use the higher of actual progress or time progress, but cap at time progress + 10%
+    const finalProgress = Math.min(Math.max(actualProgress, timeProgress), timeProgress + 10);
     
-    const timeProgress = Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
-    return Math.round(timeProgress);
+    return Math.round(finalProgress);
   };
 
   // Expand the 7-day weekly pattern for the current week
@@ -150,17 +163,37 @@ export default function DietPlanDisplay({
     today.setHours(0, 0, 0, 0);
     const dayDate = new Date(day.date);
     dayDate.setHours(0, 0, 0, 0);
+    const planStartDate = new Date(dietPlan.startDate);
+    planStartDate.setHours(0, 0, 0, 0);
     
     if (completedDays.has(day.date)) {
       return 'completed';
     }
     
+    // Current day is always in_progress
     if (dayDate.getTime() === today.getTime()) {
       return 'in_progress';
     }
     
-    if (dayDate < today) {
-      return 'missed';
+    // Plan generation day should be in_progress if it's today or in the past but within plan range
+    if (dayDate.getTime() === planStartDate.getTime() && dayDate <= today) {
+      return 'in_progress';
+    }
+    
+    if (dayDate < today && dayDate >= planStartDate) {
+      // Check completion percentage for the day
+      const dayMeals = [
+        `${day.date}-breakfast-${day.meals.breakfast.name}`,
+        `${day.date}-lunch-${day.meals.lunch.name}`,
+        `${day.date}-dinner-${day.meals.dinner.name}`,
+        ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
+      ];
+      
+      const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
+      const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
+      
+      // If 50% or more completed, consider it completed, otherwise missed
+      return completionPercentage >= 50 ? 'completed' : 'missed';
     }
     
     return 'upcoming';
@@ -185,6 +218,12 @@ export default function DietPlanDisplay({
     
     const mealId = `${selectedDay.date}-${mealType}-${meal.name}`;
     const week = Math.ceil(selectedDay.day / 7);
+    
+    // Prevent double-clicking by checking if already completed
+    if (completedMeals.has(mealId)) {
+      console.log('Meal already completed, ignoring duplicate completion');
+      return;
+    }
     
     try {
       const newCompletedMeals = new Set([...completedMeals, mealId]);
@@ -277,7 +316,7 @@ export default function DietPlanDisplay({
             </View>
             
             {/* Main Title */}
-            <Text style={styles.heroTitle}>Your Nutrition Journey</Text>
+            
             <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration}</Text>
             
             {/* Progress Circle */}
@@ -341,14 +380,35 @@ export default function DietPlanDisplay({
                   status === 'completed' && styles.premiumStatusBadgeCompleted,
                   status === 'missed' && styles.premiumStatusBadgeMissed,
                 ]}>
-                  <Text style={[styles.premiumStatusIcon, 
-                    status === 'in_progress' && styles.premiumStatusIconProgress,
-                    status === 'completed' && styles.premiumStatusIconCompleted,
-                  ]}>
-                    {status === 'in_progress' ? '🔥' : 
-                     status === 'completed' ? '✓' : 
-                     status === 'missed' ? '✗' : '🍽️'}
-                  </Text>
+                  {(() => {
+                    // Calculate completion percentage for display
+                    const dayMeals = [
+                      `${day.date}-breakfast-${day.meals.breakfast.name}`,
+                      `${day.date}-lunch-${day.meals.lunch.name}`,
+                      `${day.date}-dinner-${day.meals.dinner.name}`,
+                      ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
+                    ];
+                    const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
+                    const completionPercentage = Math.round((completedMealsCount / dayMeals.length) * 100);
+                    
+                    if (status === 'completed' || status === 'missed') {
+                      return (
+                        <Text style={[styles.premiumStatusPercentage, 
+                          status === 'completed' && styles.premiumStatusPercentageCompleted,
+                        ]}>
+                          {completionPercentage}%
+                        </Text>
+                      );
+                    }
+                    
+                    return (
+                      <Text style={[styles.premiumStatusIcon, 
+                        status === 'in_progress' && styles.premiumStatusIconProgress,
+                      ]}>
+                        {status === 'in_progress' ? '🔥' : '🍽️'}
+                      </Text>
+                    );
+                  })()}
                 </View>
                 
                 {/* Day Info */}
@@ -957,6 +1017,15 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: '900',
+  },
+  premiumStatusPercentage: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+  },
+  premiumStatusPercentageCompleted: {
+    color: colors.white,
   },
   
   // Day Info Section

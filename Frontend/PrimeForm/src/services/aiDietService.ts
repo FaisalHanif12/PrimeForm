@@ -64,46 +64,58 @@ export interface AIDietResponse {
 class AIDietService {
   private generatePrompt(userProfile: UserProfile): string {
     const prompt = `
-You are a world-renowned nutritionist and certified dietitian with expertise in international cuisines and cultural dietary preferences.  
-Generate a highly personalized **7-day diet plan** based on the following profile:
+You are a world-renowned nutritionist and certified dietitian with 20+ years of experience in creating EXTREMELY PERSONALIZED nutrition plans.  
+Create a HIGHLY SPECIFIC and STRICTLY PERSONALIZED **7-day diet plan** based on this EXACT user profile:
 
-### User Profile
-- Age: ${userProfile.age}  
-- Gender: ${userProfile.gender}  
-- Height: ${userProfile.height} cm  
-- Current Weight: ${userProfile.currentWeight} kg  
-- Target Weight: ${userProfile.targetWeight || 'Not specified'} kg
-- Goal: ${userProfile.bodyGoal}  
-- Diet Preference: ${userProfile.dietPreference || 'No specific preference'}
-- Country: ${userProfile.country || 'Not specified'}
-- Medical Conditions: ${userProfile.medicalConditions || 'None'}
-- Activity Level: Moderate
+### CRITICAL USER ANALYSIS
+- Age: ${userProfile.age} years (${userProfile.age < 25 ? 'Young adult - higher metabolism, can handle more carbs' : userProfile.age < 40 ? 'Adult - balanced metabolism, moderate portions' : userProfile.age < 55 ? 'Middle-aged - slower metabolism, portion control important' : 'Mature - focus on nutrient density, smaller portions'})
+- Gender: ${userProfile.gender} (${userProfile.gender === 'Male' ? 'Higher caloric needs, more protein required' : 'Moderate caloric needs, focus on iron and calcium'})
+- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg → ${userProfile.targetWeight || userProfile.currentWeight} kg
+- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - INCREASE CALORIES, FOCUS ON HEALTHY WEIGHT GAIN' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - MAINTAIN WITH BALANCED NUTRITION' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - CREATE CALORIC DEFICIT, HIGH PROTEIN' : 'OBESE - SIGNIFICANT CALORIC DEFICIT, MEDICAL SUPERVISION'})
+- PRIMARY GOAL: ${userProfile.bodyGoal} (THIS IS THE #1 PRIORITY - EVERY MEAL MUST SUPPORT THIS GOAL)
+- Diet Preference: ${userProfile.dietPreference || 'No specific preference'} (STRICTLY FOLLOW - NO EXCEPTIONS)
+- Country: ${userProfile.country || 'Not specified'} (USE ONLY LOCAL CUISINES AND AVAILABLE INGREDIENTS)
+- Medical Conditions: ${userProfile.medicalConditions || 'None'} (${userProfile.medicalConditions ? 'CRITICAL - MODIFY ALL MEALS FOR MEDICAL SAFETY' : 'NO DIETARY RESTRICTIONS'})
+- Calculated Daily Calories: ${userProfile.gender === 'Male' ? Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4} kcal (Harris-Benedict equation with activity factor)
 
-### Requirements
+### STRICT PERSONALIZATION RULES
+1. **DIET PREFERENCE COMPLIANCE** (ABSOLUTE REQUIREMENT):
+   - **Vegetarian**: ABSOLUTELY NO meat, fish, or poultry - ONLY plant-based proteins
+   - **Vegan**: ZERO animal products - no dairy, eggs, honey, or any animal derivatives
+   - **Non-Vegetarian**: Include variety of proteins including meat, fish, poultry
+   - **Pescatarian**: Fish and seafood ONLY - NO meat or poultry
+   - **Flexitarian**: Primarily plant-based with occasional meat/fish
+   - NEVER suggest foods that violate the user's dietary preference!
+
+2. **GOAL ALIGNMENT** (CRITICAL):
+   - **Muscle Gain**: Higher protein (1.8-2.2g/kg body weight), caloric surplus of 300-500 kcal
+   - **Fat Loss**: Caloric deficit of 500-750 kcal, high protein (1.6-2.0g/kg) to preserve muscle
+   - **Maintain Weight**: Maintenance calories, balanced macros (40% carbs, 30% protein, 30% fats)
+   - **General Training**: Well-rounded nutrition supporting active lifestyle
+   - Every meal must directly support the user's specific goal!
+
+3. **COUNTRY-SPECIFIC CUISINE** (MANDATORY): 
+   - Use ONLY traditional foods and cooking methods from ${userProfile.country || 'the user\'s region'}
+   - Include ONLY locally available ingredients and seasonal produce
+   - Respect cultural dietary customs and meal timing preferences
+   - Feature authentic regional dishes and cooking techniques
+   - NEVER suggest foods not commonly available in the user's country!
+
+4. **MEDICAL SAFETY** (NON-NEGOTIABLE):
+   - ${userProfile.medicalConditions ? `CRITICAL MODIFICATIONS REQUIRED for: ${userProfile.medicalConditions}` : 'No medical restrictions - full dietary freedom'}
+   - Account for any medical conditions with appropriate food modifications
+   - Ensure nutritional safety and balance for this specific user
+
+5. **CALORIC PRECISION**:
+   - Target: ${userProfile.gender === 'Male' ? Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4} kcal/day
+   - Adjust based on goal: ${userProfile.bodyGoal.includes('Gain') ? '+300-500 kcal surplus' : userProfile.bodyGoal.includes('Loss') || userProfile.bodyGoal.includes('Fat') ? '-500-750 kcal deficit' : 'maintenance level'}
+
+### MANDATORY STRUCTURE REQUIREMENTS
 1. **Duration Analysis**: 
-   - If goal = **Muscle Gain** → Recommend **3–6 months** duration (depending on target weight difference)
-   - If goal = **Fat Loss/Lose Fat** → Recommend **3–6 months** duration  
+   - If goal = **Muscle Gain** → Recommend **3–6-9 months** duration (depending on target weight difference)
+   - If goal = **Fat Loss/Lose Fat** → Recommend **3–6-9 months** duration  
    - If goal = **Maintain Weight/General Training** → Recommend **6–12 months** for lifestyle maintenance
    - Clearly show the chosen duration in the output
-
-2. **Country-Specific Cuisine**: 
-   - Incorporate traditional foods and cooking methods from ${userProfile.country || 'the user\'s region'}
-   - Use locally available ingredients and seasonal produce
-   - Respect cultural dietary customs and meal timing preferences
-   - Include authentic regional dishes and cooking techniques
-
-3. **Goal-Specific Nutrition**:
-   - **Muscle Gain**: Higher protein (1.6-2.2g/kg), moderate carbs, healthy fats
-   - **Fat Loss**: Caloric deficit, high protein to preserve muscle, balanced macros
-   - **Maintain Weight**: Balanced macros at maintenance calories
-   - **General Training**: Well-rounded nutrition supporting active lifestyle
-
-4. **Diet Preference Compliance**:
-   - **Vegetarian**: No meat, fish, or poultry
-   - **Vegan**: No animal products whatsoever
-   - **Non-Vegetarian**: Include variety of proteins including meat, fish, poultry
-   - **Pescatarian**: Fish and seafood allowed, no meat or poultry
-   - **Flexitarian**: Primarily plant-based with occasional meat/fish
 
 5. **7-Day Plan Structure**:
    - Each day must include: Breakfast, Lunch, Dinner, 2-3 Snacks
@@ -297,10 +309,10 @@ Generate the **complete personalized 7-day diet plan now.**
   // Load diet plan from database
   async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
     try {
-      const response = await dietPlanService.getUserDietPlans();
-      if (response.success && response.data && response.data.dietPlans.length > 0) {
+      const response = await dietPlanService.getActiveDietPlan();
+      if (response.success && response.data) {
         console.log('📱 Loading diet plan from database');
-        return response.data.dietPlans[0]; // Return the first (most recent) diet plan
+        return response.data;
       }
     } catch (error) {
       console.warn('⚠️ Could not load diet plan from database:', error);

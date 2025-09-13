@@ -576,3 +576,4 @@ module.exports = {
   getInsights,
   getRecommendations
 };
+

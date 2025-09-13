@@ -30,6 +30,7 @@ export default function WorkoutScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [showExerciseDetail, setShowExerciseDetail] = useState(false);
@@ -88,18 +89,18 @@ export default function WorkoutScreen() {
   };
 
   useEffect(() => {
-    // Only load user info if we don't have cached data
-    const cachedData = userProfileService.getCachedData();
-    if (cachedData) {
-      setUserInfo(cachedData.data);
-      setIsLoading(false);
-      console.log('📦 Using cached user profile data in workout page');
-    } else {
-      loadUserInfo();
-    }
-    
-    // Try to load workout plan from database
-    const loadWorkoutPlan = async () => {
+    const initializeData = async () => {
+      // Only load user info if we don't have cached data
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData) {
+        setUserInfo(cachedData.data);
+        setIsLoading(false);
+        console.log('📦 Using cached user profile data in workout page');
+      } else {
+        await loadUserInfo();
+      }
+      
+      // Try to load workout plan from database
       try {
         console.log('📱 Attempting to load workout plan from database...');
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
@@ -113,9 +114,11 @@ export default function WorkoutScreen() {
         console.warn('⚠️ Could not load workout plan from database:', error);
         // Don't show error to user for this, just log it
       }
+      
+      setInitialLoadComplete(true);
     };
     
-    loadWorkoutPlan();
+    initializeData();
   }, []);
 
   const handleProfilePress = () => {
@@ -327,7 +330,8 @@ export default function WorkoutScreen() {
 
   // Render content based on user info status
   const renderContent = () => {
-    if (isLoading) {
+    // Show loading only during initial load
+    if (isLoading && !initialLoadComplete) {
       return (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
@@ -335,8 +339,8 @@ export default function WorkoutScreen() {
       );
     }
 
-    if (workoutPlan) {
-      // Show workout plan display
+    // If user has workout plan, show the workout plan display immediately
+    if (workoutPlan && initialLoadComplete) {
       return (
         <WorkoutPlanDisplay 
           workoutPlan={workoutPlan}

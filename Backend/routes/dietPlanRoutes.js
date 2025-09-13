@@ -15,10 +15,11 @@ const {
 
 // Apply authentication middleware to all routes
 router.use(protect);
-
+ 
 // Diet Plan CRUD Routes
 router.post('/', createDietPlan);                    // POST /api/diet-plans
 router.get('/', getUserDietPlan);                    // GET /api/diet-plans
+router.get('/active', getUserDietPlan);              // GET /api/diet-plans/active
 router.get('/all', getAllUserDietPlans);             // GET /api/diet-plans/all
 router.put('/:id', updateDietPlan);                  // PUT /api/diet-plans/:id
 router.delete('/:id', deleteDietPlan);               // DELETE /api/diet-plans/:id

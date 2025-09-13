@@ -104,7 +104,7 @@ const getUserDietPlan = async (req, res) => {
   try {
     console.log('📖 Fetching diet plan for user:', req.user.id);
 
-    const dietPlan = await DietPlan.findActiveByUserId(req.user.id);
+    const dietPlan = await DietPlan.getActiveDietPlan(req.user.id);
 
     if (!dietPlan) {
       return res.status(404).json({
@@ -233,22 +233,31 @@ const deleteDietPlan = async (req, res) => {
 // Mark meal as completed
 const markMealCompleted = async (req, res) => {
   try {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { mealId, day, week, mealType } = req.body;
-    console.log('🍽️ Marking meal completed:', { mealId, day, week, mealType });
 
-    // For now, we'll just return success since we're storing completion state locally
-    // In a full implementation, you might want to store completion stats in the database
+    if (!mealId || !day || !week || !mealType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: mealId, day, week, mealType'
+      });
+    }
 
-    res.json({
+    const dietPlan = await DietPlan.getActiveDietPlan(userId);
+
+    if (!dietPlan) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active diet plan found'
+      });
+    }
+
+    await dietPlan.markMealCompleted(mealId, day, week, mealType);
+
+    res.status(200).json({
       success: true,
       message: 'Meal marked as completed',
-      data: {
-        mealId,
-        day,
-        week,
-        mealType,
-        completedAt: new Date().toISOString()
-      }
+      data: dietPlan
     });
 
   } catch (error) {
@@ -264,27 +273,38 @@ const markMealCompleted = async (req, res) => {
 // Mark day as completed
 const markDayCompleted = async (req, res) => {
   try {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { day, week } = req.body;
-    console.log('📅 Marking day completed:', { day, week });
 
-    // For now, we'll just return success since we're storing completion state locally
-    // In a full implementation, you might want to store completion stats in the database
+    if (!day || !week) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: day, week'
+      });
+    }
 
-    res.json({
+    const dietPlan = await DietPlan.getActiveDietPlan(userId);
+
+    if (!dietPlan) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active diet plan found'
+      });
+    }
+
+    await dietPlan.markDayCompleted(day, week);
+
+    res.status(200).json({
       success: true,
-      message: 'Day marked as completed',
-      data: {
-        day,
-        week,
-        completedAt: new Date().toISOString()
-      }
+      message: 'Diet day marked as completed',
+      data: dietPlan
     });
 
   } catch (error) {
-    console.error('❌ Error marking day completed:', error);
+    console.error('❌ Error marking diet day completed:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error while marking day completed',
+      message: 'Internal server error while marking diet day completed',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -293,21 +313,31 @@ const markDayCompleted = async (req, res) => {
 // Log water intake
 const logWaterIntake = async (req, res) => {
   try {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { day, week, amount } = req.body;
-    console.log('💧 Logging water intake:', { day, week, amount });
 
-    // For now, we'll just return success since we're storing water intake locally
-    // In a full implementation, you might want to store water intake in the database
+    if (!day || !week || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: day, week, amount'
+      });
+    }
 
-    res.json({
+    const dietPlan = await DietPlan.getActiveDietPlan(userId);
+
+    if (!dietPlan) {
+      return res.status(404).json({
+        success: false,
+        message: 'No active diet plan found'
+      });
+    }
+
+    await dietPlan.logWaterIntake(day, week, amount);
+
+    res.status(200).json({
       success: true,
       message: 'Water intake logged',
-      data: {
-        day,
-        week,
-        amount,
-        loggedAt: new Date().toISOString()
-      }
+      data: dietPlan
     });
 
   } catch (error) {
@@ -325,7 +355,7 @@ const getDietStats = async (req, res) => {
   try {
     console.log('📊 Fetching diet stats for user:', req.user.id);
 
-    const dietPlan = await DietPlan.findActiveByUserId(req.user.id);
+    const dietPlan = await DietPlan.getActiveDietPlan(req.user.id);
 
     if (!dietPlan) {
       return res.status(404).json({
