@@ -35,23 +35,30 @@ export default function WorkoutPlanCard({
             </View>
           </View>
           
-          <View style={styles.workoutList}>
-            {workouts.slice(0, 3).map((workout, index) => (
-              <View key={index} style={styles.workoutItem}>
-                <View style={styles.workoutIcon}>
-                  <Text style={styles.workoutEmoji}>{workout.emoji}</Text>
-                </View>
-                
-                <View style={styles.workoutContent}>
-                  <Text style={styles.workoutName}>{workout.name}</Text>
-                  <View style={styles.workoutDetails}>
-                    <Text style={styles.workoutStats}>{workout.sets} sets × {workout.reps} reps</Text>
-                    <Text style={styles.workoutCalories}>{workout.caloriesBurned} kcal</Text>
+          {workouts.length > 0 ? (
+            <View style={styles.workoutList}>
+              {workouts.slice(0, 3).map((workout, index) => (
+                <View key={index} style={styles.workoutItem}>
+                  <View style={styles.workoutIcon}>
+                    <Ionicons name="fitness" size={16} color={colors.mutedText} />
+                  </View>
+                  
+                  <View style={styles.workoutContent}>
+                    <Text style={styles.workoutName}>{workout.name}</Text>
+                    <View style={styles.workoutDetails}>
+                      <Text style={styles.workoutCalories}>{workout.caloriesBurned} kcal</Text>
+                      <Text style={styles.workoutWeight}>{workout.sets} sets × {workout.reps} reps</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyWorkoutContainer}>
+              <Text style={styles.emptyWorkoutTitle}>No Workout Today</Text>
+              <Text style={styles.emptyWorkoutText}>Rest day or no workout plan generated</Text>
+            </View>
+          )}
           
           {onPress && (
             <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
@@ -125,9 +132,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: spacing.md,
   },
-  workoutEmoji: {
-    fontSize: 18,
-  },
   workoutContent: {
     flex: 1,
   },
@@ -142,12 +146,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  workoutStats: {
+  workoutCalories: {
     color: colors.primary,
     fontSize: typography.small,
     fontWeight: '600',
   },
-  workoutCalories: {
+  workoutWeight: {
     color: colors.mutedText,
     fontSize: typography.small,
   },
@@ -164,5 +168,22 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  emptyWorkoutContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyWorkoutTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+  },
+  emptyWorkoutText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
 });

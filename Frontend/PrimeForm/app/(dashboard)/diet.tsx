@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Modal, ScrollView, Alert, TouchableOpacity, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Modal, ScrollView, Alert, TouchableOpacity, Dimensions, Image, ActivityIndicator } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
@@ -30,6 +30,7 @@ export default function DietScreen() {
   const [dietPlan, setDietPlan] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -75,11 +76,17 @@ export default function DietScreen() {
 
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.all([
-        loadUserInfo(),
-        loadDietPlan()
-      ]);
-      setInitialLoadComplete(true);
+      try {
+        await Promise.all([
+          loadUserInfo(),
+          loadDietPlan()
+        ]);
+      } catch (error) {
+        console.warn('⚠️ Error during initialization:', error);
+      } finally {
+        setIsLoadingPlan(false);
+        setInitialLoadComplete(true);
+      }
     };
     
     initializeData();
@@ -254,11 +261,12 @@ export default function DietScreen() {
 
   // Render content based on user info and diet plan status
   const renderContent = () => {
-    // Show loading only during initial load
-    if (isLoading && !initialLoadComplete) {
+    // Show loading only during initial load or when loading plan
+    if ((isLoading && !initialLoadComplete) || isLoadingPlan) {
       return (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.loadingText}>Loading your diet plan...</Text>
         </View>
       );
     }
@@ -361,7 +369,7 @@ export default function DietScreen() {
 
         <ScrollView 
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
           showsVerticalScrollIndicator={false}
         >
           {renderContent()}
@@ -412,6 +420,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingTop: 0,
+  },
+  contentNoPadding: {
     paddingTop: 0,
   },
   bottomSpacing: {

@@ -556,6 +556,71 @@ class ProgressService {
     }
   }
 
+  // Sync workout progress data
+  async syncWorkoutProgress(data: {
+    completedExercises: string[];
+    completedDays: string[];
+    workoutPlan: any;
+  }): Promise<void> {
+    try {
+      console.log('🔄 Syncing workout progress data...');
+      
+      // Store completion data
+      await Storage.setItem('completed_exercises', JSON.stringify(data.completedExercises));
+      await Storage.setItem('completed_workout_days', JSON.stringify(data.completedDays));
+      
+      // Calculate and store workout statistics
+      const totalExercises = data.workoutPlan?.weeklyPlan?.reduce((total: number, day: any) => 
+        total + (day.exercises?.length || 0), 0) || 0;
+      
+      const workoutStats = {
+        totalWorkouts: totalExercises,
+        completedWorkouts: data.completedExercises.length,
+        completedDays: data.completedDays.length,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await Storage.setItem('workout_stats', JSON.stringify(workoutStats));
+      console.log('✅ Workout progress synced successfully');
+    } catch (error) {
+      console.error('❌ Error syncing workout progress:', error);
+    }
+  }
+
+  // Sync diet progress data
+  async syncDietProgress(data: {
+    completedMeals: string[];
+    completedDays: string[];
+    dietPlan: any;
+    waterIntake: { [key: string]: number };
+  }): Promise<void> {
+    try {
+      console.log('🔄 Syncing diet progress data...');
+      
+      // Store completion data
+      await Storage.setItem('completed_meals', JSON.stringify(data.completedMeals));
+      await Storage.setItem('completed_diet_days', JSON.stringify(data.completedDays));
+      await Storage.setItem('water_intake', JSON.stringify(data.waterIntake));
+      
+      // Calculate and store diet statistics
+      const totalMeals = data.dietPlan?.weeklyPlan?.reduce((total: number, day: any) => 
+        total + 3 + (day.meals?.snacks?.length || 0), 0) || 0; // 3 main meals + snacks
+      
+      const dietStats = {
+        totalMeals: totalMeals,
+        completedMeals: data.completedMeals.length,
+        completedDays: data.completedDays.length,
+        waterIntake: data.waterIntake,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await Storage.setItem('diet_stats', JSON.stringify(dietStats));
+      console.log('✅ Diet progress synced successfully');
+    } catch (error) {
+      console.error('❌ Error syncing diet progress:', error);
+    }
+  }
+
   // Clear all progress data
   async clearProgressData(): Promise<void> {
     try {
@@ -564,6 +629,8 @@ class ProgressService {
       await Storage.removeItem('completed_workout_days');
       await Storage.removeItem('completed_diet_days');
       await Storage.removeItem('water_intake');
+      await Storage.removeItem('workout_stats');
+      await Storage.removeItem('diet_stats');
       console.log('🗑️ Progress data cleared');
     } catch (error) {
       console.error('❌ Error clearing progress data:', error);

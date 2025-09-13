@@ -13,6 +13,7 @@ import workoutPlanService from '../services/workoutPlanService';
 import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
+import DecorativeBackground from './DecorativeBackground';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -51,7 +52,17 @@ export default function WorkoutPlanDisplay({
     const today = new Date();
     const startDate = new Date(workoutPlan.startDate);
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(1, Math.min(Math.floor(daysDiff / 7) + 1, getTotalWeeks()));
+    const calculatedWeek = Math.floor(daysDiff / 7) + 1;
+    
+    // Check if we have completed weeks based on actual completion data
+    const completedWeeksCount = Math.floor(completedDays.size / 7);
+    const currentWeekBasedOnCompletion = completedWeeksCount + 1;
+    
+    // Use the higher of calculated week or completion-based week
+    // This ensures we progress to next week when current week is completed
+    const finalWeek = Math.max(calculatedWeek, currentWeekBasedOnCompletion);
+    
+    return Math.max(1, Math.min(finalWeek, getTotalWeeks()));
   };
 
   const getTotalWeeks = (): number => {
@@ -75,6 +86,13 @@ export default function WorkoutPlanDisplay({
     const startDate = new Date(workoutPlan.startDate);
     const weekStartDate = new Date(startDate);
     weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
+
+    console.log('📅 Workout Calendar Debug:', {
+      currentWeek,
+      completedDaysCount: completedDays.size,
+      completedWeeksCount: Math.floor(completedDays.size / 7),
+      weekStartDate: weekStartDate.toISOString().split('T')[0]
+    });
 
     return workoutPlan.weeklyPlan.map((day, index) => ({
       ...day,
@@ -199,12 +217,21 @@ export default function WorkoutPlanDisplay({
       const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
       const completionPercentage = (completedExercisesCount / dayExercises.length) * 100;
 
-      // If 50% or more completed, consider it completed, otherwise missed
-      return completionPercentage >= 50 ? 'completed' : 'missed';
+      // If 60% or more completed, consider it completed, otherwise missed
+      return completionPercentage >= 60 ? 'completed' : 'missed';
     }
 
     // Future days
     return 'upcoming';
+  };
+
+  // Get completion percentage for a specific day
+  const getDayCompletionPercentage = (day: WorkoutDay): number => {
+    if (day.isRestDay) return 100; // Rest days are always 100% complete
+    
+    const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
+    const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
+    return Math.round((completedExercisesCount / dayExercises.length) * 100);
   };
 
   const isCurrentDay = (day: WorkoutDay): boolean => {
@@ -245,6 +272,9 @@ export default function WorkoutPlanDisplay({
       // Mark exercise as completed in database
       await workoutPlanService.markExerciseCompleted(exerciseId, selectedDay.day, week);
 
+      // Sync with progress service
+      await syncProgressData();
+
       // Check if all exercises for the day are completed
       const allExercisesCompleted = selectedDay.exercises.every(ex =>
         newCompletedExercises.has(`${selectedDay.date}-${ex.name}`)
@@ -272,6 +302,21 @@ export default function WorkoutPlanDisplay({
     }
   };
 
+  // Sync progress data with progress service
+  const syncProgressData = async () => {
+    try {
+      const progressService = await import('../services/progressService');
+      // @ts-ignore - syncWorkoutProgress method exists but TypeScript doesn't recognize it
+      await progressService.default.syncWorkoutProgress({
+        completedExercises: Array.from(completedExercises),
+        completedDays: Array.from(completedDays),
+        workoutPlan: workoutPlan
+      });
+    } catch (error) {
+      console.warn('Failed to sync workout progress:', error);
+    }
+  };
+
   const handleDayPress = (day: WorkoutDay) => {
     setSelectedDay(day);
     onDayPress?.(day);
@@ -293,7 +338,8 @@ export default function WorkoutPlanDisplay({
 
 
   return (
-    <View style={styles.container}>
+    <DecorativeBackground>
+      <View style={styles.container}>
       {/* Hero Header Section - Extraordinary redesign */}
       <View style={styles.heroSection}>
         <View style={styles.heroBackground}>
@@ -368,15 +414,19 @@ export default function WorkoutPlanDisplay({
                 status === 'missed' && styles.premiumStatusBadgeMissed,
                 status === 'rest' && styles.premiumStatusBadgeRest,
                 ]}>
-                  <Text style={[styles.premiumStatusIcon,
-                  status === 'in_progress' && styles.premiumStatusIconProgress,
-                  status === 'completed' && styles.premiumStatusIconCompleted,
-                  ]}>
-                    {status === 'in_progress' ? '🔥' :
-                      status === 'completed' ? '✓' :
-                        status === 'missed' ? '✗' :
-                          status === 'rest' ? '🏃‍♂️' : '📅'}
-                  </Text>
+                  {status === 'rest' ? (
+                    <Text style={styles.premiumStatusIcon}>🏃‍♂️</Text>
+                  ) : status === 'upcoming' ? (
+                    <Text style={styles.premiumStatusIcon}>📅</Text>
+                  ) : (
+                    <Text style={[styles.premiumStatusPercentage,
+                      status === 'completed' && styles.premiumStatusPercentageCompleted,
+                      status === 'missed' && styles.premiumStatusPercentageMissed,
+                      status === 'in_progress' && styles.premiumStatusPercentageProgress,
+                    ]}>
+                      {getDayCompletionPercentage(day)}%
+                    </Text>
+                  )}
                 </View>
 
                 {/* Day Info */}
@@ -611,14 +661,15 @@ export default function WorkoutPlanDisplay({
           completedExercises.has(`${selectedDay.date}-${selectedExercise.name}`) : false}
         canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
       />
-    </View>
+      </View>
+    </DecorativeBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    width: '100%',
   },
 
   // Hero Section - Extraordinary Design
@@ -933,6 +984,21 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: '900',
+  },
+  premiumStatusPercentage: {
+    color: colors.error,
+    fontSize: 12,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+  },
+  premiumStatusPercentageCompleted: {
+    color: colors.white,
+  },
+  premiumStatusPercentageMissed: {
+    color: colors.error,
+  },
+  premiumStatusPercentageProgress: {
+    color: colors.primary,
   },
 
   // Day Info Section
