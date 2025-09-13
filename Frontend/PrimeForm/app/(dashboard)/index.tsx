@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -86,6 +86,8 @@ export default function DashboardScreen() {
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [waterIntake, setWaterIntake] = useState<number>(0);
   const [targetWater, setTargetWater] = useState<number>(2000);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [plansLoaded, setPlansLoaded] = useState(false);
   const { showToast } = useToast();
 
   // Load dynamic data on mount and when user info changes
@@ -434,8 +436,16 @@ export default function DashboardScreen() {
   // Load dynamic data
   const loadDynamicData = async () => {
     try {
-      // Load diet plan
-      const dietPlanData = await aiDietService.loadDietPlanFromDatabase();
+      setIsLoadingPlans(true);
+      setPlansLoaded(false);
+      
+      // Load both plans in parallel to ensure consistent loading
+      const [dietPlanData, workoutPlanData] = await Promise.all([
+        aiDietService.loadDietPlanFromDatabase(),
+        aiWorkoutService.loadWorkoutPlanFromDatabase()
+      ]);
+
+      // Process diet plan
       if (dietPlanData) {
         setDietPlan(dietPlanData);
         
@@ -462,8 +472,7 @@ export default function DashboardScreen() {
         }
       }
 
-      // Load workout plan
-      const workoutPlanData = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      // Process workout plan
       if (workoutPlanData) {
         setWorkoutPlan(workoutPlanData);
         
@@ -490,8 +499,13 @@ export default function DashboardScreen() {
 
       // Load completion states
       await loadCompletionStates();
+      
+      // Mark plans as loaded
+      setPlansLoaded(true);
     } catch (error) {
       console.error('Failed to load dynamic data:', error);
+    } finally {
+      setIsLoadingPlans(false);
     }
   };
 
@@ -789,35 +803,40 @@ export default function DashboardScreen() {
             delay={200}
           />
 
-          {/* Today's Workout Plan */}
-          {todayWorkouts.length > 0 ? (
-            <WorkoutPlanCard
-              title="Today's AI Workout Plan"
-              workouts={todayWorkouts}
-              onPress={() => handleFeatureAccess('AI Workout')}
-              delay={300}
-            />
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardTitle}>No Workout Today</Text>
-              <Text style={styles.emptyCardText}>Rest day or no workout plan generated</Text>
-            </View>
-          )}
-
           {/* Today's Meal Plan */}
-          {todayMeals.length > 0 ? (
+          {isLoadingPlans ? (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator color={colors.primary} size="large" />
+              <Text style={styles.loadingCardText}>Loading your meal plan...</Text>
+            </View>
+          ) : todayMeals.length > 0 ? (
             <MealPlanCard
               title="Today's AI Meal Plan"
               meals={todayMeals}
               totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
               onPress={() => handleFeatureAccess('AI Diet')}
-              delay={400}
+              delay={300}
             />
           ) : (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyCardTitle}>No Meal Plan Today</Text>
               <Text style={styles.emptyCardText}>Generate a diet plan to see today's meals</Text>
             </View>
+          )}
+
+          {/* Today's Workout Plan */}
+          {isLoadingPlans ? (
+            <View style={styles.loadingCard}>
+              <ActivityIndicator color={colors.primary} size="large" />
+              <Text style={styles.loadingCardText}>Loading your workout plan...</Text>
+            </View>
+          ) : (
+            <WorkoutPlanCard
+              title="Today's AI Workout Plan"
+              workouts={todayWorkouts}
+              onPress={() => handleFeatureAccess('AI Workout')}
+              delay={400}
+            />
           )}
 
           {/* Water Intake Section */}
@@ -1064,5 +1083,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+  loadingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 120,
+  },
+  loadingCardText: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginTop: spacing.md,
+    textAlign: 'center',
   },
 });
