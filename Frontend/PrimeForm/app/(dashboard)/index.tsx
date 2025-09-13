@@ -8,6 +8,10 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import userProfileService from '../../src/services/userProfileService';
 import { authService } from '../../src/services/authService';
+import aiDietService from '../../src/services/aiDietService';
+import aiWorkoutService from '../../src/services/aiWorkoutService';
+import dietPlanService from '../../src/services/dietPlanService';
+import workoutPlanService from '../../src/services/workoutPlanService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
@@ -74,7 +78,22 @@ export default function DashboardScreen() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [currentFeature, setCurrentFeature] = useState<string>('');
   const [hasCompletedSignup, setHasCompletedSignup] = useState<boolean>(false);
+  const [dietPlan, setDietPlan] = useState<any>(null);
+  const [workoutPlan, setWorkoutPlan] = useState<any>(null);
+  const [todayMeals, setTodayMeals] = useState<any[]>([]);
+  const [todayWorkouts, setTodayWorkouts] = useState<any[]>([]);
+  const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
+  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
+  const [waterIntake, setWaterIntake] = useState<number>(0);
+  const [targetWater, setTargetWater] = useState<number>(2000);
   const { showToast } = useToast();
+
+  // Load dynamic data on mount and when user info changes
+  useEffect(() => {
+    if (isAuthenticated || hasCompletedSignup) {
+      loadDynamicData();
+    }
+  }, [isAuthenticated, hasCompletedSignup]);
 
   // Check app state on mount
   useEffect(() => {
@@ -412,13 +431,124 @@ export default function DashboardScreen() {
     }
   };
 
-  // Mock data for demonstration
-  const mockStats = [
-    { label: t('dashboard.stats.calories'), value: '1,200', icon: 'flame' as const, color: colors.gold },
-    { label: t('dashboard.stats.water'), value: '2.1', unit: 'L', icon: 'water' as const, color: colors.blue },
-    { label: t('dashboard.stats.workouts'), value: '2', icon: 'barbell' as const, color: colors.green },
-    { label: t('dashboard.stats.steps'), value: '8,500', icon: 'walk' as const, color: colors.purple },
-  ];
+  // Load dynamic data
+  const loadDynamicData = async () => {
+    try {
+      // Load diet plan
+      const dietPlanData = await aiDietService.loadDietPlanFromDatabase();
+      if (dietPlanData) {
+        setDietPlan(dietPlanData);
+        
+        // Get today's meals
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        const todayMealData = dietPlanData.weeklyPlan.find((day: any) => 
+          new Date(day.date).toISOString().split('T')[0] === todayString
+        );
+        
+        if (todayMealData) {
+          const meals = [
+            { name: `🌅 ${todayMealData.meals.breakfast.name}`, calories: todayMealData.meals.breakfast.calories, weight: '200g' },
+            { name: `🌞 ${todayMealData.meals.lunch.name}`, calories: todayMealData.meals.lunch.calories, weight: '400g' },
+            { name: `🌙 ${todayMealData.meals.dinner.name}`, calories: todayMealData.meals.dinner.calories, weight: '500g' },
+            ...todayMealData.meals.snacks.map((snack: any, index: number) => ({
+              name: `🍎 Snack ${index + 1}: ${snack.name}`,
+              calories: snack.calories,
+              weight: '100g'
+            }))
+          ];
+          setTodayMeals(meals);
+          setTargetWater(Number(todayMealData.waterIntake) || 2000);
+        }
+      }
+
+      // Load workout plan
+      const workoutPlanData = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      if (workoutPlanData) {
+        setWorkoutPlan(workoutPlanData);
+        
+        // Get today's workout
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        const todayWorkoutData = workoutPlanData.weeklyPlan.find((day: any) => 
+          new Date(day.date).toISOString().split('T')[0] === todayString
+        );
+        
+        if (todayWorkoutData && !todayWorkoutData.isRestDay) {
+          const workouts = todayWorkoutData.exercises.map((exercise: any) => ({
+            name: exercise.name,
+            emoji: exercise.emoji,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            rest: exercise.rest,
+            targetMuscles: exercise.targetMuscles,
+            caloriesBurned: exercise.caloriesBurned
+          }));
+          setTodayWorkouts(workouts);
+        }
+      }
+
+      // Load completion states
+      await loadCompletionStates();
+    } catch (error) {
+      console.error('Failed to load dynamic data:', error);
+    }
+  };
+
+  const loadCompletionStates = async () => {
+    try {
+      // Load completed meals
+      const completedMealsData = await AsyncStorage.getItem('completed_meals');
+      if (completedMealsData) {
+        setCompletedMeals(new Set(JSON.parse(completedMealsData)));
+      }
+
+      // Load completed exercises
+      const completedExercisesData = await AsyncStorage.getItem('completed_exercises');
+      if (completedExercisesData) {
+        setCompletedExercises(new Set(JSON.parse(completedExercisesData)));
+      }
+
+      // Load water intake
+      const waterData = await AsyncStorage.getItem('water_intake');
+      if (waterData) {
+        const waterObj = JSON.parse(waterData);
+        const today = new Date().toISOString().split('T')[0];
+        setWaterIntake(waterObj[today] || 0);
+      }
+    } catch (error) {
+      console.error('Failed to load completion states:', error);
+    }
+  };
+
+  // Dynamic stats based on real data
+  const getDynamicStats = () => {
+    const totalCalories = todayMeals.reduce((sum, meal) => sum + meal.calories, 0);
+    const consumedCalories = todayMeals.filter(meal => 
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-breakfast-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-lunch-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-dinner-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-snack-${meal.name}`)
+    ).reduce((sum, meal) => sum + meal.calories, 0);
+    
+    const remainingCalories = Math.max(0, totalCalories - consumedCalories);
+    const completedWorkouts = todayWorkouts.filter(workout => 
+      completedExercises.has(`${new Date().toISOString().split('T')[0]}-${workout.name}`)
+    ).length;
+    const remainingMeals = todayMeals.length - todayMeals.filter(meal => 
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-breakfast-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-lunch-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-dinner-${meal.name}`) ||
+      completedMeals.has(`${new Date().toISOString().split('T')[0]}-snack-${meal.name}`)
+    ).length;
+
+    return [
+      { label: t('dashboard.stats.calories'), value: remainingCalories.toLocaleString(), icon: 'flame' as const, color: colors.gold },
+      { label: t('dashboard.stats.water'), value: (waterIntake / 1000).toFixed(1), unit: 'L', icon: 'water' as const, color: colors.blue },
+      { label: t('dashboard.stats.workouts'), value: (todayWorkouts.length - completedWorkouts).toString(), icon: 'barbell' as const, color: colors.green },
+      { label: 'Meals Remaining', value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
+    ];
+  };
 
   const mockWorkouts = [
     { name: `💪 ${transliterateText('Push-Ups')}`, sets: '3x12', reps: `12 ${t('workout.reps')}`, weight: '' },
@@ -561,6 +691,32 @@ export default function DashboardScreen() {
     router.push('/auth/signup');
   };
 
+  const handleWaterIntake = async (amount: number) => {
+    try {
+      const newWaterIntake = waterIntake + amount;
+      setWaterIntake(newWaterIntake);
+      
+      // Save to local storage
+      const today = new Date().toISOString().split('T')[0];
+      const waterData = await AsyncStorage.getItem('water_intake');
+      const waterObj = waterData ? JSON.parse(waterData) : {};
+      waterObj[today] = newWaterIntake;
+      await AsyncStorage.setItem('water_intake', JSON.stringify(waterObj));
+      
+      // Save to database if diet plan exists
+      if (dietPlan) {
+        const today = new Date();
+        const week = Math.ceil(today.getDate() / 7);
+        await dietPlanService.logWaterIntake(today.getDate(), week, newWaterIntake);
+      }
+      
+      showToast('success', `Added ${amount}ml water!`);
+    } catch (error) {
+      console.error('Failed to log water intake:', error);
+      showToast('error', 'Failed to log water intake');
+    }
+  };
+
   // Function to reset signup completion status
   const resetSignupStatus = async () => {
     try {
@@ -629,26 +785,63 @@ export default function DashboardScreen() {
           {/* Stats Overview */}
           <StatsCard 
             title={t('dashboard.overview')}
-            stats={mockStats}
+            stats={getDynamicStats()}
             delay={200}
           />
 
           {/* Today's Workout Plan */}
-          <WorkoutPlanCard
-            title={t('dashboard.workout.plan')}
-            workouts={mockWorkouts}
-            onPress={() => handleFeatureAccess('AI Workout')}
-            delay={300}
-          />
+          {todayWorkouts.length > 0 ? (
+            <WorkoutPlanCard
+              title="Today's AI Workout Plan"
+              workouts={todayWorkouts}
+              onPress={() => handleFeatureAccess('AI Workout')}
+              delay={300}
+            />
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyCardTitle}>No Workout Today</Text>
+              <Text style={styles.emptyCardText}>Rest day or no workout plan generated</Text>
+            </View>
+          )}
 
           {/* Today's Meal Plan */}
-          <MealPlanCard
-            title={t('dashboard.meal.plan')}
-            meals={mockMeals}
-            totalCalories={1500}
-            onPress={() => handleFeatureAccess('AI Diet')}
-            delay={400}
-          />
+          {todayMeals.length > 0 ? (
+            <MealPlanCard
+              title="Today's AI Meal Plan"
+              meals={todayMeals}
+              totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+              onPress={() => handleFeatureAccess('AI Diet')}
+              delay={400}
+            />
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyCardTitle}>No Meal Plan Today</Text>
+              <Text style={styles.emptyCardText}>Generate a diet plan to see today's meals</Text>
+            </View>
+          )}
+
+          {/* Water Intake Section */}
+          <View style={styles.waterSection}>
+            <Text style={styles.waterTitle}>💧 Water Intake</Text>
+            <Text style={styles.waterTarget}>Target: {targetWater}ml</Text>
+            <View style={styles.waterProgress}>
+              <View style={styles.waterProgressBar}>
+                <View style={[styles.waterProgressFill, { width: `${Math.min(100, (waterIntake / targetWater) * 100)}%` }]} />
+              </View>
+              <Text style={styles.waterProgressText}>{waterIntake}ml / {targetWater}ml</Text>
+            </View>
+            <View style={styles.waterButtons}>
+              {[250, 500, 750, 1000].map(amount => (
+                <TouchableOpacity
+                  key={amount}
+                  style={styles.waterButton}
+                  onPress={() => handleWaterIntake(amount)}
+                >
+                  <Text style={styles.waterButtonText}>+{amount}ml</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
           {/* Extra spacing for bottom navigation */}
           <View style={styles.bottomSpacing} />
@@ -782,14 +975,94 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100, // Space for bottom navigation
   },
-  // Removed permissionOverlay styles
-  // Removed permissionModal styles
-  // Removed permissionHeader styles
-  // Removed permissionTitle styles
-  // Removed permissionSubtitle styles
-  // Removed permissionButtons styles
-  // Removed permissionStartButton styles
-  // Removed permissionStartButtonText styles
-  // Removed permissionCancelButton styles
-  // Removed permissionCancelButtonText styles
+  
+  // Empty Card Styles
+  emptyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+  },
+  emptyCardTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+  },
+  emptyCardText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+
+  // Water Section Styles
+  waterSection: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  waterTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  waterTarget: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginBottom: spacing.md,
+  },
+  waterProgress: {
+    marginBottom: spacing.md,
+  },
+  waterProgressBar: {
+    height: 8,
+    backgroundColor: colors.cardBorder + '30',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  waterProgressFill: {
+    height: '100%',
+    backgroundColor: colors.blue,
+    borderRadius: 4,
+  },
+  waterProgressText: {
+    color: colors.blue,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+  waterButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.xs,
+  },
+  waterButton: {
+    flex: 1,
+    backgroundColor: colors.blue + '20',
+    borderRadius: 12,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.blue + '30',
+  },
+  waterButtonText: {
+    color: colors.blue,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
 });
