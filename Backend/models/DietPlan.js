@@ -178,6 +178,43 @@ const dietPlanSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  completedMeals: [{
+    mealId: String,
+    completedAt: Date,
+    day: Number,
+    week: Number,
+    mealType: String
+  }],
+  completedDays: [{
+    day: Number,
+    week: Number,
+    completedAt: Date
+  }],
+  waterIntakeLog: [{
+    day: Number,
+    week: Number,
+    amount: Number,
+    loggedAt: Date
+  }],
+  // AI generation metadata
+  aiModel: {
+    type: String,
+    default: 'deepseek/deepseek-r1-0528'
+  },
+  generationTime: {
+    type: Number, // in milliseconds
+    default: 0
+  },
+  userProfileSnapshot: {
+    age: Number,
+    gender: String,
+    height: Number,
+    currentWeight: Number,
+    bodyGoal: String,
+    targetWeight: Number,
+    dietPreference: String,
+    medicalConditions: String
   }
 }, {
   timestamps: true
@@ -186,6 +223,7 @@ const dietPlanSchema = new mongoose.Schema({
 // Indexes for better performance
 dietPlanSchema.index({ userId: 1, isActive: 1 });
 dietPlanSchema.index({ createdAt: -1 });
+dietPlanSchema.index({ 'completedMeals.mealId': 1 });
 
 // Instance methods
 dietPlanSchema.methods.toJSON = function() {
@@ -210,6 +248,80 @@ dietPlanSchema.statics.deactivateUserPlans = function(userId) {
     { userId: userId },
     { $set: { isActive: false } }
   );
+};
+
+// Virtual for progress calculation
+dietPlanSchema.virtual('progress').get(function() {
+  const totalDays = this.weeklyPlan.length;
+  const completedDaysCount = this.completedDays.length;
+  return totalDays > 0 ? (completedDaysCount / totalDays) * 100 : 0;
+});
+
+// Method to mark meal as completed
+dietPlanSchema.methods.markMealCompleted = function(mealId, day, week, mealType) {
+  const existingIndex = this.completedMeals.findIndex(
+    meal => meal.mealId === mealId && meal.day === day && meal.week === week
+  );
+  
+  if (existingIndex === -1) {
+    this.completedMeals.push({
+      mealId,
+      completedAt: new Date(),
+      day,
+      week,
+      mealType
+    });
+  }
+  
+  return this.save();
+};
+
+// Method to mark day as completed
+dietPlanSchema.methods.markDayCompleted = function(day, week) {
+  const existingIndex = this.completedDays.findIndex(
+    d => d.day === day && d.week === week
+  );
+  
+  if (existingIndex === -1) {
+    this.completedDays.push({
+      day,
+      week,
+      completedAt: new Date()
+    });
+  }
+  
+  return this.save();
+};
+
+// Method to log water intake
+dietPlanSchema.methods.logWaterIntake = function(day, week, amount) {
+  this.waterIntakeLog.push({
+    day,
+    week,
+    amount,
+    loggedAt: new Date()
+  });
+  
+  return this.save();
+};
+
+// Method to check if meal is completed
+dietPlanSchema.methods.isMealCompleted = function(mealId, day, week) {
+  return this.completedMeals.some(
+    meal => meal.mealId === mealId && meal.day === day && meal.week === week
+  );
+};
+
+// Method to check if day is completed
+dietPlanSchema.methods.isDayCompleted = function(day, week) {
+  return this.completedDays.some(
+    d => d.day === day && d.week === week
+  );
+};
+
+// Static method to get active diet plan for user
+dietPlanSchema.statics.getActiveDietPlan = function(userId) {
+  return this.findOne({ userId, isActive: true }).sort({ createdAt: -1 });
 };
 
 // Pre-save middleware
