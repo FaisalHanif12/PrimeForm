@@ -12,6 +12,10 @@ const connectDB = async () => {
     console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
+    console.log('⚠️  Server will continue running without database connection');
+    console.log('💡 Please check your MongoDB Atlas IP whitelist and network connection');
+    // Don't exit process - let server run without DB for now
+  }
 };
 
 // Handle connection events

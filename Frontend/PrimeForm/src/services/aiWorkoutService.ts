@@ -49,51 +49,52 @@ export interface AIWorkoutResponse {
 class AIWorkoutService {
   private generatePrompt(userProfile: UserProfile): string {
     const prompt = `
-You are a certified and professional fitness trainer.  
-Generate a safe, motivating, and structured **7-day workout plan** based on the following profile:
+You are a world-class certified fitness trainer with 15+ years of experience in highly personalized training programs.  
+Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** based on this EXACT user profile:
 
-### Profile
-- Age: ${userProfile.age}  
-- Gender: ${userProfile.gender}  
-- Height: ${userProfile.height}  
-- Current Weight: ${userProfile.currentWeight}  
-- Goal: ${userProfile.bodyGoal}  
-- Equipment: ${userProfile.availableEquipment}  
-- Health Considerations: ${userProfile.medicalConditions || 'None'}  
+### CRITICAL USER ANALYSIS
+- Age: ${userProfile.age} years (${userProfile.age < 25 ? 'Young adult - higher recovery, can handle intense training' : userProfile.age < 40 ? 'Adult - balanced approach, moderate recovery' : userProfile.age < 55 ? 'Middle-aged - focus on joint health, longer recovery' : 'Mature - emphasize mobility, low-impact exercises'})
+- Gender: ${userProfile.gender} (${userProfile.gender === 'Male' ? 'Typically higher muscle mass, focus on strength' : 'Often better flexibility, may need more upper body focus'})
+- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg → ${userProfile.targetWeight} kg
+- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - BALANCED APPROACH' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 'OBESE - LOW-IMPACT, GRADUAL PROGRESSION'})
+- PRIMARY GOAL: ${userProfile.bodyGoal} (THIS IS THE #1 PRIORITY - EVERY EXERCISE MUST ALIGN WITH THIS GOAL)
+- Fitness Level: Beginner (START SLOW, FOCUS ON FORM, BASIC MOVEMENTS)
+- Available Equipment: ${userProfile.availableEquipment} (STRICTLY USE ONLY THESE TOOLS - NO EXCEPTIONS)
+- Occupation: ${userProfile.occupationType} (${userProfile.occupationType?.includes('Desk') ? 'SEDENTARY - EMPHASIZE POSTURE, MOBILITY' : userProfile.occupationType?.includes('Active') ? 'ALREADY ACTIVE - COMPLEMENT WITH DIFFERENT MOVEMENTS' : 'ADAPT TO WORK SCHEDULE'})
+- Medical Conditions: ${userProfile.medicalConditions || 'None'} (${userProfile.medicalConditions ? 'CRITICAL - MODIFY ALL EXERCISES FOR SAFETY' : 'NO RESTRICTIONS - FULL INTENSITY ALLOWED'})
 
-### Requirements
-1. First, analyze the profile (goal + health + equipment).  
-   - If goal = **Muscle Gain** → Recommend **3–6 months** duration (depending on condition).  
-   - If goal = **Fat Loss** → Recommend **3–6 months** duration.  
+### STRICT PERSONALIZATION RULES
+1. **EQUIPMENT CONSTRAINT**: Use ONLY equipment listed in availableEquipment. If "No Equipment" - bodyweight only!
+2. **GOAL ALIGNMENT**: Every exercise must directly support the bodyGoal (${userProfile.bodyGoal})
+3. **FITNESS LEVEL RESPECT**: Beginner means specific rep/set ranges and exercise complexity
+4. **AGE APPROPRIATE**: ${userProfile.age} years requires specific recovery times and exercise selection
+5. **MEDICAL SAFETY**: ${userProfile.medicalConditions ? 'MANDATORY modifications for medical conditions' : 'No medical restrictions'}
+
+### MANDATORY STRUCTURE REQUIREMENTS
+1. First, analyze the profile (goal + health + equipment + age).  
+   - If goal = **Muscle Gain** → Recommend **3–6-9 months** duration (depending on condition).  
+   - If goal = **Fat Loss** → Recommend **3–6-9 months** duration.  
    - If goal = **General Fitness/Endurance/Training** → Recommend a **long-term plan** (6–12 months).  
    - Clearly show the chosen duration in the output.  
 
-2. Equipment Adaptation:  
+2. Equipment Adaptation - CRITICAL:  
    - If user has **full gym access** → use gym-based exercises.  
    - If user has **home/no equipment** → provide only bodyweight or home-friendly exercises.  
+   - NEVER suggest equipment the user doesn't have!
 
 3. The 7-day plan must include:  
-   - **6 workout days** + **1 active recovery day (running, yoga, or light cardio)**.  
-   - Each workout day should have a **different focus** (Full Body, Upper, Lower, Core/Cardio, Circuit, etc.).  
-   - For each exercise, list:  
-     - **Name**  
-     - **Sets × Reps**  
-     - **Rest (seconds)**  
-     - **Target Muscles**  
-     - **Calories Burned (estimate)**
+   - **6 workout days** + **1 active recovery day** perfectly tailored to this user.  
+   - Each workout day should have a **different focus** based on user's specific goal.  
+   - For each exercise, provide EXACT details for this user's profile.
 
-4. Always include:  
-   - **Warm-up** (5–10 mins light cardio/dynamic stretching).  
-   - **Cool-down** (5–10 mins static stretching).  
+4. Always include personalized warm-up and cool-down for this user's age and condition.
 
-5. **IMPORTANT: Make this BEGINNER-FRIENDLY**:
-   - Start with basic exercises and lighter intensity
-   - Use bodyweight exercises when possible for beginners
-   - Progress gradually over weeks for tougher excercise
-   - Include modifications for different fitness levels
-   - Keep rest periods appropriate for beginners (60-90s)
+5. **PERSONALIZATION BASED ON FITNESS LEVEL**:
+   - If BEGINNER: Start with basic exercises, lighter intensity, longer rest periods (60-90s)
+   - If INTERMEDIATE: Moderate intensity, compound movements, standard rest (45-75s)  
+   - If ADVANCED: High intensity, complex movements, shorter rest (30-60s)
 
-6. Tone should be **encouraging, motivating, and easy to follow for beginners**.
+6. Tone should be **encouraging and specifically motivating for this user's goal and situation**.
 
 7. Output format (must follow exactly):  
 

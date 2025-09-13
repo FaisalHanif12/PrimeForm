@@ -29,6 +29,7 @@ export default function DietScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [dietPlan, setDietPlan] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -73,8 +74,15 @@ export default function DietScreen() {
   };
 
   useEffect(() => {
-    loadUserInfo();
-    loadDietPlan();
+    const initializeData = async () => {
+      await Promise.all([
+        loadUserInfo(),
+        loadDietPlan()
+      ]);
+      setInitialLoadComplete(true);
+    };
+    
+    initializeData();
   }, []);
 
   const handleProfilePress = () => {
@@ -246,7 +254,8 @@ export default function DietScreen() {
 
   // Render content based on user info and diet plan status
   const renderContent = () => {
-    if (isLoading) {
+    // Show loading only during initial load
+    if (isLoading && !initialLoadComplete) {
       return (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading...</Text>
@@ -254,8 +263,8 @@ export default function DietScreen() {
       );
     }
 
-    // If user has diet plan, show the diet plan display
-    if (dietPlan && userInfo) {
+    // If user has diet plan, show the diet plan display immediately
+    if (dietPlan && userInfo && initialLoadComplete) {
       return (
         <DietPlanDisplay
           dietPlan={dietPlan}
