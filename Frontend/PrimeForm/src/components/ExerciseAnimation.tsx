@@ -6,7 +6,7 @@ import { colors, spacing, fonts } from '../theme/colors';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Import the Lottie animation
-const pushupAnimation = require('../../assets/animations/Pushup.json');
+const pushupAnimation = require('../../assets/animations/Home/Pushup.json');
 
 interface ExerciseAnimationProps {
   exerciseType: string;
