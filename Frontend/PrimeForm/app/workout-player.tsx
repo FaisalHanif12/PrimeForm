@@ -19,6 +19,7 @@ import { useToast } from '../src/context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
+import ExerciseAnimation from '../src/components/ExerciseAnimation';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -65,7 +66,8 @@ export default function WorkoutPlayerScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
 
-  const timerRef = useRef<NodeJS.Timeout>();
+
+  const timerRef = useRef<number | null>(null);
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
 
   const animationUrl = getLottieAnimation(exerciseId);
@@ -250,18 +252,16 @@ export default function WorkoutPlayerScreen() {
         </Animated.View>
 
         <View style={styles.container}>
-          {/* Lottie Animation */}
+          {/* Exercise Animation - Bigger and More Elegant */}
           <Animated.View 
             entering={ZoomIn} 
             style={styles.animationContainer}
           >
             <View style={styles.animationWrapper}>
-              <LottieView
-                source={{ uri: animationUrl }}
-                autoPlay={currentPhase === 'workout' && isPlaying && !isPaused}
-                loop={currentPhase === 'workout'}
+              <ExerciseAnimation
+                exerciseType={exerciseName}
+                isVisible={currentPhase === 'workout' || exerciseName.toLowerCase().includes('push')}
                 style={styles.lottieAnimation}
-                resizeMode="contain"
               />
               {currentPhase === 'prepare' && (
                 <View style={styles.prepareOverlay}>
@@ -271,16 +271,19 @@ export default function WorkoutPlayerScreen() {
             </View>
           </Animated.View>
 
-          {/* Timer Section */}
+          {/* Compact Timer Section */}
           <Animated.View entering={SlideInUp.delay(200)} style={styles.timerSection}>
             <LinearGradient
               colors={phaseInfo.color as [string, string]}
               style={styles.timerGradient}
             >
               <RNAnimated.View style={[styles.timerContent, { transform: [{ scale: pulseAnim }] }]}>
-                <Text style={styles.phaseEmoji}>{phaseInfo.emoji}</Text>
-                <Text style={styles.phaseTitle}>{phaseInfo.title}</Text>
-                <Text style={styles.phaseSubtitle}>{phaseInfo.subtitle}</Text>
+                <View style={styles.timerHeader}>
+                  <View style={styles.timerTextContainer}>
+                    <Text style={styles.phaseTitle}>{phaseInfo.title}</Text>
+                    <Text style={styles.phaseSubtitle}>{phaseInfo.subtitle}</Text>
+                  </View>
+                </View>
                 <Text style={styles.timerTime}>{formatTime(timeRemaining)}</Text>
               </RNAnimated.View>
             </LinearGradient>
@@ -394,9 +397,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
+    marginTop: spacing.md,
   },
   backButton: {
     width: 40,
@@ -424,26 +429,34 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   
-  // Animation Section
+  // Animation Section - Reduced size for better footer visibility
   animationContainer: {
-    flex: 1,
-    marginBottom: spacing.xl,
+    height: screenHeight * 0.35, // 35% of screen height
+    marginBottom: spacing.lg,
   },
   animationWrapper: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     overflow: 'hidden',
     position: 'relative',
+    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   lottieAnimation: {
     flex: 1,
     width: '100%',
+    height: '100%',
   },
   prepareOverlay: {
     position: 'absolute',
@@ -464,44 +477,49 @@ const styles = StyleSheet.create({
 
   // Timer Section
   timerSection: {
-    marginBottom: spacing.xl,
-    borderRadius: 20,
+    marginBottom: spacing.lg,
+    borderRadius: 16,
     overflow: 'hidden',
-    elevation: 8,
+    elevation: 4,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   timerGradient: {
-    padding: spacing.xl,
-    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   timerContent: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  phaseEmoji: {
-    fontSize: 48,
+  timerHeader: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
+  },
+  timerTextContainer: {
+    alignItems: 'center',
   },
   phaseTitle: {
     color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   phaseSubtitle: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
     fontFamily: fonts.body,
-    marginBottom: spacing.lg,
   },
   timerTime: {
     color: colors.white,
-    fontSize: 56,
+    fontSize: 32,
     fontWeight: '800',
     fontFamily: fonts.heading,
+    textAlign: 'center',
   },
 
   // Progress Section
@@ -538,6 +556,7 @@ const styles = StyleSheet.create({
   // Controls Section
   controlsSection: {
     marginBottom: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   startButton: {
     borderRadius: 20,
