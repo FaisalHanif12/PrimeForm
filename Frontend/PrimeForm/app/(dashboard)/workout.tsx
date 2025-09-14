@@ -34,6 +34,7 @@ export default function WorkoutScreen() {
   const [generationProgress, setGenerationProgress] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [showExerciseDetail, setShowExerciseDetail] = useState(false);
+  const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -90,18 +91,18 @@ export default function WorkoutScreen() {
 
   useEffect(() => {
     const initializeData = async () => {
-      // Only load user info if we don't have cached data
-      const cachedData = userProfileService.getCachedData();
-      if (cachedData) {
-        setUserInfo(cachedData.data);
-        setIsLoading(false);
-        console.log('📦 Using cached user profile data in workout page');
-      } else {
-        await loadUserInfo();
-      }
-      
-      // Try to load workout plan from database
       try {
+        // Load user info first
+        const cachedData = userProfileService.getCachedData();
+        if (cachedData) {
+          setUserInfo(cachedData.data);
+          setIsLoading(false);
+          console.log('📦 Using cached user profile data in workout page');
+        } else {
+          await loadUserInfo();
+        }
+        
+        // Try to load workout plan from database
         console.log('📱 Attempting to load workout plan from database...');
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
         if (plan) {
@@ -111,11 +112,11 @@ export default function WorkoutScreen() {
           console.log('ℹ️ No workout plan found in database');
         }
       } catch (error) {
-        console.warn('⚠️ Could not load workout plan from database:', error);
-        // Don't show error to user for this, just log it
+        console.warn('⚠️ Error during initialization:', error);
+      } finally {
+        setIsLoadingPlan(false);
+        setInitialLoadComplete(true);
       }
-      
-      setInitialLoadComplete(true);
     };
     
     initializeData();
@@ -330,11 +331,12 @@ export default function WorkoutScreen() {
 
   // Render content based on user info status
   const renderContent = () => {
-    // Show loading only during initial load
-    if (isLoading && !initialLoadComplete) {
+    // Show loading only during initial load or when loading plan
+    if ((isLoading && !initialLoadComplete) || isLoadingPlan) {
       return (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.loadingText}>Loading your workout plan...</Text>
         </View>
       );
     }
@@ -440,7 +442,7 @@ export default function WorkoutScreen() {
 
         <ScrollView 
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={workoutPlan && initialLoadComplete ? styles.contentNoPadding : styles.content}
           showsVerticalScrollIndicator={false}
         >
           {renderContent()}
@@ -500,6 +502,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingTop: 0,
+  },
+  contentNoPadding: {
     paddingTop: 0,
   },
   bottomSpacing: {

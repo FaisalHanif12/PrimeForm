@@ -23,6 +23,8 @@ export default function DecorativeBackground({ children }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    minHeight: '100%',
     backgroundColor: colors.background,
   },
 });

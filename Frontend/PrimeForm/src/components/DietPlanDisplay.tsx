@@ -12,6 +12,7 @@ import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import DailyProgressCard from './DailyProgressCard';
 import MealDetailScreen from './MealDetailScreen';
+import DecorativeBackground from './DecorativeBackground';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -51,7 +52,17 @@ export default function DietPlanDisplay({
     const today = new Date();
     const startDate = new Date(dietPlan.startDate);
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(1, Math.min(Math.floor(daysDiff / 7) + 1, getTotalWeeks()));
+    const calculatedWeek = Math.floor(daysDiff / 7) + 1;
+    
+    // Check if we have completed weeks based on actual completion data
+    const completedWeeksCount = Math.floor(completedDays.size / 7);
+    const currentWeekBasedOnCompletion = completedWeeksCount + 1;
+    
+    // Use the higher of calculated week or completion-based week
+    // This ensures we progress to next week when current week is completed
+    const finalWeek = Math.max(calculatedWeek, currentWeekBasedOnCompletion);
+    
+    return Math.max(1, Math.min(finalWeek, getTotalWeeks()));
   };
 
   const getTotalWeeks = (): number => {
@@ -98,6 +109,13 @@ export default function DietPlanDisplay({
     const startDate = new Date(dietPlan.startDate);
     const weekStartDate = new Date(startDate);
     weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
+    
+    console.log('📅 Diet Calendar Debug:', {
+      currentWeek,
+      completedDaysCount: completedDays.size,
+      completedWeeksCount: Math.floor(completedDays.size / 7),
+      weekStartDate: weekStartDate.toISOString().split('T')[0]
+    });
     
     return dietPlan.weeklyPlan.map((day, index) => ({
       ...day,
@@ -192,11 +210,24 @@ export default function DietPlanDisplay({
       const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
       const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
       
-      // If 50% or more completed, consider it completed, otherwise missed
-      return completionPercentage >= 50 ? 'completed' : 'missed';
+      // If 60% or more completed, consider it completed, otherwise missed
+      return completionPercentage >= 60 ? 'completed' : 'missed';
     }
     
     return 'upcoming';
+  };
+
+  // Get completion percentage for a specific day
+  const getDayCompletionPercentage = (day: DietDay): number => {
+    const dayMeals = [
+      `${day.date}-breakfast-${day.meals.breakfast.name}`,
+      `${day.date}-lunch-${day.meals.lunch.name}`,
+      `${day.date}-dinner-${day.meals.dinner.name}`,
+      ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
+    ];
+    
+    const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
+    return Math.round((completedMealsCount / dayMeals.length) * 100);
   };
 
   const isCurrentDay = (day: DietDay): boolean => {
@@ -234,6 +265,9 @@ export default function DietPlanDisplay({
       
       await dietPlanService.markMealCompleted(mealId, selectedDay.day, week, mealType);
       
+      // Sync with progress service
+      await syncProgressData();
+      
       // Check if all meals for the day are completed
       const dayMeals = [
         `${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`,
@@ -259,6 +293,22 @@ export default function DietPlanDisplay({
         reverted.delete(mealId);
         return reverted;
       });
+    }
+  };
+
+  // Sync progress data with progress service
+  const syncProgressData = async () => {
+    try {
+      const progressService = await import('../services/progressService');
+      // @ts-ignore - syncDietProgress method exists but TypeScript doesn't recognize it
+      await progressService.default.syncDietProgress({
+        completedMeals: Array.from(completedMeals),
+        completedDays: Array.from(completedDays),
+        dietPlan: dietPlan,
+        waterIntake: waterIntake
+      });
+    } catch (error) {
+      console.warn('Failed to sync diet progress:', error);
     }
   };
 
@@ -305,7 +355,8 @@ export default function DietPlanDisplay({
   };
 
   return (
-    <View style={styles.container}>
+    <DecorativeBackground>
+      <View style={styles.container}>
       {/* Hero Header Section - Diet Version */}
       <View style={styles.heroSection}>
         <View style={styles.heroBackground}>
@@ -380,35 +431,17 @@ export default function DietPlanDisplay({
                   status === 'completed' && styles.premiumStatusBadgeCompleted,
                   status === 'missed' && styles.premiumStatusBadgeMissed,
                 ]}>
-                  {(() => {
-                    // Calculate completion percentage for display
-                    const dayMeals = [
-                      `${day.date}-breakfast-${day.meals.breakfast.name}`,
-                      `${day.date}-lunch-${day.meals.lunch.name}`,
-                      `${day.date}-dinner-${day.meals.dinner.name}`,
-                      ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
-                    ];
-                    const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
-                    const completionPercentage = Math.round((completedMealsCount / dayMeals.length) * 100);
-                    
-                    if (status === 'completed' || status === 'missed') {
-                      return (
-                        <Text style={[styles.premiumStatusPercentage, 
-                          status === 'completed' && styles.premiumStatusPercentageCompleted,
-                        ]}>
-                          {completionPercentage}%
-                        </Text>
-                      );
-                    }
-                    
-                    return (
-                      <Text style={[styles.premiumStatusIcon, 
-                        status === 'in_progress' && styles.premiumStatusIconProgress,
-                      ]}>
-                        {status === 'in_progress' ? '🔥' : '🍽️'}
-                      </Text>
-                    );
-                  })()}
+                  {status === 'upcoming' ? (
+                    <Text style={styles.premiumStatusIcon}>🍽️</Text>
+                  ) : (
+                    <Text style={[styles.premiumStatusPercentage,
+                      status === 'completed' && styles.premiumStatusPercentageCompleted,
+                      status === 'missed' && styles.premiumStatusPercentageMissed,
+                      status === 'in_progress' && styles.premiumStatusPercentageProgress,
+                    ]}>
+                      {getDayCompletionPercentage(day)}%
+                    </Text>
+                  )}
                 </View>
                 
                 {/* Day Info */}
@@ -779,14 +812,15 @@ export default function DietPlanDisplay({
           completedMeals.has(`${selectedDay.date}-snack-${selectedMeal.name}`) : false}
         canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
       />
-    </View>
+      </View>
+    </DecorativeBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    width: '100%',
   },
   
   // Hero Section - Diet Version
@@ -1026,6 +1060,12 @@ const styles = StyleSheet.create({
   },
   premiumStatusPercentageCompleted: {
     color: colors.white,
+  },
+  premiumStatusPercentageMissed: {
+    color: colors.error,
+  },
+  premiumStatusPercentageProgress: {
+    color: colors.gold,
   },
   
   // Day Info Section
