@@ -449,12 +449,16 @@ export default function DashboardScreen() {
       if (dietPlanData) {
         setDietPlan(dietPlanData);
         
-        // Get today's meals
+        // Get today's meals using the same logic as DietPlanDisplay
         const today = new Date();
-        const todayString = today.toISOString().split('T')[0];
-        const todayMealData = dietPlanData.weeklyPlan.find((day: any) => 
-          new Date(day.date).toISOString().split('T')[0] === todayString
-        );
+        const startDate = new Date(dietPlanData.startDate);
+        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const currentWeek = Math.floor(daysDiff / 7) + 1;
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+        
+        // Get the day from the 7-day pattern
+        const todayMealData = dietPlanData.weeklyPlan[adjustedDayOfWeek];
         
         if (todayMealData) {
           const meals = [
@@ -476,12 +480,16 @@ export default function DashboardScreen() {
       if (workoutPlanData) {
         setWorkoutPlan(workoutPlanData);
         
-        // Get today's workout
+        // Get today's workout using the same logic as WorkoutPlanDisplay
         const today = new Date();
-        const todayString = today.toISOString().split('T')[0];
-        const todayWorkoutData = workoutPlanData.weeklyPlan.find((day: any) => 
-          new Date(day.date).toISOString().split('T')[0] === todayString
-        );
+        const startDate = new Date(workoutPlanData.startDate);
+        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const currentWeek = Math.floor(daysDiff / 7) + 1;
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+        
+        // Get the day from the 7-day pattern
+        const todayWorkoutData = workoutPlanData.weeklyPlan[adjustedDayOfWeek];
         
         if (todayWorkoutData && !todayWorkoutData.isRestDay) {
           const workouts = todayWorkoutData.exercises.map((exercise: any) => ({
@@ -538,23 +546,37 @@ export default function DashboardScreen() {
   // Dynamic stats based on real data
   const getDynamicStats = () => {
     const totalCalories = todayMeals.reduce((sum, meal) => sum + meal.calories, 0);
-    const consumedCalories = todayMeals.filter(meal => 
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-breakfast-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-lunch-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-dinner-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-snack-${meal.name}`)
-    ).reduce((sum, meal) => sum + meal.calories, 0);
+    
+    // Get today's date for completion checking
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check completion using the original meal names (without emojis)
+    const consumedCalories = todayMeals.filter(meal => {
+      // Extract original meal name by removing emoji prefix
+      const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
+      
+      // Check if any completion key matches this meal
+      return Array.from(completedMeals).some(completedKey => 
+        completedKey.includes(today) && completedKey.includes(originalName)
+      );
+    }).reduce((sum, meal) => sum + meal.calories, 0);
     
     const remainingCalories = Math.max(0, totalCalories - consumedCalories);
+    
+    // Check completed workouts
     const completedWorkouts = todayWorkouts.filter(workout => 
-      completedExercises.has(`${new Date().toISOString().split('T')[0]}-${workout.name}`)
+      completedExercises.has(`${today}-${workout.name}`)
     ).length;
-    const remainingMeals = todayMeals.length - todayMeals.filter(meal => 
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-breakfast-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-lunch-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-dinner-${meal.name}`) ||
-      completedMeals.has(`${new Date().toISOString().split('T')[0]}-snack-${meal.name}`)
-    ).length;
+    
+    // Check completed meals using original names
+    const completedMealsCount = todayMeals.filter(meal => {
+      const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
+      return Array.from(completedMeals).some(completedKey => 
+        completedKey.includes(today) && completedKey.includes(originalName)
+      );
+    }).length;
+    
+    const remainingMeals = todayMeals.length - completedMealsCount;
 
     return [
       { label: t('dashboard.stats.calories'), value: remainingCalories.toLocaleString(), icon: 'flame' as const, color: colors.gold },
