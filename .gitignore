@@ -5,6 +5,16 @@
 .env.*
 !.env.example
 
+# Backend environment variables
+Backend/.env
+Backend/.env.*
+!Backend/.env.example
+
+# Frontend environment variables
+Frontend/PrimeForm/.env
+Frontend/PrimeForm/.env.*
+!Frontend/PrimeForm/.env.example
+
 # Dependencies
 node_modules/
 */node_modules/
