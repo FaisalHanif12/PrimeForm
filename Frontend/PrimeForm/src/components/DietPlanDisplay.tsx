@@ -52,17 +52,22 @@ export default function DietPlanDisplay({
     const today = new Date();
     const startDate = new Date(dietPlan.startDate);
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate week based on plan generation day (not Monday)
+    // If plan starts mid-week, week 1 includes the generation day and forward
     const calculatedWeek = Math.floor(daysDiff / 7) + 1;
     
-    // Check if we have completed weeks based on actual completion data
-    const completedWeeksCount = Math.floor(completedDays.size / 7);
-    const currentWeekBasedOnCompletion = completedWeeksCount + 1;
+    console.log('📅 DietPlanDisplay Date Debug:', {
+      today: today.toDateString(),
+      startDate: startDate.toDateString(),
+      daysDiff,
+      calculatedWeek,
+      completedDaysCount: completedDays.size,
+      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+    });
     
-    // Use the higher of calculated week or completion-based week
-    // This ensures we progress to next week when current week is completed
-    const finalWeek = Math.max(calculatedWeek, currentWeekBasedOnCompletion);
-    
-    return Math.max(1, Math.min(finalWeek, getTotalWeeks()));
+    // Use simple date-based calculation to match dashboard logic
+    return Math.max(1, Math.min(calculatedWeek, getTotalWeeks()));
   };
 
   const getTotalWeeks = (): number => {
@@ -107,6 +112,9 @@ export default function DietPlanDisplay({
     
     const currentWeek = getCurrentWeek();
     const startDate = new Date(dietPlan.startDate);
+    
+    // Calculate week start based on plan generation day, not Monday
+    // Week 1 starts from the plan generation day
     const weekStartDate = new Date(startDate);
     weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
     
@@ -114,7 +122,9 @@ export default function DietPlanDisplay({
       currentWeek,
       completedDaysCount: completedDays.size,
       completedWeeksCount: Math.floor(completedDays.size / 7),
-      weekStartDate: weekStartDate.toISOString().split('T')[0]
+      weekStartDate: weekStartDate.toISOString().split('T')[0],
+      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
+      weekStartDay: weekStartDate.toLocaleDateString('en-US', { weekday: 'long' })
     });
     
     return dietPlan.weeklyPlan.map((day, index) => ({
@@ -184,6 +194,7 @@ export default function DietPlanDisplay({
     const planStartDate = new Date(dietPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
     
+    // If day is completed, always show as completed
     if (completedDays.has(day.date)) {
       return 'completed';
     }
@@ -193,12 +204,18 @@ export default function DietPlanDisplay({
       return 'in_progress';
     }
     
-    // Plan generation day should be in_progress if it's today or in the past but within plan range
+    // Plan generation day should be in_progress if it's today or in the past
     if (dayDate.getTime() === planStartDate.getTime() && dayDate <= today) {
       return 'in_progress';
     }
     
-    if (dayDate < today && dayDate >= planStartDate) {
+    // Days before plan generation should be 'upcoming' (not missed)
+    if (dayDate < planStartDate) {
+      return 'upcoming';
+    }
+    
+    // Days after plan generation but before today
+    if (dayDate < today && dayDate > planStartDate) {
       // Check completion percentage for the day
       const dayMeals = [
         `${day.date}-breakfast-${day.meals.breakfast.name}`,
@@ -214,6 +231,7 @@ export default function DietPlanDisplay({
       return completionPercentage >= 60 ? 'completed' : 'missed';
     }
     
+    // Future days
     return 'upcoming';
   };
 

@@ -90,6 +90,29 @@ export default function DashboardScreen() {
   const [plansLoaded, setPlansLoaded] = useState(false);
   const { showToast } = useToast();
 
+  // Centralized date calculation utility for consistency across all components
+  const getStandardizedDateInfo = (planStartDate: string) => {
+    const today = new Date();
+    const startDate = new Date(planStartDate);
+    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate week based on plan generation day (not Monday)
+    // If plan starts mid-week, week 1 includes the generation day and forward
+    const currentWeek = Math.floor(daysDiff / 7) + 1;
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    
+    return {
+      today,
+      startDate,
+      daysDiff,
+      currentWeek,
+      dayOfWeek,
+      adjustedDayOfWeek,
+      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+    };
+  };
+
   // Load dynamic data on mount and when user info changes
   // Load dynamic data only when dashboard is actually viewed
   useEffect(() => {
@@ -531,21 +554,26 @@ export default function DashboardScreen() {
       if (dietPlan) {
         setDietPlan(dietPlan);
         
-        // Get today's meals using the same logic as DietPlanDisplay
-        const today = new Date();
-        const startDate = new Date(dietPlan.startDate);
-        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const currentWeek = Math.floor(daysDiff / 7) + 1;
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+        // Get today's meals using centralized date logic
+        const dateInfo = getStandardizedDateInfo(dietPlan.startDate);
+        
+        console.log('📅 Dashboard Diet Date Debug:', {
+          today: dateInfo.today.toDateString(),
+          startDate: dateInfo.startDate.toDateString(),
+          daysDiff: dateInfo.daysDiff,
+          currentWeek: dateInfo.currentWeek,
+          dayOfWeek: dateInfo.dayOfWeek,
+          adjustedDayOfWeek: dateInfo.adjustedDayOfWeek,
+          planGenerationDay: dateInfo.planGenerationDay
+        });
         
         // Get the day from the 7-day pattern
-        const todayMealData = dietPlan.weeklyPlan[adjustedDayOfWeek];
+        const todayMealData = dietPlan.weeklyPlan[dateInfo.adjustedDayOfWeek];
         
         console.log('🍽️ Dashboard Meal Loading:', {
-          currentWeek,
-          dayOfWeek,
-          adjustedDayOfWeek,
+          currentWeek: dateInfo.currentWeek,
+          dayOfWeek: dateInfo.dayOfWeek,
+          adjustedDayOfWeek: dateInfo.adjustedDayOfWeek,
           hasMealData: !!todayMealData,
           mealCount: todayMealData?.meals ? Object.keys(todayMealData.meals).length : 0
         });
@@ -570,21 +598,26 @@ export default function DashboardScreen() {
       if (workoutPlan) {
         setWorkoutPlan(workoutPlan);
         
-        // Get today's workout using the same logic as WorkoutPlanDisplay
-        const today = new Date();
-        const startDate = new Date(workoutPlan.startDate);
-        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const currentWeek = Math.floor(daysDiff / 7) + 1;
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+        // Get today's workout using centralized date logic
+        const workoutDateInfo = getStandardizedDateInfo(workoutPlan.startDate);
+        
+        console.log('📅 Dashboard Workout Date Debug:', {
+          today: workoutDateInfo.today.toDateString(),
+          startDate: workoutDateInfo.startDate.toDateString(),
+          daysDiff: workoutDateInfo.daysDiff,
+          currentWeek: workoutDateInfo.currentWeek,
+          dayOfWeek: workoutDateInfo.dayOfWeek,
+          adjustedDayOfWeek: workoutDateInfo.adjustedDayOfWeek,
+          planGenerationDay: workoutDateInfo.planGenerationDay
+        });
         
         // Get the day from the 7-day pattern
-        const todayWorkoutData = workoutPlan.weeklyPlan[adjustedDayOfWeek];
+        const todayWorkoutData = workoutPlan.weeklyPlan[workoutDateInfo.adjustedDayOfWeek];
         
         console.log('💪 Dashboard Workout Loading:', {
-          currentWeek,
-          dayOfWeek,
-          adjustedDayOfWeek,
+          currentWeek: workoutDateInfo.currentWeek,
+          dayOfWeek: workoutDateInfo.dayOfWeek,
+          adjustedDayOfWeek: workoutDateInfo.adjustedDayOfWeek,
           hasWorkoutData: !!todayWorkoutData,
           isRestDay: todayWorkoutData?.isRestDay,
           exerciseCount: todayWorkoutData?.exercises?.length || 0
@@ -1209,7 +1242,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   waterButtons: {
-    flexDirection: 'row',
+    flexDirection: 'row', 
     justifyContent: 'space-between',
     gap: spacing.xs,
   },
