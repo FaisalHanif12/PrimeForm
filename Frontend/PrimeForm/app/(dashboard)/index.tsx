@@ -91,9 +91,11 @@ export default function DashboardScreen() {
   const { showToast } = useToast();
 
   // Load dynamic data on mount and when user info changes
+  // Load dynamic data only when dashboard is actually viewed
   useEffect(() => {
     if (isAuthenticated || hasCompletedSignup) {
-      loadDynamicData();
+      // Don't load immediately - let user trigger it
+      console.log('📱 Dashboard mounted, ready to load data when needed');
     }
   }, [isAuthenticated, hasCompletedSignup]);
 
@@ -645,6 +647,22 @@ export default function DashboardScreen() {
     console.log('🔄 Refreshing dashboard data...');
     await loadDynamicData();
   };
+
+  // Load data when user actually needs it (lazy loading)
+  const loadDataIfNeeded = async () => {
+    if (!plansLoaded && !isLoadingPlans) {
+      console.log('📊 Loading dashboard data on demand...');
+      await loadDynamicData();
+    }
+  };
+
+  // Load data only when dashboard is actually viewed (not on app open)
+  useEffect(() => {
+    if (isAuthenticated || hasCompletedSignup) {
+      // Load data when dashboard becomes visible
+      loadDynamicData();
+    }
+  }, [isAuthenticated, hasCompletedSignup]);
 
   // Production-optimized dynamic stats with memoization
   const getDynamicStats = useMemo(() => {
