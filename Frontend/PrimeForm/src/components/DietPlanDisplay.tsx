@@ -37,6 +37,7 @@ export default function DietPlanDisplay({
   const [selectedMeal, setSelectedMeal] = useState<DietMeal | null>(null);
   const [mealModalVisible, setMealModalVisible] = useState(false);
   const [waterIntake, setWaterIntake] = useState<{ [key: string]: number }>({});
+  const [waterCompleted, setWaterCompleted] = useState<{ [key: string]: boolean }>({});
 
   // Safety checks for diet plan structure
   if (!dietPlan || !dietPlan.weeklyPlan || !Array.isArray(dietPlan.weeklyPlan)) {
@@ -104,7 +105,51 @@ export default function DietPlanDisplay({
     return Math.round(finalProgress);
   };
 
-  // Expand the 7-day weekly pattern for the current week
+  // Get today's day data using the same logic as dashboard
+  const getTodaysDayData = () => {
+    if (!dietPlan.weeklyPlan || dietPlan.weeklyPlan.length === 0) {
+      return null;
+    }
+    
+    const today = new Date();
+    const startDate = new Date(dietPlan.startDate);
+    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate week based on plan generation day (not Monday)
+    const currentWeek = Math.floor(daysDiff / 7) + 1;
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    
+    console.log('📅 DietPlanDisplay Today Debug:', {
+      today: today.toDateString(),
+      startDate: startDate.toDateString(),
+      daysDiff,
+      currentWeek,
+      dayOfWeek,
+      adjustedDayOfWeek,
+      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+    });
+    
+    // Get today's day data using the same logic as dashboard
+    const todayMealData = dietPlan.weeklyPlan[adjustedDayOfWeek];
+    
+    if (todayMealData) {
+      // Calculate the actual date for this day
+      const todayDate = new Date();
+      const dayDate = new Date(todayDate);
+      dayDate.setDate(todayDate.getDate());
+      
+      return {
+        ...todayMealData,
+        date: dayDate.toISOString().split('T')[0],
+        day: ((currentWeek - 1) * 7) + (adjustedDayOfWeek + 1) // Absolute day number for tracking
+      };
+    }
+    
+    return null;
+  };
+
+  // Expand the 7-day weekly pattern for the current week (for calendar display)
   const getCurrentWeekDays = () => {
     if (!dietPlan.weeklyPlan || dietPlan.weeklyPlan.length === 0) {
       return [];
@@ -137,23 +182,25 @@ export default function DietPlanDisplay({
   useEffect(() => {
     loadCompletionStates();
     
-    const currentWeekDays = getCurrentWeekDays();
-    
-    if (currentWeekDays.length === 0) {
-      console.warn('No days available in current week');
-      return;
-    }
-    
-    const today = new Date().toDateString();
-    const todaysDay = currentWeekDays.find(day => new Date(day.date).toDateString() === today);
+    // Use the same logic as dashboard to get today's day data
+    const todaysDay = getTodaysDayData();
     
     if (todaysDay) {
+      console.log('📅 DietPlanDisplay Setting Today:', {
+        dayName: todaysDay.dayName,
+        date: todaysDay.date,
+        mealCount: todaysDay.meals ? Object.keys(todaysDay.meals).length : 0
+      });
       setSelectedDay(todaysDay);
       return;
     }
 
-    // Fallback to first day of current week
-    setSelectedDay(currentWeekDays[0]);
+    // Fallback to first day of current week if today's data not found
+    const currentWeekDays = getCurrentWeekDays();
+    if (currentWeekDays.length > 0) {
+      console.warn('Today\'s day data not found, using first day of week as fallback');
+      setSelectedDay(currentWeekDays[0]);
+    }
   }, [dietPlan]);
 
   const loadCompletionStates = async () => {
@@ -179,6 +226,12 @@ export default function DietPlanDisplay({
         }
         if (cachedWaterIntake) {
           setWaterIntake(JSON.parse(cachedWaterIntake));
+        }
+        
+        // Load water completion status
+        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        if (cachedWaterCompleted) {
+          setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (storageError) {
         console.warn('Could not load from local storage:', storageError);
@@ -356,19 +409,30 @@ export default function DietPlanDisplay({
     }
   };
 
-  const logWaterIntake = async (amount: number) => {
+  const toggleWaterCompletion = async () => {
     if (!selectedDay) return;
     
     const week = Math.ceil(selectedDay.day / 7);
-    const newWaterIntake = { ...waterIntake, [selectedDay.date]: amount };
-    setWaterIntake(newWaterIntake);
+    const isCompleted = waterCompleted[selectedDay.date] || false;
+    const newWaterCompleted = { ...waterCompleted, [selectedDay.date]: !isCompleted };
+    setWaterCompleted(newWaterCompleted);
     
     try {
       const Storage = await import('../utils/storage');
+      await Storage.default.setItem('water_completed', JSON.stringify(newWaterCompleted));
+      
+      // Also update water intake amount when marking as completed
+      const targetAmount = Number(selectedDay.waterIntake) || 2000;
+      const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
+      setWaterIntake(newWaterIntake);
       await Storage.default.setItem('water_intake', JSON.stringify(newWaterIntake));
-      await dietPlanService.logWaterIntake(selectedDay.day, week, amount);
+      
+      await dietPlanService.logWaterIntake(selectedDay.day, week, isCompleted ? 0 : targetAmount);
+      
+      // Sync with progress service
+      await syncProgressData();
     } catch (error) {
-      console.error('Error logging water intake:', error);
+      console.error('Error toggling water completion:', error);
     }
   };
 
@@ -788,21 +852,33 @@ export default function DietPlanDisplay({
             {/* Water Intake Section */}
             <View style={styles.waterSection}>
               <Text style={styles.waterTitle}>💧 Water Intake</Text>
-              <Text style={styles.waterTarget}>Target: {selectedDay.waterIntake}</Text>
-              <View style={styles.waterButtons}>
-                {[250, 500, 750, 1000].map(amount => (
-                  <TouchableOpacity
-                    key={amount}
-                    style={styles.waterButton}
-                    onPress={() => logWaterIntake(amount)}
-                  >
-                    <Text style={styles.waterButtonText}>+{amount}ml</Text>
-                  </TouchableOpacity>
-                ))}
+              <Text style={styles.waterTarget}>Target: {selectedDay.waterIntake}ml</Text>
+              
+              <View style={styles.waterCompletionContainer}>
+                <View style={styles.waterStatusInfo}>
+                  <Text style={styles.waterStatusText}>
+                    {waterCompleted[selectedDay.date] ? '✅ Completed' : '⏳ Pending'}
+                  </Text>
+                  <Text style={styles.waterAmountText}>
+                    {waterCompleted[selectedDay.date] ? selectedDay.waterIntake : 0}ml / {selectedDay.waterIntake}ml
+                  </Text>
+                </View>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.waterCompletionButton,
+                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonCompleted
+                  ]}
+                  onPress={toggleWaterCompletion}
+                >
+                  <Text style={[
+                    styles.waterCompletionButtonText,
+                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonTextCompleted
+                  ]}>
+                    {waterCompleted[selectedDay.date] ? 'Done' : 'Mark Done'}
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.waterCurrent}>
-                Today: {waterIntake[selectedDay.date] || 0}ml
-              </Text>
             </View>
           </ScrollView>
         )}
@@ -1514,6 +1590,51 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.heading,
     textAlign: 'center',
+  },
+
+  // Water Completion Styles
+  waterCompletionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  waterStatusInfo: {
+    flex: 1,
+  },
+  waterStatusText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  waterAmountText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  waterCompletionButton: {
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  waterCompletionButtonCompleted: {
+    backgroundColor: colors.green,
+    borderColor: colors.green,
+  },
+  waterCompletionButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  waterCompletionButtonTextCompleted: {
+    color: colors.white,
   },
 
   // Error Styles

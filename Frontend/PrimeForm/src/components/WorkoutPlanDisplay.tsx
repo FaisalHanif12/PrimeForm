@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutPlan, WorkoutDay, WorkoutExercise } from '../services/aiWorkoutService';
+import aiWorkoutService from '../services/aiWorkoutService';
 import workoutPlanService from '../services/workoutPlanService';
 import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
@@ -81,7 +82,51 @@ export default function WorkoutPlanDisplay({
     return Math.max(1, Math.ceil(daysDiff / 7));
   };
 
-  // Expand the 7-day weekly pattern for the current week
+  // Get today's day data using the same logic as dashboard
+  const getTodaysDayData = () => {
+    if (!workoutPlan.weeklyPlan || workoutPlan.weeklyPlan.length === 0) {
+      return null;
+    }
+    
+    const today = new Date();
+    const startDate = new Date(workoutPlan.startDate);
+    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate week based on plan generation day (not Monday)
+    const currentWeek = Math.floor(daysDiff / 7) + 1;
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    
+    console.log('📅 WorkoutPlanDisplay Today Debug:', {
+      today: today.toDateString(),
+      startDate: startDate.toDateString(),
+      daysDiff,
+      currentWeek,
+      dayOfWeek,
+      adjustedDayOfWeek,
+      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+    });
+    
+    // Get today's day data using the same logic as dashboard
+    const todayWorkoutData = workoutPlan.weeklyPlan[adjustedDayOfWeek];
+    
+    if (todayWorkoutData) {
+      // Calculate the actual date for this day
+      const todayDate = new Date();
+      const dayDate = new Date(todayDate);
+      dayDate.setDate(todayDate.getDate());
+      
+      return {
+        ...todayWorkoutData,
+        date: dayDate.toISOString().split('T')[0],
+        day: ((currentWeek - 1) * 7) + (adjustedDayOfWeek + 1) // Absolute day number for tracking
+      };
+    }
+    
+    return null;
+  };
+
+  // Expand the 7-day weekly pattern for the current week (for calendar display)
   const getCurrentWeekDays = () => {
     if (!workoutPlan.weeklyPlan || workoutPlan.weeklyPlan.length === 0) {
       return [];
@@ -115,45 +160,90 @@ export default function WorkoutPlanDisplay({
     // Load completion states and set initial day
     loadCompletionStates();
 
-    // Get current week days and find today
-    const currentWeekDays = getCurrentWeekDays();
-
-    if (currentWeekDays.length === 0) {
-      console.warn('No days available in current week');
-      return;
-    }
-
-    const today = new Date().toDateString();
-    const todaysDay = currentWeekDays.find(day => new Date(day.date).toDateString() === today);
-
+    // Use the same logic as dashboard to get today's day data
+    const todaysDay = getTodaysDayData();
+    
     if (todaysDay) {
+      console.log('📅 WorkoutPlanDisplay Setting Today:', {
+        dayName: todaysDay.dayName,
+        date: todaysDay.date,
+        isRestDay: todaysDay.isRestDay,
+        exerciseCount: todaysDay.exercises?.length || 0
+      });
       setSelectedDay(todaysDay);
       return;
     }
 
-    // Fallback to first workout day of current week
-    const firstWorkoutDay = currentWeekDays.find(day => !day.isRestDay);
-    if (firstWorkoutDay) {
-      setSelectedDay(firstWorkoutDay);
-    } else {
-      // Ultimate fallback - set to first day of current week
-      setSelectedDay(currentWeekDays[0]);
+    // Fallback to first workout day of current week if today's data not found
+    const currentWeekDays = getCurrentWeekDays();
+    if (currentWeekDays.length > 0) {
+      const firstWorkoutDay = currentWeekDays.find(day => !day.isRestDay);
+      if (firstWorkoutDay) {
+        console.warn('Today\'s day data not found, using first workout day as fallback');
+        setSelectedDay(firstWorkoutDay);
+      } else {
+        console.warn('Today\'s day data not found, using first day of week as fallback');
+        setSelectedDay(currentWeekDays[0]);
+      }
     }
   }, [workoutPlan]);
 
   const loadCompletionStates = async () => {
     try {
-      // Load completion states from backend
-      const stats = await workoutPlanService.getWorkoutStats();
-      if (stats.success && stats.data) {
-        // Load completed exercises and days from backend
-        // This would be implemented when backend completion tracking is ready
-        console.log('📊 Loaded workout stats:', stats.data);
+      // First try to load from the workout plan database
+      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      if (workoutPlan && workoutPlan.completedExercises) {
+        console.log('📊 Loading completed exercises from database:', workoutPlan.completedExercises);
+        setCompletedExercises(new Set(workoutPlan.completedExercises));
+      }
+      
+      if (workoutPlan && workoutPlan.completedDays) {
+        console.log('📊 Loading completed days from database:', workoutPlan.completedDays);
+        setCompletedDays(new Set(workoutPlan.completedDays));
+      }
+
+      // Also load from local storage as backup/sync
+      try {
+        const Storage = await import('../utils/storage');
+        const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
+        const cachedCompletedDays = await Storage.default.getItem('completed_days');
+
+        if (cachedCompletedExercises) {
+          const localExercises = new Set(JSON.parse(cachedCompletedExercises));
+          console.log('📊 Loading completed exercises from local storage:', Array.from(localExercises));
+          
+          // Merge with database data
+          if (workoutPlan && workoutPlan.completedExercises) {
+            const dbExercises = new Set(workoutPlan.completedExercises);
+            const mergedExercises = new Set([...localExercises, ...dbExercises]);
+            setCompletedExercises(mergedExercises);
+            console.log('📊 Merged completed exercises:', Array.from(mergedExercises));
+          } else {
+            setCompletedExercises(localExercises);
+          }
+        }
+        
+        if (cachedCompletedDays) {
+          const localDays = new Set(JSON.parse(cachedCompletedDays));
+          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
+          
+          // Merge with database data
+          if (workoutPlan && workoutPlan.completedDays) {
+            const dbDays = new Set(workoutPlan.completedDays);
+            const mergedDays = new Set([...localDays, ...dbDays]);
+            setCompletedDays(mergedDays);
+            console.log('📊 Merged completed days:', Array.from(mergedDays));
+          } else {
+            setCompletedDays(localDays);
+          }
+        }
+      } catch (storageError) {
+        console.warn('Could not load from local storage:', storageError);
       }
     } catch (error) {
-      console.warn('Could not load completion states:', error);
+      console.warn('Could not load completion states from database:', error);
 
-      // Try to load from local storage as fallback
+      // Fallback to local storage only
       try {
         const Storage = await import('../utils/storage');
         const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');

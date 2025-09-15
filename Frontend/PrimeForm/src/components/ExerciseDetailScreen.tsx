@@ -34,11 +34,6 @@ export default function ExerciseDetailScreen({
 }: ExerciseDetailScreenProps) {
   const [currentSet, setCurrentSet] = useState(1);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
-  const [isWorkoutMode, setIsWorkoutMode] = useState(false);
-  const [workoutStarted, setWorkoutStarted] = useState(false);
-  const [currentRep, setCurrentRep] = useState(0);
-  const [isResting, setIsResting] = useState(false);
-  const [restTimeLeft, setRestTimeLeft] = useState(0);
 
   if (!exercise) return null;
 
@@ -61,44 +56,6 @@ export default function ExerciseDetailScreen({
     }
   };
 
-  const handleStartWorkout = () => {
-    setIsWorkoutMode(true);
-    setWorkoutStarted(true);
-    setCurrentRep(0);
-  };
-
-  const handleRepComplete = () => {
-    const newRep = currentRep + 1;
-    setCurrentRep(newRep);
-    
-    if (newRep >= exercise.reps) {
-      // Set completed
-      const newCompletedSets = new Set(completedSets);
-      newCompletedSets.add(currentSet);
-      setCompletedSets(newCompletedSets);
-      
-      // Start rest period
-      setIsResting(true);
-      setRestTimeLeft(parseInt(exercise.rest.replace(/\D/g, '')) || 60);
-      
-      // Reset for next set
-      setCurrentRep(0);
-      setCurrentSet(prev => prev + 1);
-    }
-  };
-
-  const handleRestComplete = () => {
-    setIsResting(false);
-    setRestTimeLeft(0);
-  };
-
-  const handleWorkoutComplete = () => {
-    setIsWorkoutMode(false);
-    setWorkoutStarted(false);
-    if (onComplete && canComplete) {
-      onComplete();
-    }
-  };
 
   const allSetsCompleted = completedSets.size === exercise.sets;
 
@@ -120,68 +77,8 @@ export default function ExerciseDetailScreen({
           <View style={styles.placeholder} />
         </View>
 
-        {isWorkoutMode ? (
-          // Workout Mode with Animation
-          <View style={styles.workoutContainer}>
-            {/* Animation Section */}
-            <View style={styles.animationSection}>
-              <ExerciseAnimation
-                exerciseType={exercise.name}
-                isVisible={workoutStarted && !isResting}
-                style={styles.animationContainer}
-              />
-            </View>
-
-            {/* Workout Progress */}
-            <View style={styles.workoutProgress}>
-              <Text style={styles.workoutTitle}>
-                {isResting ? 'Rest Time' : `${exercise.name} - Set ${currentSet}`}
-              </Text>
-              
-              {isResting ? (
-                <View style={styles.restContainer}>
-                  <Text style={styles.restTime}>{restTimeLeft}s</Text>
-                  <Text style={styles.restText}>Take a break and prepare for the next set</Text>
-                  <TouchableOpacity
-                    style={styles.restButton}
-                    onPress={handleRestComplete}
-                  >
-                    <Text style={styles.restButtonText}>Start Next Set</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.repContainer}>
-                  <Text style={styles.repCount}>{currentRep} / {exercise.reps}</Text>
-                  <Text style={styles.repLabel}>Reps Completed</Text>
-                  <TouchableOpacity
-                    style={styles.repButton}
-                    onPress={handleRepComplete}
-                  >
-                    <Text style={styles.repButtonText}>Complete Rep</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            {/* Workout Stats */}
-            <View style={styles.workoutStats}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{completedSets.size}</Text>
-                <Text style={styles.statLabel}>Sets Done</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{exercise.sets}</Text>
-                <Text style={styles.statLabel}>Total Sets</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{exercise.caloriesBurned}</Text>
-                <Text style={styles.statLabel}>Calories</Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          // Normal Exercise Details
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Exercise Details */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Exercise Info Card */}
             <View style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
@@ -273,17 +170,10 @@ export default function ExerciseDetailScreen({
               </View>
             </View>
           </ScrollView>
-        )}
 
         {/* Bottom Action */}
-        {canComplete && !isCompleted && !isWorkoutMode && (
+        {canComplete && !isCompleted && (
           <View style={styles.bottomAction}>
-            <TouchableOpacity
-              style={styles.startWorkoutButton}
-              onPress={handleStartWorkout}
-            >
-              <Text style={styles.startWorkoutButtonText}>🚀 Start Workout</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.completeButton,
@@ -302,17 +192,6 @@ export default function ExerciseDetailScreen({
           </View>
         )}
 
-        {/* Workout Mode Bottom Action */}
-        {isWorkoutMode && allSetsCompleted && (
-          <View style={styles.bottomAction}>
-            <TouchableOpacity
-              style={styles.workoutCompleteButton}
-              onPress={handleWorkoutComplete}
-            >
-              <Text style={styles.workoutCompleteButtonText}>🎉 Complete Workout</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </Modal>
   );
@@ -530,145 +409,4 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // Workout Mode Styles
-  workoutContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  animationSection: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  animationContainer: {
-    width: '100%',
-    height: 300,
-  },
-  workoutProgress: {
-    backgroundColor: colors.surface,
-    margin: spacing.lg,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  workoutTitle: {
-    color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
-    fontFamily: fonts.heading,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  restContainer: {
-    alignItems: 'center',
-  },
-  restTime: {
-    color: colors.primary,
-    fontSize: 48,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.sm,
-  },
-  restText: {
-    color: colors.mutedText,
-    fontSize: 16,
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  restButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  restButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  repContainer: {
-    alignItems: 'center',
-  },
-  repCount: {
-    color: colors.primary,
-    fontSize: 36,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.sm,
-  },
-  repLabel: {
-    color: colors.mutedText,
-    fontSize: 16,
-    fontFamily: fonts.body,
-    marginBottom: spacing.lg,
-  },
-  repButton: {
-    backgroundColor: colors.green,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  repButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  workoutStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: colors.surface,
-    margin: spacing.lg,
-    marginTop: 0,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: colors.primary,
-    fontSize: 24,
-    fontWeight: '800',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
-  },
-  statLabel: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontFamily: fonts.body,
-  },
-  startWorkoutButton: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    alignItems: 'center',
-  },
-  startWorkoutButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  workoutCompleteButton: {
-    backgroundColor: colors.green,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-  },
-  workoutCompleteButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
 });

@@ -53,6 +53,8 @@ export interface DietPlan {
   targetProtein: number;
   targetCarbs: number;
   targetFats: number;
+  completedMeals?: string[];
+  completedDays?: string[];
 }
 
 export interface AIDietResponse {

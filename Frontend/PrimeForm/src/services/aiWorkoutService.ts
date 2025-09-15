@@ -38,6 +38,8 @@ export interface WorkoutPlan {
   startDate: string;
   endDate: string;
   totalWeeks?: number;
+  completedExercises?: string[];
+  completedDays?: string[];
 }
 
 export interface AIWorkoutResponse {

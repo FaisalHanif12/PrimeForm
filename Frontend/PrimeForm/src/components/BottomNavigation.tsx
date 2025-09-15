@@ -89,7 +89,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
-    position: 'relative',
+    alignSelf: 'stretch',
+    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   // Removed indicator styling
   tab: {
