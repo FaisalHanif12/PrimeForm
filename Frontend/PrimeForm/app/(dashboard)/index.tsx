@@ -86,6 +86,7 @@ export default function DashboardScreen() {
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [waterIntake, setWaterIntake] = useState<number>(0);
   const [targetWater, setTargetWater] = useState<number>(2000);
+  const [waterCompleted, setWaterCompleted] = useState<boolean>(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [plansLoaded, setPlansLoaded] = useState(false);
   const { showToast } = useToast();
@@ -651,24 +652,77 @@ export default function DashboardScreen() {
 
   const loadCompletionStates = async () => {
     try {
-      // Load completed meals
-      const completedMealsData = await AsyncStorage.getItem('completed_meals');
-      if (completedMealsData) {
-        setCompletedMeals(new Set(JSON.parse(completedMealsData)));
+      // Load from database first
+      const [workoutPlan, dietPlan] = await Promise.allSettled([
+        aiWorkoutService.loadWorkoutPlanFromDatabase(),
+        aiDietService.loadDietPlanFromDatabase()
+      ]);
+
+      // Load completed exercises from database
+      if (workoutPlan.status === 'fulfilled' && workoutPlan.value && workoutPlan.value.completedExercises) {
+        console.log('📊 Dashboard: Loading completed exercises from database:', workoutPlan.value.completedExercises);
+        setCompletedExercises(new Set(workoutPlan.value.completedExercises as string[]));
       }
 
-      // Load completed exercises
-      const completedExercisesData = await AsyncStorage.getItem('completed_exercises');
-      if (completedExercisesData) {
-        setCompletedExercises(new Set(JSON.parse(completedExercisesData)));
+      // Load completed meals from database
+      if (dietPlan.status === 'fulfilled' && dietPlan.value && dietPlan.value.completedMeals) {
+        console.log('📊 Dashboard: Loading completed meals from database:', dietPlan.value.completedMeals);
+        setCompletedMeals(new Set(dietPlan.value.completedMeals as string[]));
       }
 
-      // Load water intake
-      const waterData = await AsyncStorage.getItem('water_intake');
-      if (waterData) {
-        const waterObj = JSON.parse(waterData);
-        const today = new Date().toISOString().split('T')[0];
-        setWaterIntake(waterObj[today] || 0);
+      // Also load from local storage as backup/sync
+      try {
+        // Load completed meals
+        const completedMealsData = await AsyncStorage.getItem('completed_meals');
+        if (completedMealsData) {
+          const localMeals = new Set(JSON.parse(completedMealsData) as string[]);
+          console.log('📊 Dashboard: Loading completed meals from local storage:', Array.from(localMeals));
+          
+          // Merge with database data
+          if (dietPlan.status === 'fulfilled' && dietPlan.value && dietPlan.value.completedMeals) {
+            const dbMeals = new Set(dietPlan.value.completedMeals as string[]);
+            const mergedMeals = new Set([...localMeals, ...dbMeals]);
+            setCompletedMeals(mergedMeals);
+            console.log('📊 Dashboard: Merged completed meals:', Array.from(mergedMeals));
+          } else {
+            setCompletedMeals(localMeals);
+          }
+        }
+
+        // Load completed exercises
+        const completedExercisesData = await AsyncStorage.getItem('completed_exercises');
+        if (completedExercisesData) {
+          const localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
+          console.log('📊 Dashboard: Loading completed exercises from local storage:', Array.from(localExercises));
+          
+          // Merge with database data
+          if (workoutPlan.status === 'fulfilled' && workoutPlan.value && workoutPlan.value.completedExercises) {
+            const dbExercises = new Set(workoutPlan.value.completedExercises as string[]);
+            const mergedExercises = new Set([...localExercises, ...dbExercises]);
+            setCompletedExercises(mergedExercises);
+            console.log('📊 Dashboard: Merged completed exercises:', Array.from(mergedExercises));
+          } else {
+            setCompletedExercises(localExercises);
+          }
+        }
+
+        // Load water intake
+        const waterData = await AsyncStorage.getItem('water_intake');
+        if (waterData) {
+          const waterObj = JSON.parse(waterData);
+          const today = new Date().toISOString().split('T')[0];
+          setWaterIntake(waterObj[today] || 0);
+        }
+
+        // Load water completion status
+        const waterCompletedData = await AsyncStorage.getItem('water_completed');
+        if (waterCompletedData) {
+          const waterCompletedObj = JSON.parse(waterCompletedData);
+          const today = new Date().toISOString().split('T')[0];
+          setWaterCompleted(waterCompletedObj[today] || false);
+        }
+      } catch (storageError) {
+        console.warn('Could not load from local storage:', storageError);
       }
     } catch (error) {
       console.error('Failed to load completion states:', error);
@@ -734,11 +788,11 @@ export default function DashboardScreen() {
 
     return [
       { label: t('dashboard.stats.calories'), value: remainingCalories.toLocaleString(), icon: 'flame' as const, color: colors.gold },
-      { label: t('dashboard.stats.water'), value: (waterIntake / 1000).toFixed(1), unit: 'L', icon: 'water' as const, color: colors.blue },
+      { label: t('dashboard.stats.water'), value: waterCompleted ? 'Done' : 'Pending', icon: 'water' as const, color: waterCompleted ? colors.green : colors.blue },
       { label: t('dashboard.stats.workouts'), value: (todayWorkouts.length - completedWorkouts).toString(), icon: 'barbell' as const, color: colors.green },
       { label: 'Meals Remaining', value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
     ];
-  }, [todayMeals, completedMeals, todayWorkouts, completedExercises, waterIntake, t]);
+  }, [todayMeals, completedMeals, todayWorkouts, completedExercises, waterCompleted, t]);
 
   const mockWorkouts = [
     { name: `💪 ${transliterateText('Push-Ups')}`, sets: '3x12', reps: `12 ${t('workout.reps')}`, weight: '' },
@@ -882,31 +936,6 @@ export default function DashboardScreen() {
     router.push('/auth/signup');
   };
 
-  const handleWaterIntake = useCallback(async (amount: number) => {
-    try {
-      const newWaterIntake = waterIntake + amount;
-      setWaterIntake(newWaterIntake);
-      
-      // Save to local storage
-      const today = new Date().toISOString().split('T')[0];
-      const waterData = await AsyncStorage.getItem('water_intake');
-      const waterObj = waterData ? JSON.parse(waterData) : {};
-      waterObj[today] = newWaterIntake;
-      await AsyncStorage.setItem('water_intake', JSON.stringify(waterObj));
-      
-      // Save to database if diet plan exists
-      if (dietPlan) {
-        const today = new Date();
-        const week = Math.ceil(today.getDate() / 7);
-        await dietPlanService.logWaterIntake(today.getDate(), week, newWaterIntake);
-      }
-      
-      showToast('success', `Added ${amount}ml water!`);
-    } catch (error) {
-      console.error('Failed to log water intake:', error);
-      showToast('error', 'Failed to log water intake');
-    }
-  }, [waterIntake, dietPlan, showToast]);
 
   // Function to reset signup completion status
   const resetSignupStatus = async () => {
@@ -945,109 +974,122 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground>
-        {/* Header */}
-        <DashboardHeader 
-          userName={isAuthenticated ? transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0]) : (hasCompletedSignup ? 'User' : 'Guest')}
-          onProfilePress={handleProfilePress}
-          onNotificationPress={handleNotificationPress}
-          notificationCount={unreadCount}
-        />
-
-        {/* Content */}
-        <ScrollView 
-          style={styles.container}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.gold}
-              colors={[colors.gold]}
-            />
-          }
-        >
-          {/* Welcome Message */}
-          <Animated.View entering={FadeInUp.delay(100)} style={styles.welcomeSection}>
-            <Text style={styles.greetingText}>{t('dashboard.greeting')}, {transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])} 💪</Text>
-            <Text style={styles.motivationText}>{t('dashboard.subtitle')}</Text>
-          </Animated.View>
-
-          {/* Stats Overview */}
-          <StatsCard 
-            title={t('dashboard.overview')}
-            stats={getDynamicStats}
-            delay={200}
+        <View style={styles.mainContainer}>
+          {/* Header */}
+          <DashboardHeader 
+            userName={isAuthenticated ? transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0]) : (hasCompletedSignup ? 'User' : 'Guest')}
+            onProfilePress={handleProfilePress}
+            onNotificationPress={handleNotificationPress}
+            notificationCount={unreadCount}
           />
 
-          {/* Today's Meal Plan */}
-          {isLoadingPlans ? (
-            <View style={styles.loadingCard}>
-              <ActivityIndicator color={colors.primary} size="large" />
-              <Text style={styles.loadingCardText}>Loading your meal plan...</Text>
-            </View>
-          ) : todayMeals.length > 0 ? (
-            <MealPlanCard
-              title="Today's AI Meal Plan"
-              meals={todayMeals}
-              totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
-              onPress={() => handleFeatureAccess('AI Diet')}
-              delay={300}
-            />
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyCardTitle}>No Meal Plan Today</Text>
-              <Text style={styles.emptyCardText}>Generate a diet plan to see today's meals</Text>
-            </View>
-          )}
+          {/* Content */}
+          <ScrollView 
+            style={styles.container}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.gold}
+                colors={[colors.gold]}
+              />
+            }
+          >
+            {/* Welcome Message */}
+            <Animated.View entering={FadeInUp.delay(100)} style={styles.welcomeSection}>
+              <Text style={styles.greetingText}>{t('dashboard.greeting')}, {transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])} 💪</Text>
+              <Text style={styles.motivationText}>{t('dashboard.subtitle')}</Text>
+            </Animated.View>
 
-          {/* Today's Workout Plan */}
-          {isLoadingPlans ? (
-            <View style={styles.loadingCard}>
-              <ActivityIndicator color={colors.primary} size="large" />
-              <Text style={styles.loadingCardText}>Loading your workout plan...</Text>
-            </View>
-          ) : (
-            <WorkoutPlanCard
-              title="Today's AI Workout Plan"
-              workouts={todayWorkouts}
-              onPress={() => handleFeatureAccess('AI Workout')}
-              delay={400}
+            {/* Stats Overview */}
+            <StatsCard 
+              title={t('dashboard.overview')}
+              stats={getDynamicStats}
+              delay={200}
             />
-          )}
 
-          {/* Water Intake Section */}
-          <View style={styles.waterSection}>
-            <Text style={styles.waterTitle}>💧 Water Intake</Text>
-            <Text style={styles.waterTarget}>Target: {targetWater}ml</Text>
-            <View style={styles.waterProgress}>
-              <View style={styles.waterProgressBar}>
-                <View style={[styles.waterProgressFill, { width: `${Math.min(100, (waterIntake / targetWater) * 100)}%` }]} />
+            {/* Today's Meal Plan */}
+            {isLoadingPlans ? (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={styles.loadingCardText}>Loading your meal plan...</Text>
               </View>
-              <Text style={styles.waterProgressText}>{waterIntake}ml / {targetWater}ml</Text>
-            </View>
-            <View style={styles.waterButtons}>
-              {[250, 500, 750, 1000].map(amount => (
-                <TouchableOpacity
-                  key={amount}
-                  style={styles.waterButton}
-                  onPress={() => handleWaterIntake(amount)}
-                >
-                  <Text style={styles.waterButtonText}>+{amount}ml</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+            ) : todayMeals.length > 0 ? (
+              <MealPlanCard
+                title="Today's AI Meal Plan"
+                meals={todayMeals}
+                totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+                onPress={() => handleFeatureAccess('AI Diet')}
+                delay={300}
+              />
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardTitle}>No Meal Plan Today</Text>
+                <Text style={styles.emptyCardText}>Generate a diet plan to see today's meals</Text>
+              </View>
+            )}
 
-          {/* Extra spacing for bottom navigation */}
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
+            {/* Today's Workout Plan */}
+            {isLoadingPlans ? (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={styles.loadingCardText}>Loading your workout plan...</Text>
+              </View>
+            ) : (
+              <WorkoutPlanCard
+                title="Today's AI Workout Plan"
+                workouts={todayWorkouts}
+                completedExercises={completedExercises}
+                onPress={() => handleFeatureAccess('AI Workout')}
+                delay={400}
+              />
+            )}
 
-        {/* Bottom Navigation */}
-        <BottomNavigation 
-          activeTab={activeTab}
-          onTabPress={handleTabPress}
-        />
+            {/* Water Intake Section - Status Only */}
+            <View style={styles.waterSection}>
+              <Text style={styles.waterTitle}>💧 Water Intake</Text>
+              <Text style={styles.waterTarget}>Target: {targetWater}ml</Text>
+              
+              <View style={styles.waterStatusOnlyContainer}>
+                <View style={styles.waterStatusInfo}>
+                  <Text style={styles.waterStatusText}>
+                    {waterCompleted ? '✅ Completed' : '⏳ Pending'}
+                  </Text>
+                  <Text style={styles.waterAmountText}>
+                    {waterCompleted ? targetWater : 0}ml / {targetWater}ml
+                  </Text>
+                </View>
+                
+                <View style={[
+                  styles.waterStatusIndicator,
+                  waterCompleted && styles.waterStatusIndicatorCompleted
+                ]}>
+                  <Text style={[
+                    styles.waterStatusIndicatorText,
+                    waterCompleted && styles.waterStatusIndicatorTextCompleted
+                  ]}>
+                    {waterCompleted ? '✓' : '○'}
+                  </Text>
+                </View>
+              </View>
+              
+              <Text style={styles.waterNoteText}>
+                Manage water intake in your diet plan
+              </Text>
+            </View>
+
+            {/* Extra spacing for bottom navigation */}
+            <View style={styles.bottomSpacing} />
+          </ScrollView>
+
+          {/* Bottom Navigation */}
+          <BottomNavigation 
+            activeTab={activeTab}
+            onTabPress={handleTabPress}
+          />
+        </View>
 
         {/* Sidebar */}
         <Sidebar
@@ -1115,6 +1157,10 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
   },
   container: {
     flex: 1,
@@ -1260,6 +1306,61 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+
+  // Water Status Only Styles
+  waterStatusOnlyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  waterStatusInfo: {
+    flex: 1,
+  },
+  waterStatusText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  waterAmountText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  waterStatusIndicator: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.cardBorder + '30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
+  },
+  waterStatusIndicatorText: {
+    color: colors.mutedText,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  waterStatusIndicatorCompleted: {
+    backgroundColor: colors.green + '20',
+    borderColor: colors.green,
+  },
+  waterStatusIndicatorTextCompleted: {
+    color: colors.green,
+  },
+  waterNoteText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
   },
   loadingCard: {
     backgroundColor: colors.surface,

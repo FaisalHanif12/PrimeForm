@@ -8,6 +8,7 @@ import { WorkoutExercise } from '../services/aiWorkoutService';
 interface WorkoutPlanCardProps {
   title: string;
   workouts: WorkoutExercise[];
+  completedExercises?: Set<string>;
   onPress?: () => void;
   delay?: number;
 }
@@ -15,10 +16,14 @@ interface WorkoutPlanCardProps {
 export default function WorkoutPlanCard({ 
   title, 
   workouts, 
+  completedExercises = new Set(),
   onPress, 
   delay = 0 
 }: WorkoutPlanCardProps) {
   const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
+  
+  // Get today's date for completion checking
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <Animated.View 
@@ -37,21 +42,42 @@ export default function WorkoutPlanCard({
           
           {workouts.length > 0 ? (
             <View style={styles.workoutList}>
-              {workouts.slice(0, 3).map((workout, index) => (
-                <View key={index} style={styles.workoutItem}>
-                  <View style={styles.workoutIcon}>
-                    <Ionicons name="fitness" size={16} color={colors.mutedText} />
-                  </View>
-                  
-                  <View style={styles.workoutContent}>
-                    <Text style={styles.workoutName}>{workout.name}</Text>
-                    <View style={styles.workoutDetails}>
-                      <Text style={styles.workoutCalories}>{workout.caloriesBurned} kcal</Text>
-                      <Text style={styles.workoutWeight}>{workout.sets} sets × {workout.reps} reps</Text>
+              {workouts.map((workout, index) => {
+                const isCompleted = completedExercises.has(`${today}-${workout.name}`);
+                return (
+                  <View key={index} style={[
+                    styles.workoutItem,
+                    isCompleted && styles.workoutItemCompleted
+                  ]}>
+                    <View style={styles.workoutIcon}>
+                      <Ionicons name="fitness" size={16} color={colors.mutedText} />
                     </View>
+                    
+                    <View style={styles.workoutContent}>
+                      <Text style={[
+                        styles.workoutName,
+                        isCompleted && styles.workoutNameCompleted
+                      ]}>{workout.name}</Text>
+                      <View style={styles.workoutDetails}>
+                        <Text style={[
+                          styles.workoutCalories,
+                          isCompleted && styles.workoutCaloriesCompleted
+                        ]}>{workout.caloriesBurned} kcal</Text>
+                        <Text style={[
+                          styles.workoutWeight,
+                          isCompleted && styles.workoutWeightCompleted
+                        ]}>{workout.sets} sets × {workout.reps} reps</Text>
+                      </View>
+                    </View>
+                    
+                    {isCompleted && (
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedIcon}>✓</Text>
+                      </View>
+                    )}
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyWorkoutContainer}>
@@ -185,5 +211,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.body,
     textAlign: 'center',
+  },
+  
+  // Completion Styles
+  workoutItemCompleted: {
+    opacity: 0.7,
+  },
+  workoutNameCompleted: {
+    color: colors.mutedText,
+    textDecorationLine: 'line-through',
+  },
+  workoutCaloriesCompleted: {
+    color: colors.mutedText,
+    textDecorationLine: 'line-through',
+  },
+  workoutWeightCompleted: {
+    color: colors.mutedText + '80',
+    textDecorationLine: 'line-through',
+  },
+  completedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedIcon: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
   },
 });
