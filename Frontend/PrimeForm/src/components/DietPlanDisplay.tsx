@@ -280,8 +280,10 @@ export default function DietPlanDisplay({
       const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
       const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
       
-      // If 60% or more completed, consider it completed, otherwise missed
-      return completionPercentage >= 60 ? 'completed' : 'missed';
+      // Apply completion criteria: < 40% = missed, >= 60% = completed
+      if (completionPercentage < 40) return 'missed';
+      if (completionPercentage >= 60) return 'completed';
+      return 'in_progress'; // 40-59% = in progress
     }
     
     // Future days
@@ -298,7 +300,12 @@ export default function DietPlanDisplay({
     ];
     
     const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
-    return Math.round((completedMealsCount / dayMeals.length) * 100);
+    const percentage = Math.round((completedMealsCount / dayMeals.length) * 100);
+    
+    // Apply completion criteria: < 40% = missed, >= 60% = completed, 40-59% = in progress
+    if (percentage < 40) return 0; // Show as 0% for missed days
+    if (percentage >= 60) return 100; // Show as 100% for completed days
+    return percentage; // Show actual percentage for in-progress days
   };
 
   const isCurrentDay = (day: DietDay): boolean => {
@@ -1068,26 +1075,25 @@ const styles = StyleSheet.create({
   premiumDayCard: {
     width: 100,
     height: 140,
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent', // Remove background
     borderRadius: 20,
     padding: spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderWidth: 0, // Remove border
     position: 'relative',
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    elevation: 0, // Remove elevation
+    shadowColor: 'transparent', // Remove shadow
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   premiumDayCardToday: {
-    backgroundColor: colors.gold + '10',
+    backgroundColor: 'transparent', // Remove background
     borderColor: colors.gold,
     borderWidth: 2,
-    elevation: 8,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    elevation: 0, // Remove elevation
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   premiumDayCardSelected: {
     backgroundColor: colors.gold + '08',
@@ -1117,9 +1123,9 @@ const styles = StyleSheet.create({
   
   // Premium Status Badge
   premiumStatusBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.cardBorder + '40',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1147,8 +1153,8 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   premiumStatusPercentage: {
-    color: colors.error,
-    fontSize: 12,
+    color: colors.white,
+    fontSize: 11,
     fontWeight: '900',
     fontFamily: fonts.heading,
   },
@@ -1156,10 +1162,10 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   premiumStatusPercentageMissed: {
-    color: colors.error,
+    color: colors.white,
   },
   premiumStatusPercentageProgress: {
-    color: colors.gold,
+    color: colors.white,
   },
   
   // Day Info Section
