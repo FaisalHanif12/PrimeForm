@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -96,6 +96,74 @@ export default function DashboardScreen() {
       loadDynamicData();
     }
   }, [isAuthenticated, hasCompletedSignup]);
+
+  // Check for new day only when app becomes active (no polling)
+  useEffect(() => {
+    let isChecking = false; // Prevent concurrent checks
+    
+    const checkForNewDay = async () => {
+      if (isChecking) return;
+      
+      try {
+        isChecking = true;
+        const today = new Date().toDateString();
+        const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
+        
+        if (lastCheckedDay !== today) {
+          console.log('🌅 New day detected! Refreshing dashboard data...');
+          await AsyncStorage.setItem('last_checked_day', today);
+          await loadDynamicData();
+        }
+      } catch (error) {
+        console.error('Error checking for new day:', error);
+      } finally {
+        isChecking = false;
+      }
+    };
+
+    // Check immediately on mount
+    checkForNewDay();
+  }, []);
+
+  // Production-optimized refresh system - ONLY when needed
+  useEffect(() => {
+    let isRefreshing = false; // Prevent concurrent refreshes
+
+    const handleAppStateChange = async (nextAppState: string) => {
+      if (nextAppState === 'active' && !isRefreshing) {
+        console.log('📱 App became active, refreshing data...');
+        isRefreshing = true;
+        
+        try {
+          // First check for new day
+          const today = new Date().toDateString();
+          const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
+          
+          if (lastCheckedDay !== today) {
+            console.log('🌅 New day detected! Refreshing dashboard data...');
+            await AsyncStorage.setItem('last_checked_day', today);
+          }
+          
+          // Refresh both completion states and meal/workout data
+          await Promise.all([
+            loadCompletionStates(),
+            loadDynamicData()
+          ]);
+        } catch (error) {
+          console.error('Error refreshing data:', error);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+    };
+
+    // Listen for app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   // Check app state on mount
   useEffect(() => {
@@ -218,6 +286,7 @@ export default function DashboardScreen() {
     setRefreshing(true);
     try {
       await loadDashboard();
+      await loadDynamicData(); // Also reload meal and workout plans
     } catch (error) {
       console.error('Failed to refresh dashboard:', error);
     } finally {
@@ -434,31 +503,50 @@ export default function DashboardScreen() {
   };
 
   // Load dynamic data
-  const loadDynamicData = async () => {
+  const loadDynamicData = useCallback(async () => {
     try {
       setIsLoadingPlans(true);
       setPlansLoaded(false);
       
       // Load both plans in parallel to ensure consistent loading
-      const [dietPlanData, workoutPlanData] = await Promise.all([
+      const [dietPlanData, workoutPlanData] = await Promise.allSettled([
         aiDietService.loadDietPlanFromDatabase(),
         aiWorkoutService.loadWorkoutPlanFromDatabase()
       ]);
+      
+      // Handle results with proper error handling
+      const dietPlan = dietPlanData.status === 'fulfilled' ? dietPlanData.value : null;
+      const workoutPlan = workoutPlanData.status === 'fulfilled' ? workoutPlanData.value : null;
+      
+      if (dietPlanData.status === 'rejected') {
+        console.error('Failed to load diet plan:', dietPlanData.reason);
+      }
+      if (workoutPlanData.status === 'rejected') {
+        console.error('Failed to load workout plan:', workoutPlanData.reason);
+      }
 
       // Process diet plan
-      if (dietPlanData) {
-        setDietPlan(dietPlanData);
+      if (dietPlan) {
+        setDietPlan(dietPlan);
         
         // Get today's meals using the same logic as DietPlanDisplay
         const today = new Date();
-        const startDate = new Date(dietPlanData.startDate);
+        const startDate = new Date(dietPlan.startDate);
         const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         const currentWeek = Math.floor(daysDiff / 7) + 1;
         const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
         const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
         
         // Get the day from the 7-day pattern
-        const todayMealData = dietPlanData.weeklyPlan[adjustedDayOfWeek];
+        const todayMealData = dietPlan.weeklyPlan[adjustedDayOfWeek];
+        
+        console.log('🍽️ Dashboard Meal Loading:', {
+          currentWeek,
+          dayOfWeek,
+          adjustedDayOfWeek,
+          hasMealData: !!todayMealData,
+          mealCount: todayMealData?.meals ? Object.keys(todayMealData.meals).length : 0
+        });
         
         if (todayMealData) {
           const meals = [
@@ -477,19 +565,28 @@ export default function DashboardScreen() {
       }
 
       // Process workout plan
-      if (workoutPlanData) {
-        setWorkoutPlan(workoutPlanData);
+      if (workoutPlan) {
+        setWorkoutPlan(workoutPlan);
         
         // Get today's workout using the same logic as WorkoutPlanDisplay
         const today = new Date();
-        const startDate = new Date(workoutPlanData.startDate);
+        const startDate = new Date(workoutPlan.startDate);
         const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
         const currentWeek = Math.floor(daysDiff / 7) + 1;
         const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
         const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
         
         // Get the day from the 7-day pattern
-        const todayWorkoutData = workoutPlanData.weeklyPlan[adjustedDayOfWeek];
+        const todayWorkoutData = workoutPlan.weeklyPlan[adjustedDayOfWeek];
+        
+        console.log('💪 Dashboard Workout Loading:', {
+          currentWeek,
+          dayOfWeek,
+          adjustedDayOfWeek,
+          hasWorkoutData: !!todayWorkoutData,
+          isRestDay: todayWorkoutData?.isRestDay,
+          exerciseCount: todayWorkoutData?.exercises?.length || 0
+        });
         
         if (todayWorkoutData && !todayWorkoutData.isRestDay) {
           const workouts = todayWorkoutData.exercises.map((exercise: any) => ({
@@ -515,7 +612,7 @@ export default function DashboardScreen() {
     } finally {
       setIsLoadingPlans(false);
     }
-  };
+  }, []);
 
   const loadCompletionStates = async () => {
     try {
@@ -543,8 +640,14 @@ export default function DashboardScreen() {
     }
   };
 
-  // Dynamic stats based on real data
-  const getDynamicStats = () => {
+  // Function to refresh dashboard data (can be called from other components)
+  const refreshDashboardData = async () => {
+    console.log('🔄 Refreshing dashboard data...');
+    await loadDynamicData();
+  };
+
+  // Production-optimized dynamic stats with memoization
+  const getDynamicStats = useMemo(() => {
     const totalCalories = todayMeals.reduce((sum, meal) => sum + meal.calories, 0);
     
     // Get today's date for completion checking
@@ -584,7 +687,7 @@ export default function DashboardScreen() {
       { label: t('dashboard.stats.workouts'), value: (todayWorkouts.length - completedWorkouts).toString(), icon: 'barbell' as const, color: colors.green },
       { label: 'Meals Remaining', value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
     ];
-  };
+  }, [todayMeals, completedMeals, todayWorkouts, completedExercises, waterIntake, t]);
 
   const mockWorkouts = [
     { name: `💪 ${transliterateText('Push-Ups')}`, sets: '3x12', reps: `12 ${t('workout.reps')}`, weight: '' },
@@ -683,6 +786,7 @@ export default function DashboardScreen() {
         } else {
           // User is authenticated, ensure they stay on dashboard
           console.log('✅ App returned to foreground - user authenticated, staying on dashboard');
+          // Data will be refreshed by the optimized AppState listener
         }
       }
     };
@@ -727,7 +831,7 @@ export default function DashboardScreen() {
     router.push('/auth/signup');
   };
 
-  const handleWaterIntake = async (amount: number) => {
+  const handleWaterIntake = useCallback(async (amount: number) => {
     try {
       const newWaterIntake = waterIntake + amount;
       setWaterIntake(newWaterIntake);
@@ -751,7 +855,7 @@ export default function DashboardScreen() {
       console.error('Failed to log water intake:', error);
       showToast('error', 'Failed to log water intake');
     }
-  };
+  }, [waterIntake, dietPlan, showToast]);
 
   // Function to reset signup completion status
   const resetSignupStatus = async () => {
@@ -821,7 +925,7 @@ export default function DashboardScreen() {
           {/* Stats Overview */}
           <StatsCard 
             title={t('dashboard.overview')}
-            stats={getDynamicStats()}
+            stats={getDynamicStats}
             delay={200}
           />
 
