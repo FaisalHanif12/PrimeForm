@@ -38,6 +38,7 @@ export default function WorkoutPlanDisplay({
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [exerciseModalVisible, setExerciseModalVisible] = useState(false);
+  const [progressPercentage, setProgressPercentage] = useState(0);
 
   // Safety checks for workout plan structure
   if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
@@ -52,22 +53,51 @@ export default function WorkoutPlanDisplay({
   const getCurrentWeek = (): number => {
     const today = new Date();
     const startDate = new Date(workoutPlan.startDate);
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+    
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    // Calculate week based on plan generation day (not Monday)
-    // If plan starts mid-week, week 1 includes the generation day and forward
-    const calculatedWeek = Math.floor(daysDiff / 7) + 1;
+    // Calculate week based on plan generation day
+    // First week: from generation day to Sunday (inclusive)
+    // Subsequent weeks: Monday to Sunday
+    const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
-    console.log('📅 WorkoutPlanDisplay Date Debug:', {
+    let calculatedWeek;
+    if (daysDiff < 0) {
+      // Future date - not started yet
+      calculatedWeek = 1;
+    } else if (daysDiff === 0) {
+      // Generation day - week 1
+      calculatedWeek = 1;
+    } else {
+      // Calculate which week we're in
+      // First week: generation day to Sunday
+      const daysInFirstWeek = 7 - startDayOfWeek; // Days from generation day to Sunday
+      
+      if (daysDiff <= daysInFirstWeek) {
+        // Still in first week
+        calculatedWeek = 1;
+      } else {
+        // Calculate subsequent weeks (Monday to Sunday cycles)
+        const remainingDays = daysDiff - daysInFirstWeek;
+        calculatedWeek = 1 + Math.floor(remainingDays / 7) + 1;
+      }
+    }
+    
+    console.log('📅 WorkoutPlanDisplay Week Calculation:', {
       today: today.toDateString(),
       startDate: startDate.toDateString(),
       daysDiff,
+      startDayOfWeek,
+      daysInFirstWeek: 7 - startDayOfWeek,
       calculatedWeek,
       completedDaysCount: completedDays.size,
       planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
     });
     
-    // Use simple date-based calculation to match dashboard logic
     return Math.max(1, Math.min(calculatedWeek, getTotalWeeks()));
   };
 
@@ -134,155 +164,199 @@ export default function WorkoutPlanDisplay({
 
     const currentWeek = getCurrentWeek();
     const startDate = new Date(workoutPlan.startDate);
+    const today = new Date();
     
-    // Calculate week start based on plan generation day, not Monday
-    // Week 1 starts from the plan generation day
-    const weekStartDate = new Date(startDate);
-    weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
-
     console.log('📅 Workout Calendar Debug:', {
       currentWeek,
       completedDaysCount: completedDays.size,
       completedWeeksCount: Math.floor(completedDays.size / 7),
-      weekStartDate: weekStartDate.toISOString().split('T')[0],
       planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
-      weekStartDay: weekStartDate.toLocaleDateString('en-US', { weekday: 'long' })
+      today: today.toLocaleDateString('en-US', { weekday: 'long' })
     });
 
-    return workoutPlan.weeklyPlan.map((day, index) => ({
-      ...day,
-      date: new Date(weekStartDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-      day: ((currentWeek - 1) * 7) + (index + 1) // Absolute day number for tracking
-    }));
+    // Create a 7-day array for the current week
+    const weekDays = [];
+    
+    if (currentWeek === 1) {
+      // First week: start from generation day to Sunday
+      const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      // Calculate days from generation day to Sunday
+      let daysToShow;
+      if (startDayOfWeek === 0) { // Sunday
+        daysToShow = 1; // Sunday only
+      } else {
+        daysToShow = 8 - startDayOfWeek; // Generation day to Sunday (inclusive)
+      }
+      
+      console.log('📅 First Week Calendar:', {
+        startDayOfWeek,
+        daysToShow,
+        generationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
+        calculation: startDayOfWeek === 0 ? 'Sunday only' : `${8 - startDayOfWeek} days from generation day to Sunday`
+      });
+      
+      for (let i = 0; i < daysToShow; i++) {
+        const dayDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        const dayOfWeek = dayDate.getDay();
+            
+        const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        
+        console.log('📅 Day Mapping Debug:', {
+          i,
+          dayDate: dayDate.toDateString(),
+          dayOfWeek,
+          planDayIndex,
+          dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }),
+          hasWorkoutData: planDayIndex < workoutPlan.weeklyPlan.length
+        });
+        
+        if (planDayIndex < workoutPlan.weeklyPlan.length) {
+          weekDays.push({
+            ...workoutPlan.weeklyPlan[planDayIndex],
+            date: dayDate.toISOString().split('T')[0],
+            day: i + 1
+          });
+        }
+      }
+    } else {
+      // Subsequent weeks: Monday to Sunday
+      const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      // Calculate days in first week based on generation day
+      let daysInFirstWeek;
+      if (startDayOfWeek === 0) { // Sunday
+        daysInFirstWeek = 1; // Sunday only
+      } else {
+        daysInFirstWeek = 8 - startDayOfWeek; // Generation day to Sunday (inclusive)
+      }
+      
+      // Calculate the Monday of the current week
+      const weekStartDate = new Date(startDate);
+      weekStartDate.setDate(startDate.getDate() + daysInFirstWeek + ((currentWeek - 2) * 7) + 1);
+      
+      console.log('📅 Subsequent Week Calendar:', {
+        currentWeek,
+        daysInFirstWeek,
+        weekStartDate: weekStartDate.toDateString(),
+        weekStartDay: weekStartDate.toLocaleDateString('en-US', { weekday: 'long' })
+      });
+      
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(weekStartDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        if (i < workoutPlan.weeklyPlan.length) {
+          weekDays.push({
+            ...workoutPlan.weeklyPlan[i],
+            date: dayDate.toISOString().split('T')[0],
+            day: ((currentWeek - 1) * 7) + (i + 1)
+          });
+        }
+      }
+    }
+
+    return weekDays;
   };
 
   useEffect(() => {
     // Load completion states and set initial day
     loadCompletionStates();
 
-    // Use the same logic as dashboard to get today's day data
-    const todaysDay = getTodaysDayData();
-    
-    if (todaysDay) {
-      console.log('📅 WorkoutPlanDisplay Setting Today:', {
-        dayName: todaysDay.dayName,
-        date: todaysDay.date,
-        isRestDay: todaysDay.isRestDay,
-        exerciseCount: todaysDay.exercises?.length || 0
-      });
-      setSelectedDay(todaysDay);
-      return;
-    }
-
-    // Fallback to first workout day of current week if today's data not found
+    // Auto-select current day only
     const currentWeekDays = getCurrentWeekDays();
-    if (currentWeekDays.length > 0) {
-      const firstWorkoutDay = currentWeekDays.find(day => !day.isRestDay);
-      if (firstWorkoutDay) {
-        console.warn('Today\'s day data not found, using first workout day as fallback');
-        setSelectedDay(firstWorkoutDay);
-      } else {
-        console.warn('Today\'s day data not found, using first day of week as fallback');
-        setSelectedDay(currentWeekDays[0]);
-      }
+    const todaysDay = currentWeekDays.find(day => isCurrentDay(day));
+    if (todaysDay) {
+      setSelectedDay(todaysDay);
+    } else {
+      setSelectedDay(null);
     }
+  }, [workoutPlan]);
+
+  // Update progress percentage whenever current week changes
+  useEffect(() => {
+    const newProgress = getProgressPercentage();
+    setProgressPercentage(newProgress);
+    console.log('🔄 Progress updated (week-based):', newProgress + '%');
   }, [workoutPlan]);
 
   const loadCompletionStates = async () => {
     try {
-      // First try to load from the workout plan database
-      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-      if (workoutPlan && workoutPlan.completedExercises) {
-        console.log('📊 Loading completed exercises from database:', workoutPlan.completedExercises);
-        setCompletedExercises(new Set(workoutPlan.completedExercises));
-      }
-      
-      if (workoutPlan && workoutPlan.completedDays) {
-        console.log('📊 Loading completed days from database:', workoutPlan.completedDays);
-        setCompletedDays(new Set(workoutPlan.completedDays));
-      }
-
-      // Also load from local storage as backup/sync
-      try {
+      // Load from local storage first for immediate UI update
         const Storage = await import('../utils/storage');
         const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
         const cachedCompletedDays = await Storage.default.getItem('completed_days');
 
         if (cachedCompletedExercises) {
-          const localExercises = new Set(JSON.parse(cachedCompletedExercises));
+        const localExercises = new Set<string>(JSON.parse(cachedCompletedExercises));
           console.log('📊 Loading completed exercises from local storage:', Array.from(localExercises));
-          
-          // Merge with database data
-          if (workoutPlan && workoutPlan.completedExercises) {
-            const dbExercises = new Set(workoutPlan.completedExercises);
-            const mergedExercises = new Set([...localExercises, ...dbExercises]);
-            setCompletedExercises(mergedExercises);
-            console.log('📊 Merged completed exercises:', Array.from(mergedExercises));
-          } else {
             setCompletedExercises(localExercises);
-          }
         }
         
         if (cachedCompletedDays) {
-          const localDays = new Set(JSON.parse(cachedCompletedDays));
+        const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
           console.log('📊 Loading completed days from local storage:', Array.from(localDays));
-          
-          // Merge with database data
-          if (workoutPlan && workoutPlan.completedDays) {
-            const dbDays = new Set(workoutPlan.completedDays);
-            const mergedDays = new Set([...localDays, ...dbDays]);
-            setCompletedDays(mergedDays);
-            console.log('📊 Merged completed days:', Array.from(mergedDays));
-          } else {
             setCompletedDays(localDays);
           }
+
+      // Then try to load from database and merge
+      try {
+        const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+        if (workoutPlan) {
+          if (workoutPlan.completedExercises) {
+            console.log('📊 Loading completed exercises from database:', workoutPlan.completedExercises);
+            const dbExercises = new Set<string>(workoutPlan.completedExercises);
+            const localExercises = cachedCompletedExercises ? new Set<string>(JSON.parse(cachedCompletedExercises)) : new Set<string>();
+            const mergedExercises = new Set<string>([...localExercises, ...dbExercises]);
+            setCompletedExercises(mergedExercises);
+            console.log('📊 Merged completed exercises:', Array.from(mergedExercises));
+          }
+          
+          if (workoutPlan.completedDays) {
+            console.log('📊 Loading completed days from database:', workoutPlan.completedDays);
+            const dbDays = new Set<string>(workoutPlan.completedDays);
+            const localDays = cachedCompletedDays ? new Set<string>(JSON.parse(cachedCompletedDays)) : new Set<string>();
+            const mergedDays = new Set<string>([...localDays, ...dbDays]);
+            setCompletedDays(mergedDays);
+            console.log('📊 Merged completed days:', Array.from(mergedDays));
+          }
         }
-      } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
+      } catch (dbError) {
+        console.warn('Could not load completion states from database:', dbError);
       }
     } catch (error) {
-      console.warn('Could not load completion states from database:', error);
-
-      // Fallback to local storage only
-      try {
-        const Storage = await import('../utils/storage');
-        const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
-        const cachedCompletedDays = await Storage.default.getItem('completed_days');
-
-        if (cachedCompletedExercises) {
-          setCompletedExercises(new Set(JSON.parse(cachedCompletedExercises)));
-        }
-        if (cachedCompletedDays) {
-          setCompletedDays(new Set(JSON.parse(cachedCompletedDays)));
-        }
-      } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
-      }
+      console.warn('Could not load completion states:', error);
     }
   };
 
   const getProgressPercentage = (): number => {
-    // Calculate progress based on actual weeks completed vs total weeks
+    // Calculate progress based on weeks completed out of total weeks
     const totalWeeks = getTotalWeeks();
     const currentWeek = getCurrentWeek();
+    
+    if (totalWeeks <= 0) {
+      console.log('📊 Progress: No total weeks, returning 0%');
+      return 0;
+    }
+    
+    // Progress = (Completed Weeks / Total Weeks) * 100
+    // Week 1 = 0% (haven't completed any weeks yet)
+    // Week 2 = 1/36 * 100 = 2.78% (completed 1 week)
+    // Week 18 = 17/36 * 100 = 47.22% (completed 17 weeks)
+    // Week 36 = 35/36 * 100 = 97.22% (completed 35 weeks)
+    const completedWeeks = Math.max(0, currentWeek - 1);
+    const actualProgress = (completedWeeks / totalWeeks) * 100;
+    const roundedProgress = Math.round(Math.max(0, Math.min(100, actualProgress)));
 
-    if (totalWeeks <= 0) return 0;
+    console.log('📊 Progress Calculation (Weeks Completed):', {
+      totalWeeks,
+      currentWeek,
+      completedWeeks,
+      actualProgress: actualProgress.toFixed(2),
+      roundedProgress,
+      progressArcDegrees: `${(roundedProgress / 100) * 360}deg`,
+      formula: `${completedWeeks} / ${totalWeeks} * 100 = ${actualProgress.toFixed(2)}%`
+    });
 
-    // Calculate actual completion progress based on completed days
-    const completedWeeksCount = Math.floor(completedDays.size / 7);
-    const partialWeekProgress = (completedDays.size % 7) / 7;
-    const actualProgress = ((completedWeeksCount + partialWeekProgress) / totalWeeks) * 100;
-
-    // Calculate time-based progress for reference
-    const start = new Date(workoutPlan.startDate).getTime();
-    const end = new Date(workoutPlan.endDate).getTime();
-    const now = Date.now();
-    const timeProgress = end <= start ? 0 : Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
-
-    // Use the higher of actual progress or time progress, but cap at time progress + 10%
-    const finalProgress = Math.min(Math.max(actualProgress, timeProgress), timeProgress + 10);
-
-    return Math.round(finalProgress);
+    return roundedProgress;
   };
 
   const getDayStatus = (day: WorkoutDay, index: number): 'completed' | 'rest' | 'upcoming' | 'missed' | 'in_progress' => {
@@ -295,7 +369,7 @@ export default function WorkoutPlanDisplay({
     const planStartDate = new Date(workoutPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
 
-    // Check if day is completed
+    // Check if day is completed (60% completion criteria)
     if (completedDays.has(day.date)) {
       return 'completed';
     }
@@ -305,27 +379,21 @@ export default function WorkoutPlanDisplay({
       return 'in_progress';
     }
 
-    // Plan generation day should be in_progress if it's today or in the past
-    if (dayDate.getTime() === planStartDate.getTime() && dayDate <= today) {
-      return 'in_progress';
-    }
-
     // Days before plan generation should be 'upcoming' (not missed)
     if (dayDate < planStartDate) {
       return 'upcoming';
     }
 
     // Days after plan generation but before today
-    if (dayDate < today && dayDate > planStartDate) {
+    if (dayDate < today && dayDate >= planStartDate) {
       // Check completion percentage for the day
       const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
       const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
-      const completionPercentage = (completedExercisesCount / dayExercises.length) * 100;
+      const completionPercentage = dayExercises.length > 0 ? (completedExercisesCount / dayExercises.length) * 100 : 0;
 
-      // Apply completion criteria: < 40% = missed, >= 60% = completed
-      if (completionPercentage < 40) return 'missed';
+      // Apply completion criteria: < 60% = missed, >= 60% = completed
       if (completionPercentage >= 60) return 'completed';
-      return 'in_progress'; // 40-59% = in progress
+      if (completionPercentage < 60) return 'missed';
     }
 
     // Future days
@@ -338,10 +406,9 @@ export default function WorkoutPlanDisplay({
     
     const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
     const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
-    const percentage = Math.round((completedExercisesCount / dayExercises.length) * 100);
+    const percentage = dayExercises.length > 0 ? Math.round((completedExercisesCount / dayExercises.length) * 100) : 0;
     
-    // Apply completion criteria: < 40% = missed, >= 60% = completed, 40-59% = in progress
-    if (percentage < 40) return 0; // Show as 0% for missed days
+    // Apply completion criteria: < 60% = missed, >= 60% = completed
     if (percentage >= 60) return 100; // Show as 100% for completed days
     return percentage; // Show actual percentage for in-progress days
   };
@@ -349,7 +416,12 @@ export default function WorkoutPlanDisplay({
   const isCurrentDay = (day: WorkoutDay): boolean => {
     const today = new Date();
     const dayDate = new Date(day.date);
-    return today.toDateString() === dayDate.toDateString();
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    dayDate.setHours(0, 0, 0, 0);
+    
+    return today.getTime() === dayDate.getTime();
   };
 
   const formatDate = (dateString: string) => {
@@ -387,12 +459,12 @@ export default function WorkoutPlanDisplay({
       // Sync with progress service
       await syncProgressData();
 
-      // Check if all exercises for the day are completed
-      const allExercisesCompleted = selectedDay.exercises.every(ex =>
-        newCompletedExercises.has(`${selectedDay.date}-${ex.name}`)
-      );
+      // Check if day meets 60% completion criteria
+      const dayExercises = selectedDay.exercises.map(ex => `${selectedDay.date}-${ex.name}`);
+      const completedExercisesCount = dayExercises.filter(exerciseId => newCompletedExercises.has(exerciseId)).length;
+      const completionPercentage = (completedExercisesCount / dayExercises.length) * 100;
 
-      if (allExercisesCompleted) {
+      if (completionPercentage >= 60) {
         // Mark day as completed in database
         await workoutPlanService.markDayCompleted(selectedDay.day, week);
         const newCompletedDays = new Set([...completedDays, selectedDay.date]);
@@ -401,7 +473,7 @@ export default function WorkoutPlanDisplay({
         // Save to local storage
         await Storage.default.setItem('completed_days', JSON.stringify([...newCompletedDays]));
 
-        console.log(`🎉 Day ${selectedDay.day} completed! All exercises finished.`);
+        console.log(`🎉 Day ${selectedDay.day} completed! ${completionPercentage.toFixed(1)}% of exercises finished.`);
       }
     } catch (error) {
       console.error('Error marking exercise completed:', error);
@@ -446,6 +518,34 @@ export default function WorkoutPlanDisplay({
     }
   };
 
+  const handleDeletePlan = async () => {
+    try {
+      console.log('🗑️ Deleting workout plan...');
+      
+      // Clear local storage
+      const Storage = await import('../utils/storage');
+      await Storage.default.removeItem('cached_workout_plan');
+      await Storage.default.removeItem('completed_exercises');
+      await Storage.default.removeItem('completed_days');
+      
+      // Delete from database
+      if (workoutPlan._id || workoutPlan.id) {
+        const planId = (workoutPlan._id || workoutPlan.id) as string;
+        await workoutPlanService.deleteWorkoutPlan(planId);
+        console.log('✅ Workout plan deleted from database');
+      }
+      
+      // Call the onGenerateNew callback to refresh the parent component
+      if (onGenerateNew) {
+        onGenerateNew();
+      }
+      
+      console.log('✅ Workout plan deleted successfully - returning to profile summary');
+    } catch (error) {
+      console.error('❌ Error deleting workout plan:', error);
+    }
+  };
+
   // Removed week cards per new design
 
 
@@ -467,11 +567,14 @@ export default function WorkoutPlanDisplay({
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircle}>
+                {/* Background Circle */}
+                <View style={styles.progressCircleBackground} />
+                {/* Progress Arc - Dynamic based on percentage */}
                 <View style={[styles.progressCircleFill, {
-                  transform: [{ rotate: `${(getProgressPercentage() / 100) * 360}deg` }]
+                  transform: [{ rotate: `${(progressPercentage / 100) * 360}deg` }]
                 }]} />
                 <View style={styles.progressCircleInner}>
-                  <Text style={styles.progressCircleText}>{getProgressPercentage()}%</Text>
+                  <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
                   <Text style={styles.progressCircleLabel}>Complete</Text>
                 </View>
               </View>
@@ -565,10 +668,10 @@ export default function WorkoutPlanDisplay({
                   ) : (
                     <>
                       <Text style={[styles.premiumExerciseCount, isToday && styles.premiumExerciseCountToday]}>
-                        Active
+                        Rest
                       </Text>
                       <Text style={[styles.premiumExerciseLabel, isToday && styles.premiumExerciseLabelToday]}>
-                        recovery
+                        day
                       </Text>
                     </>
                   )}
@@ -582,8 +685,8 @@ export default function WorkoutPlanDisplay({
                   </View>
                 )}
 
-                {/* Selection Indicator */}
-                {isSelected && (
+                {/* Selection Indicator - Only for current day */}
+                {isToday && isSelected && (
                   <View style={styles.selectionIndicator}>
                     <View style={styles.selectionDot} />
                   </View>
@@ -758,6 +861,15 @@ export default function WorkoutPlanDisplay({
             <Text style={styles.noDaySelectedText}>Please select a day from the calendar above</Text>
           </View>
         )}
+
+        {/* Delete Plan Button */}
+        <TouchableOpacity 
+          style={styles.deleteButton}
+          onPress={handleDeletePlan}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.deleteButtonText}>🗑️ Delete Plan</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Exercise Detail Modal */}
@@ -782,6 +894,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
+    maxHeight: '100%', // Ensure container doesn't exceed screen height
   },
 
   // Hero Section - Extraordinary Design
@@ -844,10 +957,17 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.cardBorder + '20',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  progressCircleBackground: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 6,
+    borderColor: colors.cardBorder + '20',
   },
   progressCircleFill: {
     position: 'absolute',
@@ -855,9 +975,9 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 6,
-    borderColor: colors.primary,
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
+    borderColor: 'transparent',
+    borderTopColor: colors.primary,
+    transformOrigin: 'center',
   },
   progressCircleInner: {
     width: 100,
@@ -1658,5 +1778,24 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
+  },
+
+  // Delete Button Styles
+  deleteButton: {
+    backgroundColor: colors.error + '20',
+    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
 });
