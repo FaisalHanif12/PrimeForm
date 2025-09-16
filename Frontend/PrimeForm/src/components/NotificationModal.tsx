@@ -79,7 +79,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle mark all as read
   const handleMarkAllAsRead = () => {
     if (unreadCount === 0) {
-      showToast('No unread notifications', 'info');
+      showToast('info', 'No unread notifications');
       return;
     }
     
@@ -108,7 +108,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle bulk actions
   const handleBulkAction = (action: 'markAsRead' | 'delete') => {
     if (selectedNotifications.length === 0) {
-      showToast('No notifications selected', 'info');
+      showToast('info', 'No notifications selected');
       return;
     }
 

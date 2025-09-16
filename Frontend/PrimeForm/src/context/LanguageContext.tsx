@@ -704,7 +704,6 @@ const translations = {
     'onboarding.cancel': 'منسوخ',
     
     // Workout Page
-    'workout.page.subtitle': 'اپنی ورکاؤٹس کو ٹریک کریں اور طاقت بنائیں',
     'workout.page.comingSoon': 'ورکاؤٹ ٹریکنگ جلد آ رہی ہے!',
     'workout.page.comingSoonDesc': 'ہم آپ کی پیش رفت کو ٹریک کرنے اور آپ کے فٹنس اہداف کو حاصل کرنے میں مدد کے لیے شاندار ورکاؤٹ فیچرز بنا رہے ہیں۔',
     

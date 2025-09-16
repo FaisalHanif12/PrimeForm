@@ -35,6 +35,8 @@ export default function WorkoutScreen() {
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [showExerciseDetail, setShowExerciseDetail] = useState(false);
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
+  const [generationTimer, setGenerationTimer] = useState(0);
+  const [showGenerationModal, setShowGenerationModal] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -162,6 +164,19 @@ export default function WorkoutScreen() {
     if (userInfo) {
       // User already has profile, generate AI workout plan
       setIsGeneratingPlan(true);
+      setShowGenerationModal(true);
+      setGenerationTimer(6); // Set to 6 seconds for optimal generation time (5-7s range)
+      
+      // Start countdown timer
+      const timerInterval = setInterval(() => {
+        setGenerationTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(timerInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       
       try {
         console.log('🚀 Starting workout plan generation...');
@@ -172,6 +187,11 @@ export default function WorkoutScreen() {
           setWorkoutPlan(response.data);
           showToast('success', 'Your personalized workout plan is ready!');
           console.log('✅ Workout plan generated and saved successfully');
+          
+          // Clear timer and hide modal immediately when plan is ready
+          clearInterval(timerInterval);
+          setShowGenerationModal(false);
+          setGenerationTimer(0);
         } else {
           console.error('❌ Workout plan generation failed:', response.message);
           showToast('error', response.message || 'Failed to generate workout plan');
@@ -190,7 +210,10 @@ export default function WorkoutScreen() {
           showToast('error', 'Unable to generate workout plan. Please try again.');
         }
       } finally {
+        clearInterval(timerInterval);
         setIsGeneratingPlan(false);
+        setShowGenerationModal(false);
+        setGenerationTimer(0);
       }
     } else {
       // User needs to create profile first
@@ -329,6 +352,28 @@ export default function WorkoutScreen() {
     }
   };
 
+  // Handle delete plan - reset to profile summary interface
+  const handleDeletePlan = async () => {
+    try {
+      console.log('🗑️ Deleting workout plan and returning to profile summary...');
+      
+      // Clear current plan from UI - this will show the profile summary interface
+      setWorkoutPlan(null);
+      
+      // Clear local storage
+      const Storage = await import('../../src/utils/storage');
+      await Storage.default.removeItem('cached_workout_plan');
+      await Storage.default.removeItem('completed_exercises');
+      await Storage.default.removeItem('completed_days');
+      
+      showToast('success', 'Workout plan deleted. You can now generate a new plan.');
+      console.log('✅ Workout plan deleted - showing profile summary interface');
+    } catch (error) {
+      console.error('❌ Error deleting workout plan:', error);
+      showToast('error', 'Failed to delete workout plan. Please try again.');
+    }
+  };
+
   // Render content based on user info status
   const renderContent = () => {
     // Show loading only during initial load or when loading plan
@@ -351,7 +396,7 @@ export default function WorkoutScreen() {
             console.log('Day pressed:', day);
             // Handle day press - could show day details
           }}
-          onGenerateNew={handleGenerateNewPlan}
+          onGenerateNew={handleDeletePlan}
           isGeneratingNew={isGeneratingPlan}
         />
       );
@@ -367,7 +412,7 @@ export default function WorkoutScreen() {
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
-            </View>
+            </View> 
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.occupation')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.occupationType, 'occupation')}</Text>
@@ -488,6 +533,25 @@ export default function WorkoutScreen() {
           subtitle="Analyzing your profile and generating personalized exercises"
           type="workout"
         />
+
+        {/* Generation Timer Modal */}
+        {showGenerationModal && (
+          <View style={styles.generationModalOverlay}>
+            <View style={styles.generationModal}>
+              <Text style={styles.generationModalTitle}>Generating Your Plan</Text>
+              <Text style={styles.generationModalSubtitle}>
+                AI is creating your personalized workout plan...
+              </Text>
+              <View style={styles.timerContainer}>
+                <Text style={styles.timerText}>{generationTimer}</Text>
+                <Text style={styles.timerLabel}>seconds remaining</Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${((6 - generationTimer) / 6) * 100}%` }]} />
+              </View>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -508,7 +572,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   bottomSpacing: {
-    height: 100,
+    height: 120, // Increased to ensure proper spacing for bottom navigation
   },
   
   // Hero Section (for onboarding)
@@ -850,5 +914,75 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+
+  // Generation Timer Modal Styles
+  generationModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  generationModal: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    maxWidth: 300,
+    elevation: 10,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  generationModalTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  generationModalSubtitle: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 22,
+  },
+  timerContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  timerText: {
+    color: colors.primary,
+    fontSize: 48,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+  },
+  timerLabel: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    marginTop: spacing.xs,
+  },
+  progressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: colors.cardBorder,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
   },
 });

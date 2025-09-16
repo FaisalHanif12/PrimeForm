@@ -114,13 +114,7 @@ export default function ResetPasswordScreen() {
       console.log('Reset password response:', response);
       
       if (response?.success) {
-        // Store auth token and set user context for automatic login
-        if (response.token) {
-          await authService.storeToken(response.token);
-          if (response.data?.user) {
-            setAuthUser(response.data.user);
-          }
-        }
+        // Password reset successful, no token needed
         
         showToast('success', t('toast.password.success'));
         
