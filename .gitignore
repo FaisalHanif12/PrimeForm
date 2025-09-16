@@ -1,9 +1,21 @@
 # Root level .gitignore for entire PrimeForm project
 
-# Environment variables
+# Environment variables (ignore all .env files in root, Backend, and Frontend)
 .env
 .env.*
 !.env.example
+
+Backend/.env
+Backend/.env.*
+!Backend/.env.example
+
+Frontend/.env
+Frontend/.env.*
+!Frontend/.env.example
+
+Frontend/PrimeForm/.env
+Frontend/PrimeForm/.env.*
+!Frontend/PrimeForm/.env.example
 
 # Dependencies
 node_modules/

@@ -110,26 +110,51 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 **Day 1: [Workout Focus + Icon]**  
 - Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
 - Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
-- Note How to do the exercise correctly.   
+- Note: How to do the exercise correctly.   
 - ✅ Warm-up (5–10 min) & Cool-down (5–10 min)  
 
 ---
 
-**Day 2: Active Recovery 🏃‍♂️**  
-- Light jogging or brisk walking: 20-30 minutes
-- Yoga or stretching: 15-20 minutes
-- Focus on mobility and flexibility
----
-
-**Day 3: [Workout Focus + Icon]**  
+**Day 2: [Workout Focus + Icon]**  
 - Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
-- Note How to do the exercise correctly.
+- Note: How to do the exercise correctly.
 - Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
 - ✅ Warm-up & Cool-down included  
 
 ---
 
-…continue for all 7 days.  
+**Day 3: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 4: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 5: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 6: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 7: [Rest/Recovery Day + Icon]**  
+- Active Recovery Activities
+- Light stretching and mobility work
+- ✅ Focus on recovery and preparation for next week
 
 Generate the **final personalized plan now.**
     `;
@@ -154,7 +179,7 @@ Generate the **final personalized plan now.**
       const startTime = Date.now();
       console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
-      // Make API call without timeout - let it take as long as needed for better UX
+      // Make API call without timeout - let it generate as fast as possible
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
@@ -171,10 +196,10 @@ Generate the **final personalized plan now.**
               content: prompt
             }
           ],
-          temperature: 0.3, // Optimal for Gemini
-          max_tokens: 2000, // Gemini handles more tokens efficiently
+          temperature: 0.3, // Lower temperature for faster, more consistent responses
+          max_tokens: 3000, // Reduced for faster generation
           stream: false,
-          top_p: 0.9, // Good for Gemini
+          top_p: 0.8, // Slightly lower for faster responses
           frequency_penalty: 0.0,
           presence_penalty: 0.0,
         }),

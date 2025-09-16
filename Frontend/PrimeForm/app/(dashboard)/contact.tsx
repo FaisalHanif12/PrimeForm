@@ -207,10 +207,20 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-
+  container: {
+    flex: 1,
+  },
   content: {
     padding: spacing.lg,
     paddingTop: spacing.xl,
+  },
+  formContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
 
   backButton: {

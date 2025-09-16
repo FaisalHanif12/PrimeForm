@@ -27,6 +27,8 @@ export const colors = {
   purple: '#8B5CF6',
   // Feedback
   error: '#EF4444',
+  warning: '#F59E0B',
+  black: '#000000',
   // Legacy gradient tokens - Updated to match new background
   gradientStart: '#0A0F1A',
   gradientMid: '#0F1419',
@@ -46,6 +48,7 @@ export const spacing = {
 };
 
 export const radius = {
+  xs: 4,
   sm: 8,
   md: 12,
   lg: 16,

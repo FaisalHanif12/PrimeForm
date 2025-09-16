@@ -10,11 +10,8 @@ import {
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
-import DailyProgressCard from './DailyProgressCard';
 import MealDetailScreen from './MealDetailScreen';
 import DecorativeBackground from './DecorativeBackground';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -52,6 +49,11 @@ export default function DietPlanDisplay({
   const getCurrentWeek = (): number => {
     const today = new Date();
     const startDate = new Date(dietPlan.startDate);
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+    
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Calculate week based on plan generation day (not Monday)
@@ -205,13 +207,74 @@ export default function DietPlanDisplay({
 
   const loadCompletionStates = async () => {
     try {
-      const stats = await dietPlanService.getDietStats();
-      if (stats.success && stats.data) {
-        console.log('📊 Loaded diet stats:', stats.data);
+      // First try to load from the diet plan database
+      const dietPlan = await dietPlanService.getActiveDietPlan();
+      if (dietPlan.success && dietPlan.data) {
+        console.log('📊 Loading completed meals from database:', dietPlan.data.completedMeals);
+        if (dietPlan.data.completedMeals) {
+          const mealIds = dietPlan.data.completedMeals.map((meal: any) => meal.mealId);
+          setCompletedMeals(new Set(mealIds));
+        }
+        
+        if (dietPlan.data.completedDays) {
+          const dayIds = dietPlan.data.completedDays.map((day: any) => `${day.day}-${day.week}`);
+          setCompletedDays(new Set(dayIds));
+        }
+      }
+
+      // Also load from local storage as backup/sync
+      try {
+        const Storage = await import('../utils/storage');
+        const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
+        const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
+        const cachedWaterIntake = await Storage.default.getItem('water_intake');
+        
+        if (cachedCompletedMeals) {
+          const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
+          console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
+          
+          // Merge with database data
+          if (dietPlan.success && dietPlan.data && dietPlan.data.completedMeals) {
+            const dbMeals = new Set<string>(dietPlan.data.completedMeals.map((meal: any) => meal.mealId));
+            const mergedMeals = new Set<string>([...localMeals, ...dbMeals]);
+            setCompletedMeals(mergedMeals);
+            console.log('📊 Merged completed meals:', Array.from(mergedMeals));
+          } else {
+            setCompletedMeals(localMeals);
+          }
+        }
+        
+        if (cachedCompletedDays) {
+          const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
+          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
+          
+          // Merge with database data
+          if (dietPlan.success && dietPlan.data && dietPlan.data.completedDays) {
+            const dbDays = new Set<string>(dietPlan.data.completedDays.map((day: any) => `${day.day}-${day.week}`));
+            const mergedDays = new Set<string>([...localDays, ...dbDays]);
+            setCompletedDays(mergedDays);
+            console.log('📊 Merged completed days:', Array.from(mergedDays));
+          } else {
+            setCompletedDays(localDays);
+          }
+        }
+        
+        if (cachedWaterIntake) {
+          setWaterIntake(JSON.parse(cachedWaterIntake));
+        }
+        
+        // Load water completion status
+        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        if (cachedWaterCompleted) {
+          setWaterCompleted(JSON.parse(cachedWaterCompleted));
+        }
+      } catch (storageError) {
+        console.warn('Could not load from local storage:', storageError);
       }
     } catch (error) {
-      console.warn('Could not load completion states:', error);
+      console.warn('Could not load completion states from database:', error);
       
+      // Fallback to local storage only
       try {
         const Storage = await import('../utils/storage');
         const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
@@ -247,8 +310,11 @@ export default function DietPlanDisplay({
     const planStartDate = new Date(dietPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
     
-    // If day is completed, always show as completed
-    if (completedDays.has(day.date)) {
+    // Check if day is completed (check both date format and day-week format)
+    const isCompleted = completedDays.has(day.date) || 
+                       completedDays.has(`${day.day}-${Math.ceil(day.day / 7)}`);
+    
+    if (isCompleted) {
       return 'completed';
     }
     
@@ -311,7 +377,12 @@ export default function DietPlanDisplay({
   const isCurrentDay = (day: DietDay): boolean => {
     const today = new Date();
     const dayDate = new Date(day.date);
-    return today.toDateString() === dayDate.toDateString();
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    dayDate.setHours(0, 0, 0, 0);
+    
+    return today.getTime() === dayDate.getTime();
   };
 
   const formatDate = (dateString: string) => {
@@ -416,6 +487,36 @@ export default function DietPlanDisplay({
     }
   };
 
+  const handleDeletePlan = async () => {
+    try {
+      console.log('🗑️ Deleting diet plan...');
+      
+      // Clear local storage
+      const Storage = await import('../utils/storage');
+      await Storage.default.removeItem('cached_diet_plan');
+      await Storage.default.removeItem('completed_meals');
+      await Storage.default.removeItem('completed_diet_days');
+      await Storage.default.removeItem('water_intake');
+      await Storage.default.removeItem('water_completed');
+      
+      // Delete from database
+      if (dietPlan._id || dietPlan.id) {
+        const planId = (dietPlan._id || dietPlan.id) as string;
+        await dietPlanService.deleteDietPlan(planId);
+        console.log('✅ Diet plan deleted from database');
+      }
+      
+      // Call the onGenerateNew callback to refresh the parent component
+      if (onGenerateNew) {
+        onGenerateNew();
+      }
+      
+      console.log('✅ Diet plan deleted successfully - returning to profile summary');
+    } catch (error) {
+      console.error('❌ Error deleting diet plan:', error);
+    }
+  };
+
   const toggleWaterCompletion = async () => {
     if (!selectedDay) return;
     
@@ -471,6 +572,15 @@ export default function DietPlanDisplay({
                 </View>
               </View>
             </View>
+
+            {/* Delete Button */}
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDeletePlan}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.deleteButtonText}>🗑️ Delete Plan</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -995,9 +1105,10 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 6,
-    borderColor: colors.gold,
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
+    borderColor: 'transparent',
+    borderTopColor: colors.gold,
+    borderRightColor: colors.gold,
+    transformOrigin: 'center',
   },
   progressCircleInner: {
     width: 100,
@@ -1020,6 +1131,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: fonts.body,
     marginTop: 2,
+  },
+
+  // Delete Button Styles
+  deleteButton: {
+    backgroundColor: colors.error + '20',
+    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
 
   // Premium Calendar Section - Diet Version

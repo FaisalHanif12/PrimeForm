@@ -105,7 +105,7 @@ export default function ToastNotification({
     });
   };
 
-  if (!visible && slideAnim._value === (position === 'top' ? -100 : 100)) {
+  if (!visible && (slideAnim as any)._value === (position === 'top' ? -100 : 100)) {
     return null;
   }
 

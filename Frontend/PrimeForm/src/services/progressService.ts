@@ -166,9 +166,9 @@ class ProgressService {
         totalWorkouts = workoutDay?.exercises.length || 0;
         totalMeals = dietDay ? (3 + (dietDay.meals.snacks?.length || 0)) : 0;
         targetCalories = dietDay?.totalCalories || dietPlan?.targetCalories || 0;
-        targetProtein = dietDay?.totalProtein || (dietPlan?.targetProtein / 7) || 0;
-        targetCarbs = dietDay?.totalCarbs || (dietPlan?.targetCarbs / 7) || 0;
-        targetFats = dietDay?.totalFats || (dietPlan?.targetFats / 7) || 0;
+        targetProtein = dietDay?.totalProtein || (dietPlan?.targetProtein ? dietPlan.targetProtein / 7 : 0) || 0;
+        targetCarbs = dietDay?.totalCarbs || (dietPlan?.targetCarbs ? dietPlan.targetCarbs / 7 : 0) || 0;
+        targetFats = dietDay?.totalFats || (dietPlan?.targetFats ? dietPlan.targetFats / 7 : 0) || 0;
       } else if (period === 'weekly') {
         // Weekly targets from 7-day plan
         if (workoutPlan) {

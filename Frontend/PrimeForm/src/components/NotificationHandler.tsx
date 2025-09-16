@@ -27,8 +27,8 @@ interface NotificationHandlerProps {
 const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) => {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
   const { language } = useLanguage();
   const { showToast } = useToast();
 
@@ -100,10 +100,12 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        if (notificationListener.current) {
+          notificationListener.current.remove();
+        }
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
     };
   }, []);
@@ -186,7 +188,7 @@ async function registerForPushNotificationsAsync(handleRegistrationError?: (erro
     }
     
     try {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || (Constants.expoConfig as any)?.projectId;
       
       if (!projectId) {
         handleRegistrationError?.('Project ID not found in app configuration');
