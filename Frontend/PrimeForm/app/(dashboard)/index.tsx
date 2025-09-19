@@ -203,16 +203,20 @@ export default function DashboardScreen() {
           isAuthenticated
         });
         
-        // If this is the first launch and user hasn't selected a language, show language modal
-        if (isFirstLaunch === null && !hasSelectedLanguage) {
-          console.log('🌍 First launch detected - showing language modal');
-          // Mark as first launch
+        // Check if this is the first time ANY user has opened the app on this device
+        const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
+        
+        if (isFirstLaunch === null && !deviceLanguageSelected) {
+          console.log('🌍 First device launch detected - showing language modal');
+          // Mark as first launch and device language selection
           await AsyncStorage.setItem('primeform_first_launch', 'false');
+          await AsyncStorage.setItem('primeform_device_language_selected', 'true');
           setShowLanguageModal(true);
         } else {
           console.log('✅ Language modal conditions not met:', {
             isFirstLaunch,
-            hasSelectedLanguage
+            hasSelectedLanguage,
+            deviceLanguageSelected
           });
         }
 
@@ -252,6 +256,21 @@ export default function DashboardScreen() {
     };
     checkAppState();
   }, [isAuthenticated, hasSelectedLanguage]);
+
+  // Additional effect to handle authentication state changes
+  useEffect(() => {
+    console.log('🔄 Authentication state changed:', { 
+      isAuthenticated, 
+      user: user?.fullName,
+      hasCompletedSignup,
+      userEmail: user?.email 
+    });
+    if (isAuthenticated && user) {
+      console.log('✅ User is authenticated with name:', user.fullName);
+    } else {
+      console.log('❌ User is not authenticated or no user data');
+    }
+  }, [isAuthenticated, user, hasCompletedSignup]);
 
   // Language selection modal is now controlled by hasSelectedLanguage from context
 
@@ -788,32 +807,59 @@ export default function DashboardScreen() {
 
     return [
       { label: t('dashboard.stats.calories'), value: remainingCalories.toLocaleString(), icon: 'flame' as const, color: colors.gold },
-      { label: t('dashboard.stats.water'), value: waterCompleted ? 'Done' : 'Pending', icon: 'water' as const, color: waterCompleted ? colors.green : colors.blue },
+      { label: t('dashboard.stats.water'), value: waterCompleted ? 'Done' : 'Due', icon: 'water' as const, color: waterCompleted ? colors.green : colors.blue },
       { label: t('dashboard.stats.workouts'), value: (todayWorkouts.length - completedWorkouts).toString(), icon: 'barbell' as const, color: colors.green },
       { label: 'Meals Remaining', value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
     ];
   }, [todayMeals, completedMeals, todayWorkouts, completedExercises, waterCompleted, t]);
 
-  const mockWorkouts = [
-    { name: `💪 ${transliterateText('Push-Ups')}`, sets: '3x12', reps: `12 ${t('workout.reps')}`, weight: '' },
-    { name: `🦵 ${transliterateText('Leg Press')}`, sets: '4x10', reps: `10 ${t('workout.reps')}`, weight: '120kg' },
-    { name: `🏋️ ${transliterateText('Bench Press')}`, sets: '3x8', reps: `8 ${t('workout.reps')}`, weight: '80kg' },
-  ];
-
+  // Sample data for guest mode
   const mockMeals = [
     { name: `🥣 ${transliterateText('Chicken Rice')}`, calories: 350, weight: '200g' },
     { name: `🥗 ${transliterateText('Greek Salad')}`, calories: 500, weight: '400g' },
     { name: `🍗 ${transliterateText('Grilled Chicken')}`, calories: 650, weight: '500g' },
   ];
 
+  const mockWorkouts = [
+    { 
+      name: 'Push-ups', 
+      emoji: '💪', 
+      caloriesBurned: 50, 
+      sets: 3, 
+      reps: 15, 
+      rest: '60s', 
+      targetMuscles: ['Chest', 'Shoulders', 'Triceps'] 
+    },
+    { 
+      name: 'Squats', 
+      emoji: '🦵', 
+      caloriesBurned: 40, 
+      sets: 3, 
+      reps: 20, 
+      rest: '60s', 
+      targetMuscles: ['Quads', 'Glutes', 'Hamstrings'] 
+    },
+    { 
+      name: 'Plank', 
+      emoji: '🤸', 
+      caloriesBurned: 30, 
+      sets: 3, 
+      reps: 30, 
+      rest: '45s', 
+      targetMuscles: ['Core', 'Shoulders'] 
+    },
+  ];
+
   const handleLanguageSelect = async (language: 'en' | 'ur') => {
     try {
       console.log('🌍 Language selected:', language);
       await changeLanguage(language);
+      // Mark device language as selected (this persists across all users on this device)
+      await AsyncStorage.setItem('primeform_device_language_selected', 'true');
       // Close the modal and mark first launch as complete
       setShowLanguageModal(false);
       await AsyncStorage.setItem('primeform_first_launch', 'false');
-      console.log('✅ Language modal closed and first launch marked as complete');
+      console.log('✅ Language modal closed and device language marked as selected');
       showToast('success', 'Language updated successfully!');
     } catch (error) {
       console.error('Failed to change language:', error);
@@ -977,7 +1023,18 @@ export default function DashboardScreen() {
         <View style={styles.mainContainer}>
           {/* Header */}
           <DashboardHeader 
-            userName={isAuthenticated ? transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0]) : (hasCompletedSignup ? 'User' : 'Guest')}
+            userName={(() => {
+              const displayName = isAuthenticated ? 
+                transliterateName((user?.fullName || dashboardData?.user?.fullName || 'User').split(' ')[0]) : 
+                'Guest';
+              console.log('🏷️ Dashboard Header Display Name:', { 
+                isAuthenticated, 
+                userFullName: user?.fullName, 
+                dashboardUserFullName: dashboardData?.user?.fullName,
+                displayName 
+              });
+              return displayName;
+            })()}
             onProfilePress={handleProfilePress}
             onNotificationPress={handleNotificationPress}
             notificationCount={unreadCount}
@@ -1011,7 +1068,15 @@ export default function DashboardScreen() {
             />
 
             {/* Today's Meal Plan */}
-            {isLoadingPlans ? (
+            {!isAuthenticated ? (
+              <MealPlanCard
+                title="Today's AI Meal Plan"
+                meals={mockMeals}
+                totalCalories={mockMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+                onPress={() => handleFeatureAccess('AI Diet')}
+                delay={300}
+              />
+            ) : isLoadingPlans ? (
               <View style={styles.loadingCard}>
                 <ActivityIndicator color={colors.primary} size="large" />
                 <Text style={styles.loadingCardText}>Loading your meal plan...</Text>
@@ -1032,7 +1097,15 @@ export default function DashboardScreen() {
             )}
 
             {/* Today's Workout Plan */}
-            {isLoadingPlans ? (
+            {!isAuthenticated ? (
+              <WorkoutPlanCard
+                title="Today's AI Workout Plan"
+                workouts={mockWorkouts}
+                completedExercises={completedExercises}
+                onPress={() => handleFeatureAccess('AI Workout')}
+                delay={400}
+              />
+            ) : isLoadingPlans ? (
               <View style={styles.loadingCard}>
                 <ActivityIndicator color={colors.primary} size="large" />
                 <Text style={styles.loadingCardText}>Loading your workout plan...</Text>
@@ -1054,9 +1127,11 @@ export default function DashboardScreen() {
               
               <View style={styles.waterStatusOnlyContainer}>
                 <View style={styles.waterStatusInfo}>
-                  <Text style={styles.waterStatusText}>
-                    {waterCompleted ? '✅ Completed' : '⏳ Pending'}
+                  <View style={styles.waterStatusTextContainer}>
+                  <Text style={styles.waterStatusText} numberOfLines={1}>
+                    {waterCompleted ? '✅ Done' : '⏳ Due'}
                   </Text>
+                  </View>
                   <Text style={styles.waterAmountText}>
                     {waterCompleted ? targetWater : 0}ml / {targetWater}ml
                   </Text>
@@ -1314,16 +1389,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: spacing.md,
+    minHeight: 50,
+    paddingHorizontal: spacing.xs,
   },
   waterStatusInfo: {
     flex: 1,
+    marginRight: spacing.sm,
+    minWidth: 120,
+  },
+  waterStatusTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 100,
+    marginBottom: spacing.xs,
   },
   waterStatusText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
+    flexShrink: 0,
+    flexWrap: 'nowrap',
+    textAlign: 'left',
   },
   waterAmountText: {
     color: colors.mutedText,

@@ -492,14 +492,14 @@ export default function WorkoutScreen() {
         >
           {renderContent()}
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
         </ScrollView>
 
-        <BottomNavigation 
-          activeTab="workout"
-          onTabPress={handleTabPress}
-        />
+        <View style={styles.bottomBar}>
+          <BottomNavigation 
+            activeTab="workout"
+            onTabPress={handleTabPress}
+          />
+        </View>
 
         <Sidebar
           visible={sidebarVisible}
@@ -523,6 +523,7 @@ export default function WorkoutScreen() {
             visible={showExerciseDetail}
             onClose={handleExerciseBack}
             onComplete={() => handleExerciseComplete(selectedExercise)}
+            selectedDay={null} // This will be handled by WorkoutPlanDisplay
           />
         )}
 
@@ -567,12 +568,17 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: 0,
+    paddingBottom: 100, // reserve space for fixed bottom tab
   },
   contentNoPadding: {
     paddingTop: 0,
+    paddingBottom: 100, // reserve space for fixed bottom tab
   },
-  bottomSpacing: {
-    height: 120, // Increased to ensure proper spacing for bottom navigation
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   
   // Hero Section (for onboarding)
