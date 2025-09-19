@@ -974,7 +974,7 @@ export default function DietPlanDisplay({
               <View style={styles.waterCompletionContainer}>
                 <View style={styles.waterStatusInfo}>
                   <Text style={styles.waterStatusText}>
-                    {waterCompleted[selectedDay.date] ? '✅ Completed' : '⏳ Pending'}
+                    {waterCompleted[selectedDay.date] ? '✅ Completed' : '⏳ Due'}
                   </Text>
                   <Text style={styles.waterAmountText}>
                     {waterCompleted[selectedDay.date] ? selectedDay.waterIntake : 0}ml / {selectedDay.waterIntake}ml

@@ -65,7 +65,8 @@ const userProfileSchema = new mongoose.Schema({
       'Sedentary Desk Job', 'Active Job', 'Shift Worker', 'Student', 'Retired', 'Other',
       // Urdu values
       'بیٹھے ہوئے ڈیسک کا کام', 'متحرک کام', 'شفٹ ورکر', 'طالب علم', 'ریٹائرڈ', 'دیگر'
-    ]
+    ],
+    required: false
   },
   availableEquipment: {
     type: String,
@@ -74,7 +75,8 @@ const userProfileSchema = new mongoose.Schema({
       'None', 'Basic Dumbbells', 'Resistance Bands', 'Home Gym', 'Full Gym Access',
       // Urdu values
       'کوئی نہیں', 'بنیادی ڈمبلز', 'مزاحمتی بینڈز', 'گھریلو جم', 'مکمل جم تک رسائی'
-    ]
+    ],
+    required: false
   },
   
   // Diet Preferences
@@ -85,7 +87,8 @@ const userProfileSchema = new mongoose.Schema({
       'Vegetarian', 'Non-Vegetarian', 'Vegan', 'Flexitarian', 'Pescatarian',
       // Urdu values
       'سبزی خور', 'سبزی خور نہیں', 'ویگن', 'فلیکسیٹیرین', 'پیسکیٹیرین'
-    ]
+    ],
+    required: false
   },
   
   // Metadata

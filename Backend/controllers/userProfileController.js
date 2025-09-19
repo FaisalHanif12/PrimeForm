@@ -80,9 +80,15 @@ exports.createOrUpdateProfile = async (req, res) => {
     const requiredFields = ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'];
     const missingFields = requiredFields.filter(field => !profileData[field]);
     
-    // Conditionally require targetWeight for weight-related goals
-    if ((profileData.bodyGoal === 'Lose Fat' || profileData.bodyGoal === 'Gain Muscle') && !profileData.targetWeight) {
+    // Only require targetWeight for new profiles with weight-related goals
+    // For existing profiles, targetWeight is optional
+    if ((profileData.bodyGoal === 'Lose Fat' || profileData.bodyGoal === 'Gain Muscle') && !profileData.targetWeight && !userProfile) {
       missingFields.push('targetWeight');
+    }
+    
+    // For existing profiles, if targetWeight is not provided, don't include it in the update
+    if (userProfile && !profileData.targetWeight) {
+      delete profileData.targetWeight;
     }
     
     if (missingFields.length > 0) {
@@ -139,10 +145,36 @@ exports.createOrUpdateProfile = async (req, res) => {
       message: userProfile.isProfileComplete ? 'Profile updated successfully' : 'Profile created successfully'
     });
   } catch (error) {
-    console.error('Error creating/updating user profile:', error);
+    console.error('💥 Error creating/updating user profile:', error);
+    console.error('💥 Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      keyValue: error.keyValue,
+      errors: error.errors
+    });
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validationErrors
+      });
+    }
+    
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate entry. User profile already exists.',
+        field: Object.keys(error.keyValue)[0]
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: 'Failed to create/update user profile',
       error: error.message
     });
   }
@@ -215,10 +247,28 @@ exports.updateProfileField = async (req, res) => {
       message: 'Profile field updated successfully'
     });
   } catch (error) {
-    console.error('Error updating profile field:', error);
+    console.error('💥 Error updating profile field:', error);
+    console.error('💥 Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      keyValue: error.keyValue,
+      errors: error.errors
+    });
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: validationErrors
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Internal server error',
+      message: 'Failed to update profile field',
       error: error.message
     });
   }

@@ -19,11 +19,15 @@ class PushNotificationService {
     this.expoPushToken = null;
     this.notificationListener = null;
     this.responseListener = null;
+    this.isCleanedUp = false;
   }
 
   // Initialize push notifications
   async initialize() {
     try {
+      // Reset cleanup flag
+      this.isCleanedUp = false;
+      
       // Register for push notifications
       const token = await this.registerForPushNotificationsAsync();
       if (token) {
@@ -126,18 +130,22 @@ class PushNotificationService {
 
   // Set up notification listeners
   setupNotificationListeners() {
-    // Listener for notifications received while app is in foreground
-    this.notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📱 Notification received in foreground:', notification);
-      // You can handle the notification here (e.g., show custom UI)
-    });
+    try {
+      // Listener for notifications received while app is in foreground
+      this.notificationListener = Notifications.addNotificationReceivedListener(notification => {
+        console.log('📱 Notification received in foreground:', notification);
+        // You can handle the notification here (e.g., show custom UI)
+      });
 
-    // Listener for when user taps on notification
-    this.responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('📱 Notification tapped:', response);
-      // Handle notification tap (e.g., navigate to specific screen)
-      this.handleNotificationTap(response.notification);
-    });
+      // Listener for when user taps on notification
+      this.responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+        console.log('📱 Notification tapped:', response);
+        // Handle notification tap (e.g., navigate to specific screen)
+        this.handleNotificationTap(response.notification);
+      });
+    } catch (error) {
+      console.error('❌ Error setting up notification listeners:', error);
+    }
   }
 
   // Handle notification tap
@@ -213,11 +221,22 @@ class PushNotificationService {
 
   // Clean up listeners
   cleanup() {
-    if (this.notificationListener) {
-      Notifications.removeNotificationSubscription(this.notificationListener);
+    if (this.isCleanedUp) {
+      return; // Prevent multiple cleanup calls
     }
-    if (this.responseListener) {
-      Notifications.removeNotificationSubscription(this.responseListener);
+    
+    try {
+      if (this.notificationListener && typeof this.notificationListener.remove === 'function') {
+        this.notificationListener.remove();
+        this.notificationListener = null;
+      }
+      if (this.responseListener && typeof this.responseListener.remove === 'function') {
+        this.responseListener.remove();
+        this.responseListener = null;
+      }
+      this.isCleanedUp = true;
+    } catch (error) {
+      console.error('❌ Error cleaning up notification listeners:', error);
     }
   }
 }

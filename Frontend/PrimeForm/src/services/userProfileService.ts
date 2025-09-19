@@ -171,6 +171,15 @@ class UserProfileService {
         age: typeof userInfo.age === 'string' ? parseInt(userInfo.age, 10) : userInfo.age
       };
       
+      // Validate age
+      if (isNaN(processedUserInfo.age) || processedUserInfo.age < 13 || processedUserInfo.age > 120) {
+        return {
+          success: false,
+          data: null,
+          message: 'Age must be between 13 and 120'
+        };
+      }
+      
       console.log('🔍 userProfileService - Sending data:', processedUserInfo);
       
       const response = await api.post('/user-profile', processedUserInfo);
@@ -192,16 +201,21 @@ class UserProfileService {
         return {
           success: false,
           data: null,
-          message: 'Invalid response from server'
+          message: response?.message || 'Invalid response from server'
         };
       }
     } catch (error: any) {
       console.error('💥 userProfileService - Exception:', error);
+      console.error('💥 userProfileService - Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
       return {
         success: false,
         data: null,
-        message: error.response?.data?.message || 'Failed to create/update user profile'
+        message: error.response?.data?.message || error.message || 'Failed to create/update user profile'
       };
     }
   }

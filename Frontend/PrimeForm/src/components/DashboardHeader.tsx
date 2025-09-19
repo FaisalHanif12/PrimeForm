@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: 60, // Status bar padding
+    paddingTop: 40, // Reduced from 60 to 20
     paddingBottom: spacing.lg,
   },
   profileButton: {
