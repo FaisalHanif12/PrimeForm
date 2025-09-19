@@ -42,7 +42,6 @@ const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
   { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak' },
   { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer' },
-  { icon: 'card-outline', label: 'Subscription Plan', action: 'subscription' },
   { icon: 'language-outline', label: 'Language', action: 'language' },
   { icon: 'mail-outline', label: 'Contact Us', action: 'contact' },
   { icon: 'settings-outline', label: 'Settings', action: 'settings' },
@@ -88,8 +87,8 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
       <View style={styles.overlay}>
         {/* Background overlay */}
         <Animated.View 
-          entering={FadeIn} 
-          exiting={FadeOut}
+          entering={FadeIn.duration(200)} 
+          exiting={FadeOut.duration(200)}
           style={styles.backdrop}
         >
           <TouchableOpacity 
@@ -101,8 +100,8 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
 
         {/* Sidebar content */}
         <Animated.View 
-          entering={FadeInLeft.springify().damping(15)} 
-          exiting={FadeOutLeft.springify().damping(15)}
+          entering={FadeInLeft.duration(300)} 
+          exiting={FadeOutLeft.duration(300)}
           style={styles.sidebar}
         >
           {/* Close Button */}
@@ -162,13 +161,6 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                           <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
                             {item.label}
                           </Text>
-                          {item.action === 'subscription' && (
-                            <View style={styles.upgradeTag}>
-                              <Text style={styles.upgradeTagText}>
-                                {language === 'en' ? 'UPGRADE' : 'اپ گریڈ'}
-                              </Text>
-                            </View>
-                          )}
                         </View>
                       </View>
                     </View>

@@ -5,15 +5,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions
+  Dimensions,
+  DeviceEventEmitter
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutPlan, WorkoutDay, WorkoutExercise } from '../services/aiWorkoutService';
 import aiWorkoutService from '../services/aiWorkoutService';
 import workoutPlanService from '../services/workoutPlanService';
+import exerciseCompletionService from '../services/exerciseCompletionService';
 import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
+import ExerciseCompletionScreen from './ExerciseCompletionScreen';
 import DecorativeBackground from './DecorativeBackground';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -38,7 +42,9 @@ export default function WorkoutPlanDisplay({
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [exerciseModalVisible, setExerciseModalVisible] = useState(false);
+  const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [progressPercentage, setProgressPercentage] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Safety checks for workout plan structure
   if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
@@ -165,7 +171,7 @@ export default function WorkoutPlanDisplay({
     const currentWeek = getCurrentWeek();
     const startDate = new Date(workoutPlan.startDate);
     const today = new Date();
-    
+
     console.log('📅 Workout Calendar Debug:', {
       currentWeek,
       completedDaysCount: completedDays.size,
@@ -199,7 +205,7 @@ export default function WorkoutPlanDisplay({
       for (let i = 0; i < daysToShow; i++) {
         const dayDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
         const dayOfWeek = dayDate.getDay();
-            
+        
         const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         
         console.log('📅 Day Mapping Debug:', {
@@ -258,15 +264,26 @@ export default function WorkoutPlanDisplay({
   };
 
   useEffect(() => {
-    // Load completion states and set initial day
-    loadCompletionStates();
+    // Initialize completion service and load states
+    const initializeCompletion = async () => {
+      try {
+        await exerciseCompletionService.initialize();
+        await loadCompletionStates();
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing completion service:', error);
+        setIsInitialized(true);
+      }
+    };
+
+    initializeCompletion();
 
     // Auto-select current day only
     const currentWeekDays = getCurrentWeekDays();
     const todaysDay = currentWeekDays.find(day => isCurrentDay(day));
     if (todaysDay) {
       setSelectedDay(todaysDay);
-    } else {
+      } else {
       setSelectedDay(null);
     }
   }, [workoutPlan]);
@@ -278,52 +295,64 @@ export default function WorkoutPlanDisplay({
     console.log('🔄 Progress updated (week-based):', newProgress + '%');
   }, [workoutPlan]);
 
+  // Listen for progress updates from other screens and refresh local state
+  useEffect(() => {
+    const sub1 = DeviceEventEmitter.addListener('workoutProgressUpdated', async () => {
+      console.log('🔔 Received workoutProgressUpdated event - refreshing completion state');
+      await loadCompletionStates();
+      const newProgress = getProgressPercentage();
+      setProgressPercentage(newProgress);
+    });
+
+    const sub2 = DeviceEventEmitter.addListener('exerciseCompleted', async () => {
+      console.log('🔔 Received exerciseCompleted event - refreshing completion state');
+      await loadCompletionStates();
+      const newProgress = getProgressPercentage();
+      setProgressPercentage(newProgress);
+    });
+
+    const sub3 = DeviceEventEmitter.addListener('dayCompleted', async () => {
+      console.log('🔔 Received dayCompleted event - refreshing completion state');
+      await loadCompletionStates();
+      const newProgress = getProgressPercentage();
+      setProgressPercentage(newProgress);
+    });
+
+    return () => {
+      try { sub1.remove(); } catch (_) {}
+      try { sub2.remove(); } catch (_) {}
+      try { sub3.remove(); } catch (_) {}
+    };
+  }, []);
+
+  // Also refresh when screen regains focus (coming back from detail or other tabs)
+  useFocusEffect(
+    React.useCallback(() => {
+      (async () => {
+        await loadCompletionStates();
+        const newProgress = getProgressPercentage();
+        setProgressPercentage(newProgress);
+      })();
+    }, [])
+  );
+
   const loadCompletionStates = async () => {
     try {
-      // Load from local storage first for immediate UI update
-        const Storage = await import('../utils/storage');
-        const cachedCompletedExercises = await Storage.default.getItem('completed_exercises');
-        const cachedCompletedDays = await Storage.default.getItem('completed_days');
-
-        if (cachedCompletedExercises) {
-        const localExercises = new Set<string>(JSON.parse(cachedCompletedExercises));
-          console.log('📊 Loading completed exercises from local storage:', Array.from(localExercises));
-            setCompletedExercises(localExercises);
-        }
-        
-        if (cachedCompletedDays) {
-        const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
-          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
-            setCompletedDays(localDays);
-          }
-
-      // Then try to load from database and merge
-      try {
-        const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-        if (workoutPlan) {
-          if (workoutPlan.completedExercises) {
-            console.log('📊 Loading completed exercises from database:', workoutPlan.completedExercises);
-            const dbExercises = new Set<string>(workoutPlan.completedExercises);
-            const localExercises = cachedCompletedExercises ? new Set<string>(JSON.parse(cachedCompletedExercises)) : new Set<string>();
-            const mergedExercises = new Set<string>([...localExercises, ...dbExercises]);
-            setCompletedExercises(mergedExercises);
-            console.log('📊 Merged completed exercises:', Array.from(mergedExercises));
-          }
-          
-          if (workoutPlan.completedDays) {
-            console.log('📊 Loading completed days from database:', workoutPlan.completedDays);
-            const dbDays = new Set<string>(workoutPlan.completedDays);
-            const localDays = cachedCompletedDays ? new Set<string>(JSON.parse(cachedCompletedDays)) : new Set<string>();
-            const mergedDays = new Set<string>([...localDays, ...dbDays]);
-            setCompletedDays(mergedDays);
-            console.log('📊 Merged completed days:', Array.from(mergedDays));
-          }
-        }
-      } catch (dbError) {
-        console.warn('Could not load completion states from database:', dbError);
-      }
+      console.log('🔄 Loading completion states...');
+      
+      // Get completion data from the service
+      const completionData = exerciseCompletionService.getCompletionData();
+      
+      // Update local state
+      setCompletedExercises(new Set(completionData.completedExercises));
+      setCompletedDays(new Set(completionData.completedDays));
+      
+      console.log('✅ Completion states loaded:', {
+        exercises: completionData.completedExercises.length,
+        days: completionData.completedDays.length,
+      });
     } catch (error) {
-      console.warn('Could not load completion states:', error);
+      console.error('❌ Error loading completion states:', error);
     }
   };
 
@@ -371,16 +400,19 @@ export default function WorkoutPlanDisplay({
 
     // Check if day is completed (60% completion criteria)
     if (completedDays.has(day.date)) {
+      console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
       return 'completed';
     }
 
     // Current day - show as in progress
     if (dayDate.getTime() === today.getTime()) {
+      console.log('📊 Day Status: Current day - showing as in_progress:', day.date);
       return 'in_progress';
     }
 
     // Days before plan generation should be 'upcoming' (not missed)
     if (dayDate < planStartDate) {
+      console.log('📊 Day Status: Day before plan start - showing as upcoming:', day.date);
       return 'upcoming';
     }
 
@@ -391,12 +423,20 @@ export default function WorkoutPlanDisplay({
       const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
       const completionPercentage = dayExercises.length > 0 ? (completedExercisesCount / dayExercises.length) * 100 : 0;
 
+      console.log('📊 Day Status: Past day completion check:', {
+        dayDate: day.date,
+        totalExercises: dayExercises.length,
+        completedExercises: completedExercisesCount,
+        completionPercentage: completionPercentage.toFixed(2)
+      });
+
       // Apply completion criteria: < 60% = missed, >= 60% = completed
       if (completionPercentage >= 60) return 'completed';
       if (completionPercentage < 60) return 'missed';
     }
 
     // Future days
+    console.log('📊 Day Status: Future day - showing as upcoming:', day.date);
     return 'upcoming';
   };
 
@@ -405,12 +445,23 @@ export default function WorkoutPlanDisplay({
     if (day.isRestDay) return 100; // Rest days are always 100% complete
     
     const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
-    const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
-    const percentage = dayExercises.length > 0 ? Math.round((completedExercisesCount / dayExercises.length) * 100) : 0;
+    const percentage = exerciseCompletionService.calculateDayCompletion(dayExercises, day.date);
     
-    // Apply completion criteria: < 60% = missed, >= 60% = completed
+    console.log('📊 Day Completion Debug:', {
+      dayDate: day.date,
+      dayExercises: dayExercises,
+      percentage: percentage,
+      isCurrentDay: isCurrentDay(day)
+    });
+    
+    // For current day, always show actual percentage
+    if (isCurrentDay(day)) {
+      return Math.round(percentage);
+    }
+    
+    // For past days, apply completion criteria: < 60% = missed, >= 60% = completed
     if (percentage >= 60) return 100; // Show as 100% for completed days
-    return percentage; // Show actual percentage for in-progress days
+    return Math.round(percentage); // Show actual percentage for in-progress days
   };
 
   const isCurrentDay = (day: WorkoutDay): boolean => {
@@ -438,51 +489,61 @@ export default function WorkoutPlanDisplay({
     const exerciseId = `${selectedDay.date}-${exercise.name}`;
     const week = Math.ceil(selectedDay.day / 7);
 
-    // Prevent double-clicking by checking if already completed
-    if (completedExercises.has(exerciseId)) {
-      console.log('Exercise already completed, ignoring duplicate completion');
-      return;
-    }
-
     try {
-      // Optimistically update local state first for better UX
-      const newCompletedExercises = new Set([...completedExercises, exerciseId]);
-      setCompletedExercises(newCompletedExercises);
+      console.log('🎯 WorkoutPlanDisplay: Completing exercise:', { exerciseId, dayDate: selectedDay.date, dayNumber: selectedDay.day, weekNumber: week });
 
-      // Save to local storage immediately
-      const Storage = await import('../utils/storage');
-      await Storage.default.setItem('completed_exercises', JSON.stringify([...newCompletedExercises]));
+      // Mark exercise as completed using the service
+      const success = await exerciseCompletionService.markExerciseCompleted(
+        exerciseId,
+        selectedDay.date,
+        selectedDay.day,
+        week
+      );
 
-      // Mark exercise as completed in database
-      await workoutPlanService.markExerciseCompleted(exerciseId, selectedDay.day, week);
+      console.log('🎯 WorkoutPlanDisplay: Exercise completion service result:', success);
 
-      // Sync with progress service
-      await syncProgressData();
+      if (success) {
+        // Update local state immediately
+        const newCompletedExercises = new Set([...completedExercises, exerciseId]);
+        setCompletedExercises(newCompletedExercises);
+        console.log('🎯 WorkoutPlanDisplay: Updated local completed exercises state');
 
-      // Check if day meets 60% completion criteria
+        // Check if day meets completion criteria
       const dayExercises = selectedDay.exercises.map(ex => `${selectedDay.date}-${ex.name}`);
-      const completedExercisesCount = dayExercises.filter(exerciseId => newCompletedExercises.has(exerciseId)).length;
-      const completionPercentage = (completedExercisesCount / dayExercises.length) * 100;
+        const isDayFullyCompleted = exerciseCompletionService.isDayFullyCompleted(dayExercises, selectedDay.date);
 
-      if (completionPercentage >= 60) {
-        // Mark day as completed in database
-        await workoutPlanService.markDayCompleted(selectedDay.day, week);
+        if (isDayFullyCompleted && !completedDays.has(selectedDay.date)) {
+          // Mark day as completed
+          const daySuccess = await exerciseCompletionService.markDayCompleted(
+            selectedDay.date,
+            selectedDay.day,
+            week
+          );
+
+          if (daySuccess) {
         const newCompletedDays = new Set([...completedDays, selectedDay.date]);
         setCompletedDays(newCompletedDays);
+            console.log(`🎉 Day ${selectedDay.day} completed!`);
+          }
+        }
 
-        // Save to local storage
-        await Storage.default.setItem('completed_days', JSON.stringify([...newCompletedDays]));
+        // Update progress percentage
+        const newProgress = getProgressPercentage();
+        setProgressPercentage(newProgress);
 
-        console.log(`🎉 Day ${selectedDay.day} completed! ${completionPercentage.toFixed(1)}% of exercises finished.`);
+        // Broadcast progress update
+        DeviceEventEmitter.emit('workoutProgressUpdated', {
+          type: 'exercise_completed',
+          exerciseId,
+          date: selectedDay.date
+        });
+
+        console.log('✅ WorkoutPlanDisplay: Exercise completion processed successfully');
+      } else {
+        console.error('❌ WorkoutPlanDisplay: Failed to complete exercise');
       }
     } catch (error) {
-      console.error('Error marking exercise completed:', error);
-      // Revert optimistic update on error
-      setCompletedExercises(prev => {
-        const reverted = new Set(prev);
-        reverted.delete(exerciseId);
-        return reverted;
-      });
+      console.error('❌ WorkoutPlanDisplay: Error completing exercise:', error);
     }
   };
 
@@ -512,39 +573,36 @@ export default function WorkoutPlanDisplay({
     onExercisePress?.(exercise);
   };
 
-  const handleExerciseModalComplete = () => {
+  const handleExerciseModalComplete = async () => {
     if (selectedExercise && selectedDay) {
-      handleExerciseComplete(selectedExercise);
+      console.log('🎯 WorkoutPlanDisplay: handleExerciseModalComplete called');
+      await handleExerciseComplete(selectedExercise);
+      console.log('🎯 WorkoutPlanDisplay: handleExerciseComplete completed');
+      
+      // Force refresh the completion states to ensure UI updates
+      await loadCompletionStates();
+      console.log('🎯 WorkoutPlanDisplay: Completion states refreshed');
+      
+      // Don't close the modal immediately - let the completion screen handle it
     }
   };
 
-  const handleDeletePlan = async () => {
-    try {
-      console.log('🗑️ Deleting workout plan...');
-      
-      // Clear local storage
-      const Storage = await import('../utils/storage');
-      await Storage.default.removeItem('cached_workout_plan');
-      await Storage.default.removeItem('completed_exercises');
-      await Storage.default.removeItem('completed_days');
-      
-      // Delete from database
-      if (workoutPlan._id || workoutPlan.id) {
-        const planId = (workoutPlan._id || workoutPlan.id) as string;
-        await workoutPlanService.deleteWorkoutPlan(planId);
-        console.log('✅ Workout plan deleted from database');
-      }
-      
-      // Call the onGenerateNew callback to refresh the parent component
-      if (onGenerateNew) {
-        onGenerateNew();
-      }
-      
-      console.log('✅ Workout plan deleted successfully - returning to profile summary');
-    } catch (error) {
-      console.error('❌ Error deleting workout plan:', error);
-    }
+  const handleShowCompletion = () => {
+    setExerciseModalVisible(false);
+    setCompletionModalVisible(true);
   };
+
+  const handleBackToWorkout = () => {
+    setCompletionModalVisible(false);
+    setSelectedExercise(null);
+  };
+
+  const handleCloseCompletion = () => {
+    setCompletionModalVisible(false);
+    setSelectedExercise(null);
+  };
+
+  // Removed delete plan handler and button per new requirement
 
   // Removed week cards per new design
 
@@ -569,10 +627,6 @@ export default function WorkoutPlanDisplay({
               <View style={styles.progressCircle}>
                 {/* Background Circle */}
                 <View style={styles.progressCircleBackground} />
-                {/* Progress Arc - Dynamic based on percentage */}
-                <View style={[styles.progressCircleFill, {
-                  transform: [{ rotate: `${(progressPercentage / 100) * 360}deg` }]
-                }]} />
                 <View style={styles.progressCircleInner}>
                   <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
                   <Text style={styles.progressCircleLabel}>Complete</Text>
@@ -632,7 +686,7 @@ export default function WorkoutPlanDisplay({
                   {status === 'rest' ? (
                     <Text style={styles.premiumStatusIcon}>🏃‍♂️</Text>
                   ) : status === 'upcoming' ? (
-                    <Text style={styles.premiumStatusIcon}>📅</Text>
+                    <Text style={styles.premiumStatusIcon}>⏰</Text>
                   ) : (
                     <Text style={[styles.premiumStatusPercentage,
                       status === 'completed' && styles.premiumStatusPercentageCompleted,
@@ -680,7 +734,6 @@ export default function WorkoutPlanDisplay({
                 {/* Today Pulse Animation */}
                 {isToday && (
                   <View style={styles.todayPulseContainer}>
-                    <View style={styles.todayPulseRing} />
                     <View style={styles.todayPulseDot} />
                   </View>
                 )}
@@ -718,7 +771,7 @@ export default function WorkoutPlanDisplay({
               <Text style={styles.workoutProgressText}>
                 {selectedDay.exercises.filter(exercise => {
                   const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${selectedDay.exercises.indexOf(exercise)}`;
-                  return completedExercises.has(exerciseId);
+                  return exerciseCompletionService.isExerciseCompleted(exerciseId);
                 }).length}/{selectedDay.exercises.length}
               </Text>
               <Text style={styles.workoutProgressLabel}>Complete</Text>
@@ -731,7 +784,7 @@ export default function WorkoutPlanDisplay({
             {selectedDay.exercises && selectedDay.exercises.length > 0 ? (
               selectedDay.exercises.map((exercise, index) => {
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
-                const isCompleted = completedExercises.has(exerciseId);
+                const isCompleted = exerciseCompletionService.isExerciseCompleted(exerciseId);
                 const dayStatus = getDayStatus(selectedDay, 0);
 
                 return (
@@ -862,14 +915,7 @@ export default function WorkoutPlanDisplay({
           </View>
         )}
 
-        {/* Delete Plan Button */}
-        <TouchableOpacity 
-          style={styles.deleteButton}
-          onPress={handleDeletePlan}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.deleteButtonText}>🗑️ Delete Plan</Text>
-        </TouchableOpacity>
+
       </View>
 
       {/* Exercise Detail Modal */}
@@ -881,9 +927,19 @@ export default function WorkoutPlanDisplay({
           setSelectedExercise(null);
         }}
         onComplete={handleExerciseModalComplete}
+        onShowCompletion={handleShowCompletion}
         isCompleted={selectedExercise && selectedDay ?
-          completedExercises.has(`${selectedDay.date}-${selectedExercise.name}`) : false}
+          exerciseCompletionService.isExerciseCompleted(`${selectedDay.date}-${selectedExercise.name}`) : false}
         canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
+        selectedDay={selectedDay}
+      />
+
+      {/* Exercise Completion Modal */}
+      <ExerciseCompletionScreen
+        exercise={selectedExercise}
+        visible={completionModalVisible}
+        onClose={handleCloseCompletion}
+        onBackToWorkout={handleBackToWorkout}
       />
       </View>
     </DecorativeBackground>
@@ -894,7 +950,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    maxHeight: '100%', // Ensure container doesn't exceed screen height
   },
 
   // Hero Section - Extraordinary Design
@@ -968,16 +1023,6 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 6,
     borderColor: colors.cardBorder + '20',
-  },
-  progressCircleFill: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 6,
-    borderColor: 'transparent',
-    borderTopColor: colors.primary,
-    transformOrigin: 'center',
   },
   progressCircleInner: {
     width: 100,
@@ -1285,24 +1330,17 @@ const styles = StyleSheet.create({
   // Today Pulse Animation
   todayPulseContainer: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 16,
-    height: 16,
+    top: -4,
+    right: -6,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  todayPulseRing: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.primary + '40',
-  },
   todayPulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.primary,
   },
 
