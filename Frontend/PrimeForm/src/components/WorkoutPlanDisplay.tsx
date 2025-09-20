@@ -221,7 +221,8 @@ export default function WorkoutPlanDisplay({
           weekDays.push({
             ...workoutPlan.weeklyPlan[planDayIndex],
             date: dayDate.toISOString().split('T')[0],
-            day: i + 1
+            day: i + 1,
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
           });
         }
       }
@@ -254,7 +255,8 @@ export default function WorkoutPlanDisplay({
           weekDays.push({
             ...workoutPlan.weeklyPlan[i],
             date: dayDate.toISOString().split('T')[0],
-            day: ((currentWeek - 1) * 7) + (i + 1)
+            day: ((currentWeek - 1) * 7) + (i + 1),
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
           });
         }
       }
@@ -445,23 +447,18 @@ export default function WorkoutPlanDisplay({
     if (day.isRestDay) return 100; // Rest days are always 100% complete
     
     const dayExercises = day.exercises.map(exercise => `${day.date}-${exercise.name}`);
-    const percentage = exerciseCompletionService.calculateDayCompletion(dayExercises, day.date);
+    const completedExercisesCount = dayExercises.filter(exerciseId => completedExercises.has(exerciseId)).length;
+    const percentage = dayExercises.length > 0 ? (completedExercisesCount / dayExercises.length) * 100 : 0;
     
     console.log('📊 Day Completion Debug:', {
       dayDate: day.date,
-      dayExercises: dayExercises,
-      percentage: percentage,
+      totalExercises: dayExercises.length,
+      completedExercises: completedExercisesCount,
+      percentage: percentage.toFixed(2),
       isCurrentDay: isCurrentDay(day)
     });
     
-    // For current day, always show actual percentage
-    if (isCurrentDay(day)) {
-      return Math.round(percentage);
-    }
-    
-    // For past days, apply completion criteria: < 60% = missed, >= 60% = completed
-    if (percentage >= 60) return 100; // Show as 100% for completed days
-    return Math.round(percentage); // Show actual percentage for in-progress days
+    return Math.round(percentage);
   };
 
   const isCurrentDay = (day: WorkoutDay): boolean => {
@@ -575,15 +572,8 @@ export default function WorkoutPlanDisplay({
 
   const handleExerciseModalComplete = async () => {
     if (selectedExercise && selectedDay) {
-      console.log('🎯 WorkoutPlanDisplay: handleExerciseModalComplete called');
       await handleExerciseComplete(selectedExercise);
-      console.log('🎯 WorkoutPlanDisplay: handleExerciseComplete completed');
-      
-      // Force refresh the completion states to ensure UI updates
       await loadCompletionStates();
-      console.log('🎯 WorkoutPlanDisplay: Completion states refreshed');
-      
-      // Don't close the modal immediately - let the completion screen handle it
     }
   };
 
@@ -608,8 +598,7 @@ export default function WorkoutPlanDisplay({
 
 
   return (
-    <DecorativeBackground>
-      <View style={styles.container}>
+    <View style={styles.container}>
       {/* Hero Header Section - Extraordinary redesign */}
       <View style={styles.heroSection}>
         <View style={styles.heroBackground}>
@@ -632,6 +621,16 @@ export default function WorkoutPlanDisplay({
                   <Text style={styles.progressCircleLabel}>Complete</Text>
                 </View>
               </View>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+              </View>
+              <Text style={styles.progressBarText}>
+                Week {getCurrentWeek()} of {getTotalWeeks()} • {progressPercentage}% Complete
+              </Text>
             </View>
           </View>
         </View>
@@ -669,12 +668,12 @@ export default function WorkoutPlanDisplay({
                   isSelected && styles.premiumDayCardSelected,
                   status === 'completed' && styles.premiumDayCardCompleted,
                   status === 'missed' && styles.premiumDayCardMissed,
+                  status === 'in_progress' && styles.premiumDayCardInProgress,
                 ]}
                 onPress={() => handleDayPress(day)}
                 activeOpacity={0.8}
               >
-                {/* Background Glow Effect */}
-                {isToday && <View style={styles.todayGlow} />}
+                {/* Background Glow Effect - Removed for cleaner look */}
 
                 {/* Status Badge */}
                 <View style={[styles.premiumStatusBadge,
@@ -942,7 +941,6 @@ export default function WorkoutPlanDisplay({
         onBackToWorkout={handleBackToWorkout}
       />
       </View>
-    </DecorativeBackground>
   );
 }
 
@@ -950,11 +948,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
+    backgroundColor: 'transparent',
   },
 
   // Hero Section - Extraordinary Design
   heroSection: {
-    marginHorizontal: spacing.md,
     marginBottom: spacing.xl,
     borderRadius: 24,
     overflow: 'hidden',
@@ -1047,9 +1045,36 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Progress Bar Styles
+  progressBarContainer: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    width: '100%',
+  },
+  progressBar: {
+    width: '80%',
+    height: 8,
+    backgroundColor: colors.cardBorder + '30',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+    minWidth: 8, // Minimum width to show some progress
+  },
+  progressBarText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+
   // Week Cards Styles
   weekSection: {
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
   weekSectionTitle: {
@@ -1130,7 +1155,6 @@ const styles = StyleSheet.create({
 
   // Premium Calendar Section - Extraordinary Design
   premiumCalendarSection: {
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
   calendarHeader: {
@@ -1194,12 +1218,18 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   premiumDayCardToday: {
-    backgroundColor: 'transparent', // Remove background
-    borderColor: colors.primary,
+    backgroundColor: 'transparent', // Remove heavy background
+    borderColor: colors.blue,
     borderWidth: 2,
     elevation: 0, // Remove elevation
+    shadowColor: 'transparent',
     shadowOpacity: 0,
     shadowRadius: 0,
+  },
+  premiumDayCardInProgress: {
+    backgroundColor: 'transparent', // Remove heavy background
+    borderColor: colors.blue + '60',
+    borderWidth: 2,
   },
   premiumDayCardSelected: {
     backgroundColor: colors.primary + '08',
@@ -1222,7 +1252,7 @@ const styles = StyleSheet.create({
     left: -4,
     right: -4,
     bottom: -4,
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.blue + '20',
     borderRadius: 24,
     zIndex: -1,
   },
@@ -1291,7 +1321,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   premiumDayNameToday: {
-    color: colors.primary,
+    color: colors.blue,
   },
   premiumDayDate: {
     color: colors.mutedText,
@@ -1300,7 +1330,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumDayDateToday: {
-    color: colors.primary + 'AA',
+    color: colors.blue + 'AA',
   },
 
   // Exercise Info Section
@@ -1315,7 +1345,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   premiumExerciseCountToday: {
-    color: colors.primary,
+    color: colors.blue,
   },
   premiumExerciseLabel: {
     color: colors.mutedText,
@@ -1324,7 +1354,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumExerciseLabelToday: {
-    color: colors.primary + '80',
+    color: colors.blue + '80',
   },
 
   // Today Pulse Animation
@@ -1341,7 +1371,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.blue,
   },
 
   // Selection Indicator
@@ -1364,7 +1394,6 @@ const styles = StyleSheet.create({
 
   // Workout Details Section - Modern Design
   workoutDetailsSection: {
-    paddingHorizontal: spacing.lg,
     flex: 1,
   },
   workoutHeader: {
@@ -1372,6 +1401,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.lg,
+    paddingLeft: spacing.lg, // Only left padding to align with "This Week's Plan"
+    paddingRight: spacing.lg,
   },
   workoutHeaderLeft: {
     flex: 1,
@@ -1418,6 +1449,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
     borderWidth: 1,
     borderColor: colors.cardBorder,
     elevation: 6,
@@ -1704,6 +1736,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -1776,6 +1809,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },

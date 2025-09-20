@@ -1243,6 +1243,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: 0,
+    paddingBottom: 100, // reserve space for bottom tab that scrolls with content
   },
   loadingContainer: {
     flex: 1,
