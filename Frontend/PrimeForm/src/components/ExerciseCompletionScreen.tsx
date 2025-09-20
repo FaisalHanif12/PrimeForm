@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
-import { WorkoutExercise } from '../services/aiWorkoutService';
+import { WorkoutExercise } from '../services/aiWorkoutS ervice';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -59,8 +59,8 @@ export default function ExerciseCompletionScreen({
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
+      statusBarTranslucent={false}
     >
-      <StatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.8)" />
       <View style={styles.overlay}>
         <Animated.View 
           style={[

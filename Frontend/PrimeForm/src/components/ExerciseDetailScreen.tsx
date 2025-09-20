@@ -10,6 +10,7 @@ import {
   StatusBar,
   Alert,
   Animated,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
@@ -44,7 +45,7 @@ export default function ExerciseDetailScreen({
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
 
-  // Reset state when exercise changes
+  // Simple state reset when exercise changes
   useEffect(() => {
     if (exercise) {
       setCurrentSet(1);
@@ -53,17 +54,7 @@ export default function ExerciseDetailScreen({
     }
   }, [exercise]);
 
-  // Update completion state when isCompleted prop changes
-  useEffect(() => {
-    if (isCompleted) {
-      // If exercise is completed, mark all sets as completed
-      const allSets = new Set(Array.from({ length: exercise?.sets || 0 }, (_, i) => i + 1));
-      setCompletedSets(allSets);
-      console.log('🎯 ExerciseDetailScreen: Exercise marked as completed, updating sets state');
-    }
-  }, [isCompleted, exercise?.sets]);
-
-  // Animation effects
+  // Simple animation effects
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -88,7 +79,7 @@ export default function ExerciseDetailScreen({
   if (!exercise) return null;
 
   const handleSetComplete = (setNumber: number) => {
-    if (!canComplete || isCompleted) return;
+    if (!canComplete) return;
     
     const newCompletedSets = new Set(completedSets);
     if (completedSets.has(setNumber)) {
@@ -100,7 +91,7 @@ export default function ExerciseDetailScreen({
   };
 
   const handleCompleteExercise = async () => {
-    if (!canComplete || isCompleted || isCompleting) return;
+    if (!canComplete || isCompleting) return;
     
     if (completedSets.size !== exercise.sets) {
       Alert.alert(
@@ -114,30 +105,18 @@ export default function ExerciseDetailScreen({
     setIsCompleting(true);
 
     try {
-      console.log('🎯 ExerciseDetailScreen: Starting completion process...');
-      
-      // Call the completion handler
+      // Complete the exercise
       if (onComplete) {
-        console.log('🎯 ExerciseDetailScreen: Calling onComplete handler...');
         await onComplete();
-        console.log('🎯 ExerciseDetailScreen: onComplete handler completed');
       }
 
-      // Add a small delay to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Show completion screen immediately without closing the detail screen
+      // Navigate to completion screen
       if (onShowCompletion) {
-        console.log('🎯 ExerciseDetailScreen: Showing completion screen...');
         onShowCompletion();
       }
     } catch (error) {
-      console.error('❌ ExerciseDetailScreen: Error completing exercise:', error);
-      Alert.alert(
-        'Error',
-        'Failed to complete exercise. Please try again.',
-        [{ text: 'OK' }]
-      );
+      console.error('Error completing exercise:', error);
+      Alert.alert('Error', 'Failed to complete exercise. Please try again.');
     } finally {
       setIsCompleting(false);
     }
@@ -152,17 +131,18 @@ export default function ExerciseDetailScreen({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
+      statusBarTranslucent={false}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <Animated.View 
-        style={[
-          styles.container,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
+      <SafeAreaView style={styles.safeContainer}>
+        <Animated.View 
+          style={[
+            styles.container,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -210,7 +190,7 @@ export default function ExerciseDetailScreen({
           </View>
 
           {/* Progress Card */}
-          {canComplete && !isCompleted && (
+          {canComplete && (
             <View style={styles.progressCard}>
               <Text style={styles.sectionTitle}>Progress</Text>
               <View style={styles.progressBar}>
@@ -228,7 +208,7 @@ export default function ExerciseDetailScreen({
           )}
 
           {/* Set Tracker */}
-          {canComplete && !isCompleted && (
+          {canComplete && (
             <View style={styles.setTracker}>
               <Text style={styles.sectionTitle}>Track Your Sets</Text>
               <View style={styles.setsGrid}>
@@ -289,7 +269,7 @@ export default function ExerciseDetailScreen({
         </ScrollView>
 
         {/* Bottom Action */}
-        {canComplete && !isCompleted && (
+        {canComplete && (
           <View style={styles.bottomAction}>
             <TouchableOpacity
               style={[
@@ -317,12 +297,17 @@ export default function ExerciseDetailScreen({
           </View>
         )}
 
-      </Animated.View>
+        </Animated.View>
+      </SafeAreaView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

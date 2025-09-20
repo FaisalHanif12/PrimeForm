@@ -386,7 +386,7 @@ export default function WorkoutScreen() {
       );
     }
 
-    // If user has workout plan, show the workout plan display immediately
+    // If user has workout plan, show the workout plan display within the normal layout
     if (workoutPlan && initialLoadComplete) {
       return (
         <WorkoutPlanDisplay 
@@ -476,25 +476,24 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <DecorativeBackground>
-      <SafeAreaView style={styles.safeArea}>
-        <DashboardHeader 
-          userName={user?.fullName || t('common.user')}
-          onProfilePress={handleProfilePress}
-          onNotificationPress={() => console.log('Notifications pressed')}
-          notificationCount={0}
-        />
+    <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground>
+        <View style={styles.mainContainer}>
+          <DashboardHeader 
+            userName={user?.fullName || t('common.user')}
+            onProfilePress={handleProfilePress}
+            onNotificationPress={() => console.log('Notifications pressed')}
+            notificationCount={0}
+          />
 
-        <ScrollView 
-          style={styles.container}
-          contentContainerStyle={workoutPlan && initialLoadComplete ? styles.contentNoPadding : styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {renderContent()}
+          <ScrollView 
+            style={styles.container}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderContent()}
+          </ScrollView>
 
-        </ScrollView>
-
-        <View style={styles.bottomBar}>
           <BottomNavigation 
             activeTab="workout"
             onTabPress={handleTabPress}
@@ -553,8 +552,8 @@ export default function WorkoutScreen() {
             </View>
           </View>
         )}
-      </SafeAreaView>
-    </DecorativeBackground>
+      </DecorativeBackground>
+    </SafeAreaView>
   );
 }
 
@@ -562,23 +561,17 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
   },
   content: {
     padding: spacing.lg,
     paddingTop: 0,
-    paddingBottom: 100, // reserve space for fixed bottom tab
-  },
-  contentNoPadding: {
-    paddingTop: 0,
-    paddingBottom: 100, // reserve space for fixed bottom tab
-  },
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    paddingBottom: 100, // reserve space for bottom tab that scrolls with content
   },
   
   // Hero Section (for onboarding)
