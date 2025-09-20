@@ -369,7 +369,7 @@ export default function DietScreen() {
 
         <ScrollView 
           style={styles.container}
-          contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
           {renderContent()}
@@ -421,9 +421,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: 0,
-  },
-  contentNoPadding: {
-    paddingTop: 0,
+    paddingBottom: 100, // reserve space for bottom tab that scrolls with content
   },
   bottomSpacing: {
     height: 100,
