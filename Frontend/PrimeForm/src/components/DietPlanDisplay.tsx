@@ -5,11 +5,14 @@ import {
   StyleSheet, 
   ScrollView, 
   TouchableOpacity,
-  Dimensions 
+  Dimensions,
+  DeviceEventEmitter
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
+import mealCompletionService from '../services/mealCompletionService';
 import MealDetailScreen from './MealDetailScreen';
 import DecorativeBackground from './DecorativeBackground';
 
@@ -35,6 +38,8 @@ export default function DietPlanDisplay({
   const [mealModalVisible, setMealModalVisible] = useState(false);
   const [waterIntake, setWaterIntake] = useState<{ [key: string]: number }>({});
   const [waterCompleted, setWaterCompleted] = useState<{ [key: string]: boolean }>({});
+  const [progressPercentage, setProgressPercentage] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Safety checks for diet plan structure
   if (!dietPlan || !dietPlan.weeklyPlan || !Array.isArray(dietPlan.weeklyPlan)) {
@@ -56,20 +61,44 @@ export default function DietPlanDisplay({
     
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
-    // Calculate week based on plan generation day (not Monday)
-    // If plan starts mid-week, week 1 includes the generation day and forward
-    const calculatedWeek = Math.floor(daysDiff / 7) + 1;
+    // Calculate week based on plan generation day
+    // First week: from generation day to Sunday (inclusive)
+    // Subsequent weeks: Monday to Sunday
+    const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
-    console.log('📅 DietPlanDisplay Date Debug:', {
+    let calculatedWeek;
+    if (daysDiff < 0) {
+      // Future date - not started yet
+      calculatedWeek = 1;
+    } else if (daysDiff === 0) {
+      // Generation day - week 1
+      calculatedWeek = 1;
+    } else {
+      // Calculate which week we're in
+      // First week: generation day to Sunday
+      const daysInFirstWeek = 7 - startDayOfWeek; // Days from generation day to Sunday
+      
+      if (daysDiff <= daysInFirstWeek) {
+        // Still in first week
+        calculatedWeek = 1;
+      } else {
+        // Calculate subsequent weeks (Monday to Sunday cycles)
+        const remainingDays = daysDiff - daysInFirstWeek;
+        calculatedWeek = 1 + Math.floor(remainingDays / 7) + 1;
+      }
+    }
+    
+    console.log('📅 DietPlanDisplay Week Calculation:', {
       today: today.toDateString(),
       startDate: startDate.toDateString(),
       daysDiff,
+      startDayOfWeek,
+      daysInFirstWeek: 7 - startDayOfWeek,
       calculatedWeek,
       completedDaysCount: completedDays.size,
       planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
     });
     
-    // Use simple date-based calculation to match dashboard logic
     return Math.max(1, Math.min(calculatedWeek, getTotalWeeks()));
   };
 
@@ -84,27 +113,25 @@ export default function DietPlanDisplay({
   };
 
   const getProgressPercentage = (): number => {
-    // Calculate progress based on actual weeks completed vs total weeks
+    // Calculate progress based on completed weeks vs total weeks
     const totalWeeks = getTotalWeeks();
-    const currentWeek = getCurrentWeek();
     
     if (totalWeeks <= 0) return 0;
     
-    // Calculate actual completion progress based on completed days
+    // Calculate completed weeks based on completed days
     const completedWeeksCount = Math.floor(completedDays.size / 7);
-    const partialWeekProgress = (completedDays.size % 7) / 7;
-    const actualProgress = ((completedWeeksCount + partialWeekProgress) / totalWeeks) * 100;
     
-    // Calculate time-based progress for reference
-    const start = new Date(dietPlan.startDate).getTime();
-    const end = new Date(dietPlan.endDate).getTime();
-    const now = Date.now();
-    const timeProgress = end <= start ? 0 : Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+    // Calculate percentage: completed weeks / total weeks * 100
+    const percentage = (completedWeeksCount / totalWeeks) * 100;
     
-    // Use the higher of actual progress or time progress, but cap at time progress + 10%
-    const finalProgress = Math.min(Math.max(actualProgress, timeProgress), timeProgress + 10);
+    console.log('📊 Diet Progress Calculation:', {
+      totalWeeks,
+      completedDaysCount: completedDays.size,
+      completedWeeksCount,
+      progressPercentage: percentage.toFixed(2)
+    });
     
-    return Math.round(finalProgress);
+    return Math.round(Math.min(percentage, 100)); // Cap at 100%
   };
 
   // Get today's day data using the same logic as dashboard
@@ -151,59 +178,138 @@ export default function DietPlanDisplay({
     return null;
   };
 
-  // Expand the 7-day weekly pattern for the current week (for calendar display)
+  // Get current week's days data
   const getCurrentWeekDays = () => {
     if (!dietPlan.weeklyPlan || dietPlan.weeklyPlan.length === 0) {
       return [];
     }
     
+    const weekDays: DietDay[] = [];
     const currentWeek = getCurrentWeek();
     const startDate = new Date(dietPlan.startDate);
     
-    // Calculate week start based on plan generation day, not Monday
-    // Week 1 starts from the plan generation day
-    const weekStartDate = new Date(startDate);
-    weekStartDate.setDate(startDate.getDate() + ((currentWeek - 1) * 7));
+    // Calculate the first day of the current week
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - currentDayOfWeek + 1); // Go to Monday of current week
     
-    console.log('📅 Diet Calendar Debug:', {
+    // If we're in week 1, use the plan generation day logic
+    if (currentWeek === 1) {
+      const planStartDayOfWeek = startDate.getDay();
+      
+      // Week 1: from plan generation day onwards
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startDate);
+        dayDate.setDate(startDate.getDate() + i);
+        
+        const planDayIndex = (planStartDayOfWeek + i) % 7;
+        
+        if (planDayIndex < dietPlan.weeklyPlan.length) {
+          weekDays.push({
+            ...dietPlan.weeklyPlan[planDayIndex],
+            date: dayDate.toISOString().split('T')[0],
+            day: i + 1,
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
+          });
+        }
+      }
+    } else {
+      // Subsequent weeks: use Monday-Sunday pattern
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(monday);
+        dayDate.setDate(monday.getDate() + i);
+        
+        if (i < dietPlan.weeklyPlan.length) {
+          weekDays.push({
+            ...dietPlan.weeklyPlan[i],
+            date: dayDate.toISOString().split('T')[0],
+            day: ((currentWeek - 1) * 7) + (i + 1),
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
+          });
+        }
+      }
+    }
+    
+    console.log('📅 Diet Calendar Week Days:', {
       currentWeek,
-      completedDaysCount: completedDays.size,
-      completedWeeksCount: Math.floor(completedDays.size / 7),
-      weekStartDate: weekStartDate.toISOString().split('T')[0],
-      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
-      weekStartDay: weekStartDate.toLocaleDateString('en-US', { weekday: 'long' })
+      weekDaysCount: weekDays.length,
+      firstDay: weekDays[0]?.dayName,
+      lastDay: weekDays[weekDays.length - 1]?.dayName,
+      completedDaysCount: completedDays.size
     });
     
-    return dietPlan.weeklyPlan.map((day, index) => ({
-      ...day,
-      date: new Date(weekStartDate.getTime() + (index * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
-      day: ((currentWeek - 1) * 7) + (index + 1) // Absolute day number for tracking
-    }));
+    return weekDays;
   };
 
   useEffect(() => {
-    loadCompletionStates();
+    const initializeComponent = async () => {
+      // Initialize meal completion service
+      await mealCompletionService.initialize();
+      
+      // Load completion states
+      loadCompletionStates();
+      
+      // Use the same logic as dashboard to get today's day data
+      const todaysDay = getTodaysDayData();
+      
+      if (todaysDay) {
+        console.log('📅 DietPlanDisplay Setting Today:', {
+          dayName: todaysDay.dayName,
+          date: todaysDay.date,
+          mealCount: todaysDay.meals ? Object.keys(todaysDay.meals).length : 0
+        });
+        setSelectedDay(todaysDay);
+      } else {
+        // Fallback to first day of current week if today's data not found
+        const currentWeekDays = getCurrentWeekDays();
+        if (currentWeekDays.length > 0) {
+          console.warn('Today\'s day data not found, using first day of week as fallback');
+          setSelectedDay(currentWeekDays[0]);
+        }
+      }
+      
+      setIsInitialized(true);
+    };
     
-    // Use the same logic as dashboard to get today's day data
-    const todaysDay = getTodaysDayData();
-    
-    if (todaysDay) {
-      console.log('📅 DietPlanDisplay Setting Today:', {
-        dayName: todaysDay.dayName,
-        date: todaysDay.date,
-        mealCount: todaysDay.meals ? Object.keys(todaysDay.meals).length : 0
-      });
-      setSelectedDay(todaysDay);
-      return;
-    }
-
-    // Fallback to first day of current week if today's data not found
-    const currentWeekDays = getCurrentWeekDays();
-    if (currentWeekDays.length > 0) {
-      console.warn('Today\'s day data not found, using first day of week as fallback');
-      setSelectedDay(currentWeekDays[0]);
-    }
+    initializeComponent();
   }, [dietPlan]);
+
+  // Add focus effect to reload completion states when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isInitialized) {
+        loadCompletionStates();
+      }
+    }, [isInitialized])
+  );
+
+  // Listen for meal completion events
+  useEffect(() => {
+    const mealCompletedListener = (event: any) => {
+      console.log('🍽️ Meal completed event received:', event);
+      loadCompletionStates();
+    };
+
+    const dayCompletedListener = (event: any) => {
+      console.log('📅 Day completed event received:', event);
+      loadCompletionStates();
+    };
+
+    const subscription1 = DeviceEventEmitter.addListener('mealCompleted', mealCompletedListener);
+    const subscription2 = DeviceEventEmitter.addListener('dayCompleted', dayCompletedListener);
+
+    return () => {
+      subscription1?.remove();
+      subscription2?.remove();
+    };
+  }, []);
+
+  // Update progress percentage when completion states change
+  useEffect(() => {
+    const newProgressPercentage = getProgressPercentage();
+    setProgressPercentage(newProgressPercentage);
+  }, [completedDays]);
 
   const loadCompletionStates = async () => {
     try {
@@ -310,49 +416,35 @@ export default function DietPlanDisplay({
     const planStartDate = new Date(dietPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
     
-    // Check if day is completed (check both date format and day-week format)
-    const isCompleted = completedDays.has(day.date) || 
-                       completedDays.has(`${day.day}-${Math.ceil(day.day / 7)}`);
+    // Check if day is completed (50% completion criteria)
+    const dayMeals = [
+      `${day.date}-breakfast-${day.meals.breakfast.name}`,
+      `${day.date}-lunch-${day.meals.lunch.name}`,
+      `${day.date}-dinner-${day.meals.dinner.name}`,
+      ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
+    ];
     
-    if (isCompleted) {
-      return 'completed';
-    }
+    const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
+    const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
     
-    // Current day is always in_progress
+    // Current day is always in_progress regardless of completion
     if (dayDate.getTime() === today.getTime()) {
       return 'in_progress';
     }
     
-    // Plan generation day should be in_progress if it's today or in the past
-    if (dayDate.getTime() === planStartDate.getTime() && dayDate <= today) {
-      return 'in_progress';
-    }
-    
-    // Days before plan generation should be 'upcoming' (not missed)
-    if (dayDate < planStartDate) {
+    // Future days are always upcoming
+    if (dayDate > today) {
       return 'upcoming';
     }
     
-    // Days after plan generation but before today
-    if (dayDate < today && dayDate > planStartDate) {
-      // Check completion percentage for the day
-      const dayMeals = [
-        `${day.date}-breakfast-${day.meals.breakfast.name}`,
-        `${day.date}-lunch-${day.meals.lunch.name}`,
-        `${day.date}-dinner-${day.meals.dinner.name}`,
-        ...day.meals.snacks.map((snack, idx) => `${day.date}-snack-${snack.name}`)
-      ];
-      
-      const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
-      const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
-      
-      // Apply completion criteria: < 40% = missed, >= 60% = completed
-      if (completionPercentage < 40) return 'missed';
-      if (completionPercentage >= 60) return 'completed';
-      return 'in_progress'; // 40-59% = in progress
+    // Past days: check completion based on 50% threshold
+    if (dayDate < today) {
+      // Apply completion criteria: < 50% = missed, >= 50% = completed
+      if (completionPercentage >= 50) return 'completed';
+      if (completionPercentage < 50) return 'missed';
     }
     
-    // Future days
+    // Default fallback
     return 'upcoming';
   };
 
@@ -368,10 +460,16 @@ export default function DietPlanDisplay({
     const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
     const percentage = Math.round((completedMealsCount / dayMeals.length) * 100);
     
-    // Apply completion criteria: < 40% = missed, >= 60% = completed, 40-59% = in progress
-    if (percentage < 40) return 0; // Show as 0% for missed days
-    if (percentage >= 60) return 100; // Show as 100% for completed days
-    return percentage; // Show actual percentage for in-progress days
+    console.log('📊 Day meal completion calculation:', {
+      dayDate: day.date,
+      totalMeals: dayMeals.length,
+      completedMeals: completedMealsCount,
+      percentage: percentage,
+      isCurrentDay: isCurrentDay(day)
+    });
+    
+    // Always show actual percentage achieved
+    return percentage;
   };
 
   const isCurrentDay = (day: DietDay): boolean => {
@@ -396,28 +494,30 @@ export default function DietPlanDisplay({
       return;
     }
     
-    const mealId = `${selectedDay.date}-${mealType}-${meal.name}`;
-    const week = Math.ceil(selectedDay.day / 7);
-    
-    // Prevent double-clicking by checking if already completed
-    if (completedMeals.has(mealId)) {
-      console.log('Meal already completed, ignoring duplicate completion');
+    // Only allow completion on current day
+    if (!isCurrentDay(selectedDay)) {
+      console.warn('Cannot complete meal: only current day meals can be completed');
       return;
     }
     
-    try {
+    const mealId = `${selectedDay.date}-${mealType}-${meal.name}`;
+    const week = Math.ceil(selectedDay.day / 7);
+    
+    // Use meal completion service
+    const success = await mealCompletionService.markMealCompleted(
+      mealId, 
+      selectedDay.date, 
+      selectedDay.day, 
+      week, 
+      mealType
+    );
+    
+    if (success) {
+      // Update local state
       const newCompletedMeals = new Set([...completedMeals, mealId]);
       setCompletedMeals(newCompletedMeals);
       
-      const Storage = await import('../utils/storage');
-      await Storage.default.setItem('completed_meals', JSON.stringify([...newCompletedMeals]));
-      
-      await dietPlanService.markMealCompleted(mealId, selectedDay.day, week, mealType);
-      
-      // Sync with progress service
-      await syncProgressData();
-      
-      // Check if all meals for the day are completed
+      // Check if all meals for the day are completed (50% threshold)
       const dayMeals = [
         `${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`,
         `${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`,
@@ -425,23 +525,26 @@ export default function DietPlanDisplay({
         ...selectedDay.meals.snacks.map((snack, index) => `${selectedDay.date}-snack-${snack.name}`)
       ];
       
-      const allMealsCompleted = dayMeals.every(mealId => newCompletedMeals.has(mealId));
+      const completedMealsCount = dayMeals.filter(id => newCompletedMeals.has(id)).length;
+      const completionPercentage = (completedMealsCount / dayMeals.length) * 100;
       
-      if (allMealsCompleted) {
-        await dietPlanService.markDayCompleted(selectedDay.day, week);
-        const newCompletedDays = new Set([...completedDays, selectedDay.date]);
-        setCompletedDays(newCompletedDays);
+      // Mark day as completed if >= 50% of meals are done
+      if (completionPercentage >= 50 && !completedDays.has(selectedDay.date)) {
+        const daySuccess = await mealCompletionService.markDayCompleted(
+          selectedDay.date, 
+          selectedDay.day, 
+          week
+        );
         
-        await Storage.default.setItem('completed_diet_days', JSON.stringify([...newCompletedDays]));
-        console.log(`🎉 Diet Day ${selectedDay.day} completed! All meals finished.`);
+        if (daySuccess) {
+          const newCompletedDays = new Set([...completedDays, selectedDay.date]);
+          setCompletedDays(newCompletedDays);
+          console.log(`🎉 Diet Day ${selectedDay.day} completed! ${completionPercentage.toFixed(1)}% of meals finished.`);
+        }
       }
-    } catch (error) {
-      console.error('Error marking meal completed:', error);
-      setCompletedMeals(prev => {
-        const reverted = new Set(prev);
-        reverted.delete(mealId);
-        return reverted;
-      });
+      
+      // Sync with progress service
+      await syncProgressData();
     }
   };
 
@@ -564,13 +667,25 @@ export default function DietPlanDisplay({
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircle}>
                 <View style={[styles.progressCircleFill, { 
-                  transform: [{ rotate: `${(getProgressPercentage() / 100) * 360}deg` }] 
+                  transform: [{ rotate: `${(progressPercentage / 100) * 360}deg` }] 
                 }]} />
                 <View style={styles.progressCircleInner}>
-                  <Text style={styles.progressCircleText}>{getProgressPercentage()}%</Text>
+                  <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
                   <Text style={styles.progressCircleLabel}>Complete</Text>
                 </View>
               </View>
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressBarFill, { 
+                  width: `${progressPercentage}%` 
+                }]} />
+              </View>
+              <Text style={styles.progressBarText}>
+                {Math.floor(completedDays.size / 7)} of {getTotalWeeks()} weeks completed
+              </Text>
             </View>
 
             {/* Delete Button */}
@@ -617,6 +732,7 @@ export default function DietPlanDisplay({
                   isSelected && styles.premiumDayCardSelected,
                   status === 'completed' && styles.premiumDayCardCompleted,
                   status === 'missed' && styles.premiumDayCardMissed,
+                  status === 'in_progress' && styles.premiumDayCardInProgress,
                 ]}
                 onPress={() => handleDayPress(day)}
                 activeOpacity={0.8}
@@ -754,7 +870,7 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : getDayStatus(selectedDay, 0) === 'in_progress' ? (
+                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
                       <TouchableOpacity 
                         style={styles.completeMealButton}
                         onPress={(e) => {
@@ -821,7 +937,7 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : getDayStatus(selectedDay, 0) === 'in_progress' ? (
+                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
                       <TouchableOpacity 
                         style={styles.completeMealButton}
                         onPress={(e) => {
@@ -888,7 +1004,7 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : getDayStatus(selectedDay, 0) === 'in_progress' ? (
+                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
                       <TouchableOpacity 
                         style={styles.completeMealButton}
                         onPress={(e) => {
@@ -943,7 +1059,7 @@ export default function DietPlanDisplay({
                       <View style={styles.completedSnackBadge}>
                         <Text style={styles.completedSnackIcon}>✓</Text>
                       </View>
-                    ) : getDayStatus(selectedDay, 0) === 'in_progress' ? (
+                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
                       <TouchableOpacity 
                         style={styles.completeSnackButton}
                         onPress={(e) => {
@@ -1021,7 +1137,7 @@ export default function DietPlanDisplay({
           completedMeals.has(`${selectedDay.date}-lunch-${selectedMeal.name}`) ||
           completedMeals.has(`${selectedDay.date}-dinner-${selectedMeal.name}`) ||
           completedMeals.has(`${selectedDay.date}-snack-${selectedMeal.name}`) : false}
-        canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
+        canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
       />
       </View>
     </DecorativeBackground>
@@ -1133,6 +1249,33 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Progress Bar Styles
+  progressBarContainer: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    width: '100%',
+  },
+  progressBar: {
+    width: '80%',
+    height: 8,
+    backgroundColor: colors.cardBorder + '30',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.gold,
+    borderRadius: 4,
+    minWidth: 8, // Minimum width to show some progress
+  },
+  progressBarText: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+
   // Delete Button Styles
   deleteButton: {
     backgroundColor: colors.error + '20',
@@ -1219,7 +1362,7 @@ const styles = StyleSheet.create({
   },
   premiumDayCardToday: {
     backgroundColor: 'transparent', // Remove background
-    borderColor: colors.gold,
+    borderColor: colors.blue,
     borderWidth: 2,
     elevation: 0, // Remove elevation
     shadowOpacity: 0,
@@ -1238,6 +1381,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error + '10',
     borderColor: colors.error + '40',
   },
+  premiumDayCardInProgress: {
+    backgroundColor: colors.blue + '10',
+    borderColor: colors.blue + '60',
+    borderWidth: 2,
+  },
   
   // Today Glow Effect
   todayGlow: {
@@ -1246,7 +1394,7 @@ const styles = StyleSheet.create({
     left: -4,
     right: -4,
     bottom: -4,
-    backgroundColor: colors.gold + '20',
+    backgroundColor: colors.blue + '20',
     borderRadius: 24,
     zIndex: -1,
   },
@@ -1263,7 +1411,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   premiumStatusBadgeProgress: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.blue,
   },
   premiumStatusBadgeCompleted: {
     backgroundColor: colors.green,
@@ -1312,7 +1460,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   premiumDayNameToday: {
-    color: colors.gold,
+    color: colors.blue,
   },
   premiumDayDate: {
     color: colors.mutedText,
@@ -1321,7 +1469,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumDayDateToday: {
-    color: colors.gold + 'AA',
+    color: colors.blue + 'AA',
   },
   
   // Calories Info Section
@@ -1336,7 +1484,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   premiumCaloriesCountToday: {
-    color: colors.gold,
+    color: colors.blue,
   },
   premiumCaloriesLabel: {
     color: colors.mutedText,
@@ -1345,7 +1493,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumCaloriesLabelToday: {
-    color: colors.gold + '80',
+    color: colors.blue + '80',
   },
   
   // Today Pulse Animation
@@ -1363,13 +1511,13 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: colors.gold + '40',
+    backgroundColor: colors.blue + '40',
   },
   todayPulseDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.gold,
+    backgroundColor: colors.blue,
   },
   
   // Selection Indicator

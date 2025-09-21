@@ -48,12 +48,30 @@ class DietPlanService {
   async createDietPlan(dietPlan: DietPlan): Promise<DietPlanResponse> {
     try {
       console.log('💾 Saving diet plan to database...');
+      console.log('📦 Diet Plan Data Structure:', {
+        goal: dietPlan.goal,
+        duration: dietPlan.duration,
+        country: dietPlan.country,
+        startDate: dietPlan.startDate,
+        endDate: dietPlan.endDate,
+        totalWeeks: dietPlan.totalWeeks,
+        weeklyPlanLength: dietPlan.weeklyPlan?.length,
+        firstDayMeals: dietPlan.weeklyPlan?.[0]?.meals ? Object.keys(dietPlan.weeklyPlan[0].meals) : 'undefined'
+      });
+      
       const response = await api.post('/diet-plans', dietPlan);
       
       console.log('✅ Diet plan saved to database');
       return response;
     } catch (error) {
       console.error('❌ Error saving diet plan to database:', error);
+      console.error('❌ Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: (error as any)?.response?.status,
+        statusText: (error as any)?.response?.statusText,
+        data: (error as any)?.response?.data
+      });
       throw error;
     }
   }

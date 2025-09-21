@@ -354,7 +354,18 @@ Generate the **complete personalized 7-day diet plan now.**
     const caloriesMatch = aiResponse.match(/\*\*Target Daily Calories:\*\*\s*(\d+)/i);
     const countryMatch = aiResponse.match(/\*\*Country Cuisine:\*\*\s*(.+?)(?:\n|$)/i);
 
-    const goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Health';
+    // Ensure goal matches user profile more closely and normalize format
+    let goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Health';
+    
+    // Normalize goal to match expected values
+    if (goal.toLowerCase().includes('gain') && goal.toLowerCase().includes('muscle')) {
+      goal = 'Muscle Gain';
+    } else if (goal.toLowerCase().includes('lose') || goal.toLowerCase().includes('fat')) {
+      goal = 'Fat Loss';
+    } else if (goal.toLowerCase().includes('maintain') || goal.toLowerCase().includes('general')) {
+      goal = 'General Health';
+    }
+    
     const duration = durationMatch ? durationMatch[1].trim() : '12 weeks';
     const targetCalories = caloriesMatch ? parseInt(caloriesMatch[1]) : 2000;
     const country = countryMatch ? countryMatch[1].trim() : userProfile.country || 'International';
@@ -492,14 +503,14 @@ Generate the **complete personalized 7-day diet plan now.**
       return {
         name: name.trim(),
         emoji: this.getMealEmoji(name.trim()),
-        ingredients: ingredients,
+        ingredients: ingredients.length > 0 ? ingredients : ['Healthy ingredients'],
         calories: parseInt(calories) || 0,
         protein: parseInt(protein) || 0,
         carbs: parseInt(carbs) || 0,
         fats: parseInt(fats) || 0,
         preparationTime: prepTime.trim(),
         servingSize: '1 serving',
-        instructions: instructions
+        instructions: instructions || 'Prepare according to standard cooking methods'
       };
     }
     
@@ -522,7 +533,8 @@ Generate the **complete personalized 7-day diet plan now.**
         carbs: Math.round(parseInt(calories) * 0.6 / 4), // Estimate
         fats: Math.round(parseInt(calories) * 0.25 / 9), // Estimate
         preparationTime: '5 min',
-        servingSize: '1 serving'
+        servingSize: '1 serving',
+        instructions: 'Enjoy as a healthy snack'
       });
     }
     
@@ -591,7 +603,7 @@ Generate the **complete personalized 7-day diet plan now.**
       fats: 10,
       preparationTime: '15 min',
       servingSize: '1 serving',
-      instructions: 'Prepare with fresh, wholesome ingredients'
+      instructions: 'Prepare with fresh, wholesome ingredients according to standard cooking methods'
     };
   }
 
