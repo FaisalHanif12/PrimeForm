@@ -13,7 +13,8 @@ const mealSchema = new mongoose.Schema({
   },
   ingredients: [{
     type: String,
-    required: true
+    required: false, // Made optional for flexibility
+    default: []
   }],
   calories: {
     type: Number,
@@ -45,7 +46,8 @@ const mealSchema = new mongoose.Schema({
   },
   instructions: {
     type: String,
-    required: true
+    required: false, // Made optional since AI parsing might not always provide this
+    default: 'Prepare according to standard cooking methods'
   }
 });
 
@@ -125,7 +127,8 @@ const dietPlanSchema = new mongoose.Schema({
   goal: {
     type: String,
     required: true,
-    enum: ['Muscle Gain', 'Fat Loss', 'General Health']
+    trim: true
+    // Removed enum restriction to allow flexible AI-generated goals
   },
   duration: {
     type: String,
