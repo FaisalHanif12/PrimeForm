@@ -400,7 +400,7 @@ export default function WorkoutPlanDisplay({
     const planStartDate = new Date(workoutPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
 
-    // Check if day is completed (60% completion criteria)
+    // Check if day is completed (50% completion criteria)
     if (completedDays.has(day.date)) {
       console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
       return 'completed';
@@ -432,9 +432,9 @@ export default function WorkoutPlanDisplay({
         completionPercentage: completionPercentage.toFixed(2)
       });
 
-      // Apply completion criteria: < 60% = missed, >= 60% = completed
-      if (completionPercentage >= 60) return 'completed';
-      if (completionPercentage < 60) return 'missed';
+      // Apply completion criteria: < 50% = missed, >= 50% = completed
+      if (completionPercentage >= 50) return 'completed';
+      if (completionPercentage < 50) return 'missed';
     }
 
     // Future days
@@ -458,6 +458,7 @@ export default function WorkoutPlanDisplay({
       isCurrentDay: isCurrentDay(day)
     });
     
+     // Always show actual percentage achieved (not 100% for completed days)
     return Math.round(percentage);
   };
 
@@ -785,6 +786,8 @@ export default function WorkoutPlanDisplay({
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
                 const isCompleted = exerciseCompletionService.isExerciseCompleted(exerciseId);
                 const dayStatus = getDayStatus(selectedDay, 0);
+                const isToday = selectedDay && selectedDay.date ? isCurrentDay(selectedDay) : false;
+                const canComplete = isToday && dayStatus === 'in_progress';
 
                 return (
                   <TouchableOpacity
@@ -792,14 +795,14 @@ export default function WorkoutPlanDisplay({
                     style={[
                       styles.modernExerciseCard,
                       isCompleted && styles.modernExerciseCardCompleted,
-                      dayStatus === 'missed' && styles.modernExerciseCardDisabled,
+                      !canComplete && styles.modernExerciseCardDisabled,
                     ]}
                     onPress={() => {
-                      if (dayStatus === 'missed') return;
+                      if (!canComplete) return;
                       handleExercisePress(exercise);
                     }}
-                    activeOpacity={0.8}
-                    disabled={dayStatus === 'missed'}
+                    activeOpacity={canComplete ? 0.8 : 1}
+                    disabled={!canComplete}
                   >
                     {/* Exercise Number Badge */}
                     <View style={[styles.exerciseNumber, isCompleted && styles.exerciseNumberCompleted]}>
@@ -830,7 +833,7 @@ export default function WorkoutPlanDisplay({
                             <View style={styles.modernCompletedBadge}>
                               <Text style={styles.modernCompletedIcon}>✓</Text>
                             </View>
-                          ) : dayStatus === 'in_progress' ? (
+                          ) : canComplete ? (
                             <TouchableOpacity
                               style={styles.modernStartButton}
                               onPress={(e) => {
@@ -929,7 +932,7 @@ export default function WorkoutPlanDisplay({
         onShowCompletion={handleShowCompletion}
         isCompleted={selectedExercise && selectedDay ?
           exerciseCompletionService.isExerciseCompleted(`${selectedDay.date}-${selectedExercise.name}`) : false}
-        canComplete={selectedDay ? getDayStatus(selectedDay, 0) === 'in_progress' : false}
+        canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
         selectedDay={selectedDay}
       />
 

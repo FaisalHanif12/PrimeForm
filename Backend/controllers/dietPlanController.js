@@ -4,8 +4,32 @@ const User = require('../models/User');
 // Create a new diet plan
 const createDietPlan = async (req, res) => {
   try {
-    console.log('📝 Creating diet plan for user:', req.user.id);
+    // Ensure we have a valid user object
+    if (!req.user) {
+      console.log('❌ createDietPlan - No user object found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Extract userId - MongoDB uses _id, but we need to handle both cases
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+
+    console.log('🔍 createDietPlan - User ID:', userId);
+    console.log('🔍 createDietPlan - User object keys:', Object.keys(req.user));
+    console.log('🔍 createDietPlan - User _id:', req.user._id);
+    console.log('🔍 createDietPlan - User id:', req.user.id);
     console.log('📦 Diet plan data received:', JSON.stringify(req.body, null, 2));
+
+    // Validate that we have a userId
+    if (!userId) {
+      console.log('❌ createDietPlan - No valid user ID found');
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user authentication'
+      });
+    }
 
     const {
       goal,
@@ -39,22 +63,75 @@ const createDietPlan = async (req, res) => {
     }
 
     // Validate each day in weeklyPlan
-    for (const day of weeklyPlan) {
+    for (let i = 0; i < weeklyPlan.length; i++) {
+      const day = weeklyPlan[i];
       if (!day.meals || !day.meals.breakfast || !day.meals.lunch || !day.meals.dinner) {
+        console.log(`❌ Day ${i + 1} meal validation failed:`, {
+          hasMeals: !!day.meals,
+          hasBreakfast: !!(day.meals && day.meals.breakfast),
+          hasLunch: !!(day.meals && day.meals.lunch),
+          hasDinner: !!(day.meals && day.meals.dinner)
+        });
         return res.status(400).json({
           success: false,
-          message: 'Each day must have breakfast, lunch, and dinner meals'
+          message: `Day ${i + 1} must have breakfast, lunch, and dinner meals`
         });
       }
+      
+      // Ensure each meal has required properties
+      const meals = [day.meals.breakfast, day.meals.lunch, day.meals.dinner];
+      if (day.meals.snacks && Array.isArray(day.meals.snacks)) {
+        meals.push(...day.meals.snacks);
+      }
+      
+      for (let j = 0; j < meals.length; j++) {
+        const meal = meals[j];
+        if (!meal.name || meal.calories === undefined || meal.protein === undefined || meal.carbs === undefined || meal.fats === undefined) {
+          console.log(`❌ Meal validation failed for day ${i + 1}, meal ${j + 1}:`, meal);
+          return res.status(400).json({
+            success: false,
+            message: `Day ${i + 1} has incomplete meal data - missing required nutritional information`
+          });
+        }
+        
+        // Ensure numeric values are properly formatted
+        meal.calories = Number(meal.calories) || 0;
+        meal.protein = Number(meal.protein) || 0;
+        meal.carbs = Number(meal.carbs) || 0;
+        meal.fats = Number(meal.fats) || 0;
+        
+        // Ensure meal has instructions (add default if missing)
+        if (!meal.instructions) {
+          meal.instructions = 'Prepare according to standard cooking methods';
+        }
+        
+        // Ensure meal has ingredients (add default if missing)
+        if (!meal.ingredients || !Array.isArray(meal.ingredients) || meal.ingredients.length === 0) {
+          meal.ingredients = ['Healthy ingredients'];
+        }
+      }
+      
+      // Ensure day-level numeric values are properly formatted
+      day.totalCalories = Number(day.totalCalories) || 0;
+      day.totalProtein = Number(day.totalProtein) || 0;
+      day.totalCarbs = Number(day.totalCarbs) || 0;
+      day.totalFats = Number(day.totalFats) || 0;
+      day.day = Number(day.day) || (i + 1);
+      
+      // Ensure required day fields
+      if (!day.dayName) day.dayName = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i];
+      if (!day.date) day.date = new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      if (!day.waterIntake) day.waterIntake = '2-3 liters';
+      if (!day.notes) day.notes = '';
     }
 
     // Deactivate existing diet plans for this user
-    await DietPlan.deactivateUserPlans(req.user.id);
+    await DietPlan.deactivateUserPlans(userId);
     console.log('🔄 Deactivated existing diet plans for user');
 
-    // Create new diet plan
+    // Create new diet plan with validated numeric fields
     const dietPlan = new DietPlan({
-      userId: req.user.id,
+      userId: userId,
       goal,
       duration,
       country,
@@ -62,11 +139,11 @@ const createDietPlan = async (req, res) => {
       weeklyPlan,
       startDate: startDate || new Date().toISOString().split('T')[0],
       endDate: endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      totalWeeks: totalWeeks || 12,
-      targetCalories: targetCalories || 2000,
-      targetProtein: targetProtein || 100,
-      targetCarbs: targetCarbs || 250,
-      targetFats: targetFats || 67,
+      totalWeeks: Number(totalWeeks) || 12,
+      targetCalories: Number(targetCalories) || 2000,
+      targetProtein: Number(targetProtein) || 100,
+      targetCarbs: Number(targetCarbs) || 250,
+      targetFats: Number(targetFats) || 67,
       isActive: true
     });
 
@@ -102,9 +179,15 @@ const createDietPlan = async (req, res) => {
 // Get user's active diet plan
 const getUserDietPlan = async (req, res) => {
   try {
-    console.log('📖 Fetching diet plan for user:', req.user.id);
+    // Extract userId - MongoDB uses _id, but we need to handle both cases
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
 
-    const dietPlan = await DietPlan.getActiveDietPlan(req.user.id);
+    console.log('📖 Fetching diet plan for user:', userId);
+    console.log('🔍 getUserDietPlan - User object keys:', Object.keys(req.user));
+    console.log('🔍 getUserDietPlan - User _id:', req.user._id);
+    console.log('🔍 getUserDietPlan - User id:', req.user.id);
+
+    const dietPlan = await DietPlan.getActiveDietPlan(userId);
 
     if (!dietPlan) {
       return res.status(404).json({
@@ -137,9 +220,11 @@ const updateDietPlan = async (req, res) => {
     const dietPlanId = req.params.id;
     console.log('📝 Updating diet plan:', dietPlanId);
 
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+
     const dietPlan = await DietPlan.findOne({
       _id: dietPlanId,
-      userId: req.user.id,
+      userId: userId,
       isActive: true
     });
 
@@ -198,9 +283,11 @@ const deleteDietPlan = async (req, res) => {
     const dietPlanId = req.params.id;
     console.log('🗑️ Deleting diet plan:', dietPlanId);
 
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+
     const dietPlan = await DietPlan.findOne({
       _id: dietPlanId,
-      userId: req.user.id
+      userId: userId
     });
 
     if (!dietPlan) {
@@ -353,9 +440,10 @@ const logWaterIntake = async (req, res) => {
 // Get diet stats
 const getDietStats = async (req, res) => {
   try {
-    console.log('📊 Fetching diet stats for user:', req.user.id);
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+    console.log('📊 Fetching diet stats for user:', userId);
 
-    const dietPlan = await DietPlan.getActiveDietPlan(req.user.id);
+    const dietPlan = await DietPlan.getActiveDietPlan(userId);
 
     if (!dietPlan) {
       return res.status(404).json({
@@ -399,9 +487,10 @@ const getDietStats = async (req, res) => {
 // Get all diet plans for user (including inactive)
 const getAllUserDietPlans = async (req, res) => {
   try {
-    console.log('📚 Fetching all diet plans for user:', req.user.id);
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+    console.log('📚 Fetching all diet plans for user:', userId);
 
-    const dietPlans = await DietPlan.find({ userId: req.user.id })
+    const dietPlans = await DietPlan.find({ userId: userId })
       .sort({ createdAt: -1 })
       .limit(10); // Limit to last 10 plans
 
