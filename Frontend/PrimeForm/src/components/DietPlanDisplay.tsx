@@ -187,47 +187,57 @@ export default function DietPlanDisplay({
     const weekDays: DietDay[] = [];
     const currentWeek = getCurrentWeek();
     const startDate = new Date(dietPlan.startDate);
-    
-    // Calculate the first day of the current week
     const today = new Date();
-    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - currentDayOfWeek + 1); // Go to Monday of current week
     
-    // If we're in week 1, use the plan generation day logic
+    // If we're in week 1, show days from plan start date to end of first week
     if (currentWeek === 1) {
-      const planStartDayOfWeek = startDate.getDay();
+      const planStartDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
-      // Week 1: from plan generation day onwards
+      // Week 1: from plan generation day to Sunday (or end of available days)
       for (let i = 0; i < 7; i++) {
         const dayDate = new Date(startDate);
         dayDate.setDate(startDate.getDate() + i);
         
-        const planDayIndex = (planStartDayOfWeek + i) % 7;
-        
-        if (planDayIndex < dietPlan.weeklyPlan.length) {
-          weekDays.push({
-            ...dietPlan.weeklyPlan[planDayIndex],
-            date: dayDate.toISOString().split('T')[0],
-            day: i + 1,
-            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
-          });
+        // Stop if we've gone past Sunday of the first week
+        if (dayDate.getDay() === 0 && i > 0) {
+          // Include Sunday and then stop
+          if (i < dietPlan.weeklyPlan.length) {
+            weekDays.push({
+              ...dietPlan.weeklyPlan[i],
+              date: dayDate.toISOString().split('T')[0],
+              day: i + 1,
+              dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
+            });
+          }
+          break;
         }
-      }
-    } else {
-      // Subsequent weeks: use Monday-Sunday pattern
-      for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(monday);
-        dayDate.setDate(monday.getDate() + i);
         
         if (i < dietPlan.weeklyPlan.length) {
           weekDays.push({
             ...dietPlan.weeklyPlan[i],
             date: dayDate.toISOString().split('T')[0],
-            day: ((currentWeek - 1) * 7) + (i + 1),
-            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
+            day: i + 1,
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
           });
         }
+      }
+    } else {
+      // Subsequent weeks: use Monday-Sunday pattern
+      const currentMonday = new Date(today);
+      currentMonday.setDate(today.getDate() - today.getDay() + 1); // Go to Monday of current week
+      
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(currentMonday);
+        dayDate.setDate(currentMonday.getDate() + i);
+        
+        const planDayIndex = i % dietPlan.weeklyPlan.length; // Cycle through the weekly plan
+        
+        weekDays.push({
+          ...dietPlan.weeklyPlan[planDayIndex],
+          date: dayDate.toISOString().split('T')[0],
+          day: ((currentWeek - 1) * 7) + (i + 1),
+          dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
+        });
       }
     }
     
@@ -284,7 +294,7 @@ export default function DietPlanDisplay({
     }, [isInitialized])
   );
 
-  // Listen for meal completion events
+  // Listen for meal completion events and progress updates
   useEffect(() => {
     const mealCompletedListener = (event: any) => {
       console.log('🍽️ Meal completed event received:', event);
@@ -296,12 +306,28 @@ export default function DietPlanDisplay({
       loadCompletionStates();
     };
 
+    const dietProgressUpdatedListener = async () => {
+      console.log('🔔 Received dietProgressUpdated event - refreshing completion state');
+      await loadCompletionStates();
+      const newProgress = getProgressPercentage();
+      setProgressPercentage(newProgress);
+    };
+
+    const waterIntakeUpdatedListener = async () => {
+      console.log('💧 Received waterIntakeUpdated event - refreshing completion state');
+      await loadCompletionStates();
+    };
+
     const subscription1 = DeviceEventEmitter.addListener('mealCompleted', mealCompletedListener);
     const subscription2 = DeviceEventEmitter.addListener('dayCompleted', dayCompletedListener);
+    const subscription3 = DeviceEventEmitter.addListener('dietProgressUpdated', dietProgressUpdatedListener);
+    const subscription4 = DeviceEventEmitter.addListener('waterIntakeUpdated', waterIntakeUpdatedListener);
 
     return () => {
       subscription1?.remove();
       subscription2?.remove();
+      subscription3?.remove();
+      subscription4?.remove();
     };
   }, []);
 
@@ -503,7 +529,20 @@ export default function DietPlanDisplay({
     const mealId = `${selectedDay.date}-${mealType}-${meal.name}`;
     const week = Math.ceil(selectedDay.day / 7);
     
-    // Use meal completion service
+    // Update UI immediately for better UX
+    const newCompletedMeals = new Set([...completedMeals, mealId]);
+    setCompletedMeals(newCompletedMeals);
+    
+    // Broadcast immediate UI update
+    DeviceEventEmitter.emit('mealCompleted', {
+      mealId,
+      dayDate: selectedDay.date,
+      dayNumber: selectedDay.day,
+      weekNumber: week,
+      mealType
+    });
+    
+    // Use meal completion service in background
     const success = await mealCompletionService.markMealCompleted(
       mealId, 
       selectedDay.date, 
@@ -513,10 +552,6 @@ export default function DietPlanDisplay({
     );
     
     if (success) {
-      // Update local state
-      const newCompletedMeals = new Set([...completedMeals, mealId]);
-      setCompletedMeals(newCompletedMeals);
-      
       // Check if all meals for the day are completed (50% threshold)
       const dayMeals = [
         `${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`,
@@ -530,6 +565,18 @@ export default function DietPlanDisplay({
       
       // Mark day as completed if >= 50% of meals are done
       if (completionPercentage >= 50 && !completedDays.has(selectedDay.date)) {
+        // Update UI immediately
+        const newCompletedDays = new Set([...completedDays, selectedDay.date]);
+        setCompletedDays(newCompletedDays);
+        
+        // Broadcast day completion
+        DeviceEventEmitter.emit('dayCompleted', {
+          dayDate: selectedDay.date,
+          dayNumber: selectedDay.day,
+          weekNumber: week
+        });
+        
+        // Save to backend
         const daySuccess = await mealCompletionService.markDayCompleted(
           selectedDay.date, 
           selectedDay.day, 
@@ -537,14 +584,17 @@ export default function DietPlanDisplay({
         );
         
         if (daySuccess) {
-          const newCompletedDays = new Set([...completedDays, selectedDay.date]);
-          setCompletedDays(newCompletedDays);
           console.log(`🎉 Diet Day ${selectedDay.day} completed! ${completionPercentage.toFixed(1)}% of meals finished.`);
         }
       }
       
       // Sync with progress service
       await syncProgressData();
+    } else {
+      // Revert UI change if backend failed
+      const revertedMeals = new Set(completedMeals);
+      revertedMeals.delete(mealId);
+      setCompletedMeals(revertedMeals);
     }
   };
 
@@ -552,13 +602,23 @@ export default function DietPlanDisplay({
   const syncProgressData = async () => {
     try {
       const progressService = await import('../services/progressService');
-      // @ts-ignore - syncDietProgress method exists but TypeScript doesn't recognize it
       await progressService.default.syncDietProgress({
         completedMeals: Array.from(completedMeals),
         completedDays: Array.from(completedDays),
         dietPlan: dietPlan,
         waterIntake: waterIntake
       });
+      
+      // Broadcast progress update to dashboard
+      DeviceEventEmitter.emit('dietProgressUpdated', {
+        completedMeals: Array.from(completedMeals),
+        completedDays: Array.from(completedDays),
+        totalMeals: dietPlan?.weeklyPlan?.reduce((total: number, day: any) => 
+          total + 3 + (day.meals?.snacks?.length || 0), 0) || 0,
+        progressPercentage: getProgressPercentage()
+      });
+      
+      console.log('🔄 Diet progress synced and broadcasted to dashboard');
     } catch (error) {
       console.warn('Failed to sync diet progress:', error);
     }
@@ -626,24 +686,37 @@ export default function DietPlanDisplay({
     const week = Math.ceil(selectedDay.day / 7);
     const isCompleted = waterCompleted[selectedDay.date] || false;
     const newWaterCompleted = { ...waterCompleted, [selectedDay.date]: !isCompleted };
+    
+    // Update UI immediately for better UX
     setWaterCompleted(newWaterCompleted);
+    
+    // Also update water intake amount when marking as completed
+    const targetAmount = Number(selectedDay.waterIntake) || 2000;
+    const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
+    setWaterIntake(newWaterIntake);
     
     try {
       const Storage = await import('../utils/storage');
       await Storage.default.setItem('water_completed', JSON.stringify(newWaterCompleted));
-      
-      // Also update water intake amount when marking as completed
-      const targetAmount = Number(selectedDay.waterIntake) || 2000;
-      const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
-      setWaterIntake(newWaterIntake);
       await Storage.default.setItem('water_intake', JSON.stringify(newWaterIntake));
       
       await dietPlanService.logWaterIntake(selectedDay.day, week, isCompleted ? 0 : targetAmount);
+      
+      // Broadcast water update
+      DeviceEventEmitter.emit('waterIntakeUpdated', {
+        date: selectedDay.date,
+        completed: !isCompleted,
+        amount: isCompleted ? 0 : targetAmount
+      });
       
       // Sync with progress service
       await syncProgressData();
     } catch (error) {
       console.error('Error toggling water completion:', error);
+      
+      // Revert UI changes if backend failed
+      setWaterCompleted(waterCompleted);
+      setWaterIntake(waterIntake);
     }
   };
 
