@@ -13,8 +13,7 @@ const mealSchema = new mongoose.Schema({
   },
   ingredients: [{
     type: String,
-    required: false, // Made optional for flexibility
-    default: []
+    required: true
   }],
   calories: {
     type: Number,
@@ -46,8 +45,7 @@ const mealSchema = new mongoose.Schema({
   },
   instructions: {
     type: String,
-    required: false, // Made optional since AI parsing might not always provide this
-    default: 'Prepare according to standard cooking methods'
+    required: true
   }
 });
 

@@ -162,106 +162,77 @@ export default function WorkoutPlanDisplay({
     return null;
   };
 
-  // Expand the 7-day weekly pattern for the current week (for calendar display)
+  // Get current week's days data - Same logic as DietPlanDisplay
   const getCurrentWeekDays = () => {
     if (!workoutPlan.weeklyPlan || workoutPlan.weeklyPlan.length === 0) {
       return [];
     }
-
+    
+    const weekDays: WorkoutDay[] = [];
     const currentWeek = getCurrentWeek();
     const startDate = new Date(workoutPlan.startDate);
     const today = new Date();
-
-    console.log('📅 Workout Calendar Debug:', {
-      currentWeek,
-      completedDaysCount: completedDays.size,
-      completedWeeksCount: Math.floor(completedDays.size / 7),
-      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
-      today: today.toLocaleDateString('en-US', { weekday: 'long' })
-    });
-
-    // Create a 7-day array for the current week
-    const weekDays = [];
     
+    // If we're in week 1, show days from plan start date to end of first week
     if (currentWeek === 1) {
-      // First week: start from generation day to Sunday
-      const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const planStartDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
-      // Calculate days from generation day to Sunday
-      let daysToShow;
-      if (startDayOfWeek === 0) { // Sunday
-        daysToShow = 1; // Sunday only
-      } else {
-        daysToShow = 8 - startDayOfWeek; // Generation day to Sunday (inclusive)
-      }
-      
-      console.log('📅 First Week Calendar:', {
-        startDayOfWeek,
-        daysToShow,
-        generationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' }),
-        calculation: startDayOfWeek === 0 ? 'Sunday only' : `${8 - startDayOfWeek} days from generation day to Sunday`
-      });
-      
-      for (let i = 0; i < daysToShow; i++) {
-        const dayDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
-        const dayOfWeek = dayDate.getDay();
-        
-        const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        
-        console.log('📅 Day Mapping Debug:', {
-          i,
-          dayDate: dayDate.toDateString(),
-          dayOfWeek,
-          planDayIndex,
-          dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }),
-          hasWorkoutData: planDayIndex < workoutPlan.weeklyPlan.length
-        });
-        
-        if (planDayIndex < workoutPlan.weeklyPlan.length) {
-          weekDays.push({
-            ...workoutPlan.weeklyPlan[planDayIndex],
-            date: dayDate.toISOString().split('T')[0],
-            day: i + 1,
-            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
-          });
-        }
-      }
-    } else {
-      // Subsequent weeks: Monday to Sunday
-      const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      
-      // Calculate days in first week based on generation day
-      let daysInFirstWeek;
-      if (startDayOfWeek === 0) { // Sunday
-        daysInFirstWeek = 1; // Sunday only
-      } else {
-        daysInFirstWeek = 8 - startDayOfWeek; // Generation day to Sunday (inclusive)
-      }
-      
-      // Calculate the Monday of the current week
-      const weekStartDate = new Date(startDate);
-      weekStartDate.setDate(startDate.getDate() + daysInFirstWeek + ((currentWeek - 2) * 7) + 1);
-      
-      console.log('📅 Subsequent Week Calendar:', {
-        currentWeek,
-        daysInFirstWeek,
-        weekStartDate: weekStartDate.toDateString(),
-        weekStartDay: weekStartDate.toLocaleDateString('en-US', { weekday: 'long' })
-      });
-      
+      // Week 1: from plan generation day to Sunday (or end of available days)
       for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(weekStartDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        const dayDate = new Date(startDate);
+        dayDate.setDate(startDate.getDate() + i);
+        
+        // Stop if we've gone past Sunday of the first week
+        if (dayDate.getDay() === 0 && i > 0) {
+          // Include Sunday and then stop
+          if (i < workoutPlan.weeklyPlan.length) {
+            weekDays.push({
+              ...workoutPlan.weeklyPlan[i],
+              date: dayDate.toISOString().split('T')[0],
+              day: i + 1,
+              dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
+            });
+          }
+          break;
+        }
+        
         if (i < workoutPlan.weeklyPlan.length) {
           weekDays.push({
             ...workoutPlan.weeklyPlan[i],
             date: dayDate.toISOString().split('T')[0],
-            day: ((currentWeek - 1) * 7) + (i + 1),
-            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' }) // Use actual day name
+            day: i + 1,
+            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
           });
         }
       }
+    } else {
+      // Subsequent weeks: use Monday-Sunday pattern
+      const currentMonday = new Date(today);
+      currentMonday.setDate(today.getDate() - today.getDay() + 1); // Go to Monday of current week
+      
+      for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(currentMonday);
+        dayDate.setDate(currentMonday.getDate() + i);
+        
+        const planDayIndex = i % workoutPlan.weeklyPlan.length; // Cycle through the weekly plan
+        
+        weekDays.push({
+          ...workoutPlan.weeklyPlan[planDayIndex],
+          date: dayDate.toISOString().split('T')[0],
+          day: ((currentWeek - 1) * 7) + (i + 1),
+          dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
+        });
+      }
     }
-
+    
+    console.log('📅 Workout Calendar Week Days:', {
+      currentWeek,
+      weekDaysCount: weekDays.length,
+      firstDay: weekDays[0]?.dayName,
+      lastDay: weekDays[weekDays.length - 1]?.dayName,
+      completedDaysCount: completedDays.size
+    });
+    
     return weekDays;
   };
 
