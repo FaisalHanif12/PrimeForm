@@ -31,6 +31,11 @@ export default function Index() {
         const hasCompletedSignup = await AsyncStorage.getItem('primeform_signup_completed');
         console.log('🔍 User History:', { hasEverSignedUp, hasCompletedSignup, isAuthenticated });
         
+        // CRITICAL: Ensure language modal never shows for users who have ever signed up
+        if (hasEverSignedUp === 'true' || hasCompletedSignup === 'true') {
+          await AsyncStorage.setItem('primeform_device_language_selected', 'true');
+        }
+        
         if (hasEverSignedUp === 'true' || hasCompletedSignup === 'true') {
           // User has either signed up before OR completed signup in current session
           if (isAuthenticated) {
