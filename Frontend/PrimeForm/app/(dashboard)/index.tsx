@@ -197,17 +197,30 @@ export default function DashboardScreen() {
       try {
         // Check if this is the first time the app has ever been launched
         const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
+        const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
+        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+        
         console.log('🔍 App State Check:', {
           isFirstLaunch,
           hasSelectedLanguage,
-          isAuthenticated
+          isAuthenticated,
+          deviceLanguageSelected,
+          hasEverSignedUp
         });
         
-        // Check if this is the first time ANY user has opened the app on this device
-        const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
+        // CRITICAL: Language modal should ONLY show for first-time guest users
+        // According to workflow Phase 4: After sign-up, language modal NEVER appears again
+        if (hasEverSignedUp === 'true' || isAuthenticated) {
+          console.log('🚫 User has signed up before or is authenticated - language modal will NOT be shown');
+          // Ensure language modal never shows for users who have ever signed up
+          await AsyncStorage.setItem('primeform_device_language_selected', 'true');
+          setShowLanguageModal(false);
+          return;
+        }
         
+        // Check if this is the first time ANY user has opened the app on this device
         if (isFirstLaunch === null && !deviceLanguageSelected) {
-          console.log('🌍 First device launch detected - showing language modal');
+          console.log('🌍 First device launch detected - showing language modal for guest user');
           // Mark as first launch and device language selection
           await AsyncStorage.setItem('primeform_first_launch', 'false');
           await AsyncStorage.setItem('primeform_device_language_selected', 'true');
@@ -216,13 +229,13 @@ export default function DashboardScreen() {
           console.log('✅ Language modal conditions not met:', {
             isFirstLaunch,
             hasSelectedLanguage,
-            deviceLanguageSelected
+            deviceLanguageSelected,
+            hasEverSignedUp
           });
         }
 
         // Check if user has completed signup - check both authentication and signup completion
         const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
-        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
         
         if (isAuthenticated) {
           // User is authenticated - mark signup as completed

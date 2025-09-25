@@ -12,7 +12,8 @@ const getApiConfig = (): ApiConfig => {
   if (isDevelopment) {
     // Try your network IP first, then fall back to localhost
     const possibleUrls = [
-      'http://192.168.0.117:5000/api', // Primary: your network IP
+      'http://192.168.100.33:5000/api', // Primary: your NEW network IP
+      'http://192.168.0.117:5000/api',  // Fallback: your OLD network IP (in case you switch back)
       'http://localhost:5000/api',      // Fallback: localhost
       'http://127.0.0.1:5000/api',     // Alternative: loopback
     ];

@@ -180,7 +180,8 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.0.117:${PORT}`);
+  console.log(`🌐 Network: http://192.168.100.33:${PORT}`); // Updated to new network IP
+  console.log(`🌐 Old Network: http://192.168.0.117:${PORT}`); // Keep old IP for reference
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
   
