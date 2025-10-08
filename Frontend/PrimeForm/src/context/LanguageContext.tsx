@@ -1027,14 +1027,39 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
     const loadLanguage = async () => {
       try {
         const savedLanguage = await AsyncStorage.getItem('primeform_language_selected');
-        console.log('🌍 LanguageContext: Loading language from storage:', savedLanguage);
+        const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
+        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+        
+        console.log('🌍 LanguageContext: Loading language from storage:', {
+          savedLanguage,
+          deviceLanguageSelected,
+          hasEverSignedUp
+        });
+        
+        // CRITICAL: If user has ever signed up, always mark language as selected
+        // According to workflow Phase 4: After sign-up, language modal NEVER appears again
+        if (hasEverSignedUp === 'true') {
+          console.log('🚫 LanguageContext: User has signed up before - language marked as selected');
+          setHasSelectedLanguage(true);
+          // Use saved language or default to English
+          const finalLanguage = (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) ? savedLanguage : 'en';
+          setLanguage(finalLanguage);
+          // Ensure device language is also marked as selected
+          await AsyncStorage.setItem('primeform_device_language_selected', 'true');
+          return;
+        }
         
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) {
           setLanguage(savedLanguage);
           setHasSelectedLanguage(true);
           console.log('✅ LanguageContext: Language loaded and marked as selected');
+        } else if (deviceLanguageSelected === 'true') {
+          // Device language was selected before, use default English
+          setLanguage('en');
+          setHasSelectedLanguage(true);
+          console.log('✅ LanguageContext: Device language previously selected, using English default');
         } else {
-          // If no language is saved, set default to English and mark as not selected
+          // If no language is saved and device language not selected, mark as not selected
           setLanguage('en');
           setHasSelectedLanguage(false);
           console.log('🌍 LanguageContext: No saved language, defaulting to English');

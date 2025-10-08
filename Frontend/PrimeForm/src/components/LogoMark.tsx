@@ -15,7 +15,7 @@ export default function LogoMark({ subtitle }: Props) {
     <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/Primelogo1.png')} style={styles.icon} />
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText} numberOfLines={1}>PRIME FORM</Text>
+        <Text style={styles.titleText} numberOfLines={1}>PRIMEFORM</Text>
       </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </Animated.View>

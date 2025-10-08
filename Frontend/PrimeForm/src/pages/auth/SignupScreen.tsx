@@ -146,16 +146,16 @@ export default function SignupScreen() {
     setErrors(prev => ({ ...prev, confirm: error }));
   };
 
-  // Check if language already selected
-  useEffect(() => {
-    const checkLanguage = async () => {
-      const chosen = await AsyncStorage.getItem('primeform_language_selected');
-      if (!chosen) {
-        setShowLanguageOverlay(true);
-      }
-    };
-    checkLanguage();
-  }, []);
+  // Check if language already selected - DISABLED for auth pages
+  // useEffect(() => {
+  //   const checkLanguage = async () => {
+  //     const chosen = await AsyncStorage.getItem('primeform_language_selected');
+  //     if (!chosen) {
+  //       setShowLanguageOverlay(true);
+  //     }
+  //   };
+  //   checkLanguage();
+  // }, []);
 
   const chooseLanguage = async (lang: 'en' | 'ur') => {
     await changeLanguage(lang);

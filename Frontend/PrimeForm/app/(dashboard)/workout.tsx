@@ -476,9 +476,8 @@ export default function WorkoutScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground>
-        <View style={styles.mainContainer}>
+        <SafeAreaView style={styles.safeArea}>
           <DashboardHeader 
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
@@ -488,17 +487,21 @@ export default function WorkoutScreen() {
 
           <ScrollView 
             style={styles.container}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={workoutPlan && initialLoadComplete ? styles.contentNoPadding : styles.content}
             showsVerticalScrollIndicator={false}
           >
             {renderContent()}
+
+            {/* Bottom Spacing - only show when not displaying workout plan */}
+            {!(workoutPlan && initialLoadComplete) && (
+              <View style={styles.bottomSpacing} />
+            )}
           </ScrollView>
 
           <BottomNavigation 
             activeTab="workout"
             onTabPress={handleTabPress}
           />
-        </View>
 
         <Sidebar
           visible={sidebarVisible}
@@ -552,8 +555,8 @@ export default function WorkoutScreen() {
             </View>
           </View>
         )}
+        </SafeAreaView>
       </DecorativeBackground>
-    </SafeAreaView>
   );
 }
 
@@ -572,6 +575,13 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: 0,
     paddingBottom: 100, // reserve space for bottom tab that scrolls with content
+  },
+  contentNoPadding: {
+    paddingTop: 0,
+    paddingBottom: 0, // No bottom padding when workout plan is displayed
+  },
+  bottomSpacing: {
+    height: 100,
   },
   
   // Hero Section (for onboarding)

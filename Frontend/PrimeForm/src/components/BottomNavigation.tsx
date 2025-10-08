@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl + spacing.md, // Increased bottom margin
+    marginBottom: spacing.md, // Minimal bottom margin for tight positioning
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,

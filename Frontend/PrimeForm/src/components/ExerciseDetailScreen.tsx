@@ -129,7 +129,7 @@ export default function ExerciseDetailScreen({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
       statusBarTranslucent={false}
     >

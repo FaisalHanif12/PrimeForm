@@ -247,20 +247,17 @@ const styles = StyleSheet.create({
       android: spacing.md,
       default: spacing.lg 
     }),
-    paddingTop: Platform.OS === 'ios' ? spacing.xl : spacing.lg,
   },
   centerWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     width: '100%',
-    minHeight: '100%',
   },
   card: {
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 420 : Platform.OS === 'ios' ? '92%' : '95%',
-    marginTop: spacing.sm,
   },
   divider: {
     height: 1,

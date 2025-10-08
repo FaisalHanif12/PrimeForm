@@ -14,7 +14,6 @@ import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
 import MealDetailScreen from './MealDetailScreen';
-import DecorativeBackground from './DecorativeBackground';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -113,25 +112,33 @@ export default function DietPlanDisplay({
   };
 
   const getProgressPercentage = (): number => {
-    // Calculate progress based on completed weeks vs total weeks
+    // Calculate progress based on weeks completed out of total weeks (same as workout plan)
     const totalWeeks = getTotalWeeks();
+    const currentWeek = getCurrentWeek();
     
-    if (totalWeeks <= 0) return 0;
+    if (totalWeeks <= 0) {
+      console.log('📊 Diet Progress: No total weeks, returning 0%');
+      return 0;
+    }
     
-    // Calculate completed weeks based on completed days
-    const completedWeeksCount = Math.floor(completedDays.size / 7);
-    
-    // Calculate percentage: completed weeks / total weeks * 100
-    const percentage = (completedWeeksCount / totalWeeks) * 100;
-    
-    console.log('📊 Diet Progress Calculation:', {
+    // Progress = (Completed Weeks / Total Weeks) * 100
+    // Week 1 = 0% (haven't completed any weeks yet)
+    // Week 2 = 1/12 * 100 = 8.33% (completed 1 week)
+    const completedWeeks = Math.max(0, currentWeek - 1);
+    const actualProgress = (completedWeeks / totalWeeks) * 100;
+    const roundedProgress = Math.round(Math.max(0, Math.min(100, actualProgress)));
+
+    console.log('📊 Diet Progress Calculation (Weeks Completed):', {
       totalWeeks,
-      completedDaysCount: completedDays.size,
-      completedWeeksCount,
-      progressPercentage: percentage.toFixed(2)
+      currentWeek,
+      completedWeeks,
+      actualProgress: actualProgress.toFixed(2),
+      roundedProgress,
+      progressArcDegrees: `${(roundedProgress / 100) * 360}deg`,
+      formula: `${completedWeeks} / ${totalWeeks} * 100 = ${actualProgress.toFixed(2)}%`
     });
-    
-    return Math.round(Math.min(percentage, 100)); // Cap at 100%
+
+    return roundedProgress;
   };
 
   // Get today's day data using the same logic as dashboard
@@ -650,35 +657,6 @@ export default function DietPlanDisplay({
     }
   };
 
-  const handleDeletePlan = async () => {
-    try {
-      console.log('🗑️ Deleting diet plan...');
-      
-      // Clear local storage
-      const Storage = await import('../utils/storage');
-      await Storage.default.removeItem('cached_diet_plan');
-      await Storage.default.removeItem('completed_meals');
-      await Storage.default.removeItem('completed_diet_days');
-      await Storage.default.removeItem('water_intake');
-      await Storage.default.removeItem('water_completed');
-      
-      // Delete from database
-      if (dietPlan._id || dietPlan.id) {
-        const planId = (dietPlan._id || dietPlan.id) as string;
-        await dietPlanService.deleteDietPlan(planId);
-        console.log('✅ Diet plan deleted from database');
-      }
-      
-      // Call the onGenerateNew callback to refresh the parent component
-      if (onGenerateNew) {
-        onGenerateNew();
-      }
-      
-      console.log('✅ Diet plan deleted successfully - returning to profile summary');
-    } catch (error) {
-      console.error('❌ Error deleting diet plan:', error);
-    }
-  };
 
   const toggleWaterCompletion = async () => {
     if (!selectedDay) return;
@@ -721,7 +699,6 @@ export default function DietPlanDisplay({
   };
 
   return (
-    <DecorativeBackground>
       <View style={styles.container}>
       {/* Hero Header Section - Diet Version */}
       <View style={styles.heroSection}>
@@ -733,15 +710,13 @@ export default function DietPlanDisplay({
             </View>
             
             {/* Main Title */}
-            
             <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration}</Text>
             
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircle}>
-                <View style={[styles.progressCircleFill, { 
-                  transform: [{ rotate: `${(progressPercentage / 100) * 360}deg` }] 
-                }]} />
+                {/* Background Circle */}
+                <View style={styles.progressCircleBackground} />
                 <View style={styles.progressCircleInner}>
                   <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
                   <Text style={styles.progressCircleLabel}>Complete</Text>
@@ -757,18 +732,9 @@ export default function DietPlanDisplay({
                 }]} />
               </View>
               <Text style={styles.progressBarText}>
-                {Math.floor(completedDays.size / 7)} of {getTotalWeeks()} weeks completed
+                Week {getCurrentWeek()} of {getTotalWeeks()} • {progressPercentage}% Complete
               </Text>
             </View>
-
-            {/* Delete Button */}
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDeletePlan}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.deleteButtonText}>🗑️ Delete Plan</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1213,7 +1179,6 @@ export default function DietPlanDisplay({
         canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
       />
       </View>
-    </DecorativeBackground>
   );
 }
 
@@ -1283,21 +1248,17 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.cardBorder + '20',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  progressCircleFill: {
+  progressCircleBackground: {
     position: 'absolute',
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 6,
-    borderColor: 'transparent',
-    borderTopColor: colors.gold,
-    borderRightColor: colors.gold,
-    transformOrigin: 'center',
+    borderColor: colors.cardBorder + '20',
   },
   progressCircleInner: {
     width: 100,
@@ -1347,26 +1308,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     fontFamily: fonts.body,
+    textAlign: 'center',
   },
 
-  // Delete Button Styles
-  deleteButton: {
-    backgroundColor: colors.error + '20',
-    borderRadius: 16,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.error + '40',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteButtonText: {
-    color: colors.error,
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
 
   // Premium Calendar Section - Diet Version
   premiumCalendarSection: {
@@ -1572,10 +1516,10 @@ const styles = StyleSheet.create({
   // Today Pulse Animation
   todayPulseContainer: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 16,
-    height: 16,
+    top: -4,
+    right: -6,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1587,9 +1531,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue + '40',
   },
   todayPulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.blue,
   },
   
@@ -1613,7 +1557,6 @@ const styles = StyleSheet.create({
 
   // Diet Details Section
   dietDetailsSection: {
-    paddingHorizontal: spacing.lg,
     flex: 1,
   },
   dietHeader: {
@@ -1621,6 +1564,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.lg,
+    paddingLeft: spacing.lg, // Only left padding to align with "This Week's Plan"
+    paddingRight: spacing.lg,
   },
   dietHeaderLeft: {
     flex: 1,
@@ -1667,13 +1612,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     marginBottom: spacing.md,
+    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    elevation: 4,
+    elevation: 6,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     overflow: 'hidden',
   },
   mealCardCompleted: {
@@ -1797,16 +1743,21 @@ const styles = StyleSheet.create({
 
   // Snack Cards
   snackCard: {
-    backgroundColor: colors.surface + '80',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginBottom: spacing.sm,
+    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
     borderWidth: 1,
-    borderColor: colors.cardBorder + '50',
-    elevation: 2,
+    borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     overflow: 'hidden',
   },
   snackCardCompleted: {
-    backgroundColor: colors.green + '15',
+    backgroundColor: colors.green + '10',
     borderColor: colors.green + '30',
     opacity: 0.8,
   },
@@ -1903,8 +1854,14 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginTop: spacing.md,
     marginBottom: spacing.xl,
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   waterTitle: {
     color: colors.white,
@@ -2016,6 +1973,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   noDaySelectedText: {
     color: colors.mutedText,
