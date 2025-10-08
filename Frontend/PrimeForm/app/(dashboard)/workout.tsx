@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions, ActivityIndicator, StatusBar } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
@@ -123,6 +124,17 @@ export default function WorkoutScreen() {
     
     initializeData();
   }, []);
+
+  // Reset layout when screen comes into focus (after returning from modals)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reset status bar to ensure proper layout
+      StatusBar.setBarStyle('light-content');
+      if (StatusBar.setBackgroundColor) {
+        StatusBar.setBackgroundColor(colors.background, true);
+      }
+    }, [])
+  );
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
