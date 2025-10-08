@@ -34,6 +34,7 @@ export default function DietPlanDisplay({
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [selectedMeal, setSelectedMeal] = useState<DietMeal | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | null>(null);
   const [mealModalVisible, setMealModalVisible] = useState(false);
   const [waterIntake, setWaterIntake] = useState<{ [key: string]: number }>({});
   const [waterCompleted, setWaterCompleted] = useState<{ [key: string]: boolean }>({});
@@ -141,48 +142,32 @@ export default function DietPlanDisplay({
     return roundedProgress;
   };
 
-  // Get today's day data using the same logic as dashboard
+  // Get today's day data by finding it from current week days
   const getTodaysDayData = () => {
-    if (!dietPlan.weeklyPlan || dietPlan.weeklyPlan.length === 0) {
-      return null;
-    }
-    
+    const currentWeekDays = getCurrentWeekDays();
     const today = new Date();
-    const startDate = new Date(dietPlan.startDate);
-    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    today.setHours(0, 0, 0, 0);
     
-    // Calculate week based on plan generation day (not Monday)
-    const currentWeek = Math.floor(daysDiff / 7) + 1;
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    // Find today's day from the current week days
+    const todaysDay = currentWeekDays.find(day => {
+      const dayDate = new Date(day.date);
+      dayDate.setHours(0, 0, 0, 0);
+      return dayDate.getTime() === today.getTime();
+    });
     
     console.log('📅 DietPlanDisplay Today Debug:', {
       today: today.toDateString(),
-      startDate: startDate.toDateString(),
-      daysDiff,
-      currentWeek,
-      dayOfWeek,
-      adjustedDayOfWeek,
-      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+      todaysDay: todaysDay ? {
+        dayName: todaysDay.dayName,
+        date: todaysDay.date,
+        day: todaysDay.day
+      } : 'Not found',
+      currentWeekDaysCount: currentWeekDays.length,
+      firstDayInWeek: currentWeekDays[0]?.dayName,
+      lastDayInWeek: currentWeekDays[currentWeekDays.length - 1]?.dayName
     });
     
-    // Get today's day data using the same logic as dashboard
-    const todayMealData = dietPlan.weeklyPlan[adjustedDayOfWeek];
-    
-    if (todayMealData) {
-      // Calculate the actual date for this day
-      const todayDate = new Date();
-      const dayDate = new Date(todayDate);
-      dayDate.setDate(todayDate.getDate());
-      
-      return {
-        ...todayMealData,
-        date: dayDate.toISOString().split('T')[0],
-        day: ((currentWeek - 1) * 7) + (adjustedDayOfWeek + 1) // Absolute day number for tracking
-      };
-    }
-    
-    return null;
+    return todaysDay || null;
   };
 
   // Get current week's days data
@@ -239,12 +224,12 @@ export default function DietPlanDisplay({
         
         const planDayIndex = i % dietPlan.weeklyPlan.length; // Cycle through the weekly plan
         
-        weekDays.push({
+          weekDays.push({
           ...dietPlan.weeklyPlan[planDayIndex],
-          date: dayDate.toISOString().split('T')[0],
-          day: ((currentWeek - 1) * 7) + (i + 1),
+            date: dayDate.toISOString().split('T')[0],
+            day: ((currentWeek - 1) * 7) + (i + 1),
           dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
-        });
+          });
       }
     }
     
@@ -636,24 +621,25 @@ export default function DietPlanDisplay({
     onDayPress?.(day);
   };
 
-  const handleMealPress = (meal: DietMeal, mealType: string) => {
+  const handleMealPress = (meal: DietMeal, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
     setSelectedMeal(meal);
+    setSelectedMealType(mealType);
     setMealModalVisible(true);
     onMealPress?.(meal);
   };
 
   const handleMealModalComplete = () => {
-    // This will be implemented based on the meal type
-    if (selectedMeal && selectedDay) {
-      // Determine meal type and complete it
-      let mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' = 'breakfast';
+    // Use the stored meal type for accurate completion
+    if (selectedMeal && selectedDay && selectedMealType) {
+      console.log('🍽️ Completing meal from modal:', {
+        mealName: selectedMeal.name,
+        mealType: selectedMealType,
+        dayDate: selectedDay.date
+      });
       
-      if (selectedDay.meals.breakfast.name === selectedMeal.name) mealType = 'breakfast';
-      else if (selectedDay.meals.lunch.name === selectedMeal.name) mealType = 'lunch';
-      else if (selectedDay.meals.dinner.name === selectedMeal.name) mealType = 'dinner';
-      else mealType = 'snack';
-      
-      handleMealComplete(selectedMeal, mealType);
+      handleMealComplete(selectedMeal, selectedMealType);
+    } else {
+      console.warn('❌ Cannot complete meal: missing meal, day, or meal type');
     }
   };
 
@@ -667,11 +653,11 @@ export default function DietPlanDisplay({
     
     // Update UI immediately for better UX
     setWaterCompleted(newWaterCompleted);
-    
-    // Also update water intake amount when marking as completed
-    const targetAmount = Number(selectedDay.waterIntake) || 2000;
-    const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
-    setWaterIntake(newWaterIntake);
+      
+      // Also update water intake amount when marking as completed
+      const targetAmount = Number(selectedDay.waterIntake) || 2000;
+      const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
+      setWaterIntake(newWaterIntake);
     
     try {
       const Storage = await import('../utils/storage');
@@ -1169,13 +1155,11 @@ export default function DietPlanDisplay({
         onClose={() => {
           setMealModalVisible(false);
           setSelectedMeal(null);
+          setSelectedMealType(null);
         }}
         onComplete={handleMealModalComplete}
-        isCompleted={selectedMeal && selectedDay ? 
-          completedMeals.has(`${selectedDay.date}-breakfast-${selectedMeal.name}`) ||
-          completedMeals.has(`${selectedDay.date}-lunch-${selectedMeal.name}`) ||
-          completedMeals.has(`${selectedDay.date}-dinner-${selectedMeal.name}`) ||
-          completedMeals.has(`${selectedDay.date}-snack-${selectedMeal.name}`) : false}
+        isCompleted={selectedMeal && selectedDay && selectedMealType ? 
+          completedMeals.has(`${selectedDay.date}-${selectedMealType}-${selectedMeal.name}`) : false}
         canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
       />
       </View>
