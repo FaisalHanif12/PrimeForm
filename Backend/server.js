@@ -80,14 +80,17 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
+      'http://192.168.48.66:8081', // Your CURRENT network IP
+      'http://192.168.48.66:5000', // Your CURRENT API IP
+      'http://192.168.75.66:8081', // Your previous mobile data IP
+      'http://192.168.75.66:5000', // Your previous mobile data API IP
       'http://192.168.100.33:8081', // Your previous network IP
       'http://192.168.100.33:5000', // Your previous API IP
-      'http://192.168.75.66:8081', // Your current mobile data IP
-      'http://192.168.75.66:5000', // Your current mobile data API IP
       'http://192.168.0.117:8081', // Your old IP address
       'http://192.168.0.117:5000', // Your old API IP
+      'exp://192.168.48.66:8081',  // Expo protocol - current network
+      'exp://192.168.75.66:8081',  // Expo protocol - previous mobile data
       'exp://192.168.100.33:8081', // Expo protocol - previous network
-      'exp://192.168.75.66:8081',  // Expo protocol - current mobile data
       'exp://192.168.0.117:8081',  // Expo protocol - old network
       'exp://localhost:8081',       // Expo localhost
       process.env.FRONTEND_URL
@@ -186,8 +189,9 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.100.33:${PORT}`); // Reverted to previous network IP
-  console.log(`🌐 Current Mobile Data Network: http://192.168.75.66:${PORT}`); // New mobile data IP for reference
+  console.log(`🌐 Network: http://192.168.48.66:${PORT}`); // Current network IP
+  console.log(`🌐 Previous Mobile Data: http://192.168.75.66:${PORT}`); // Previous mobile data IP for reference
+  console.log(`🌐 Previous Network: http://192.168.100.33:${PORT}`); // Previous network IP for reference
   console.log(`🌐 Old Network: http://192.168.0.117:${PORT}`); // Keep old IP for reference
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
