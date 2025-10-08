@@ -271,7 +271,7 @@ export default function DietScreen() {
       );
     }
 
-    // If user has diet plan, show the diet plan display immediately
+    // If user has diet plan, show the diet plan display within the normal layout
     if (dietPlan && userInfo && initialLoadComplete) {
       return (
         <DietPlanDisplay
@@ -369,13 +369,15 @@ export default function DietScreen() {
 
         <ScrollView 
           style={styles.container}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
           showsVerticalScrollIndicator={false}
         >
           {renderContent()}
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
+          {/* Bottom Spacing - only show when not displaying diet plan */}
+          {!(dietPlan && userInfo && initialLoadComplete) && (
+            <View style={styles.bottomSpacing} />
+          )}
         </ScrollView>
 
         <BottomNavigation 
@@ -422,6 +424,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: 0,
     paddingBottom: 100, // reserve space for bottom tab that scrolls with content
+  },
+  contentNoPadding: {
+    paddingTop: 0,
+    paddingBottom: 0, // No bottom padding when diet plan is displayed
   },
   bottomSpacing: {
     height: 100,

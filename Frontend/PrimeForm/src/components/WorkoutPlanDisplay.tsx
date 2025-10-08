@@ -927,6 +927,7 @@ const styles = StyleSheet.create({
 
   // Hero Section - Extraordinary Design
   heroSection: {
+    marginHorizontal: spacing.md,
     marginBottom: spacing.xl,
     borderRadius: 24,
     overflow: 'hidden',
@@ -1129,6 +1130,7 @@ const styles = StyleSheet.create({
 
   // Premium Calendar Section - Extraordinary Design
   premiumCalendarSection: {
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
   calendarHeader: {
@@ -1423,7 +1425,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 20,
     marginBottom: spacing.md,
-    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
+    marginHorizontal: spacing.lg, // Keep horizontal margin for proper spacing
     borderWidth: 1,
     borderColor: colors.cardBorder,
     elevation: 6,

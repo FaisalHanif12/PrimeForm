@@ -14,7 +14,6 @@ import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
 import MealDetailScreen from './MealDetailScreen';
-import DecorativeBackground from './DecorativeBackground';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -700,7 +699,6 @@ export default function DietPlanDisplay({
   };
 
   return (
-    <DecorativeBackground>
       <View style={styles.container}>
       {/* Hero Header Section - Diet Version */}
       <View style={styles.heroSection}>
@@ -713,7 +711,7 @@ export default function DietPlanDisplay({
             
             {/* Main Title */}
             <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration}</Text>
-
+            
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
               <View style={styles.progressCircle}>
@@ -1181,7 +1179,6 @@ export default function DietPlanDisplay({
         canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
       />
       </View>
-    </DecorativeBackground>
   );
 }
 
@@ -1193,6 +1190,7 @@ const styles = StyleSheet.create({
   
   // Hero Section - Diet Version
   heroSection: {
+    marginHorizontal: spacing.md,
     marginBottom: spacing.xl,
     borderRadius: 24,
     overflow: 'hidden',
@@ -1316,6 +1314,7 @@ const styles = StyleSheet.create({
 
   // Premium Calendar Section - Diet Version
   premiumCalendarSection: {
+    paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
   calendarHeader: {
@@ -1323,7 +1322,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
   },
   calendarHeaderLeft: {
     flex: 1,
@@ -1518,10 +1516,10 @@ const styles = StyleSheet.create({
   // Today Pulse Animation
   todayPulseContainer: {
     position: 'absolute',
-    top: -8,
-    right: -8,
-    width: 16,
-    height: 16,
+    top: -4,
+    right: -6,
+    width: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1533,9 +1531,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue + '40',
   },
   todayPulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: colors.blue,
   },
   
@@ -1566,7 +1564,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.lg, // Only left padding to align with "This Week's Plan"
+    paddingRight: spacing.lg,
   },
   dietHeaderLeft: {
     flex: 1,
@@ -1610,20 +1609,21 @@ const styles = StyleSheet.create({
 
   // Meal Cards
   mealCard: {
-    backgroundColor: 'transparent', // Remove navy blue background
+    backgroundColor: colors.surface,
     borderRadius: 20,
     marginBottom: spacing.md,
     marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
-    borderWidth: 0, // Remove border
-    elevation: 0, // Remove elevation
-    shadowColor: 'transparent', // Remove shadow
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0,
-    shadowRadius: 0,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
     overflow: 'hidden',
   },
   mealCardCompleted: {
-    backgroundColor: 'transparent', // Remove background for completed state
+    backgroundColor: colors.green + '10',
     borderColor: colors.green + '40',
     opacity: 0.8,
   },
@@ -1743,16 +1743,21 @@ const styles = StyleSheet.create({
 
   // Snack Cards
   snackCard: {
-    backgroundColor: 'transparent', // Remove navy blue background
+    backgroundColor: colors.surface,
     borderRadius: 16,
     marginBottom: spacing.sm,
     marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
-    borderWidth: 0, // Remove border
-    elevation: 0, // Remove elevation
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     overflow: 'hidden',
   },
   snackCardCompleted: {
-    backgroundColor: 'transparent', // Remove background for completed state
+    backgroundColor: colors.green + '10',
     borderColor: colors.green + '30',
     opacity: 0.8,
   },
@@ -1844,13 +1849,19 @@ const styles = StyleSheet.create({
 
   // Water Section
   waterSection: {
-    backgroundColor: 'transparent', // Remove navy blue background
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: spacing.lg,
     marginTop: spacing.md,
     marginBottom: spacing.xl,
-    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
-    borderWidth: 0, // Remove border
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   waterTitle: {
     color: colors.white,
@@ -1956,12 +1967,18 @@ const styles = StyleSheet.create({
 
   // No Day Selected Styles
   noDaySelectedContainer: {
-    backgroundColor: 'transparent', // Remove navy blue background
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.xl,
     alignItems: 'center',
-    marginHorizontal: spacing.lg, // Add horizontal margin for proper spacing
-    borderWidth: 0, // Remove border
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   noDaySelectedText: {
     color: colors.mutedText,

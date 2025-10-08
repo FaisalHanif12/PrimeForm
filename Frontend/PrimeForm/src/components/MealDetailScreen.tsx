@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietMeal } from '../services/aiDietService';
@@ -48,11 +49,11 @@ export default function MealDetailScreen({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -185,7 +186,7 @@ export default function MealDetailScreen({
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
