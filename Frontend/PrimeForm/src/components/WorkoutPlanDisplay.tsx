@@ -118,48 +118,32 @@ export default function WorkoutPlanDisplay({
     return Math.max(1, Math.ceil(daysDiff / 7));
   };
 
-  // Get today's day data using the same logic as dashboard
+  // Get today's day data by finding it from current week days
   const getTodaysDayData = () => {
-    if (!workoutPlan.weeklyPlan || workoutPlan.weeklyPlan.length === 0) {
-      return null;
-    }
-    
+    const currentWeekDays = getCurrentWeekDays();
     const today = new Date();
-    const startDate = new Date(workoutPlan.startDate);
-    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    today.setHours(0, 0, 0, 0);
     
-    // Calculate week based on plan generation day (not Monday)
-    const currentWeek = Math.floor(daysDiff / 7) + 1;
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    // Find today's day from the current week days
+    const todaysDay = currentWeekDays.find(day => {
+      const dayDate = new Date(day.date);
+      dayDate.setHours(0, 0, 0, 0);
+      return dayDate.getTime() === today.getTime();
+    });
     
     console.log('📅 WorkoutPlanDisplay Today Debug:', {
       today: today.toDateString(),
-      startDate: startDate.toDateString(),
-      daysDiff,
-      currentWeek,
-      dayOfWeek,
-      adjustedDayOfWeek,
-      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
+      todaysDay: todaysDay ? {
+        dayName: todaysDay.dayName,
+        date: todaysDay.date,
+        day: todaysDay.day
+      } : 'Not found',
+      currentWeekDaysCount: currentWeekDays.length,
+      firstDayInWeek: currentWeekDays[0]?.dayName,
+      lastDayInWeek: currentWeekDays[currentWeekDays.length - 1]?.dayName
     });
     
-    // Get today's day data using the same logic as dashboard
-    const todayWorkoutData = workoutPlan.weeklyPlan[adjustedDayOfWeek];
-    
-    if (todayWorkoutData) {
-      // Calculate the actual date for this day
-      const todayDate = new Date();
-      const dayDate = new Date(todayDate);
-      dayDate.setDate(todayDate.getDate());
-      
-      return {
-        ...todayWorkoutData,
-        date: dayDate.toISOString().split('T')[0],
-        day: ((currentWeek - 1) * 7) + (adjustedDayOfWeek + 1) // Absolute day number for tracking
-      };
-    }
-    
-    return null;
+    return todaysDay || null;
   };
 
   // Get current week's days data - Same logic as DietPlanDisplay

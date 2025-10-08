@@ -1482,7 +1482,4 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  bottomSpacing: {
-    height: 100, // Space for bottom navigation
-  },
 });
