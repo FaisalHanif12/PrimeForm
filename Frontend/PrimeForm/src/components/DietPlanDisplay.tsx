@@ -13,7 +13,6 @@ import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
-import MealDetailScreen from './MealDetailScreen';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -33,9 +32,7 @@ export default function DietPlanDisplay({
   const [selectedDay, setSelectedDay] = useState<DietDay | null>(null);
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
-  const [selectedMeal, setSelectedMeal] = useState<DietMeal | null>(null);
-  const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | null>(null);
-  const [mealModalVisible, setMealModalVisible] = useState(false);
+  const [expandedMealId, setExpandedMealId] = useState<string | null>(null);
   const [waterIntake, setWaterIntake] = useState<{ [key: string]: number }>({});
   const [waterCompleted, setWaterCompleted] = useState<{ [key: string]: boolean }>({});
   const [progressPercentage, setProgressPercentage] = useState(0);
@@ -621,25 +618,12 @@ export default function DietPlanDisplay({
     onDayPress?.(day);
   };
 
-  const handleMealPress = (meal: DietMeal, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
-    setSelectedMeal(meal);
-    setSelectedMealType(mealType);
-    setMealModalVisible(true);
-    onMealPress?.(meal);
-  };
-
-  const handleMealModalComplete = () => {
-    // Use the stored meal type for accurate completion
-    if (selectedMeal && selectedDay && selectedMealType) {
-      console.log('🍽️ Completing meal from modal:', {
-        mealName: selectedMeal.name,
-        mealType: selectedMealType,
-        dayDate: selectedDay.date
-      });
-      
-      handleMealComplete(selectedMeal, selectedMealType);
+  const handleMealPress = (mealId: string) => {
+    // Toggle expansion - if clicking same meal, collapse it; otherwise expand new one
+    if (expandedMealId === mealId) {
+      setExpandedMealId(null);
     } else {
-      console.warn('❌ Cannot complete meal: missing meal, day, or meal type');
+      setExpandedMealId(mealId);
     }
   };
 
@@ -663,8 +647,6 @@ export default function DietPlanDisplay({
       const Storage = await import('../utils/storage');
       await Storage.default.setItem('water_completed', JSON.stringify(newWaterCompleted));
       await Storage.default.setItem('water_intake', JSON.stringify(newWaterIntake));
-      
-      await dietPlanService.logWaterIntake(selectedDay.day, week, isCompleted ? 0 : targetAmount);
       
       // Broadcast water update
       DeviceEventEmitter.emit('waterIntakeUpdated', {
@@ -852,15 +834,17 @@ export default function DietPlanDisplay({
         {selectedDay && (
           <ScrollView style={styles.mealsContainer} showsVerticalScrollIndicator={false}>
             {/* Breakfast */}
-            <TouchableOpacity
+            <View
               style={[
                 styles.mealCard,
                 completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealCardCompleted
               ]}
-              onPress={() => handleMealPress(selectedDay.meals.breakfast, 'breakfast')}
-              activeOpacity={0.8}
             >
-              <View style={styles.mealHeader}>
+              <TouchableOpacity 
+                style={styles.mealHeader}
+                onPress={() => handleMealPress(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.mealTimeSection}>
                   <Text style={[
                     styles.mealTime,
@@ -895,39 +879,68 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
-                      <TouchableOpacity 
-                        style={styles.completeMealButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleMealComplete(selectedDay.meals.breakfast, 'breakfast');
-                        }}
-                      >
-                        <Text style={styles.completeMealButtonText}>✓</Text>
-                      </TouchableOpacity>
                     ) : null}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
               
-              {/* Progress Bar for Completed Meals - Same as Exercise */}
+              {/* Expandable Details Section */}
+              {expandedMealId === `${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}` && (
+                <View style={styles.expandedMealDetails}>
+                  <View style={styles.detailDivider} />
+                  
+                  {/* Ingredients */}
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    {selectedDay.meals.breakfast.ingredients.map((ingredient, idx) => (
+                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                    ))}
+                  </View>
+                  
+                  {/* Instructions */}
+                  {selectedDay.meals.breakfast.instructions && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
+                      <Text style={styles.detailText}>{selectedDay.meals.breakfast.instructions}</Text>
+                    </View>
+                  )}
+                  
+                  {/* Mark as Eaten Button */}
+                  {!completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && 
+                   isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress' && (
+                    <TouchableOpacity 
+                      style={styles.markEatenButton}
+                      onPress={() => {
+                        handleMealComplete(selectedDay.meals.breakfast, 'breakfast');
+                        setExpandedMealId(null); // Collapse after marking
+                      }}
+                    >
+                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+              
+              {/* Progress Bar for Completed Meals */}
               {completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && (
                 <View style={styles.mealProgressBar}>
                   <View style={styles.mealProgressFill} />
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
 
             {/* Lunch */}
-            <TouchableOpacity
+            <View
               style={[
                 styles.mealCard,
                 completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealCardCompleted
               ]}
-              onPress={() => handleMealPress(selectedDay.meals.lunch, 'lunch')}
-              activeOpacity={0.8}
             >
-              <View style={styles.mealHeader}>
+              <TouchableOpacity 
+                style={styles.mealHeader}
+                onPress={() => handleMealPress(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.mealTimeSection}>
                   <Text style={[
                     styles.mealTime,
@@ -962,20 +975,47 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
-                      <TouchableOpacity 
-                        style={styles.completeMealButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleMealComplete(selectedDay.meals.lunch, 'lunch');
-                        }}
-                      >
-                        <Text style={styles.completeMealButtonText}>✓</Text>
-                      </TouchableOpacity>
                     ) : null}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
+              
+              {/* Expandable Details Section */}
+              {expandedMealId === `${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}` && (
+                <View style={styles.expandedMealDetails}>
+                  <View style={styles.detailDivider} />
+                  
+                  {/* Ingredients */}
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    {selectedDay.meals.lunch.ingredients.map((ingredient, idx) => (
+                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                    ))}
+                  </View>
+                  
+                  {/* Instructions */}
+                  {selectedDay.meals.lunch.instructions && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
+                      <Text style={styles.detailText}>{selectedDay.meals.lunch.instructions}</Text>
+                    </View>
+                  )}
+                  
+                  {/* Mark as Eaten Button */}
+                  {!completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && 
+                   isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress' && (
+                    <TouchableOpacity 
+                      style={styles.markEatenButton}
+                      onPress={() => {
+                        handleMealComplete(selectedDay.meals.lunch, 'lunch');
+                        setExpandedMealId(null);
+                      }}
+                    >
+                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
               
               {/* Progress Bar for Completed Meals */}
               {completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && (
@@ -983,18 +1023,20 @@ export default function DietPlanDisplay({
                   <View style={styles.mealProgressFill} />
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
 
             {/* Dinner */}
-            <TouchableOpacity
+            <View
               style={[
                 styles.mealCard,
                 completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealCardCompleted
               ]}
-              onPress={() => handleMealPress(selectedDay.meals.dinner, 'dinner')}
-              activeOpacity={0.8}
             >
-              <View style={styles.mealHeader}>
+              <TouchableOpacity 
+                style={styles.mealHeader}
+                onPress={() => handleMealPress(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.mealTimeSection}>
                   <Text style={[
                     styles.mealTime,
@@ -1029,20 +1071,47 @@ export default function DietPlanDisplay({
                       <View style={styles.completedMealBadge}>
                         <Text style={styles.completedMealIcon}>✓</Text>
                       </View>
-                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
-                      <TouchableOpacity 
-                        style={styles.completeMealButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleMealComplete(selectedDay.meals.dinner, 'dinner');
-                        }}
-                      >
-                        <Text style={styles.completeMealButtonText}>✓</Text>
-                      </TouchableOpacity>
                     ) : null}
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
+              
+              {/* Expandable Details Section */}
+              {expandedMealId === `${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}` && (
+                <View style={styles.expandedMealDetails}>
+                  <View style={styles.detailDivider} />
+                  
+                  {/* Ingredients */}
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    {selectedDay.meals.dinner.ingredients.map((ingredient, idx) => (
+                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                    ))}
+                  </View>
+                  
+                  {/* Instructions */}
+                  {selectedDay.meals.dinner.instructions && (
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
+                      <Text style={styles.detailText}>{selectedDay.meals.dinner.instructions}</Text>
+                    </View>
+                  )}
+                  
+                  {/* Mark as Eaten Button */}
+                  {!completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && 
+                   isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress' && (
+                    <TouchableOpacity 
+                      style={styles.markEatenButton}
+                      onPress={() => {
+                        handleMealComplete(selectedDay.meals.dinner, 'dinner');
+                        setExpandedMealId(null);
+                      }}
+                    >
+                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
               
               {/* Progress Bar for Completed Meals */}
               {completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && (
@@ -1050,20 +1119,24 @@ export default function DietPlanDisplay({
                   <View style={styles.mealProgressFill} />
                 </View>
               )}
-            </TouchableOpacity>
+            </View>
 
             {/* Snacks */}
-            {selectedDay.meals.snacks.map((snack, index) => (
-              <TouchableOpacity
+            {selectedDay.meals.snacks.map((snack, index) => {
+              const snackId = `${selectedDay.date}-snack-${snack.name}`;
+              return (
+              <View
                 key={index}
                 style={[
                   styles.snackCard,
-                  completedMeals.has(`${selectedDay.date}-snack-${snack.name}`) && styles.snackCardCompleted
+                  completedMeals.has(snackId) && styles.snackCardCompleted
                 ]}
-                onPress={() => handleMealPress(snack, 'snack')}
-                activeOpacity={0.8}
               >
-                <View style={styles.snackContent}>
+                <TouchableOpacity 
+                  style={styles.snackContent}
+                  onPress={() => handleMealPress(snackId)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.snackIcon}>
                     <Text style={styles.snackEmoji}>{snack.emoji}</Text>
                   </View>
@@ -1071,41 +1144,69 @@ export default function DietPlanDisplay({
                   <View style={styles.snackInfo}>
                     <Text style={[
                       styles.snackName,
-                      completedMeals.has(`${selectedDay.date}-snack-${snack.name}`) && styles.snackNameCompleted
+                      completedMeals.has(snackId) && styles.snackNameCompleted
                     ]}>🍎 Snack {index + 1}: {snack.name}</Text>
                     <Text style={[
                       styles.snackCalories,
-                      completedMeals.has(`${selectedDay.date}-snack-${snack.name}`) && styles.snackCaloriesCompleted
+                      completedMeals.has(snackId) && styles.snackCaloriesCompleted
                     ]}>{snack.calories} kcal</Text>
                   </View>
                   
                   <View style={styles.snackAction}>
-                    {completedMeals.has(`${selectedDay.date}-snack-${snack.name}`) ? (
+                    {completedMeals.has(snackId) ? (
                       <View style={styles.completedSnackBadge}>
                         <Text style={styles.completedSnackIcon}>✓</Text>
                       </View>
-                    ) : (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') ? (
-                      <TouchableOpacity 
-                        style={styles.completeSnackButton}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleMealComplete(snack, 'snack');
-                        }}
-                      >
-                        <Text style={styles.completeSnackButtonText}>✓</Text>
-                      </TouchableOpacity>
                     ) : null}
                   </View>
-                </View>
+                </TouchableOpacity>
+                
+                {/* Expandable Details Section */}
+                {expandedMealId === snackId && (
+                  <View style={styles.expandedMealDetails}>
+                    <View style={styles.detailDivider} />
+                    
+                    {/* Ingredients */}
+                    <View style={styles.detailSection}>
+                      <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                      {snack.ingredients.map((ingredient, idx) => (
+                        <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                      ))}
+                    </View>
+                    
+                    {/* Instructions */}
+                    {snack.instructions && (
+                      <View style={styles.detailSection}>
+                        <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
+                        <Text style={styles.detailText}>{snack.instructions}</Text>
+                      </View>
+                    )}
+                    
+                    {/* Mark as Eaten Button */}
+                    {!completedMeals.has(snackId) && 
+                     isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress' && (
+                      <TouchableOpacity 
+                        style={styles.markEatenButton}
+                        onPress={() => {
+                          handleMealComplete(snack, 'snack');
+                          setExpandedMealId(null);
+                        }}
+                      >
+                        <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
                 
                 {/* Progress Bar for Completed Snacks */}
-                {completedMeals.has(`${selectedDay.date}-snack-${snack.name}`) && (
+                {completedMeals.has(snackId) && (
                   <View style={styles.snackProgressBar}>
                     <View style={styles.snackProgressFill} />
                   </View>
                 )}
-              </TouchableOpacity>
-            ))}
+              </View>
+            );
+            })}
 
             {/* Water Intake Section */}
             <View style={styles.waterSection}>
@@ -1147,21 +1248,6 @@ export default function DietPlanDisplay({
           </View>
         )}
       </View>
-
-      {/* Meal Detail Modal */}
-      <MealDetailScreen
-        meal={selectedMeal}
-        visible={mealModalVisible}
-        onClose={() => {
-          setMealModalVisible(false);
-          setSelectedMeal(null);
-          setSelectedMealType(null);
-        }}
-        onComplete={handleMealModalComplete}
-        isCompleted={selectedMeal && selectedDay && selectedMealType ? 
-          completedMeals.has(`${selectedDay.date}-${selectedMealType}-${selectedMeal.name}`) : false}
-        canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
-      />
       </View>
   );
 }
@@ -1969,5 +2055,53 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
+  },
+
+  // Expandable Meal Details Styles
+  expandedMealDetails: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background,
+  },
+  detailDivider: {
+    height: 1,
+    backgroundColor: colors.cardBorder,
+    marginVertical: spacing.md,
+  },
+  detailSection: {
+    marginBottom: spacing.md,
+  },
+  detailSectionTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+  },
+  detailText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    lineHeight: 22,
+    marginBottom: spacing.xs,
+  },
+  markEatenButton: {
+    backgroundColor: colors.green,
+    borderRadius: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    elevation: 4,
+    shadowColor: colors.green,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  markEatenButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
 });

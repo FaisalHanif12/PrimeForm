@@ -99,8 +99,12 @@ export default function DietScreen() {
       // Reset status bar to ensure proper layout
       StatusBar.setBarStyle('light-content');
       if (StatusBar.setBackgroundColor) {
-        StatusBar.setBackgroundColor(colors.background, true);
+        StatusBar.setBackgroundColor(colors.background, false);
       }
+      // Force layout recalculation
+      setTimeout(() => {
+        StatusBar.setHidden(false, 'none');
+      }, 0);
     }, [])
   );
 
