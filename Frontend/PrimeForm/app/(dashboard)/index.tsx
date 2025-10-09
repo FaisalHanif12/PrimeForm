@@ -797,7 +797,7 @@ export default function DashboardScreen() {
       
       // Check if any completion key matches this meal
       return Array.from(completedMeals).some(completedKey => 
-        completedKey.includes(today) && completedKey.includes(originalName)
+        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).reduce((sum, meal) => sum + meal.calories, 0);
     
@@ -812,7 +812,7 @@ export default function DashboardScreen() {
     const completedMealsCount = todayMeals.filter(meal => {
       const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
       return Array.from(completedMeals).some(completedKey => 
-        completedKey.includes(today) && completedKey.includes(originalName)
+        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).length;
     
