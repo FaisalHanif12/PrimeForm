@@ -99,8 +99,12 @@ export default function DietScreen() {
       // Reset status bar to ensure proper layout
       StatusBar.setBarStyle('light-content');
       if (StatusBar.setBackgroundColor) {
-        StatusBar.setBackgroundColor(colors.background, true);
+        StatusBar.setBackgroundColor(colors.background, false);
       }
+      // Force layout recalculation
+      setTimeout(() => {
+        StatusBar.setHidden(false, 'none');
+      }, 0);
     }, [])
   );
 
@@ -439,7 +443,7 @@ const styles = StyleSheet.create({
   },
   contentNoPadding: {
     paddingTop: 0,
-    paddingBottom: 0, // No bottom padding when diet plan is displayed
+    paddingBottom: 80, // Ensure space for bottom navigation
   },
   bottomSpacing: {
     height: 100,

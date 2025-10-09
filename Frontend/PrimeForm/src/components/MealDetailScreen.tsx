@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -31,11 +31,25 @@ export default function MealDetailScreen({
 }: MealDetailScreenProps) {
   const [portionMultiplier, setPortionMultiplier] = useState(1);
 
+  // Manage StatusBar when modal opens/closes to prevent layout issues
+  useEffect(() => {
+    if (visible) {
+      StatusBar.setBarStyle('light-content');
+      StatusBar.setHidden(false);
+    } else {
+      // Restore status bar when modal closes  
+      StatusBar.setBarStyle('light-content');
+      StatusBar.setHidden(false);
+    }
+  }, [visible]);
+
   if (!meal) return null;
 
   const handleCompletemeal = () => {
     if (onComplete && canComplete) {
+      console.log('🍽️ Meal marked as eaten - completing and closing');
       onComplete();
+      // Close modal immediately without delay
       onClose();
     }
   };
@@ -51,8 +65,10 @@ export default function MealDetailScreen({
       animationType="slide"
       presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent={false}
+      hardwareAccelerated={true}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} translucent={false} />
       <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

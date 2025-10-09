@@ -797,7 +797,7 @@ export default function DashboardScreen() {
       
       // Check if any completion key matches this meal
       return Array.from(completedMeals).some(completedKey => 
-        completedKey.includes(today) && completedKey.includes(originalName)
+        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).reduce((sum, meal) => sum + meal.calories, 0);
     
@@ -812,7 +812,7 @@ export default function DashboardScreen() {
     const completedMealsCount = todayMeals.filter(meal => {
       const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
       return Array.from(completedMeals).some(completedKey => 
-        completedKey.includes(today) && completedKey.includes(originalName)
+        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).length;
     
@@ -1099,6 +1099,7 @@ export default function DashboardScreen() {
                 title="Today's AI Meal Plan"
                 meals={todayMeals}
                 totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+                completedMeals={completedMeals}
                 onPress={() => handleFeatureAccess('AI Diet')}
                 delay={300}
               />
