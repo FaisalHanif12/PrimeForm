@@ -1099,6 +1099,7 @@ export default function DashboardScreen() {
                 title="Today's AI Meal Plan"
                 meals={todayMeals}
                 totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
+                completedMeals={completedMeals}
                 onPress={() => handleFeatureAccess('AI Diet')}
                 delay={300}
               />
