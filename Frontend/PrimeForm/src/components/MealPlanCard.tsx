@@ -26,7 +26,14 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
   
   // Helper function to check if meal is completed
   const isMealCompleted = (meal: MealItem): boolean => {
-    const today = new Date().toISOString().split('T')[0];
+    // Get today's date in local timezone to avoid UTC offset
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const year = todayDate.getFullYear();
+    const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const day = String(todayDate.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+    
     const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
     
     return Array.from(completedMeals).some(completedKey => 
