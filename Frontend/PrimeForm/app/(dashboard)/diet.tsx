@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   contentNoPadding: {
     paddingTop: 0,
-    paddingBottom: 80, // Ensure space for bottom navigation
+    paddingBottom: 0, // No padding here - DietPlanDisplay handles its own bottom padding
   },
   bottomSpacing: {
     height: 100,

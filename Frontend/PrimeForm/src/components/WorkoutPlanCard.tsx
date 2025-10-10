@@ -22,8 +22,13 @@ export default function WorkoutPlanCard({
 }: WorkoutPlanCardProps) {
   const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
   
-  // Get today's date for completion checking
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date for completion checking (use local timezone to avoid UTC offset)
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const year = todayDate.getFullYear();
+  const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+  const day = String(todayDate.getDate()).padStart(2, '0');
+  const today = `${year}-${month}-${day}`;
 
   return (
     <Animated.View 
