@@ -165,6 +165,13 @@ export default function WorkoutPlanDisplay({
       for (let i = 0; i < 7; i++) {
         const dayDate = new Date(startDate);
         dayDate.setDate(startDate.getDate() + i);
+        dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+        
+        // Format date in local timezone to avoid UTC offset issues
+        const year = dayDate.getFullYear();
+        const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dayDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
         
         // Stop if we've gone past Sunday of the first week
         if (dayDate.getDay() === 0 && i > 0) {
@@ -172,7 +179,7 @@ export default function WorkoutPlanDisplay({
           if (i < workoutPlan.weeklyPlan.length) {
             weekDays.push({
               ...workoutPlan.weeklyPlan[i],
-              date: dayDate.toISOString().split('T')[0],
+              date: dateString,
               day: i + 1,
               dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
             });
@@ -183,7 +190,7 @@ export default function WorkoutPlanDisplay({
         if (i < workoutPlan.weeklyPlan.length) {
           weekDays.push({
             ...workoutPlan.weeklyPlan[i],
-            date: dayDate.toISOString().split('T')[0],
+            date: dateString,
             day: i + 1,
             dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
           });
@@ -193,16 +200,24 @@ export default function WorkoutPlanDisplay({
       // Subsequent weeks: use Monday-Sunday pattern
       const currentMonday = new Date(today);
       currentMonday.setDate(today.getDate() - today.getDay() + 1); // Go to Monday of current week
+      currentMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
       
       for (let i = 0; i < 7; i++) {
         const dayDate = new Date(currentMonday);
         dayDate.setDate(currentMonday.getDate() + i);
+        dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+        
+        // Format date in local timezone to avoid UTC offset issues
+        const year = dayDate.getFullYear();
+        const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dayDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
         
         const planDayIndex = i % workoutPlan.weeklyPlan.length; // Cycle through the weekly plan
         
         weekDays.push({
           ...workoutPlan.weeklyPlan[planDayIndex],
-          date: dayDate.toISOString().split('T')[0],
+          date: dateString,
           day: ((currentWeek - 1) * 7) + (i + 1),
           dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
         });
@@ -907,6 +922,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     backgroundColor: 'transparent',
+    paddingBottom: 100, // Add bottom padding for BottomNavigation
   },
 
   // Hero Section - Extraordinary Design
