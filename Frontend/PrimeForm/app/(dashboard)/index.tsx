@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -100,8 +100,7 @@ export default function DashboardScreen() {
     // Calculate week based on plan generation day (not Monday)
     // If plan starts mid-week, week 1 includes the generation day and forward
     const currentWeek = Math.floor(daysDiff / 7) + 1;
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert to 0-6 where 0 = Monday
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
     
     return {
       today,
@@ -109,7 +108,6 @@ export default function DashboardScreen() {
       daysDiff,
       currentWeek,
       dayOfWeek,
-      adjustedDayOfWeek,
       planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
     };
   };
@@ -188,6 +186,33 @@ export default function DashboardScreen() {
     
     return () => {
       subscription?.remove();
+    };
+  }, []);
+
+  // Listen for meal completion events to update dashboard in real-time
+  useEffect(() => {
+    const mealCompletedListener = DeviceEventEmitter.addListener('mealCompleted', async (data) => {
+      console.log('📊 Dashboard: Received mealCompleted event', data);
+      // Reload completion states to reflect the change
+      await loadCompletionStates();
+    });
+
+    const dayCompletedListener = DeviceEventEmitter.addListener('dayCompleted', async (data) => {
+      console.log('📊 Dashboard: Received dayCompleted event', data);
+      // Reload completion states to reflect the change
+      await loadCompletionStates();
+    });
+
+    const exerciseCompletedListener = DeviceEventEmitter.addListener('exerciseCompleted', async (data) => {
+      console.log('📊 Dashboard: Received exerciseCompleted event', data);
+      // Reload completion states to reflect the change
+      await loadCompletionStates();
+    });
+
+    return () => {
+      mealCompletedListener.remove();
+      dayCompletedListener.remove();
+      exerciseCompletedListener.remove();
     };
   }, []);
 
@@ -596,17 +621,18 @@ export default function DashboardScreen() {
           daysDiff: dateInfo.daysDiff,
           currentWeek: dateInfo.currentWeek,
           dayOfWeek: dateInfo.dayOfWeek,
-          adjustedDayOfWeek: dateInfo.adjustedDayOfWeek,
+          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateInfo.dayOfWeek],
           planGenerationDay: dateInfo.planGenerationDay
         });
         
         // Get the day from the 7-day pattern
-        const todayMealData = dietPlan.weeklyPlan[dateInfo.adjustedDayOfWeek];
+        // Diet weeklyPlan starts with Sunday at index 0, so we use dayOfWeek directly
+        const todayMealData = dietPlan.weeklyPlan[dateInfo.dayOfWeek];
         
         console.log('🍽️ Dashboard Meal Loading:', {
           currentWeek: dateInfo.currentWeek,
           dayOfWeek: dateInfo.dayOfWeek,
-          adjustedDayOfWeek: dateInfo.adjustedDayOfWeek,
+          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateInfo.dayOfWeek],
           hasMealData: !!todayMealData,
           mealCount: todayMealData?.meals ? Object.keys(todayMealData.meals).length : 0
         });
@@ -640,17 +666,21 @@ export default function DashboardScreen() {
           daysDiff: workoutDateInfo.daysDiff,
           currentWeek: workoutDateInfo.currentWeek,
           dayOfWeek: workoutDateInfo.dayOfWeek,
-          adjustedDayOfWeek: workoutDateInfo.adjustedDayOfWeek,
+          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][workoutDateInfo.dayOfWeek],
           planGenerationDay: workoutDateInfo.planGenerationDay
         });
         
         // Get the day from the 7-day pattern
-        const todayWorkoutData = workoutPlan.weeklyPlan[workoutDateInfo.adjustedDayOfWeek];
+        // Workout weeklyPlan starts with Monday at index 0, so we need to adjust:
+        // Sunday (0) -> 6, Monday (1) -> 0, Tuesday (2) -> 1, etc.
+        const workoutDayIndex = workoutDateInfo.dayOfWeek === 0 ? 6 : workoutDateInfo.dayOfWeek - 1;
+        const todayWorkoutData = workoutPlan.weeklyPlan[workoutDayIndex];
         
         console.log('💪 Dashboard Workout Loading:', {
           currentWeek: workoutDateInfo.currentWeek,
           dayOfWeek: workoutDateInfo.dayOfWeek,
-          adjustedDayOfWeek: workoutDateInfo.adjustedDayOfWeek,
+          workoutDayIndex,
+          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][workoutDateInfo.dayOfWeek],
           hasWorkoutData: !!todayWorkoutData,
           isRestDay: todayWorkoutData?.isRestDay,
           exerciseCount: todayWorkoutData?.exercises?.length || 0

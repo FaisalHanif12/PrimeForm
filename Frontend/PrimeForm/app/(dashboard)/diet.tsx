@@ -376,30 +376,32 @@ export default function DietScreen() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        <DashboardHeader 
-          userName={t('common.user')}
-          onProfilePress={handleProfilePress}
-          onNotificationPress={() => console.log('Notifications pressed')}
-          notificationCount={0}
-        />
+        <View style={styles.mainContainer}>
+          <DashboardHeader 
+            userName={t('common.user')}
+            onProfilePress={handleProfilePress}
+            onNotificationPress={() => console.log('Notifications pressed')}
+            notificationCount={0}
+          />
 
-        <ScrollView 
-          style={styles.container}
-          contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {renderContent()}
+          <ScrollView 
+            style={styles.container}
+            contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderContent()}
 
-          {/* Bottom Spacing - only show when not displaying diet plan */}
-          {!(dietPlan && userInfo && initialLoadComplete) && (
-            <View style={styles.bottomSpacing} />
-          )}
-        </ScrollView>
+            {/* Bottom Spacing - only show when not displaying diet plan */}
+            {!(dietPlan && userInfo && initialLoadComplete) && (
+              <View style={styles.bottomSpacing} />
+            )}
+          </ScrollView>
 
-        <BottomNavigation 
-          activeTab="diet"
-          onTabPress={handleTabPress}
-        />
+          <BottomNavigation 
+            activeTab="diet"
+            onTabPress={handleTabPress}
+          />
+        </View>
 
         <Sidebar
           visible={sidebarVisible}
@@ -433,6 +435,10 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
+  },
   container: {
     flex: 1,
   },
@@ -443,7 +449,8 @@ const styles = StyleSheet.create({
   },
   contentNoPadding: {
     paddingTop: 0,
-    paddingBottom: 0, // No padding here - DietPlanDisplay handles its own bottom padding
+    paddingBottom: 0, // DietPlanDisplay handles its own bottom padding (100px)
+    paddingHorizontal: 0, // Remove horizontal padding to allow full-width content
   },
   bottomSpacing: {
     height: 100,
