@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography, fonts } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -28,6 +29,7 @@ const tabs: Tab[] = [
 
 export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const indicatorPosition = useSharedValue(0); // Keeping for potential future use but indicator removed
   const containerWidth = useSharedValue(0);
 
@@ -45,7 +47,10 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { 
+        paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.xs,
+        marginBottom: spacing.md, // Add visible margin from bottom edge
+      }]}
       onLayout={({ nativeEvent }) => {
         containerWidth.value = nativeEvent.layout.width;
       }}
@@ -80,11 +85,14 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl + spacing.md, // Increased bottom margin
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
