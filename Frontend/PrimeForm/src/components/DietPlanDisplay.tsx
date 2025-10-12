@@ -72,10 +72,11 @@ export default function DietPlanDisplay({
       calculatedWeek = 1;
     } else {
       // Calculate which week we're in
-      // First week: generation day to Sunday
-      const daysInFirstWeek = 7 - startDayOfWeek; // Days from generation day to Sunday
+      // First week: generation day to Sunday (if Sunday, only 1 day)
+      // Special case: if plan starts on Sunday (0), first week is only Sunday
+      const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
       
-      if (daysDiff <= daysInFirstWeek) {
+      if (daysDiff < daysInFirstWeek) {
         // Still in first week
         calculatedWeek = 1;
       } else {
@@ -182,39 +183,48 @@ export default function DietPlanDisplay({
     if (currentWeek === 1) {
       const planStartDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
-      // Week 1: from plan generation day to Sunday (or end of available days)
-      for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(startDate);
-        dayDate.setDate(startDate.getDate() + i);
-        dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
-        
-        // Format date in local timezone to avoid UTC offset issues
-        const year = dayDate.getFullYear();
-        const month = String(dayDate.getMonth() + 1).padStart(2, '0');
-        const day = String(dayDate.getDate()).padStart(2, '0');
+      // Special case: if plan starts on Sunday, only show Sunday for week 1
+      if (planStartDayOfWeek === 0) {
+        const year = startDate.getFullYear();
+        const month = String(startDate.getMonth() + 1).padStart(2, '0');
+        const day = String(startDate.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        // Stop if we've gone past Sunday of the first week
-        if (dayDate.getDay() === 0 && i > 0) {
-          // Include Sunday and then stop
-          if (i < dietPlan.weeklyPlan.length) {
+        weekDays.push({
+          ...dietPlan.weeklyPlan[0], // Sunday is at index 0
+          date: dateString,
+          day: 1,
+          dayName: 'Sunday'
+        });
+      } else {
+        // Week 1: from plan generation day to Sunday (or end of available days)
+        for (let i = 0; i < 7; i++) {
+          const dayDate = new Date(startDate);
+          dayDate.setDate(startDate.getDate() + i);
+          dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+          
+          // Format date in local timezone to avoid UTC offset issues
+          const year = dayDate.getFullYear();
+          const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+          const day = String(dayDate.getDate()).padStart(2, '0');
+          const dateString = `${year}-${month}-${day}`;
+          
+          // Get the correct weeklyPlan index based on day of week (Sunday=0, Monday=1, etc.)
+          const planIndex = dayDate.getDay();
+          
+          if (planIndex < dietPlan.weeklyPlan.length) {
             weekDays.push({
-              ...dietPlan.weeklyPlan[i],
+              ...dietPlan.weeklyPlan[planIndex],
               date: dateString,
               day: i + 1,
               dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
             });
           }
-          break;
-        }
-        
-        if (i < dietPlan.weeklyPlan.length) {
-          weekDays.push({
-            ...dietPlan.weeklyPlan[i],
-            date: dateString,
-            day: i + 1,
-            dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
-          });
+          
+          // Stop after reaching Sunday
+          if (dayDate.getDay() === 0 && i > 0) {
+            break;
+          }
         }
       }
     } else {
@@ -234,7 +244,9 @@ export default function DietPlanDisplay({
         const day = String(dayDate.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        const planDayIndex = i % dietPlan.weeklyPlan.length; // Cycle through the weekly plan
+        // Map Monday-Sunday loop (i=0 to 6) to weeklyPlan array (Sunday=0, Monday=1, etc.)
+        // i=0 (Monday) -> weeklyPlan[1], i=1 (Tuesday) -> weeklyPlan[2], ..., i=6 (Sunday) -> weeklyPlan[0]
+        const planDayIndex = (i + 1) % dietPlan.weeklyPlan.length;
         
           weekDays.push({
           ...dietPlan.weeklyPlan[planDayIndex],
