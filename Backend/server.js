@@ -80,8 +80,12 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
-      'http://192.168.0.112:8081', // Your CURRENT network IP
-      'http://192.168.0.112:5000', // Your CURRENT API IP
+      'http://192.168.48.129:8081', // Your CURRENT network IP
+      'http://192.168.48.129:5000', // Your CURRENT API IP
+      'http://192.168.0.112:8081', // Previous network IP (Expo dev server)
+      'http://192.168.0.112:5000', // Previous network IP (API)
+      'http://192.168.49.223:8081', // Previous network IP (Expo dev server)
+      'http://192.168.49.223:5000', // Previous network IP (API)
       'http://192.168.48.66:8081', // Your previous network IP
       'http://192.168.48.66:5000', // Your previous API IP
       'http://192.168.75.66:8081', // Your previous mobile data IP
@@ -90,7 +94,9 @@ const corsOptions = {
       'http://192.168.100.33:5000', // Your previous API IP
       'http://192.168.0.117:8081', // Your old IP address
       'http://192.168.0.117:5000', // Your old API IP
-      'exp://192.168.0.112:8081',  // Expo protocol - current network
+      'exp://192.168.48.129:8081',  // Expo protocol - current network
+      'exp://192.168.0.112:8081',  // Expo protocol - previous network
+      'exp://192.168.49.223:8081',  // Expo protocol - previous network
       'exp://192.168.48.66:8081',  // Expo protocol - previous network
       'exp://192.168.75.66:8081',  // Expo protocol - previous mobile data
       'exp://192.168.100.33:8081', // Expo protocol - previous network
@@ -192,7 +198,8 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.0.112:${PORT}`); // Current network IP
+  console.log(`🌐 Network: http://192.168.48.129:${PORT}`); // Current network IP
+  console.log(`🌐 Previous Network: http://192.168.0.112:${PORT}`); // Previous network IP for reference
   console.log(`🌐 Previous Network: http://192.168.48.66:${PORT}`); // Previous network IP for reference
   console.log(`🌐 Previous Mobile Data: http://192.168.75.66:${PORT}`); // Previous mobile data IP for reference
   console.log(`🌐 Previous Network: http://192.168.100.33:${PORT}`); // Previous network IP for reference

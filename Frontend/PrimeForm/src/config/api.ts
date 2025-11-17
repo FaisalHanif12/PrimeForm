@@ -12,7 +12,9 @@ const getApiConfig = (): ApiConfig => {
   if (isDevelopment) {
     // Try your network IP first, then fall back to localhost
     const possibleUrls = [
-      'http://192.168.0.112:5000/api', // Primary: your CURRENT network IP
+      'http://192.168.48.129:5000/api', // Primary: your CURRENT network IP
+      'http://192.168.0.112:5000/api',  // Fallback: previous network IP
+      'http://192.168.49.223:5000/api', // Fallback: another network IP
       'http://192.168.48.66:5000/api',  // Fallback: your previous network IP
       'http://192.168.75.66:5000/api',  // Fallback: your previous mobile data IP
       'http://192.168.100.33:5000/api', // Fallback: your previous network IP
@@ -21,7 +23,7 @@ const getApiConfig = (): ApiConfig => {
       'http://127.0.0.1:5000/api',     // Alternative: loopback
     ];
     
-    // Use the first URL (localhost) as primary
+    // Use the first URL (current network IP) as primary
     const baseURL = possibleUrls[0];
     
     console.log('🔍 Primary API URL:', baseURL);

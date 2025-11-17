@@ -303,24 +303,14 @@ const resetPassword = asyncHandler(async (req, res) => {
   await user.save();
   console.log('Password reset successfully for user:', email);
 
-  // Generate authentication token for automatic login
-  const { generateToken } = require('../middleware/authMiddleware');
-  const token = generateToken(user._id);
-  console.log('Generated auth token for user after password reset');
+  // Don't generate token - user should login manually with new password
+  // This ensures they remember their new password and maintains security
+  console.log('Password reset complete. User should login with new password.');
 
   res.status(200).json({
     success: true,
-    message: 'Password updated successfully!',
-    token,
-    data: {
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        isEmailVerified: user.isEmailVerified,
-        createdAt: user.createdAt
-      }
-    }
+    message: 'Password updated successfully! Please login with your new password.',
+    // No token or user data - redirect to login page
   });
 });
 
