@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacit
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthInput from '../../components/AuthInput';
 import SimpleInput from '../../components/SimpleInput';
 import AuthButton from '../../components/AuthButton';
@@ -114,13 +115,21 @@ export default function ResetPasswordScreen() {
       console.log('Reset password response:', response);
       
       if (response?.success) {
-        // Password reset successful, no token needed
+        // Password reset successful - redirect to login page
+        // User should login with their new password (no auto-login)
+        
+        // Clear only the auth token and signup completion flag
+        // Keep has_ever_signed_up and language selection to prevent re-showing those modals
+        await AsyncStorage.multiRemove([
+          'authToken',
+          'primeform_signup_completed'
+        ]);
         
         showToast('success', t('toast.password.success'));
         
-        // Navigate to dashboard after successful reset
+        // Navigate to login page after successful reset
         setTimeout(() => {
-          router.replace('/(dashboard)');
+          router.replace('/auth/login');
         }, 1500);
       } else {
         showToast('error', response?.message || t('toast.password.error'));
