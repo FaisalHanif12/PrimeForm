@@ -311,13 +311,22 @@ export default function WorkoutPlanDisplay({
   }, []);
 
   // Also refresh when screen regains focus (coming back from detail or other tabs)
+  // Only reload if data might have changed (e.g., after coming back from another screen)
+  const lastFocusTime = React.useRef<number>(0);
   useFocusEffect(
     React.useCallback(() => {
-      (async () => {
-        await loadCompletionStates();
-        const newProgress = getProgressPercentage();
-        setProgressPercentage(newProgress);
-      })();
+      const now = Date.now();
+      // Only reload if it's been more than 2 seconds since last focus
+      // This prevents unnecessary reloads on quick navigation
+      if (now - lastFocusTime.current > 2000) {
+        console.log('🔄 WorkoutPlanDisplay: Reloading completion states after focus');
+        (async () => {
+          await loadCompletionStates();
+          const newProgress = getProgressPercentage();
+          setProgressPercentage(newProgress);
+        })();
+        lastFocusTime.current = now;
+      }
     }, [])
   );
 
@@ -721,12 +730,7 @@ export default function WorkoutPlanDisplay({
                   </View>
                 )}
 
-                {/* Selection Indicator - Only for current day */}
-                {isToday && isSelected && (
-                  <View style={styles.selectionIndicator}>
-                    <View style={styles.selectionDot} />
-                  </View>
-                )}
+                {/* Selection Indicator - Removed as per user request */}
               </TouchableOpacity>
             );
           })}
@@ -1363,23 +1367,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue,
   },
 
-  // Selection Indicator
-  selectionIndicator: {
-    position: 'absolute',
-    bottom: -4,
-    left: '50%',
-    marginLeft: -6,
-    width: 12,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
-  },
-  selectionDot: {
-    width: 12,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
-  },
+  // Selection Indicator - Removed as per user request
 
   // Workout Details Section - Modern Design
   workoutDetailsSection: {
