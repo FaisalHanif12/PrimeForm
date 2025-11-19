@@ -49,38 +49,36 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     <View
       style={[styles.container, { 
         paddingBottom: Math.max(insets.bottom, spacing.xs),
-        marginBottom: spacing.sm, // Reduced margin from bottom edge
+        marginBottom: spacing.md, // Add visible margin from bottom edge
       }]}
       onLayout={({ nativeEvent }) => {
         containerWidth.value = nativeEvent.layout.width;
       }}
     >
-      {/* Inner container to keep tabs centered regardless of padding */}
-      <View style={styles.tabsContainer}>
-        {/* Tab buttons */}
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              style={styles.tab}
-              onPress={() => onTabPress(tab.key)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.tabContent, isActive && styles.activeTabContent]}>
-                <Ionicons
-                  name={tab.icon}
-                  size={20}
-                  color={isActive ? colors.gold : colors.mutedText}
-                />
-                <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
-                  {t(`nav.${tab.key}`)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      
+      {/* Tab buttons */}
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.key;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.tab}
+            onPress={() => onTabPress(tab.key)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.tabContent, isActive && styles.activeTabContent]}>
+              <Ionicons
+                name={tab.icon}
+                size={22}
+                color={isActive ? colors.gold : colors.mutedText}
+              />
+              <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
+                {t(`nav.${tab.key}`)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -91,9 +89,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center', // Center the content horizontally
+    alignItems: 'center', // Vertically center items
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
+    paddingTop: spacing.sm, // Equal padding top
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
@@ -102,17 +104,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    justifyContent: 'center', // Center the inner container
-    alignItems: 'center', // Center the inner container
-  },
-  // Inner container to hold tabs and keep them centered
-  tabsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center', // Center tabs vertically
-    justifyContent: 'space-evenly', // Distribute tabs evenly
-    width: '100%',
-    height: 56, // Fixed compact height
-    // Remove all padding - let alignItems: 'center' do the centering
+    height: 70, // Fixed height for consistent appearance
   },
   // Removed indicator styling
   tab: {
@@ -120,24 +112,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center', // Center content vertically
     alignItems: 'center', // Center content horizontally
-    height: '100%', // Take full height of tabsContainer
+    height: '100%', // Take full height of container
   },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center', // Center content vertically
-    // No vertical padding - let the parent centering handle it
+    paddingVertical: 0, // Remove vertical padding - let parent handle centering
     paddingHorizontal: spacing.xs,
-    borderRadius: 12,
+    borderRadius: 16,
   },
   activeTabContent: {
     // No special background for active tab
   },
   tabLabel: {
     color: colors.mutedText,
-    fontSize: 9, // Slightly smaller for compact look
+    fontSize: 10,
     fontFamily: fonts.body,
     fontWeight: '500',
-    marginTop: 4, // Spacing between icon and label
+    marginTop: 2,
   },
   activeTabLabel: {
     color: colors.primary,
