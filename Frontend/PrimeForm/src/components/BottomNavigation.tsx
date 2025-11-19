@@ -48,8 +48,8 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   return (
     <View
       style={[styles.container, { 
-        paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.xs,
-        marginBottom: spacing.md, // Add visible margin from bottom edge
+        paddingBottom: Math.max(insets.bottom, spacing.xs),
+        marginBottom: spacing.sm, // Reduced margin from bottom edge
       }]}
       onLayout={({ nativeEvent }) => {
         containerWidth.value = nativeEvent.layout.width;
@@ -70,7 +70,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
               <View style={[styles.tabContent, isActive && styles.activeTabContent]}>
                 <Ionicons
                   name={tab.icon}
-                  size={22}
+                  size={20}
                   color={isActive ? colors.gold : colors.mutedText}
                 />
                 <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
@@ -109,10 +109,12 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     alignItems: 'center', // Center tabs vertically
-    justifyContent: 'center', // Center tabs horizontally
+    justifyContent: 'space-evenly', // Distribute tabs evenly
     width: '100%',
-    minHeight: 60, // Minimum height for the tabs area
-    paddingVertical: spacing.sm, // Fixed padding for tabs
+    height: 56, // Fixed compact height (reduced from 60)
+    paddingVertical: spacing.xs, // Minimal padding for compact look
+    paddingTop: spacing.sm, // Top padding for breathing room
+    paddingBottom: spacing.xs, // Minimal bottom padding
   },
   // Removed indicator styling
   tab: {
@@ -125,19 +127,19 @@ const styles = StyleSheet.create({
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center', // Center content vertically
-    paddingVertical: spacing.sm,
+    paddingVertical: 4, // Minimal vertical padding for compact look
     paddingHorizontal: spacing.xs,
-    borderRadius: 16,
+    borderRadius: 12,
   },
   activeTabContent: {
     // No special background for active tab
   },
   tabLabel: {
     color: colors.mutedText,
-    fontSize: 10,
+    fontSize: 9, // Slightly smaller for compact look
     fontFamily: fonts.body,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 3, // Reduced spacing between icon and label
   },
   activeTabLabel: {
     color: colors.primary,
