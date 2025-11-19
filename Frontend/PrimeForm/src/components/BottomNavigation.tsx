@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.md, // More top padding to center content exactly
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
