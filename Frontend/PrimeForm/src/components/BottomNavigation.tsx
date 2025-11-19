@@ -90,27 +90,32 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
+    justifyContent: 'center', // Center the content
+    alignItems: 'center', // Vertically center items
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm, // Fixed padding instead of xs
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
-    alignSelf: 'stretch',
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+    minHeight: 60, // Minimum height to maintain consistency
   },
   // Removed indicator styling
   tab: {
     flex: 1,
     zIndex: 1,
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
   },
   tabContent: {
     alignItems: 'center',
+    justifyContent: 'center', // Center content vertically
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: 16,
