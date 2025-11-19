@@ -121,13 +121,22 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
               </View>
             </View>
             
-            {/* Badge Display */}
+            {/* Modern Achievement Badge */}
             {badges && badges.includes('profile_completion') && (
-              <View style={styles.badgeSection}>
-                <Badge type="profile_completion" size="small" showLabel={false} />
-                <Text style={styles.badgeText}>
-                  {language === 'en' ? 'Profile Completed!' : 'پروفائل مکمل!'}
-                </Text>
+              <View style={styles.achievementBadge}>
+                <View style={styles.achievementBadgeGlow}>
+                  <View style={styles.achievementIconContainer}>
+                    <Text style={styles.achievementIcon}>🏆</Text>
+                  </View>
+                  <View style={styles.achievementContent}>
+                    <Text style={styles.achievementTitle}>
+                      {language === 'en' ? 'Profile Completed!' : 'پروفائل مکمل!'}
+                    </Text>
+                    <Text style={styles.achievementSubtitle}>
+                      {language === 'en' ? 'Ready to achieve your goals' : 'اپنے اہداف حاصل کرنے کے لیے تیار'}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
           </View>
@@ -518,24 +527,58 @@ const styles = StyleSheet.create({
   },
 
 
-  // Badge styles
-  badgeSection: {
+  // Modern Achievement Badge styles
+  achievementBadge: {
+    marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  achievementBadgeGlow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+    position: 'relative',
+    overflow: 'hidden',
   },
-  badgeText: {
+  achievementIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.gold,
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  achievementIcon: {
+    fontSize: 24,
+  },
+  achievementContent: {
+    flex: 1,
+  },
+  achievementTitle: {
     color: colors.gold,
-    fontSize: typography.small,
+    fontSize: 15,
+    fontFamily: fonts.heading,
+    fontWeight: '700',
+    marginBottom: 2,
+    letterSpacing: 0.3,
+  },
+  achievementSubtitle: {
+    color: 'rgba(245, 158, 11, 0.7)',
+    fontSize: 12,
     fontFamily: fonts.body,
-    fontWeight: '600',
-    marginLeft: spacing.sm,
+    fontWeight: '500',
+    lineHeight: 16,
   },
 });
