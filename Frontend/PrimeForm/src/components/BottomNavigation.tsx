@@ -48,7 +48,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   return (
     <View
       style={[styles.container, { 
-        paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.xs,
+        paddingBottom: Math.max(insets.bottom, spacing.xs),
         marginBottom: spacing.md, // Add visible margin from bottom edge
       }]}
       onLayout={({ nativeEvent }) => {
@@ -90,21 +90,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center', // Center the content
-    alignItems: 'center', // Vertically center items
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    paddingVertical: spacing.sm, // Fixed padding instead of xs
+    paddingTop: spacing.md, // More top padding to center content exactly
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
+    alignSelf: 'stretch',
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    minHeight: 60, // Minimum height to maintain consistency
   },
   // Removed indicator styling
   tab: {
