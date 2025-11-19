@@ -90,21 +90,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center', // Center the content horizontally
-    alignItems: 'center', // Vertically center items
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    paddingTop: spacing.sm, // Equal padding top
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
+    alignSelf: 'stretch',
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    height: 70, // Fixed height for consistent appearance
   },
   // Removed indicator styling
   tab: {
@@ -112,12 +110,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center', // Center content vertically
     alignItems: 'center', // Center content horizontally
-    height: '100%', // Take full height of container
   },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center', // Center content vertically
-    paddingVertical: 0, // Remove vertical padding - let parent handle centering
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: 16,
   },
