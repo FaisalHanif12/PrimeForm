@@ -111,10 +111,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Center tabs vertically
     justifyContent: 'space-evenly', // Distribute tabs evenly
     width: '100%',
-    height: 56, // Fixed compact height (reduced from 60)
-    paddingVertical: spacing.xs, // Minimal padding for compact look
-    paddingTop: spacing.sm, // Top padding for breathing room
-    paddingBottom: spacing.xs, // Minimal bottom padding
+    height: 56, // Fixed compact height
+    // Remove all padding - let alignItems: 'center' do the centering
   },
   // Removed indicator styling
   tab: {
@@ -127,7 +125,7 @@ const styles = StyleSheet.create({
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center', // Center content vertically
-    paddingVertical: 4, // Minimal vertical padding for compact look
+    // No vertical padding - let the parent centering handle it
     paddingHorizontal: spacing.xs,
     borderRadius: 12,
   },
@@ -139,7 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 9, // Slightly smaller for compact look
     fontFamily: fonts.body,
     fontWeight: '500',
-    marginTop: 3, // Reduced spacing between icon and label
+    marginTop: 4, // Spacing between icon and label
   },
   activeTabLabel: {
     color: colors.primary,
