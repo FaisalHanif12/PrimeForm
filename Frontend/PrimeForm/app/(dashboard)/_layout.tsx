@@ -62,6 +62,18 @@ export default function DashboardLayout() {
           title: 'Subscription',
         }}
       />
+      <Stack.Screen 
+        name="contact" 
+        options={{
+          title: 'Contact Us',
+        }}
+      />
+      <Stack.Screen 
+        name="language" 
+        options={{
+          title: 'Language',
+        }}
+      />
     </Stack>
   );
 }

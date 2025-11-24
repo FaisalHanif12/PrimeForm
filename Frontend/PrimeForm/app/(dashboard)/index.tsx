@@ -579,7 +579,8 @@ export default function DashboardScreen() {
         }
         break;
       case 'language':
-        // Language change is always allowed
+        // Navigate to language preferences page
+        router.push('/(dashboard)/language');
         break;
       default:
         console.log('Unknown action:', action);

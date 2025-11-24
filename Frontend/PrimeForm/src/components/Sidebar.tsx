@@ -49,14 +49,9 @@ const menuItems: MenuItem[] = [
 ];
 
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
-  const { t, language, changeLanguage } = useLanguage();
-  const [showLanguageToggle, setShowLanguageToggle] = useState(false);
+  const { t } = useLanguage();
 
   const handleMenuPress = (action: string) => {
-    if (action === 'language') {
-      setShowLanguageToggle(!showLanguageToggle);
-      return;
-    }
     if (action === 'profile') {
       onMenuItemPress('profile');
       onClose();
@@ -67,13 +62,13 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
       onClose();
       return;
     }
+    if (action === 'language') {
+      onMenuItemPress('language');
+      onClose();
+      return;
+    }
     onMenuItemPress(action);
     onClose();
-  };
-
-  const handleLanguageChange = async (lang: 'en' | 'ur') => {
-    await changeLanguage(lang);
-    setShowLanguageToggle(false);
   };
 
   return (
@@ -131,104 +126,30 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
             {menuItems
               .filter(item => !isGuest || item.action !== 'logout')
               .map((item, index) => (
-                <View key={item.action}>
-                  <TouchableOpacity
-                    style={[
-                      styles.menuItem,
-                      item.action === 'language' && showLanguageToggle && styles.languageMenuItemActive
-                    ]}
-                    onPress={() => handleMenuPress(item.action)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.menuItemContent}>
-                      <Ionicons
-                        name={item.icon}
-                        size={22}
-                        color={item.color || colors.white}
-                      />
-                      <View style={styles.menuItemTextContainer}>
-                        <View style={styles.menuItemTextRow}>
-                          <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
-                            {item.label}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    <View style={styles.menuItemRight}>
-                      {item.action === 'language' ? (
-                        <Ionicons
-                          name={showLanguageToggle ? "chevron-up" : "chevron-down"}
-                          size={20}
-                          color={colors.mutedText}
-                        />
-                      ) : (
-                        <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Language Toggle Options */}
-                  {item.action === 'language' && showLanguageToggle && (
-                    <Animated.View
-                      entering={FadeIn.duration(200)}
-                      exiting={FadeOut.duration(200)}
-                      style={styles.languageToggleContainer}
-                    >
-                      <View style={styles.languageToggleHeader}>
-                        <Text style={styles.languageToggleTitle}>
-                          {t('language.choose')}
+                <TouchableOpacity
+                  key={item.action}
+                  style={styles.menuItem}
+                  onPress={() => handleMenuPress(item.action)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.menuItemContent}>
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      color={item.color || colors.white}
+                    />
+                    <View style={styles.menuItemTextContainer}>
+                      <View style={styles.menuItemTextRow}>
+                        <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
+                          {item.label}
                         </Text>
                       </View>
-                      <View style={styles.languageToggleSwitch}>
-                        <TouchableOpacity
-                          style={[
-                            styles.languageToggleOption,
-                            language === 'en' && styles.languageToggleActive
-                          ]}
-                          onPress={() => handleLanguageChange('en')}
-                        >
-                          <View style={styles.languageToggleContent}>
-                            <Text style={styles.languageToggleFlag}>🇺🇸</Text>
-                            <Text style={[
-                              styles.languageToggleText,
-                              language === 'en' && styles.languageToggleTextActive
-                            ]}>
-                              English
-                            </Text>
-                          </View>
-                          {language === 'en' && (
-                            <View style={styles.languageToggleCheckmark}>
-                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
-                            </View>
-                          )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[
-                            styles.languageToggleOption,
-                            language === 'ur' && styles.languageToggleActive
-                          ]}
-                          onPress={() => handleLanguageChange('ur')}
-                        >
-                          <View style={styles.languageToggleContent}>
-                            <Text style={styles.languageToggleFlag}>🇵🇰</Text>
-                            <Text style={[
-                              styles.languageToggleText,
-                              language === 'ur' && styles.languageToggleTextActive
-                            ]}>
-                              اردو
-                            </Text>
-                          </View>
-                          {language === 'ur' && (
-                            <View style={styles.languageToggleCheckmark}>
-                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </Animated.View>
-                  )}
-                </View>
+                    </View>
+                  </View>
+                  <View style={styles.menuItemRight}>
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                  </View>
+                </TouchableOpacity>
               ))}
           </ScrollView>
 

@@ -801,10 +801,6 @@ export default function WorkoutPlanDisplay({
                     {/* Exercise Content */}
                     <View style={styles.modernExerciseContent}>
                       <View style={styles.modernExerciseHeader}>
-                        <View style={styles.modernExerciseIcon}>
-                          <Text style={styles.modernExerciseEmoji}>{exercise.emoji}</Text>
-                        </View>
-
                         <View style={styles.modernExerciseInfo}>
                           <Text style={[styles.modernExerciseName, isCompleted && styles.modernExerciseNameCompleted]}>
                             {exercise.name}
