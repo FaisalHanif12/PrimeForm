@@ -15,6 +15,8 @@ import { colors, spacing, typography, fonts, radius } from '../../src/theme/colo
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
@@ -58,8 +60,10 @@ export default function ProgressScreen() {
   const { t, language } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
-  
+  const { unreadCount } = useNotifications();
+
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -82,13 +86,13 @@ export default function ProgressScreen() {
   const loadProgressData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Load available weeks and months
       const weeks = await progressService.getAvailableWeeks();
       const months = await progressService.getAvailableMonths();
       setAvailableWeeks(weeks);
       setAvailableMonths(months);
-      
+
       // Set default selections if not already set
       if (selectedPeriod === 'weekly' && !selectedWeek && weeks.length > 0) {
         setSelectedWeek(weeks[weeks.length - 1]); // Current week
@@ -96,10 +100,10 @@ export default function ProgressScreen() {
       if (selectedPeriod === 'monthly' && !selectedMonth && months.length > 0) {
         setSelectedMonth(months[months.length - 1]); // Current month
       }
-      
+
       // Load progress statistics with period filters
       const statsResponse = await progressService.getProgressStats(
-        selectedPeriod, 
+        selectedPeriod,
         selectedPeriod === 'weekly' ? selectedWeek || weeks[weeks.length - 1] : undefined,
         selectedPeriod === 'monthly' ? selectedMonth || months[months.length - 1] : undefined
       );
@@ -308,7 +312,7 @@ export default function ProgressScreen() {
                 <Text style={styles.cardIcon}>{card.icon}</Text>
                 <Text style={styles.cardTitle}>{card.title}</Text>
               </View>
-              
+
               <View style={styles.cardContent}>
                 {card.consumed !== undefined && card.burned !== undefined ? (
                   // Calories card with consumed/burned
@@ -327,8 +331,8 @@ export default function ProgressScreen() {
                     </View>
                     <View style={styles.calorieRow}>
                       <Text style={styles.calorieLabel}>Net</Text>
-                      <Text style={[styles.calorieValue, { 
-                        color: (card.consumed - card.burned) > 0 ? colors.green : colors.error 
+                      <Text style={[styles.calorieValue, {
+                        color: (card.consumed - card.burned) > 0 ? colors.green : colors.error
                       }]}>
                         {Math.abs(card.consumed - card.burned)} {card.unit}
                       </Text>
@@ -341,14 +345,14 @@ export default function ProgressScreen() {
                       {card.completed}/{card.total}
                     </Text>
                     <View style={styles.progressBar}>
-                      <View 
+                      <View
                         style={[
-                          styles.progressFill, 
-                          { 
+                          styles.progressFill,
+                          {
                             width: `${(card.completed / card.total) * 100}%`,
-                            backgroundColor: card.color 
+                            backgroundColor: card.color
                           }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.percentageText}>
@@ -362,14 +366,14 @@ export default function ProgressScreen() {
                       {card.consumed}/{card.target} {card.unit}
                     </Text>
                     <View style={styles.progressBar}>
-                      <View 
+                      <View
                         style={[
-                          styles.progressFill, 
-                          { 
+                          styles.progressFill,
+                          {
                             width: `${Math.min((card.consumed! / card.target!) * 100, 100)}%`,
-                            backgroundColor: card.color 
+                            backgroundColor: card.color
                           }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.percentageText}>
@@ -409,14 +413,14 @@ export default function ProgressScreen() {
                 <Text style={styles.macroValue}>{macro.value}g</Text>
                 <Text style={styles.macroPercentage}>{macro.percentage.toFixed(1)}%</Text>
                 <View style={styles.macroBar}>
-                  <View 
+                  <View
                     style={[
-                      styles.macroBarFill, 
-                      { 
+                      styles.macroBarFill,
+                      {
                         width: `${macro.percentage}%`,
-                        backgroundColor: macro.color 
+                        backgroundColor: macro.color
                       }
-                    ]} 
+                    ]}
                   />
                 </View>
               </View>
@@ -460,21 +464,21 @@ export default function ProgressScreen() {
     return (
       <Animated.View entering={FadeInUp.delay(800)} style={styles.chartsSection}>
         <Text style={styles.sectionTitle}>Detailed Analytics</Text>
-        
+
         <ProgressChart
           title="Calories Trend"
           data={chartData.calories}
           type="line"
           period={selectedPeriod}
         />
-        
+
         <ProgressChart
           title="Workout Performance"
           data={chartData.workouts}
           type="bar"
           period={selectedPeriod}
         />
-        
+
         <ProgressChart
           title="Hydration Tracking"
           data={chartData.water}
@@ -489,17 +493,17 @@ export default function ProgressScreen() {
     return (
       <DecorativeBackground>
         <SafeAreaView style={styles.safeArea}>
-          <DashboardHeader 
+          <DashboardHeader
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
-            onNotificationPress={() => console.log('Notifications pressed')}
-            notificationCount={0}
+            onNotificationPress={() => setShowNotificationModal(true)}
+            notificationCount={unreadCount}
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading your progress...</Text>
           </View>
-          <BottomNavigation 
+          <BottomNavigation
             activeTab="progress"
             onTabPress={handleTabPress}
           />
@@ -511,14 +515,14 @@ export default function ProgressScreen() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        <DashboardHeader 
+        <DashboardHeader
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
-          onNotificationPress={() => console.log('Notifications pressed')}
-          notificationCount={0}
+          onNotificationPress={() => setShowNotificationModal(true)}
+          notificationCount={unreadCount}
         />
 
-        <ScrollView 
+        <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -542,7 +546,7 @@ export default function ProgressScreen() {
           {renderCharts()}
 
           {/* Health Remarks */}
-          <HealthRemarks 
+          <HealthRemarks
             remarks={healthRemarks}
             progressStats={progressStats}
             period={selectedPeriod}
@@ -552,7 +556,7 @@ export default function ProgressScreen() {
           <View style={styles.bottomSpacing} />
         </ScrollView>
 
-        <BottomNavigation 
+        <BottomNavigation
           activeTab="progress"
           onTabPress={handleTabPress}
         />
@@ -565,6 +569,11 @@ export default function ProgressScreen() {
           userEmail={user?.email || 'user@example.com'}
           userInfo={null}
           badges={[]}
+        />
+
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
         />
       </SafeAreaView>
     </DecorativeBackground>

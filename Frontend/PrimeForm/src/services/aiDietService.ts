@@ -64,6 +64,33 @@ export interface AIDietResponse {
 }
 
 class AIDietService {
+  private loadingCache: Map<string, Promise<any>> = new Map();
+  private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  private getCachedData(key: string): any | null {
+    const cached = this.dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      console.log(`📦 Using cached data for ${key}`);
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setCachedData(key: string, data: any): void {
+    this.dataCache.set(key, { data, timestamp: Date.now() });
+  }
+
+  private clearCache(key?: string): void {
+    if (key) {
+      this.dataCache.delete(key);
+      this.loadingCache.delete(key);
+    } else {
+      this.dataCache.clear();
+      this.loadingCache.clear();
+    }
+  }
+
   private generatePrompt(userProfile: UserProfile): string {
     const dailyCalories = userProfile.gender === 'Male' ? 
       Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : 
@@ -242,27 +269,54 @@ Generate complete 7-day plan now.
 
   // Load diet plan from database
   async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
-    try {
-      const response = await dietPlanService.getActiveDietPlan();
-      if (response.success && response.data) {
-        console.log('📱 Loading diet plan from database');
-        return response.data;
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not load diet plan from database:', error);
-
-      // Try to load from local cache as fallback
-      try {
-        const cachedPlan = await Storage.getItem('cached_diet_plan');
-        if (cachedPlan) {
-          console.log('📱 Loading diet plan from local cache');
-          return JSON.parse(cachedPlan);
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Could not load from cache either:', cacheError);
-      }
+    const cacheKey = 'diet-plan-active';
+    
+    // Check if there's already a request in flight
+    if (this.loadingCache.has(cacheKey)) {
+      console.log('🔄 Request already in flight, waiting for existing request...');
+      return this.loadingCache.get(cacheKey);
     }
-    return null;
+
+    // Check memory cache first
+    const cachedData = this.getCachedData(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // Create new request and cache the promise to prevent duplicates
+    const request = (async () => {
+      try {
+        const response = await dietPlanService.getActiveDietPlan();
+        if (response.success && response.data) {
+          console.log('📱 Loaded diet plan from database');
+          this.setCachedData(cacheKey, response.data);
+          return response.data;
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not load diet plan from database:', error);
+
+        // Try to load from local cache as fallback
+        try {
+          const cachedPlan = await Storage.getItem('cached_diet_plan');
+          if (cachedPlan) {
+            console.log('📱 Loading diet plan from local cache');
+            const plan = JSON.parse(cachedPlan);
+            this.setCachedData(cacheKey, plan);
+            return plan;
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Could not load from cache either:', cacheError);
+        }
+      } finally {
+        // Remove from loading cache after request completes
+        this.loadingCache.delete(cacheKey);
+      }
+      return null;
+    })();
+
+    // Cache the promise to prevent duplicate requests
+    this.loadingCache.set(cacheKey, request);
+    return request;
   }
 
   // Clear diet plan from database
@@ -274,6 +328,9 @@ Generate complete 7-day plan now.
       // Also clear local cache
       await Storage.removeItem('cached_diet_plan');
       console.log('🗑️ Local diet plan cache cleared');
+      
+      // Clear memory cache
+      this.clearCache('diet-plan-active');
     } catch (error) {
       console.warn('⚠️ Could not clear diet plans from database:', error);
     }

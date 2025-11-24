@@ -85,8 +85,7 @@ exports.createOrUpdateProfile = async (req, res) => {
     if ((profileData.bodyGoal === 'Lose Fat' || profileData.bodyGoal === 'Gain Muscle') && !profileData.targetWeight && !userProfile) {
       missingFields.push('targetWeight');
     }
-    
-    // For existing profiles, if targetWeight is not provided, don't include it in the update
+  
     if (userProfile && !profileData.targetWeight) {
       delete profileData.targetWeight;
     }

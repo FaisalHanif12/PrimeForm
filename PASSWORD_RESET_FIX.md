@@ -217,3 +217,4 @@ Run `./update-ip.sh` whenever you switch WiFi networks!
 
 **The app now behaves exactly as specified in your requirements!** 🎉
 
+

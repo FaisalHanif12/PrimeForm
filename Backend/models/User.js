@@ -110,7 +110,7 @@ userSchema.virtual('isLocked').get(function() {
 });
 
 // Indexes for performance
-userSchema.index({ email: 1 });
+
 userSchema.index({ createdAt: 1 });
 userSchema.index({ 'otp.expiresAt': 1 }, { expireAfterSeconds: 0 });
 

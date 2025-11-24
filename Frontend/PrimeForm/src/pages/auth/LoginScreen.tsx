@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: Platform.select({ 
-      ios: spacing.lg, 
+      ios: spacing.lg,  
       android: spacing.md,
       default: spacing.lg 
     }),

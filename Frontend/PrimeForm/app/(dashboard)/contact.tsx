@@ -17,6 +17,9 @@ import { colors, spacing, typography, fonts, radius } from '../../src/theme/colo
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import DashboardHeader from '../../src/components/DashboardHeader';
+import Sidebar from '../../src/components/Sidebar';
+import { useAuthContext } from '../../src/context/AuthContext';
 import api from '../../src/config/api';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -31,17 +34,14 @@ export default function ContactPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+  const { user, isAuthenticated, logout } = useAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const [formData, setFormData] = useState<ContactForm>({
     name: '',
     email: '',
     problem: ''
   });
-
-  // Handle back navigation - return to sidebar menu
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleInputChange = (field: keyof ContactForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -95,6 +95,52 @@ export default function ContactPage() {
       showToast('error', error?.message || 'Failed to send message. Please try again later.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleProfilePress = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleNotificationPress = () => {
+    showToast('info', 'Notifications are coming soon!');
+  };
+
+  const handleSidebarMenuPress = async (action: string) => {
+    try {
+      switch (action) {
+        case 'profile':
+          router.push('/(dashboard)');
+          break;
+        case 'streak':
+          router.push('/(dashboard)/streak');
+          break;
+        case 'ai-trainer':
+          router.push('/(dashboard)/ai-trainer');
+          break;
+        case 'settings':
+          router.push('/(dashboard)/settings');
+          break;
+        case 'subscription':
+          router.push('/(dashboard)/subscription');
+          break;
+        case 'contact':
+          // Already here
+          break;
+        case 'logout':
+          await logout();
+          router.replace('/auth/login');
+          break;
+        case 'language':
+          break;
+        default:
+          console.log('Unknown sidebar action:', action);
+      }
+    } catch (error) {
+      console.error('Sidebar action failed:', error);
+      showToast('error', 'Something went wrong. Please try again.');
+    } finally {
+      setSidebarVisible(false);
     }
   };
 
@@ -181,23 +227,31 @@ export default function ContactPage() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
+        <DashboardHeader
+          userName={user?.fullName || t('common.user')}
+          onProfilePress={handleProfilePress}
+          onNotificationPress={handleNotificationPress}
+          notificationCount={0}
+        />
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBack}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.gold} />
-          </TouchableOpacity>
-          
           {renderContactForm()}
           
           <View style={styles.bottomSpacing} />
         </ScrollView>
+        <Sidebar
+          visible={sidebarVisible}
+          onClose={() => setSidebarVisible(false)}
+          onMenuItemPress={handleSidebarMenuPress}
+          userName={user?.fullName || t('common.user')}
+          userEmail={user?.email || 'user@primeform.com'}
+          isGuest={!isAuthenticated}
+          userInfo={null}
+          badges={[]}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -222,12 +276,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-
-  backButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.md,
-  },
    formHeader: {
     alignItems: 'center',
     marginBottom: spacing.xl,
@@ -236,12 +284,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: 'rgba(0, 201, 124, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
     borderWidth: 2,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: colors.gold,
   },
   formTitle: {
     fontSize: typography.h3,
