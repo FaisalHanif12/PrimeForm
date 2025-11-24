@@ -657,11 +657,11 @@ export default function WorkoutPlanDisplay({
                 key={day.day}
                 style={[
                   styles.premiumDayCard,
-                  isToday && styles.premiumDayCardToday,
-                  isSelected && styles.premiumDayCardSelected,
                   status === 'completed' && styles.premiumDayCardCompleted,
                   status === 'missed' && styles.premiumDayCardMissed,
                   status === 'in_progress' && styles.premiumDayCardInProgress,
+                  isSelected && styles.premiumDayCardSelected,
+                  isToday && styles.premiumDayCardToday,
                 ]}
                 onPress={() => handleDayPress(day)}
                 activeOpacity={0.8}
@@ -1211,9 +1211,8 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   premiumDayCardToday: {
-    backgroundColor: 'transparent', // Remove heavy background
-    borderColor: colors.blue,
-    borderWidth: 2,
+    backgroundColor: '#000000', // Black background
+    borderWidth: 0, // Remove border
     elevation: 0, // Remove elevation
     shadowColor: 'transparent',
     shadowOpacity: 0,
@@ -1314,7 +1313,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   premiumDayNameToday: {
-    color: colors.blue,
+    color: colors.white,
   },
   premiumDayDate: {
     color: colors.mutedText,
@@ -1323,7 +1322,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumDayDateToday: {
-    color: colors.blue + 'AA',
+    color: colors.mutedText,
   },
 
   // Exercise Info Section
@@ -1338,7 +1337,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   premiumExerciseCountToday: {
-    color: colors.blue,
+    color: colors.white,
   },
   premiumExerciseLabel: {
     color: colors.mutedText,
@@ -1347,7 +1346,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumExerciseLabelToday: {
-    color: colors.blue + '80',
+    color: colors.mutedText,
   },
 
   // Today Pulse Animation
