@@ -712,7 +712,7 @@ export default function DietPlanDisplay({
             </View>
             
             {/* Main Title */}
-            <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration}</Text>
+            <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration.split('(')[0].trim()}</Text>
             
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
@@ -769,18 +769,17 @@ export default function DietPlanDisplay({
                 key={day.day}
                 style={[
                   styles.premiumDayCard,
-                  isToday && styles.premiumDayCardToday,
-                  isSelected && styles.premiumDayCardSelected,
                   status === 'completed' && styles.premiumDayCardCompleted,
                   status === 'missed' && styles.premiumDayCardMissed,
                   status === 'in_progress' && styles.premiumDayCardInProgress,
+                  isSelected && styles.premiumDayCardSelected,
+                  isToday && styles.premiumDayCardToday,
                 ]}
                 onPress={() => handleDayPress(day)}
                 activeOpacity={0.8}
               >
-                {/* Background Glow Effect */}
-                {isToday && <View style={styles.todayGlow} />}
-                
+                {/* Background Glow Effect - Removed for cleaner look */}
+
                 {/* Status Badge */}
                 <View style={[styles.premiumStatusBadge, 
                   status === 'in_progress' && styles.premiumStatusBadgeProgress,
@@ -802,20 +801,20 @@ export default function DietPlanDisplay({
                 
                 {/* Day Info */}
                 <View style={styles.dayInfo}>
-                  <Text style={[styles.premiumDayName, isToday && styles.premiumDayNameToday]}>
+                  <Text style={[styles.premiumDayName, (isToday || isSelected) && styles.premiumDayNameToday]}>
                     {day.dayName.substring(0, 3)}
                   </Text>
-                  <Text style={[styles.premiumDayDate, isToday && styles.premiumDayDateToday]}>
+                  <Text style={[styles.premiumDayDate, (isToday || isSelected) && styles.premiumDayDateToday]}>
                     {formatDate(day.date)}
                   </Text>
                 </View>
                 
                 {/* Calories Info */}
                 <View style={styles.caloriesInfo}>
-                  <Text style={[styles.premiumCaloriesCount, isToday && styles.premiumCaloriesCountToday]}>
+                  <Text style={[styles.premiumCaloriesCount, (isToday || isSelected) && styles.premiumCaloriesCountToday]}>
                     {day.totalCalories}
                   </Text>
-                  <Text style={[styles.premiumCaloriesLabel, isToday && styles.premiumCaloriesLabelToday]}>
+                  <Text style={[styles.premiumCaloriesLabel, (isToday || isSelected) && styles.premiumCaloriesLabelToday]}>
                     kcal
                   </Text>
                 </View>
@@ -828,10 +827,10 @@ export default function DietPlanDisplay({
                   </View>
                 )}
                 
-                {/* Selection Indicator */}
-                {isSelected && (
-                  <View style={styles.selectionIndicator}>
-                    <View style={styles.selectionDot} />
+                {/* Selection Indicator - Blue circle in top right (matching workout page) */}
+                {isSelected && !isToday && (
+                  <View style={styles.todayPulseContainer}>
+                    <View style={styles.todayPulseDot} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -1483,17 +1482,21 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
   },
   premiumDayCardToday: {
-    backgroundColor: 'transparent', // Remove background
-    borderColor: colors.blue,
-    borderWidth: 2,
+    backgroundColor: '#000000', // Black background
+    borderWidth: 0, // Remove border
     elevation: 0, // Remove elevation
+    shadowColor: 'transparent',
     shadowOpacity: 0,
     shadowRadius: 0,
   },
   premiumDayCardSelected: {
-    backgroundColor: colors.gold + '08',
-    borderColor: colors.gold + '60',
+    backgroundColor: 'transparent',
+    borderColor: colors.blue,
     borderWidth: 2,
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   premiumDayCardCompleted: {
     backgroundColor: colors.green + '10',
@@ -1533,7 +1536,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   premiumStatusBadgeProgress: {
-    backgroundColor: colors.blue,
+    backgroundColor: colors.primary,
   },
   premiumStatusBadgeCompleted: {
     backgroundColor: colors.green,
@@ -1582,7 +1585,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   premiumDayNameToday: {
-    color: colors.blue,
+    color: colors.white,
   },
   premiumDayDate: {
     color: colors.mutedText,
@@ -1591,7 +1594,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumDayDateToday: {
-    color: colors.blue + 'AA',
+    color: colors.mutedText,
   },
   
   // Calories Info Section
@@ -1606,7 +1609,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   premiumCaloriesCountToday: {
-    color: colors.blue,
+    color: colors.white,
   },
   premiumCaloriesLabel: {
     color: colors.mutedText,
@@ -1615,7 +1618,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   premiumCaloriesLabelToday: {
-    color: colors.blue + '80',
+    color: colors.mutedText,
   },
   
   // Today Pulse Animation
@@ -1642,23 +1645,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue,
   },
   
-  // Selection Indicator
-  selectionIndicator: {
-    position: 'absolute',
-    bottom: -4,
-    left: '50%',
-    marginLeft: -6,
-    width: 12,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.gold,
-  },
-  selectionDot: {
-    width: 12,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.gold,
-  },
+  // Selection Indicator - Removed (using blue circle in top right instead, matching workout page)
 
   // Diet Details Section
   dietDetailsSection: {
