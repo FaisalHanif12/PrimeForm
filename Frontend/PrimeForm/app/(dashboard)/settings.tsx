@@ -92,6 +92,7 @@ export default function SettingsPage() {
           router.replace('/auth/login');
           break;
         case 'language':
+          router.push('/(dashboard)/language');
           break;
         default:
           console.log('Unknown sidebar action:', action);
