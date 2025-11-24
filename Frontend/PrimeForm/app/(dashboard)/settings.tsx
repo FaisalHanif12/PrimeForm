@@ -7,13 +7,17 @@ import {
   StyleSheet,
   Switch,
   Alert,
-  Dimensions
+  Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
+import DashboardHeader from '../../src/components/DashboardHeader';
+import Sidebar from '../../src/components/Sidebar';
+import { useAuthContext } from '../../src/context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +39,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+  const { user, isAuthenticated, logout } = useAuthContext();
   
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     pushNotifications: true,
@@ -51,10 +56,52 @@ export default function SettingsPage() {
   });
 
   const [isUpdating, setIsUpdating] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  // Handle back navigation - return to sidebar menu
-  const handleBack = () => {
-    router.back();
+  const handleProfilePress = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleNotificationPress = () => {
+    showToast('info', 'Notifications are coming soon!');
+  };
+
+  const handleSidebarMenuPress = async (action: string) => {
+    try {
+      switch (action) {
+        case 'profile':
+          router.push('/(dashboard)');
+          break;
+        case 'streak':
+          router.push('/(dashboard)/streak');
+          break;
+        case 'ai-trainer':
+          router.push('/(dashboard)/ai-trainer');
+          break;
+        case 'settings':
+          // already here
+          break;
+        case 'subscription':
+          router.push('/(dashboard)/subscription');
+          break;
+        case 'contact':
+          router.push('/(dashboard)/contact');
+          break;
+        case 'logout':
+          await logout();
+          router.replace('/auth/login');
+          break;
+        case 'language':
+          break;
+        default:
+          console.log('Unknown sidebar action:', action);
+      }
+    } catch (error) {
+      console.error('Sidebar action failed:', error);
+      showToast('error', 'Unable to complete that action. Please try again.');
+    } finally {
+      setSidebarVisible(false);
+    }
   };
 
   // Load saved notification settings
@@ -123,19 +170,6 @@ export default function SettingsPage() {
   };
 
     
-
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={handleBack}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.gold} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{t('sidebar.settings')}</Text>
-      <View style={styles.headerRight} />
-    </View>
-  );
 
   const renderNotificationSection = () => (
     <View style={styles.section}>
@@ -269,50 +303,49 @@ export default function SettingsPage() {
   );
 
   return (
-    <View style={styles.container}>
-      {renderHeader()}
-      
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {renderNotificationSection()}
-        {renderSoftwareUpdateSection()}
-        {renderAppInfoSection()}
-        
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <DashboardHeader
+        userName={user?.fullName || t('common.user')}
+        onProfilePress={handleProfilePress}
+        onNotificationPress={handleNotificationPress}
+        notificationCount={0}
+      />
+      <View style={styles.container}>
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {renderNotificationSection()}
+          {renderSoftwareUpdateSection()}
+          {renderAppInfoSection()}
+          
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </View>
+
+      <Sidebar
+        visible={sidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+        onMenuItemPress={handleSidebarMenuPress}
+        userName={user?.fullName || t('common.user')}
+        userEmail={user?.email || 'user@primeform.com'}
+        isGuest={!isAuthenticated}
+        userInfo={null}
+        badges={[]}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-  },
-  backButton: {
-    padding: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: typography.h3,
-    fontWeight: 'bold',
-    color: colors.gold,
-    fontFamily: fonts.heading,
-  },
-  headerRight: {
-    width: 40,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,

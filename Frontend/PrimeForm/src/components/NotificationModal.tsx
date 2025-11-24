@@ -40,7 +40,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     formatTime,
     clearError
   } = useNotifications();
-  
+
   const { t } = useLanguage();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +82,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
       showToast('info', 'No unread notifications');
       return;
     }
-    
+
     Alert.alert(
       'Mark All as Read',
       'Are you sure you want to mark all notifications as read?',
@@ -151,7 +151,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     const isSelected = selectedNotifications.includes(notification._id);
     const icon = getNotificationIcon(notification.type);
     const priorityColor = getNotificationColor(notification.priority);
-    
+
     return (
       <TouchableOpacity
         key={notification._id}
@@ -175,7 +175,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
               <Text style={styles.notificationIcon}>{icon}</Text>
               {!notification.isRead && <View style={[styles.unreadDot, { backgroundColor: priorityColor }]} />}
             </View>
-            
+
             <View style={styles.notificationText}>
               <Text style={[
                 styles.notificationTitle,
@@ -190,7 +190,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
                 {formatTime(notification.createdAt)}
               </Text>
             </View>
-            
+
             <View style={styles.notificationActions}>
               {selectionMode ? (
                 <View style={[
@@ -235,7 +235,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
               </View>
             )}
           </View>
-          
+
           <View style={styles.headerRight}>
             {selectionMode ? (
               <>
@@ -305,7 +305,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
                   refreshing={refreshing}
                   onRefresh={handleRefresh}
                   tintColor={colors.gold}
-                colors={[colors.gold]}
+                  colors={[colors.gold]}
                 />
               }
               showsVerticalScrollIndicator={false}
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.gold,
+    color: 'white',
     marginRight: 10,
   },
   headerBadge: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyTitle: {
-    color: colors.gold,
+    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: 20,

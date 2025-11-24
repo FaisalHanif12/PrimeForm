@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, SafeAreaView, RefreshControl, Alert, AppState, ActivityIndicator, DeviceEventEmitter } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -89,6 +89,7 @@ export default function DashboardScreen() {
   const [waterCompleted, setWaterCompleted] = useState<boolean>(false);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [plansLoaded, setPlansLoaded] = useState(false);
+  const loadingInProgress = useRef(false);
   const { showToast } = useToast();
 
   // Centralized date calculation utility for consistency across all components
@@ -96,12 +97,12 @@ export default function DashboardScreen() {
     const today = new Date();
     const startDate = new Date(planStartDate);
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     // Calculate week based on plan generation day (not Monday)
     // If plan starts mid-week, week 1 includes the generation day and forward
     const currentWeek = Math.floor(daysDiff / 7) + 1;
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, 2 = Tuesday, etc.
-    
+
     return {
       today,
       startDate,
@@ -124,15 +125,15 @@ export default function DashboardScreen() {
   // Check for new day only when app becomes active (no polling)
   useEffect(() => {
     let isChecking = false; // Prevent concurrent checks
-    
+
     const checkForNewDay = async () => {
       if (isChecking) return;
-      
+
       try {
         isChecking = true;
         const today = new Date().toDateString();
         const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
-        
+
         if (lastCheckedDay !== today) {
           console.log('🌅 New day detected! Refreshing dashboard data...');
           await AsyncStorage.setItem('last_checked_day', today);
@@ -157,17 +158,17 @@ export default function DashboardScreen() {
       if (nextAppState === 'active' && !isRefreshing) {
         console.log('📱 App became active, refreshing data...');
         isRefreshing = true;
-        
+
         try {
           // First check for new day
           const today = new Date().toDateString();
           const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
-          
+
           if (lastCheckedDay !== today) {
             console.log('🌅 New day detected! Refreshing dashboard data...');
             await AsyncStorage.setItem('last_checked_day', today);
           }
-          
+
           // Refresh both completion states and meal/workout data
           await Promise.all([
             loadCompletionStates(),
@@ -183,7 +184,7 @@ export default function DashboardScreen() {
 
     // Listen for app state changes
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     return () => {
       subscription?.remove();
     };
@@ -224,7 +225,7 @@ export default function DashboardScreen() {
         const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
         const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
         const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
-        
+
         console.log('🔍 App State Check:', {
           isFirstLaunch,
           hasSelectedLanguage,
@@ -232,7 +233,7 @@ export default function DashboardScreen() {
           deviceLanguageSelected,
           hasEverSignedUp
         });
-        
+
         // CRITICAL: Language modal should ONLY show for first-time guest users
         // According to workflow Phase 4: After sign-up, language modal NEVER appears again
         if (hasEverSignedUp === 'true' || isAuthenticated) {
@@ -242,7 +243,7 @@ export default function DashboardScreen() {
           setShowLanguageModal(false);
           return;
         }
-        
+
         // Check if this is the first time ANY user has opened the app on this device
         if (isFirstLaunch === null && !deviceLanguageSelected) {
           console.log('🌍 First device launch detected - showing language modal for guest user');
@@ -261,7 +262,7 @@ export default function DashboardScreen() {
 
         // Check if user has completed signup - check both authentication and signup completion
         const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
-        
+
         if (isAuthenticated) {
           // User is authenticated - mark signup as completed
           setHasCompletedSignup(true);
@@ -272,7 +273,7 @@ export default function DashboardScreen() {
           // User has completed signup but might not be authenticated
           // This could happen if token expired but user hasn't logged out
           setHasCompletedSignup(true);
-          
+
           // Try to refresh authentication status
           try {
             const isStillAuth = await authService.isAuthenticated();
@@ -297,11 +298,11 @@ export default function DashboardScreen() {
 
   // Additional effect to handle authentication state changes
   useEffect(() => {
-    console.log('🔄 Authentication state changed:', { 
-      isAuthenticated, 
+    console.log('🔄 Authentication state changed:', {
+      isAuthenticated,
       user: user?.fullName,
       hasCompletedSignup,
-      userEmail: user?.email 
+      userEmail: user?.email
     });
     if (isAuthenticated && user) {
       console.log('✅ User is authenticated with name:', user.fullName);
@@ -387,12 +388,12 @@ export default function DashboardScreen() {
     try {
       // Save to backend database
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
-      
+
       console.log('🔍 Full response from userProfileService:', response);
       console.log('🔍 Response type:', typeof response);
       console.log('🔍 Response.success:', response.success);
       console.log('🔍 Response.data:', response.data);
-      
+
       if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
@@ -424,7 +425,7 @@ export default function DashboardScreen() {
     try {
       // Load user profile from backend database
       const response = await userProfileService.getUserProfile();
-      
+
       if (response.success && response.data) {
         setUserInfo(response.data);
         console.log('User profile loaded from database:', response.data);
@@ -445,18 +446,18 @@ export default function DashboardScreen() {
     try {
       // Update in backend database
       const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
-      
+
       if (response.success) {
         setUserInfo(updatedUserInfo);
         console.log('User profile updated in database:', response.data);
-              } else {
-          console.error('Failed to update in database:', response.message);
-          showToast('error', 'Failed to update profile. Please try again.');
-        }
-      } catch (error) {
-        console.error('Failed to update user info:', error);
-        showToast('error', 'Failed to update profile. Please check your connection and try again.');
+      } else {
+        console.error('Failed to update in database:', response.message);
+        showToast('error', 'Failed to update profile. Please try again.');
       }
+    } catch (error) {
+      console.error('Failed to update user info:', error);
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
   };
 
 
@@ -496,7 +497,7 @@ export default function DashboardScreen() {
       setActiveTab(tab);
       return;
     }
-    
+
     // For non-home tabs, check authentication and signup completion
     if (!isAuthenticated && !hasCompletedSignup) {
       const featureNames = {
@@ -509,10 +510,10 @@ export default function DashboardScreen() {
       setShowSignupModal(true);
       return;
     }
-    
+
     // User is authenticated or has completed signup, allow navigation
     setActiveTab(tab);
-    
+
     switch (tab) {
       case 'diet':
         router.push('/(dashboard)/diet');
@@ -587,20 +588,27 @@ export default function DashboardScreen() {
 
   // Load dynamic data
   const loadDynamicData = useCallback(async () => {
+    // Prevent concurrent calls
+    if (loadingInProgress.current) {
+      console.log('⏭️ Load already in progress, skipping duplicate call');
+      return;
+    }
+
     try {
+      loadingInProgress.current = true;
       setIsLoadingPlans(true);
       setPlansLoaded(false);
-      
+
       // Load both plans in parallel to ensure consistent loading
       const [dietPlanData, workoutPlanData] = await Promise.allSettled([
         aiDietService.loadDietPlanFromDatabase(),
         aiWorkoutService.loadWorkoutPlanFromDatabase()
       ]);
-      
+
       // Handle results with proper error handling
       const dietPlan = dietPlanData.status === 'fulfilled' ? dietPlanData.value : null;
       const workoutPlan = workoutPlanData.status === 'fulfilled' ? workoutPlanData.value : null;
-      
+
       if (dietPlanData.status === 'rejected') {
         console.error('Failed to load diet plan:', dietPlanData.reason);
       }
@@ -611,10 +619,10 @@ export default function DashboardScreen() {
       // Process diet plan
       if (dietPlan) {
         setDietPlan(dietPlan);
-        
+
         // Get today's meals using centralized date logic
         const dateInfo = getStandardizedDateInfo(dietPlan.startDate);
-        
+
         console.log('📅 Dashboard Diet Date Debug:', {
           today: dateInfo.today.toDateString(),
           startDate: dateInfo.startDate.toDateString(),
@@ -624,11 +632,11 @@ export default function DashboardScreen() {
           dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateInfo.dayOfWeek],
           planGenerationDay: dateInfo.planGenerationDay
         });
-        
+
         // Get the day from the 7-day pattern
         // Diet weeklyPlan starts with Sunday at index 0, so we use dayOfWeek directly
         const todayMealData = dietPlan.weeklyPlan[dateInfo.dayOfWeek];
-        
+
         console.log('🍽️ Dashboard Meal Loading:', {
           currentWeek: dateInfo.currentWeek,
           dayOfWeek: dateInfo.dayOfWeek,
@@ -636,7 +644,7 @@ export default function DashboardScreen() {
           hasMealData: !!todayMealData,
           mealCount: todayMealData?.meals ? Object.keys(todayMealData.meals).length : 0
         });
-        
+
         if (todayMealData) {
           const meals = [
             { name: `🌅 ${todayMealData.meals.breakfast.name}`, calories: todayMealData.meals.breakfast.calories, weight: '200g' },
@@ -656,10 +664,10 @@ export default function DashboardScreen() {
       // Process workout plan
       if (workoutPlan) {
         setWorkoutPlan(workoutPlan);
-        
+
         // Get today's workout using centralized date logic
         const workoutDateInfo = getStandardizedDateInfo(workoutPlan.startDate);
-        
+
         console.log('📅 Dashboard Workout Date Debug:', {
           today: workoutDateInfo.today.toDateString(),
           startDate: workoutDateInfo.startDate.toDateString(),
@@ -669,13 +677,13 @@ export default function DashboardScreen() {
           dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][workoutDateInfo.dayOfWeek],
           planGenerationDay: workoutDateInfo.planGenerationDay
         });
-        
+
         // Get the day from the 7-day pattern
         // Workout weeklyPlan starts with Monday at index 0, so we need to adjust:
         // Sunday (0) -> 6, Monday (1) -> 0, Tuesday (2) -> 1, etc.
         const workoutDayIndex = workoutDateInfo.dayOfWeek === 0 ? 6 : workoutDateInfo.dayOfWeek - 1;
         const todayWorkoutData = workoutPlan.weeklyPlan[workoutDayIndex];
-        
+
         console.log('💪 Dashboard Workout Loading:', {
           currentWeek: workoutDateInfo.currentWeek,
           dayOfWeek: workoutDateInfo.dayOfWeek,
@@ -685,7 +693,7 @@ export default function DashboardScreen() {
           isRestDay: todayWorkoutData?.isRestDay,
           exerciseCount: todayWorkoutData?.exercises?.length || 0
         });
-        
+
         if (todayWorkoutData && !todayWorkoutData.isRestDay) {
           const workouts = todayWorkoutData.exercises.map((exercise: any) => ({
             name: exercise.name,
@@ -702,13 +710,14 @@ export default function DashboardScreen() {
 
       // Load completion states
       await loadCompletionStates();
-      
+
       // Mark plans as loaded
       setPlansLoaded(true);
     } catch (error) {
       console.error('Failed to load dynamic data:', error);
     } finally {
       setIsLoadingPlans(false);
+      loadingInProgress.current = false;
     }
   }, []);
 
@@ -739,7 +748,7 @@ export default function DashboardScreen() {
         if (completedMealsData) {
           const localMeals = new Set(JSON.parse(completedMealsData) as string[]);
           console.log('📊 Dashboard: Loading completed meals from local storage:', Array.from(localMeals));
-          
+
           // Merge with database data
           if (dietPlan.status === 'fulfilled' && dietPlan.value && dietPlan.value.completedMeals) {
             const dbMeals = new Set(dietPlan.value.completedMeals as string[]);
@@ -756,7 +765,7 @@ export default function DashboardScreen() {
         if (completedExercisesData) {
           const localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
           console.log('📊 Dashboard: Loading completed exercises from local storage:', Array.from(localExercises));
-          
+
           // Merge with database data
           if (workoutPlan.status === 'fulfilled' && workoutPlan.value && workoutPlan.value.completedExercises) {
             const dbExercises = new Set(workoutPlan.value.completedExercises as string[]);
@@ -816,36 +825,36 @@ export default function DashboardScreen() {
   // Production-optimized dynamic stats with memoization
   const getDynamicStats = useMemo(() => {
     const totalCalories = todayMeals.reduce((sum, meal) => sum + meal.calories, 0);
-    
+
     // Get today's date for completion checking
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Check completion using the original meal names (without emojis)
     const consumedCalories = todayMeals.filter(meal => {
       // Extract original meal name by removing emoji prefix
       const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
-      
+
       // Check if any completion key matches this meal
-      return Array.from(completedMeals).some(completedKey => 
+      return Array.from(completedMeals).some(completedKey =>
         typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).reduce((sum, meal) => sum + meal.calories, 0);
-    
+
     const remainingCalories = Math.max(0, totalCalories - consumedCalories);
-    
+
     // Check completed workouts
-    const completedWorkouts = todayWorkouts.filter(workout => 
+    const completedWorkouts = todayWorkouts.filter(workout =>
       completedExercises.has(`${today}-${workout.name}`)
     ).length;
-    
+
     // Check completed meals using original names
     const completedMealsCount = todayMeals.filter(meal => {
       const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
-      return Array.from(completedMeals).some(completedKey => 
+      return Array.from(completedMeals).some(completedKey =>
         typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
       );
     }).length;
-    
+
     const remainingMeals = todayMeals.length - completedMealsCount;
 
     return [
@@ -864,32 +873,32 @@ export default function DashboardScreen() {
   ];
 
   const mockWorkouts = [
-    { 
-      name: 'Push-ups', 
-      emoji: '💪', 
-      caloriesBurned: 50, 
-      sets: 3, 
-      reps: 15, 
-      rest: '60s', 
-      targetMuscles: ['Chest', 'Shoulders', 'Triceps'] 
+    {
+      name: 'Push-ups',
+      emoji: '💪',
+      caloriesBurned: 50,
+      sets: 3,
+      reps: 15,
+      rest: '60s',
+      targetMuscles: ['Chest', 'Shoulders', 'Triceps']
     },
-    { 
-      name: 'Squats', 
-      emoji: '🦵', 
-      caloriesBurned: 40, 
-      sets: 3, 
-      reps: 20, 
-      rest: '60s', 
-      targetMuscles: ['Quads', 'Glutes', 'Hamstrings'] 
+    {
+      name: 'Squats',
+      emoji: '🦵',
+      caloriesBurned: 40,
+      sets: 3,
+      reps: 20,
+      rest: '60s',
+      targetMuscles: ['Quads', 'Glutes', 'Hamstrings']
     },
-    { 
-      name: 'Plank', 
-      emoji: '🤸', 
-      caloriesBurned: 30, 
-      sets: 3, 
-      reps: 30, 
-      rest: '45s', 
-      targetMuscles: ['Core', 'Shoulders'] 
+    {
+      name: 'Plank',
+      emoji: '🤸',
+      caloriesBurned: 30,
+      sets: 3,
+      reps: 30,
+      rest: '45s',
+      targetMuscles: ['Core', 'Shoulders']
     },
   ];
 
@@ -955,7 +964,7 @@ export default function DashboardScreen() {
           // User is not authenticated, check if they have completed signup
           const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
           const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
-          
+
           if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
             // User has completed signup but token might be expired
             // Try to refresh authentication
@@ -987,7 +996,7 @@ export default function DashboardScreen() {
 
     // Add AppState listener
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     // Cleanup subscription
     return () => subscription?.remove();
   }, [isAuthenticated]);
@@ -998,7 +1007,7 @@ export default function DashboardScreen() {
       // User is actually authenticated, mark signup as completed
       AsyncStorage.setItem('primeform_signup_completed', 'true');
       setHasCompletedSignup(true);
-      
+
       // Also mark that user has ever signed up (for app-wide tracking)
       AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
     } else {
@@ -1065,16 +1074,16 @@ export default function DashboardScreen() {
       <DecorativeBackground>
         <View style={styles.mainContainer}>
           {/* Header */}
-          <DashboardHeader 
+          <DashboardHeader
             userName={(() => {
-              const displayName = isAuthenticated ? 
-                transliterateName((user?.fullName || dashboardData?.user?.fullName || 'User').split(' ')[0]) : 
+              const displayName = isAuthenticated ?
+                transliterateName((user?.fullName || dashboardData?.user?.fullName || 'User').split(' ')[0]) :
                 'Guest';
-              console.log('🏷️ Dashboard Header Display Name:', { 
-                isAuthenticated, 
-                userFullName: user?.fullName, 
+              console.log('🏷️ Dashboard Header Display Name:', {
+                isAuthenticated,
+                userFullName: user?.fullName,
                 dashboardUserFullName: dashboardData?.user?.fullName,
-                displayName 
+                displayName
               });
               return displayName;
             })()}
@@ -1084,7 +1093,7 @@ export default function DashboardScreen() {
           />
 
           {/* Content */}
-          <ScrollView 
+          <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
@@ -1104,7 +1113,7 @@ export default function DashboardScreen() {
             </Animated.View>
 
             {/* Stats Overview */}
-            <StatsCard 
+            <StatsCard
               title={t('dashboard.overview')}
               stats={getDynamicStats}
               delay={200}
@@ -1168,19 +1177,19 @@ export default function DashboardScreen() {
             <View style={styles.waterSection}>
               <Text style={styles.waterTitle}>💧 Water Intake</Text>
               <Text style={styles.waterTarget}>Target: {targetWater}ml</Text>
-              
+
               <View style={styles.waterStatusOnlyContainer}>
                 <View style={styles.waterStatusInfo}>
                   <View style={styles.waterStatusTextContainer}>
-                  <Text style={styles.waterStatusText} numberOfLines={1}>
-                    {waterCompleted ? '✅ Done' : '⏳ Due'}
-                  </Text>
+                    <Text style={styles.waterStatusText} numberOfLines={1}>
+                      {waterCompleted ? '✅ Done' : '⏳ Due'}
+                    </Text>
                   </View>
                   <Text style={styles.waterAmountText}>
                     {waterCompleted ? targetWater : 0}ml / {targetWater}ml
                   </Text>
                 </View>
-                
+
                 <View style={[
                   styles.waterStatusIndicator,
                   waterCompleted && styles.waterStatusIndicatorCompleted
@@ -1193,7 +1202,7 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <Text style={styles.waterNoteText}>
                 Manage water intake in your diet plan
               </Text>
@@ -1204,7 +1213,7 @@ export default function DashboardScreen() {
           </ScrollView>
 
           {/* Bottom Navigation */}
-          <BottomNavigation 
+          <BottomNavigation
             activeTab={activeTab}
             onTabPress={handleTabPress}
           />
@@ -1337,7 +1346,7 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100, // Space for bottom navigation
   },
-  
+
   // Empty Card Styles
   emptyCard: {
     backgroundColor: colors.surface,
@@ -1408,7 +1417,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   waterButtons: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.xs,
   },

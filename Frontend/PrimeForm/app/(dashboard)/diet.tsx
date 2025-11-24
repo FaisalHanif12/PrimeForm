@@ -16,6 +16,8 @@ import UserInfoModal from '../../src/components/UserInfoModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DietPlanDisplay from '../../src/components/DietPlanDisplay';
 import LoadingModal from '../../src/components/LoadingModal';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -24,7 +26,9 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function DietScreen() {
   const { t, language } = useLanguage();
   const router = useRouter();
+  const { unreadCount } = useNotifications();
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +41,7 @@ export default function DietScreen() {
   // Helper function to translate dynamic values (same approach as ProfilePage)
   const translateValue = (value: string, type: 'goal' | 'diet') => {
     console.log('🔍 Diet translateValue called with:', { value, type, language });
-    
+
     if (language === 'ur' && value) {
       // Use the same arrays as ProfilePage for consistency
       const bodyGoals = [
@@ -47,7 +51,7 @@ export default function DietScreen() {
         { en: 'General Training', ur: 'عمومی تربیت' },
         { en: 'Improve Fitness', ur: 'فٹنس بہتر کریں' }
       ];
-      
+
       const dietPreferences = [
         { en: 'Vegetarian', ur: 'سبزی خور' },
         { en: 'Non-Vegetarian', ur: 'سبزی خور نہیں' },
@@ -55,7 +59,7 @@ export default function DietScreen() {
         { en: 'Flexitarian', ur: 'فلیکسیٹیرین' },
         { en: 'Pescatarian', ur: 'پیسکیٹیرین' }
       ];
-      
+
       let options: { en: string; ur: string }[];
       if (type === 'goal') {
         options = bodyGoals;
@@ -64,7 +68,7 @@ export default function DietScreen() {
       } else {
         return value;
       }
-      
+
       // Find the matching option and return Urdu text
       const option = options.find(opt => opt.en === value);
       if (option) {
@@ -89,7 +93,7 @@ export default function DietScreen() {
         setInitialLoadComplete(true);
       }
     };
-    
+
     initializeData();
   }, []);
 
@@ -120,10 +124,10 @@ export default function DietScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
-                    case 'settings':
+      case 'settings':
         router.push('/(dashboard)/settings');
         break;
-              case 'subscription':
+      case 'subscription':
         router.push('/(dashboard)/subscription');
         break;
       case 'contact':
@@ -134,10 +138,10 @@ export default function DietScreen() {
           const { authService } = await import('../../src/services/authService');
           await authService.logout();
           router.replace('/auth/login');
-                  } catch (error) {
-            console.error('Logout failed:', error);
-            showToast('error', 'Failed to logout. Please try again.');
-          }
+        } catch (error) {
+          console.error('Logout failed:', error);
+          showToast('error', 'Failed to logout. Please try again.');
+        }
         break;
       default:
         console.log('Unknown action:', action);
@@ -150,7 +154,7 @@ export default function DietScreen() {
       setIsGenerating(true);
       try {
         const response = await aiDietService.generateDietPlan(userInfo);
-        
+
         if (response.success && response.data) {
           setDietPlan(response.data);
           showToast('success', 'Your personalized diet plan is ready!');
@@ -159,10 +163,10 @@ export default function DietScreen() {
         }
       } catch (error) {
         console.error('Diet generation failed:', error);
-        
+
         // Show interactive error alert instead of console logging
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
-        
+
         if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
           showToast('error', 'Network issue detected. Please check your connection and try again.');
         } else if (errorMessage.includes('API')) {
@@ -182,21 +186,21 @@ export default function DietScreen() {
   const handleCompleteUserInfo = async (userInfoData: any) => {
     try {
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
-      
+
       console.log('🔍 Diet Page - Full response:', response);
       console.log('🔍 Diet Page - Response.success:', response?.success);
-      
+
       if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
         console.log('✅ User profile saved to database:', response.data);
         showToast('success', 'Profile created! Now generating your diet plan...');
-        
+
         // Automatically generate diet plan after profile creation
         try {
           setIsGenerating(true);
           const dietResponse = await aiDietService.generateDietPlan(userInfoData);
-          
+
           if (dietResponse.success && dietResponse.data) {
             setDietPlan(dietResponse.data);
             showToast('success', 'Your personalized diet plan is ready!');
@@ -230,7 +234,7 @@ export default function DietScreen() {
   const loadUserInfo = async () => {
     try {
       const response = await userProfileService.getUserProfile();
-      
+
       if (response.success) {
         if (response.data) {
           setUserInfo(response.data);
@@ -312,7 +316,7 @@ export default function DietScreen() {
       return (
         <View style={styles.profileSummaryContainer}>
           <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
-          
+
           <View style={styles.profileSummaryCard}>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
@@ -332,8 +336,8 @@ export default function DietScreen() {
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.confirmGenerateButton, isGenerating && styles.confirmGenerateButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.confirmGenerateButton, isGenerating && styles.confirmGenerateButtonDisabled]}
             onPress={handleGenerateClick}
             disabled={isGenerating}
           >
@@ -352,17 +356,17 @@ export default function DietScreen() {
           <View style={styles.startCardIconContainer}>
             <Text style={styles.startCardIcon}>🥗</Text>
           </View>
-          
+
           <Text style={styles.startCardTitle}>
             {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی غذائی پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized diet through AI?'}
           </Text>
-          
+
           <Text style={styles.startCardSubtitle}>
             {t('diet.hero.subtitle')}
           </Text>
-          
-          <TouchableOpacity 
-            style={styles.startButton} 
+
+          <TouchableOpacity
+            style={styles.startButton}
             onPress={() => setShowUserInfoModal(true)}
             activeOpacity={0.8}
           >
@@ -377,14 +381,14 @@ export default function DietScreen() {
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.mainContainer}>
-          <DashboardHeader 
+          <DashboardHeader
             userName={t('common.user')}
             onProfilePress={handleProfilePress}
-            onNotificationPress={() => console.log('Notifications pressed')}
-            notificationCount={0}
+            onNotificationPress={() => setShowNotificationModal(true)}
+            notificationCount={unreadCount}
           />
 
-          <ScrollView 
+          <ScrollView
             style={styles.container}
             contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
             showsVerticalScrollIndicator={false}
@@ -397,7 +401,7 @@ export default function DietScreen() {
             )}
           </ScrollView>
 
-          <BottomNavigation 
+          <BottomNavigation
             activeTab="diet"
             onTabPress={handleTabPress}
           />
@@ -417,6 +421,11 @@ export default function DietScreen() {
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
           onCancel={handleCancelUserInfo}
+        />
+
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
         />
 
         {/* Beautiful Loading Modal */}
@@ -455,7 +464,7 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
-  
+
   // Hero Section (for onboarding)
   heroSection: {
     marginBottom: spacing.xl,

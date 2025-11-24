@@ -33,7 +33,7 @@ const translations = {
     'auth.login.forgot': 'Forgot Password?',
     'auth.login.signup': 'Sign Up',
     'auth.login.noAccount': "Don't have an account? ",
-    
+
     'auth.signup.title': 'Create Account',
     'auth.signup.subtitle': 'Join Prime Form today',
     'auth.signup.name': 'Username',
@@ -43,32 +43,32 @@ const translations = {
     'auth.signup.button': 'Sign Up',
     'auth.signup.hasAccount': 'Already have an account? ',
     'auth.signup.login': 'Log In',
-    
+
     // Language selection
     'language.choose': 'Choose your preferred language',
     'language.urdu': 'اردو',
     'language.english': 'English',
-    
-         // Dashboard
-     'dashboard.greeting': 'Good Morning',
-     'dashboard.subtitle': 'Ready to crush your fitness goals today?',
-     'dashboard.overview': "Today's Overview",
-     'dashboard.calories': 'Calories left',
-     'dashboard.water': 'Water',
-     'dashboard.workouts': 'Workouts remaining',
-     'dashboard.steps': 'Steps',
-     'dashboard.workout.plan': "Today's AI Workout Plan",
-     'dashboard.meal.plan': "Today's AI Meal Plan",
-     'dashboard.view.full.workout': 'View Full AI Workout',
-     'dashboard.view.full.meal': 'View Full AI Meal Plan',
-    
+
+    // Dashboard
+    'dashboard.greeting': 'Good Morning',
+    'dashboard.subtitle': 'Ready to crush your fitness goals today?',
+    'dashboard.overview': "Today's Overview",
+    'dashboard.calories': 'Calories left',
+    'dashboard.water': 'Water',
+    'dashboard.workouts': 'Workouts remaining',
+    'dashboard.steps': 'Steps',
+    'dashboard.workout.plan': "Today's AI Workout Plan",
+    'dashboard.meal.plan': "Today's AI Meal Plan",
+    'dashboard.view.full.workout': 'View Full AI Workout',
+    'dashboard.view.full.meal': 'View Full AI Meal Plan',
+
     // Navigation
     'nav.home': 'Home',
     'nav.diet': 'AI Diet',
     'nav.gym': 'Gym',
     'nav.workout': 'AI Workout',
     'nav.progress': 'Progress',
-    
+
     // Sidebar
     'sidebar.profile': 'Profile',
     'sidebar.settings': 'Settings',
@@ -82,17 +82,17 @@ const translations = {
     'sidebar.tapToChange': 'Tap to change',
     'sidebar.upgrade': 'UPGRADE',
     'sidebar.appName': 'PrimeForm',
-    
+
     // Common
     'common.loading': 'Loading Prime Form...',
     'common.error': 'Something went wrong',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
     'common.save': 'Save',
-    
+
     // Brand
     'brand.primeform': 'PRIMEFORM',
-    
+
     // Settings Page
     'settings.notification.preferences': 'Notification Preferences',
     'settings.push.notifications': 'Push Notifications',
@@ -122,7 +122,7 @@ const translations = {
     'settings.app.language': 'Language',
     'settings.app.language.english': 'English',
     'settings.app.language.urdu': 'اردو',
-    
+
     // Validation messages
     'validation.name.required': 'Name is required',
     'validation.name.minLength': 'Name must be at least 2 characters',
@@ -135,7 +135,7 @@ const translations = {
     'validation.password.number': 'One number required',
     'validation.confirm.required': 'Please confirm your password',
     'validation.confirm.mismatch': 'Passwords do not match',
-    
+
     // Toast messages
     'toast.signup.success': 'Account created successfully!',
     'toast.signup.error': 'Failed to create account',
@@ -149,13 +149,13 @@ const translations = {
     'toast.otp.error': 'Invalid or expired OTP',
     'toast.password.success': 'Password reset successfully!',
     'toast.password.error': 'Failed to reset password',
-    
+
     // Forgot Password
     'auth.forgot.title': 'Forgot Password',
     'auth.forgot.description': 'Enter your email address and we\'ll send you a link to reset your password.',
     'auth.forgot.button': 'Send OTP',
     'auth.forgot.sent': 'OTP Sent',
-    
+
     // OTP Verification
     'auth.otp.title': 'Verify OTP',
     'auth.otp.description': 'Enter the 6-digit code sent to your email',
@@ -171,38 +171,38 @@ const translations = {
     'auth.otp.wait': 'Too many attempts. Wait',
     'auth.otp.minutes': 'minute(s)',
     'auth.otp.failed': 'Failed to resend code',
-    
+
     // Reset Password
     'auth.reset.title': 'Reset Password',
     'auth.reset.description': 'Enter your new password',
     'auth.reset.new': 'New Password',
     'auth.reset.confirm': 'Confirm New Password',
     'auth.reset.button': 'Reset Password',
-    
+
     // Dashboard Stats
     'dashboard.stats.calories': 'Calories left',
     'dashboard.stats.water': 'Water',
     'dashboard.stats.workouts': 'Workouts remaining',
     'dashboard.stats.steps': 'Steps',
-    
+
     // Workout Card
     'workout.pushups': 'Push-Ups',
     'workout.reps': 'reps',
     'workout.sets': 'sets',
-    
+
     // Meal Card
     'meal.breakfast': 'Breakfast',
-    'meal.lunch': 'Lunch', 
+    'meal.lunch': 'Lunch',
     'meal.dinner': 'Dinner',
     'meal.snack': 'Snack',
     'meal.calories': 'calories',
     'meal.protein': 'Protein',
     'meal.carbs': 'Carbs',
     'meal.fat': 'Fat',
-    
+
     // App Branding
     'app.name': 'Prime Form',
-    
+
     // Gym Section
     'gym.title': 'Gym Exercises',
     'gym.subtitle': 'Choose your section and start your fitness journey',
@@ -212,7 +212,7 @@ const translations = {
     'gym.filterByLocation': 'Filter by Location',
     'gym.noExercises': 'No exercises found',
     'gym.noExercisesSubtitle': 'Try selecting a different target area or section',
-    
+
     // Exercise Names
     'exercise.pushups': 'Push-ups',
     'exercise.pullups': 'Pull-ups',
@@ -234,7 +234,7 @@ const translations = {
     'exercise.yoga': 'Yoga',
     'exercise.pilates': 'Pilates',
     'exercise.dance_cardio': 'Dance Cardio',
-    
+
     // Exercise Categories
     'category.chest': 'chest',
     'category.back': 'back',
@@ -246,7 +246,7 @@ const translations = {
     'category.full_body': 'full body',
     'category.glutes': 'glutes',
     'category.flexibility': 'flexibility',
-    
+
     // Muscle Groups
     'muscle.chest': 'chest',
     'muscle.triceps': 'triceps',
@@ -281,9 +281,9 @@ const translations = {
     'onboarding.description': '',
     'onboarding.start': 'Start',
     'onboarding.cancel': 'Cancel',
-    
+
     // Workout Page
-    
+
     // Diet Page
     'diet.page.title': 'AI Diet Plan',
     'diet.page.subtitle': 'Your personalized AI nutrition guide',
@@ -301,7 +301,7 @@ const translations = {
     'diet.page.features.tracking.text': 'AI monitor your nutrition journey and see results',
     'diet.page.content.title': 'Your Personalized AI Diet Plan',
     'diet.page.content.description': 'Based on your profile, your personalized AI diet plan will appear here with detailed meal suggestions, nutrition information, and progress tracking.',
-    
+
     // Workout Page
     'workout.page.title': 'AI Workout Plan',
     'workout.page.subtitle': 'Your personalized AI fitness guide',
@@ -319,7 +319,7 @@ const translations = {
     'workout.page.features.tracking.text': 'AI track your workouts and maintain consistency',
     'workout.page.content.title': 'Your Personalized AI Workout Plan',
     'workout.page.content.description': 'Based on your profile, your personalized AI workout plan will appear here with exercise routines, sets, reps, and progress tracking.',
-    
+
     // Diet & Workout Page Content
     'diet.hero.title': 'AI Smart Diet Planning',
     'diet.hero.subtitle': 'Personalized AI nutrition plans tailored to your goals and lifestyle',
@@ -334,7 +334,7 @@ const translations = {
     'diet.features.tracking.title': 'Easy Tracking',
     'diet.features.tracking.text': 'AI monitor your progress and stay accountable',
     'diet.magic.message': 'You are one click away from AI magic! ✨',
-    
+
     'workout.hero.title': 'AI Smart Workout Plans',
     'workout.hero.subtitle': 'Personalized AI training programs designed for your fitness level and goals',
     'workout.generate.button': 'Create My AI Workout Plan',
@@ -348,7 +348,7 @@ const translations = {
     'workout.features.trackable.title': 'Trackable',
     'workout.features.trackable.text': 'AI monitor progress and stay motivated with detailed analytics',
     'workout.magic.message': 'You are one click away from AI magic! ✨',
-    
+
     // Profile Summary
     'profile.summary.title': 'Your Profile Summary',
     'profile.summary.goal': 'Goal:',
@@ -360,7 +360,7 @@ const translations = {
     'profile.summary.medical.conditions': 'Medical Conditions:',
     'profile.summary.none': 'None',
     'profile.summary.confirm.generate': 'Confirm Generate',
-    
+
     // Dropdown Options
     'dropdown.select.country': '🌍 Select your country',
     'dropdown.select.gender': '👤 Select gender',
@@ -368,14 +368,14 @@ const translations = {
     'dropdown.select.occupation': '💼 Select occupation type',
     'dropdown.select.equipment': '🏋️ Select available equipment',
     'dropdown.select.diet': '🥗 Select diet preference',
-    
+
     // Body Goals
     'goal.lose.fat': '🔥 Lose Fat',
     'goal.gain.muscle': '💪 Gain Muscle',
     'goal.maintain.weight': '⚖️ Maintain Weight',
     'goal.general.training': '🏃‍♂️ General Training',
     'goal.improve.fitness': '🌟 Improve Fitness',
-    
+
     // Occupation Types
     'occupation.sedentary': '🪑 Sedentary Desk Job',
     'occupation.active': '🏃‍♂️ Active Job',
@@ -383,21 +383,21 @@ const translations = {
     'occupation.student': '📚 Student',
     'occupation.retired': '🌅 Retired',
     'occupation.other': '🔧 Other',
-    
+
     // Equipment Options
     'equipment.none': '❌ None',
     'equipment.dumbbells': '💪 Basic Dumbbells',
     'equipment.bands': '🎯 Resistance Bands',
     'equipment.home.gym': '🏠 Home Gym',
     'equipment.full.gym': '🏢 Full Gym Access',
-    
+
     // Diet Preferences
     'diet.vegetarian': '🥬 Vegetarian',
     'diet.non.vegetarian': '🍖 Non-Vegetarian',
     'diet.vegan': '🌱 Vegan',
     'diet.flexitarian': '🥄 Flexitarian',
     'diet.pescatarian': '🐟 Pescatarian',
-    
+
     // Validation Messages
     'validation.country.required': 'Please select your country',
     'validation.age.required': 'Please enter your age',
@@ -408,19 +408,19 @@ const translations = {
     'validation.occupation.required': 'Please select your occupation type',
     'validation.equipment.required': 'Please select your available equipment',
     'validation.diet.required': 'Please select your diet preference',
-    
+
     // Input Placeholders
     'placeholder.height': '175 cm or 5\'8 inches',
     'placeholder.weight': '70 kg or 154 lbs',
     'placeholder.age': '25',
     'placeholder.medical': 'e.g., diabetes, hypertension, PCOS, heart issues (or none)',
-    
+
     // Step Titles
     'step.personal.info': 'Personal Information',
     'step.physical.info': 'Physical Information',
     'step.lifestyle.health': 'Lifestyle & Health',
     'step.diet.preferences': 'Diet Preferences',
-    
+
     // Alert Messages
     'alert.incomplete.title': 'Incomplete Information',
     'alert.incomplete.message': 'Please fill in all required fields in {step} before continuing.',
@@ -428,7 +428,7 @@ const translations = {
     'alert.missing.message': 'Please fill in all required fields before completing.',
     'alert.invalid.age': 'Invalid Age',
     'alert.invalid.age.message': 'Please enter a valid age between 13 and 120 years.',
-    
+
     // User Info Modal
     'userinfo.title': 'Personalize Your AI Experience',
     'userinfo.step': 'AI Step',
@@ -462,7 +462,7 @@ const translations = {
     'userinfo.lifestyle.health': 'AI Lifestyle & Health',
     'userinfo.diet.preferences': 'AI Diet Preferences',
     'userinfo.select.diet': 'Select your AI diet preference',
-    
+
     // Requirements Panel
     'requirements.title': 'Email & Password Requirements',
     'requirements.email.section': '📧 Email Format:',
@@ -472,16 +472,16 @@ const translations = {
     'requirements.password.length': '• At least 6 characters long',
     'requirements.password.letter': '• Contains at least one letter (a-z, A-Z)',
     'requirements.password.number': '• Contains at least one number (0-9)',
-    
+
     // Common User
     'common.user': 'User',
-    
+
     // Gender Options
     'gender.select': 'Select your gender',
     'gender.male': 'Male',
     'gender.female': 'Female',
     'gender.other': 'Other',
-    
+
     // Permission Modal
     'permission.title': 'Welcome to AI PrimeForm! 🎉',
     'permission.subtitle': 'To provide you with personalized AI diet and workout plans, we need to collect some information about you.',
@@ -495,7 +495,7 @@ const translations = {
     'profile.sections.personal': 'AI Personal Information',
     'profile.sections.goals': 'AI Goals & Preferences',
     'profile.sections.lifestyle': 'AI Lifestyle & Health',
-    'profile.fields.country': 'Country', 
+    'profile.fields.country': 'Country',
     'profile.fields.age': 'Age',
     'profile.fields.gender': 'Gender',
     'profile.fields.height': 'Height',
@@ -511,7 +511,7 @@ const translations = {
     'profile.save': 'Save Profile',
     'profile.notSpecified': 'Not specified',
     'profile.select': 'AI Select...',
-    
+
     // Location Labels
     'location.home': 'Home',
     'location.gym': 'Gym',
@@ -527,7 +527,7 @@ const translations = {
     'auth.login.forgot': 'پاس ورڈ بھول گئے؟',
     'auth.login.signup': 'سائن اپ',
     'auth.login.noAccount': 'کیا آپ کا اکاؤنٹ نہیں ہے؟ ',
-    
+
     'auth.signup.title': 'اکاؤنٹ بنائیں',
     'auth.signup.subtitle': 'آج ہی پرائم فارم میں شامل ہوں',
     'auth.signup.name': 'صارف نام',
@@ -537,32 +537,32 @@ const translations = {
     'auth.signup.button': 'سائن اپ',
     'auth.signup.hasAccount': 'پہلے سے اکاؤنٹ ہے؟ ',
     'auth.signup.login': 'لاگ ان',
-    
+
     // Language selection
     'language.choose': 'اپنی پسندیدہ زبان منتخب کریں',
     'language.urdu': 'اردو',
     'language.english': 'English',
-    
-         // Dashboard
-     'dashboard.greeting': 'صبح بخیر',
-     'dashboard.subtitle': 'کیا آپ آج اپنے فٹنس اہداف کو حاصل کرنے کے لیے تیار ہیں؟',
-     'dashboard.overview': 'آج کا جائزہ',
-     'dashboard.calories': 'باقی کیلوریز',
-     'dashboard.water': 'پانی',
-     'dashboard.workouts': 'باقی ورکاؤٹس',
-     'dashboard.steps': 'قدم',
-     'dashboard.workout.plan': 'آج کا AI ورکاؤٹ پلان',
-     'dashboard.meal.plan': 'آج کا AI کھانے کا پلان',
-     'dashboard.view.full.workout': 'مکمل AI ورکاؤٹ دیکھیں',
-     'dashboard.view.full.meal': 'مکمل AI کھانے کا پلان دیکھیں',
-    
+
+    // Dashboard
+    'dashboard.greeting': 'صبح بخیر',
+    'dashboard.subtitle': 'کیا آپ آج اپنے فٹنس اہداف کو حاصل کرنے کے لیے تیار ہیں؟',
+    'dashboard.overview': 'آج کا جائزہ',
+    'dashboard.calories': 'باقی کیلوریز',
+    'dashboard.water': 'پانی',
+    'dashboard.workouts': 'باقی ورکاؤٹس',
+    'dashboard.steps': 'قدم',
+    'dashboard.workout.plan': 'آج کا AI ورکاؤٹ پلان',
+    'dashboard.meal.plan': 'آج کا AI کھانے کا پلان',
+    'dashboard.view.full.workout': 'مکمل AI ورکاؤٹ دیکھیں',
+    'dashboard.view.full.meal': 'مکمل AI کھانے کا پلان دیکھیں',
+
     // Navigation
     'nav.home': 'ہوم',
     'nav.diet': 'ذہین ڈائٹ',
     'nav.gym': 'جم',
     'nav.workout': 'ذہین ورکاؤٹ',
     'nav.progress': 'پیش قدمی',
-    
+
     // Sidebar
     'sidebar.profile': 'پروفائل',
     'sidebar.settings': 'سیٹنگز',
@@ -576,17 +576,17 @@ const translations = {
     'sidebar.tapToChange': 'تبدیل کرنے کے لیے ٹیپ کریں',
     'sidebar.upgrade': 'اپ گریڈ',
     'sidebar.appName': 'پرائم فارم',
-    
+
     // Common
     'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
     'common.error': 'کچھ غلط ہو گیا',
     'common.retry': 'دوبارہ کوشش',
     'common.cancel': 'منسوخ',
     'common.save': 'محفوظ',
-    
+
     // Brand
     'brand.primeform': 'پرائم فارم',
-    
+
     // Settings Page
     'settings.notification.preferences': 'نوٹیفیکیشن کی ترجیحات',
     'settings.push.notifications': 'پش نوٹیفیکیشنز',
@@ -616,7 +616,7 @@ const translations = {
     'settings.app.language': 'زبان',
     'settings.app.language.english': 'انگریزی',
     'settings.app.language.urdu': 'اردو',
-    
+
     // Validation messages
     'validation.name.required': 'نام ضروری ہے',
     'validation.name.minLength': 'نام کم از کم 2 حروف کا ہونا چاہیے',
@@ -629,7 +629,7 @@ const translations = {
     'validation.password.number': 'ایک نمبر ضروری ہے',
     'validation.confirm.required': 'برائے کرم پاس ورڈ کی تصدیق کریں',
     'validation.confirm.mismatch': 'پاس ورڈ میں مطابقت نہیں',
-    
+
     // Toast messages
     'toast.signup.success': 'اکاؤنٹ کامیابی سے بن گیا!',
     'toast.signup.error': 'اکاؤنٹ بنانے میں ناکامی',
@@ -643,13 +643,13 @@ const translations = {
     'toast.otp.error': 'غلط یا ختم ہو چکا OTP',
     'toast.password.success': 'پاس ورڈ کامیابی سے ری سیٹ ہو گیا!',
     'toast.password.error': 'پاس ورڈ ری سیٹ کرنے میں ناکامی',
-    
+
     // Forgot Password
     'auth.forgot.title': 'پاس ورڈ بھول گئے',
     'auth.forgot.description': 'اپنا ای میل ایڈریس درج کریں اور ہم آپ کو پاس ورڈ ری سیٹ کرنے کا لنک بھیجیں گے۔',
     'auth.forgot.button': 'OTP بھیجیں',
     'auth.forgot.sent': 'OTP بھیج دیا',
-    
+
     // OTP Verification
     'auth.otp.title': 'OTP کی تصدیق',
     'auth.otp.description': 'آپ کے ای میل پر بھیجا گیا 6 ہندسوں کا کوڈ درج کریں',
@@ -665,25 +665,25 @@ const translations = {
     'auth.otp.wait': 'بہت زیادہ کوششیں۔ انتظار کریں',
     'auth.otp.minutes': 'منٹ',
     'auth.otp.failed': 'کوڈ دوبارہ بھیجنے میں ناکامی',
-    
+
     // Reset Password
     'auth.reset.title': 'پاس ورڈ ری سیٹ',
     'auth.reset.description': 'اپنا نیا پاس ورڈ درج کریں',
     'auth.reset.new': 'نیا پاس ورڈ',
     'auth.reset.confirm': 'نیا پاس ورڈ تصدیق',
     'auth.reset.button': 'پاس ورڈ ری سیٹ',
-    
+
     // Dashboard Stats
     'dashboard.stats.calories': 'باقی کیلوریز',
     'dashboard.stats.water': 'پانی',
     'dashboard.stats.workouts': 'باقی ورکاؤٹس',
     'dashboard.stats.steps': 'قدم',
-    
+
     // Workout Card
     'workout.pushups': 'پش اپس',
     'workout.reps': 'بار',
     'workout.sets': 'سیٹس',
-    
+
     // Meal Card
     'meal.breakfast': 'ناشتہ',
     'meal.lunch': 'دوپہر کا کھانا',
@@ -693,22 +693,22 @@ const translations = {
     'meal.protein': 'پروٹین',
     'meal.carbs': 'کاربس',
     'meal.fat': 'چربی',
-    
+
     // App Branding
     'app.name': 'پرائم فارم',
-    
+
     // Onboarding
     'onboarding.title': 'کیا آپ اپنی AI ڈائٹ اور ورکاؤٹ پلان کو ذاتی بنانے کے لیے AI سے چلنے والے سوالات کے لیے تیار ہیں؟',
     'onboarding.description': '',
     'onboarding.start': 'شروع کریں',
     'onboarding.cancel': 'منسوخ',
-    
+
     // Workout Page
     'workout.page.comingSoon': 'ورکاؤٹ ٹریکنگ جلد آ رہی ہے!',
     'workout.page.comingSoonDesc': 'ہم آپ کی پیش رفت کو ٹریک کرنے اور آپ کے فٹنس اہداف کو حاصل کرنے میں مدد کے لیے شاندار ورکاؤٹ فیچرز بنا رہے ہیں۔',
-    
 
-    
+
+
     // User Info Modal
     'userinfo.title': 'اپنی تجربہ کو پروردہ کریں',
     'userinfo.step': 'قدم',
@@ -742,7 +742,7 @@ const translations = {
     'userinfo.lifestyle.health': 'لافک اور صحت',
     'userinfo.diet.preferences': 'خوراک پسندیاں',
     'userinfo.select.diet': 'اپنی خوراک پسندی دیکھیں',
-    
+
     // Requirements Panel
     'requirements.title': 'ای میل اور پاس ورڈ کی ضروریات',
     'requirements.email.section': '📧 ای میل فارمیٹ:',
@@ -752,16 +752,16 @@ const translations = {
     'requirements.password.length': '• کم از کم 6 حروف لمبا ہونا چاہیے',
     'requirements.password.letter': '• کم از کم ایک لیٹر (a-z, A-Z) شامل ہونا چاہیے',
     'requirements.password.number': '• کم از کم ایک نمبر (0-9) شامل ہونا چاہیے',
-    
+
     // Common User
     'common.user': 'صارف',
-    
+
     // Gender Options
     'gender.select': 'اپنا جنس منتخب کریں',
     'gender.male': 'مرد',
     'gender.female': 'خوراں',
     'gender.other': 'دیگر',
-    
+
     // Permission Modal
     'permission.title': 'پرائم فارم میں خوش آمدید! 🎉',
     'permission.subtitle': 'آپ کو صرف پروردہ خوراک اور ورکاؤٹ پلان کے لیے آپ کے لیے کچھ معلومات لےنا پڑے گی۔',
@@ -785,7 +785,7 @@ const translations = {
     'profile.fields.occupation': 'کام',
     'profile.fields.equipment': 'موجودہ ادائیگی',
     'profile.fields.medical': 'میڈیکل سمندریات',
-    
+
     // Diet Page
     'diet.page.title': 'ڈائٹ پلان',
     'diet.page.subtitle': 'آپ کی ذاتی غذائی رہنمائی',
@@ -803,7 +803,7 @@ const translations = {
     'diet.page.features.tracking.text': 'اپنی غذائی سفر کی نگرانی کریں اور نتائج دیکھیں',
     'diet.page.content.title': 'آپ کا ذاتی ڈائٹ پلان',
     'diet.page.content.description': 'آپ کی پروفائل کے مطابق، آپ کا ذاتی ڈائٹ پلان یہاں تفصیلی کھانے کے مشوروں، غذائی معلومات اور پیش رفت کی نگرانی کے ساتھ ظاہر ہوگا۔',
-    
+
     // Workout Page
     'workout.page.title': 'ورکاؤٹ پلان',
     'workout.page.subtitle': 'آپ کی ذاتی فٹنس رہنمائی',
@@ -821,7 +821,7 @@ const translations = {
     'workout.page.features.tracking.text': 'اپنے ورکاؤٹس کی نگرانی کریں اور مستقل مزاجی برقرار رکھیں',
     'workout.page.content.title': 'آپ کا ذاتی ورکاؤٹ پلان',
     'workout.page.content.description': 'آپ کی پروفائل کے مطابق، آپ کا ذاتی ورکاؤٹ پلان یہاں ورزش کی روٹینز، سیٹس، ریپس اور پیش رفت کی نگرانی کے ساتھ ظاہر ہوگا۔',
-    
+
     // Diet & Workout Page Content
     'diet.hero.title': 'ذہین ڈائٹ پلاننگ',
     'diet.hero.subtitle': 'آپ کے اہداف اور طرز زندگی کے مطابق ذاتی غذائی پلان',
@@ -836,7 +836,7 @@ const translations = {
     'diet.features.tracking.title': 'آسان ٹریکنگ',
     'diet.features.tracking.text': 'اپنی پیش رفت کی نگرانی کریں اور ذمہ دار رہیں',
     'diet.magic.message': 'آپ جادو سے صرف ایک کلک دور ہیں! ✨',
-    
+
     'workout.hero.title': 'ذہین ورکاؤٹ پلانز',
     'workout.hero.subtitle': 'آپ کی فٹنس لیول اور اہداف کے لیے ڈیزائن کردہ ذاتی تربیتی پروگرام',
     'workout.generate.button': 'میرا ورکاؤٹ پلان بنائیں',
@@ -850,7 +850,7 @@ const translations = {
     'workout.features.trackable.title': 'ٹریک کرنے کے قابل',
     'workout.features.trackable.text': 'تفصیلی تجزیات کے ساتھ پیش رفت کی نگرانی کریں اور حوصلہ برقرار رکھیں',
     'workout.magic.message': 'آپ جادو سے صرف ایک کلک دور ہیں! ✨',
-    
+
     // Profile Summary
     'profile.summary.title': 'آپ کی پروفائل کا خلاصہ',
     'profile.summary.goal': 'مقصد:',
@@ -862,7 +862,7 @@ const translations = {
     'profile.summary.medical.conditions': 'طبی حالات:',
     'profile.summary.none': 'کوئی نہیں',
     'profile.summary.confirm.generate': 'تصدیق کریں',
-    
+
     // Dropdown Options
     'dropdown.select.country': '🌍 اپنا ملک منتخب کریں',
     'dropdown.select.gender': '👤 جنس منتخب کریں',
@@ -870,14 +870,14 @@ const translations = {
     'dropdown.select.occupation': '💼 کام کی قسم منتخب کریں',
     'dropdown.select.equipment': '🏋️ دستیاب سامان منتخب کریں',
     'dropdown.select.diet': '🥗 غذائی ترجیح منتخب کریں',
-    
+
     // Body Goals
     'goal.lose.fat': '🔥 چربی کم کریں',
     'goal.gain.muscle': '💪 پٹھے بنائیں',
     'goal.maintain.weight': '⚖️ وزن برقرار رکھیں',
     'goal.general.training': '🏃‍♂️ عمومی تربیت',
     'goal.improve.fitness': '🌟 فٹنس بہتر کریں',
-    
+
     // Occupation Types
     'occupation.sedentary': '🪑 بیٹھے ہوئے ڈیسک کا کام',
     'occupation.active': '🏃‍♂️ متحرک کام',
@@ -885,21 +885,21 @@ const translations = {
     'occupation.student': '📚 طالب علم',
     'occupation.retired': '🌅 ریٹائرڈ',
     'occupation.other': '🔧 دیگر',
-    
+
     // Equipment Options
     'equipment.none': '❌ کوئی نہیں',
     'equipment.dumbbells': '💪 بنیادی ڈمبلز',
     'equipment.bands': '🎯 مزاحمتی بینڈز',
     'equipment.home.gym': '🏠 گھریلو جم',
     'equipment.full.gym': '🏢 مکمل جم تک رسائی',
-    
+
     // Diet Preferences
     'diet.vegetarian': '🥬 سبزی خور',
     'diet.non.vegetarian': '🍖 سبزی خور نہیں',
     'diet.vegan': '🌱 ویگن',
     'diet.flexitarian': '🥄 فلیکسیٹیرین',
     'diet.pescatarian': '🐟 پیسکیٹیرین',
-    
+
     // Validation Messages
     'validation.country.required': 'برائے کرم اپنا ملک منتخب کریں',
     'validation.age.required': 'برائے کرم اپنی عمر درج کریں',
@@ -910,13 +910,13 @@ const translations = {
     'validation.occupation.required': 'برائے کرم اپنی کام کی قسم منتخب کریں',
     'validation.equipment.required': 'برائے کرم اپنا دستیاب سامان منتخب کریں',
     'validation.diet.required': 'برائے کرم اپنی غذائی ترجیح منتخب کریں',
-    
+
     // Step Titles
     'step.personal.info': 'ذاتی معلومات',
     'step.physical.info': 'جسمانی معلومات',
     'step.lifestyle.health': 'طرز زندگی اور صحت',
     'step.diet.preferences': 'غذائی ترجیحات',
-    
+
     // Alert Messages
     'alert.incomplete.title': 'نامکمل معلومات',
     'alert.incomplete.message': 'برائے کرم جاری رکھنے سے پہلے {step} میں تمام ضروری فیلڈز پُر کریں۔',
@@ -924,13 +924,13 @@ const translations = {
     'alert.missing.message': 'برائے کرم مکمل کرنے سے پہلے تمام ضروری فیلڈز پُر کریں۔',
     'alert.invalid.age': 'غلط عمر',
     'alert.invalid.age.message': 'برائے کرم 13 سے 120 سال کے درمیان صحیح عمر درج کریں۔',
-    
+
     // Input Placeholders
     'placeholder.height': '175 سینٹی میٹر یا 5\'8 انچ',
     'placeholder.weight': '70 کلوگرام یا 154 پاؤنڈ',
     'placeholder.age': '25',
     'placeholder.medical': 'جیسے ذیابیطس، ہائی بلڈ پریشر، PCOS، دل کے مسائل (یا کوئی نہیں)',
-    
+
     // Profile Actions
     'profile.title': 'پروفائل',
     'profile.edit': 'ترمیم',
@@ -938,7 +938,7 @@ const translations = {
     'profile.save': 'محفوظ کریں',
     'profile.notSpecified': 'متعلق نہیں',
     'profile.select': 'منتخب کریں...',
-    
+
     // Gym Section
     'gym.title': '💪 جم ایکسرسائز',
     'gym.subtitle': 'اپنا سیکشن منتخب کریں اور اپنا فٹنس سفر شروع کریں',
@@ -948,7 +948,7 @@ const translations = {
     'gym.filterByLocation': 'مقام کے مطابق فلٹر کریں',
     'gym.noExercises': 'کوئی ورزش نہیں ملی',
     'gym.noExercisesSubtitle': 'مختلف ٹارگٹ ایریا یا سیکشن منتخب کرنے کی کوشش کریں',
-    
+
     // Exercise Names
     'exercise.pushups': 'پش اپس',
     'exercise.pullups': 'پل اپس',
@@ -970,7 +970,7 @@ const translations = {
     'exercise.yoga': 'یوگا',
     'exercise.pilates': 'پائلیٹس',
     'exercise.dance_cardio': 'ڈانس کارڈیو',
-    
+
     // Exercise Categories
     'category.chest': 'سینہ',
     'category.back': 'کمر',
@@ -982,7 +982,7 @@ const translations = {
     'category.full_body': 'پورا جسم',
     'category.glutes': 'کولہے',
     'category.flexibility': 'لچک',
-    
+
     // Muscle Groups
     'muscle.chest': 'سینہ',
     'muscle.triceps': 'ٹرائسپس',
@@ -1011,7 +1011,7 @@ const translations = {
     'exercise.detail.beginner': 'ابتدائی',
     'exercise.detail.medium': 'درمیانہ',
     'exercise.detail.advanced': 'ایڈوانس',
-    
+
     // Location Labels
     'location.home': 'Home',
     'location.gym': 'Gym',
@@ -1029,13 +1029,13 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
         const savedLanguage = await AsyncStorage.getItem('primeform_language_selected');
         const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
         const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
-        
+
         console.log('🌍 LanguageContext: Loading language from storage:', {
           savedLanguage,
           deviceLanguageSelected,
           hasEverSignedUp
         });
-        
+
         // CRITICAL: If user has ever signed up, always mark language as selected
         // According to workflow Phase 4: After sign-up, language modal NEVER appears again
         if (hasEverSignedUp === 'true') {
@@ -1048,7 +1048,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
           await AsyncStorage.setItem('primeform_device_language_selected', 'true');
           return;
         }
-        
+
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) {
           setLanguage(savedLanguage);
           setHasSelectedLanguage(true);

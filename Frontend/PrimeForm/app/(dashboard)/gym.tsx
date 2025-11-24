@@ -10,6 +10,8 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { useToast } from '../../src/context/ToastContext';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 // Using Expo Vector Icons instead
 // import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,55 +20,55 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Enhanced workout categories with correct exercise counts and elegant design
 const workoutCategories = [
-  { 
-    id: 'chest', 
-    name: 'Chest', 
-    emoji: '💪', 
+  {
+    id: 'chest',
+    name: 'Chest',
+    emoji: '💪',
     description: 'Build powerful pecs',
     exerciseCount: 8,
     gradientColors: ['#667eea', '#764ba2'],
     iconBg: '#667eea'
   },
-  { 
-    id: 'back', 
-    name: 'Back', 
-    emoji: '🏋️', 
+  {
+    id: 'back',
+    name: 'Back',
+    emoji: '🏋️',
     description: 'Strengthen your spine',
     exerciseCount: 6,
     gradientColors: ['#f093fb', '#f5576c'],
     iconBg: '#f093fb'
   },
-  { 
-    id: 'arms', 
-    name: 'Arms', 
-    emoji: '💪', 
+  {
+    id: 'arms',
+    name: 'Arms',
+    emoji: '💪',
     description: 'Sculpt strong arms',
     exerciseCount: 5,
     gradientColors: ['#4facfe', '#00f2fe'],
     iconBg: '#4facfe'
   },
-  { 
-    id: 'legs', 
-    name: 'Legs', 
-    emoji: '🦵', 
+  {
+    id: 'legs',
+    name: 'Legs',
+    emoji: '🦵',
     description: 'Power up your legs',
     exerciseCount: 6,
     gradientColors: ['#43e97b', '#38f9d7'],
     iconBg: '#43e97b'
   },
-  { 
-    id: 'abs', 
-    name: 'Abs', 
-    emoji: '🔥', 
+  {
+    id: 'abs',
+    name: 'Abs',
+    emoji: '🔥',
     description: 'Core strength & definition',
     exerciseCount: 7,
     gradientColors: ['#fa709a', '#fee140'],
     iconBg: '#fa709a'
   },
-  { 
-    id: 'full_body', 
-    name: 'Full Body', 
-    emoji: '🚀', 
+  {
+    id: 'full_body',
+    name: 'Full Body',
+    emoji: '🚀',
     description: 'Complete workout',
     exerciseCount: 8,
     gradientColors: ['#a8edea', '#fed6e3'],
@@ -79,7 +81,9 @@ export default function GymScreen() {
   const { t } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
+  const { unreadCount } = useNotifications();
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [selectedGender, setSelectedGender] = useState<'men' | 'women'>('men');
 
   const handleProfilePress = () => {
@@ -126,6 +130,8 @@ export default function GymScreen() {
       router.push('/(dashboard)/diet');
     } else if (tab === 'workout') {
       router.push('/(dashboard)/workout');
+    } else if (tab === 'progress') {
+      router.push('/(dashboard)/progress');
     } else {
       console.log('Feature coming soon:', tab);
     }
@@ -143,16 +149,14 @@ export default function GymScreen() {
     });
   };
 
-
-
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
         <DashboardHeader
           userName={user?.fullName || 'User'}
           onProfilePress={handleProfilePress}
-          onNotificationPress={() => console.log('Notifications pressed')}
-          notificationCount={0}
+          onNotificationPress={() => setShowNotificationModal(true)}
+          notificationCount={unreadCount}
         />
 
         <ScrollView
@@ -247,7 +251,7 @@ export default function GymScreen() {
                       <View style={[styles.categoryIconContainer, { backgroundColor: category.iconBg + '20' }]}>
                         <Text style={styles.categoryEmoji}>{category.emoji}</Text>
                       </View>
-                      
+
                       <View style={styles.categoryTextContainer}>
                         <Text style={styles.categoryName}>{category.name}</Text>
                         <Text style={styles.categoryDescription}>{category.description}</Text>
@@ -255,7 +259,7 @@ export default function GymScreen() {
                           <Text style={styles.exerciseCount}>{category.exerciseCount} exercises</Text>
                         </View>
                       </View>
-                      
+
                       <View style={styles.categoryArrowContainer}>
                         <LinearGradient
                           colors={category.gradientColors as [string, string]}
@@ -288,6 +292,11 @@ export default function GymScreen() {
           userInfo={null}
           badges={[]}
         />
+
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -304,7 +313,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: spacing.xl,
   },
-  
+
   // Hero Section
   heroSection: {
     marginHorizontal: spacing.lg,

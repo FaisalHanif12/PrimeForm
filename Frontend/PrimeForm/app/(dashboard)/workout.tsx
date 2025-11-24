@@ -18,6 +18,8 @@ import LoadingModal from '../../src/components/LoadingModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -25,9 +27,11 @@ export default function WorkoutScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { user } = useAuthContext();
+  const { unreadCount } = useNotifications();
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
@@ -43,7 +47,7 @@ export default function WorkoutScreen() {
   // Helper function to translate dynamic values (same approach as ProfilePage)
   const translateValue = (value: string, type: 'goal' | 'occupation' | 'equipment') => {
     console.log('🔍 Workout translateValue called with:', { value, type, language });
-    
+
     if (language === 'ur' && value) {
       // Use the same arrays as ProfilePage for consistency
       const bodyGoals = [
@@ -53,7 +57,7 @@ export default function WorkoutScreen() {
         { en: 'General Training', ur: 'عمومی تربیت' },
         { en: 'Improve Fitness', ur: 'فٹنس بہتر کریں' }
       ];
-      
+
       const occupationTypes = [
         { en: 'Sedentary Desk Job', ur: 'بیٹھے ہوئے ڈیسک کا کام' },
         { en: 'Active Job', ur: 'متحرک کام' },
@@ -62,7 +66,7 @@ export default function WorkoutScreen() {
         { en: 'Retired', ur: 'ریٹائرڈ' },
         { en: 'Other', ur: 'دیگر' }
       ];
-      
+
       const equipmentOptions = [
         { en: 'None', ur: 'کوئی نہیں' },
         { en: 'Basic Dumbbells', ur: 'بنیادی ڈمبلز' },
@@ -70,7 +74,7 @@ export default function WorkoutScreen() {
         { en: 'Home Gym', ur: 'گھریلو جم' },
         { en: 'Full Gym Access', ur: 'مکمل جم تک رسائی' }
       ];
-      
+
       let options: { en: string; ur: string }[];
       if (type === 'goal') {
         options = bodyGoals;
@@ -81,7 +85,7 @@ export default function WorkoutScreen() {
       } else {
         return value;
       }
-      
+
       // Find the matching option and return Urdu text
       const option = options.find(opt => opt.en === value);
       if (option) {
@@ -104,7 +108,7 @@ export default function WorkoutScreen() {
         } else {
           await loadUserInfo();
         }
-        
+
         // Try to load workout plan from database
         console.log('📱 Attempting to load workout plan from database...');
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
@@ -121,7 +125,7 @@ export default function WorkoutScreen() {
         setInitialLoadComplete(true);
       }
     };
-    
+
     initializeData();
   }, []);
 
@@ -148,10 +152,10 @@ export default function WorkoutScreen() {
       case 'edit_profile':
         setShowUserInfoModal(true);
         break;
-                    case 'settings':
+      case 'settings':
         router.push('/(dashboard)/settings');
         break;
-              case 'subscription':
+      case 'subscription':
         router.push('/(dashboard)/subscription');
         break;
       case 'contact':
@@ -162,10 +166,10 @@ export default function WorkoutScreen() {
           const { authService } = await import('../../src/services/authService');
           await authService.logout();
           router.replace('/auth/login');
-                  } catch (error) {
-            console.error('Logout failed:', error);
-            showToast('error', 'Failed to logout. Please try again.');
-          }
+        } catch (error) {
+          console.error('Logout failed:', error);
+          showToast('error', 'Failed to logout. Please try again.');
+        }
         break;
       default:
         console.log('Unknown action:', action);
@@ -178,7 +182,7 @@ export default function WorkoutScreen() {
       setIsGeneratingPlan(true);
       setShowGenerationModal(true);
       setGenerationTimer(6); // Set to 6 seconds for optimal generation time (5-7s range)
-      
+
       // Start countdown timer
       const timerInterval = setInterval(() => {
         setGenerationTimer(prev => {
@@ -189,17 +193,17 @@ export default function WorkoutScreen() {
           return prev - 1;
         });
       }, 1000);
-      
+
       try {
         console.log('🚀 Starting workout plan generation...');
-        
+
         const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
-        
+
         if (response.success && response.data) {
           setWorkoutPlan(response.data);
           showToast('success', 'Your personalized workout plan is ready!');
           console.log('✅ Workout plan generated and saved successfully');
-          
+
           // Clear timer and hide modal immediately when plan is ready
           clearInterval(timerInterval);
           setShowGenerationModal(false);
@@ -210,10 +214,10 @@ export default function WorkoutScreen() {
         }
       } catch (error) {
         console.error('❌ Error generating workout plan:', error);
-        
+
         // Show interactive error alert instead of console logging
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
-        
+
         if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
           showToast('error', 'Network issue detected. Please check your connection and try again.');
         } else if (errorMessage.includes('API')) {
@@ -236,24 +240,24 @@ export default function WorkoutScreen() {
   const handleCompleteUserInfo = async (userInfoData: any) => {
     try {
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
-      
+
       if (response.success) {
         setUserInfo(userInfoData);
-                  setShowUserInfoModal(false);
-          console.log('User profile saved to database:', response.data);
-          showToast('success', 'Profile created! Now generating your workout plan...');
-          // Here you would typically call the workout plan generation API
-          setTimeout(() => {
-            showToast('success', 'Your personalized workout plan is ready! This feature will be available soon.');
-          }, 2000);
-        } else {
-          console.error('Failed to save to database:', response.message);
-          showToast('error', 'Failed to save profile. Please try again.');
-        }
-      } catch (error) {
-        console.error('Failed to save user info:', error);
-        showToast('error', 'Failed to save profile. Please check your connection and try again.');
+        setShowUserInfoModal(false);
+        console.log('User profile saved to database:', response.data);
+        showToast('success', 'Profile created! Now generating your workout plan...');
+        // Here you would typically call the workout plan generation API
+        setTimeout(() => {
+          showToast('success', 'Your personalized workout plan is ready! This feature will be available soon.');
+        }, 2000);
+      } else {
+        console.error('Failed to save to database:', response.message);
+        showToast('error', 'Failed to save profile. Please try again.');
       }
+    } catch (error) {
+      console.error('Failed to save user info:', error);
+      showToast('error', 'Failed to save profile. Please check your connection and try again.');
+    }
   };
 
   const handleCancelUserInfo = async () => {
@@ -268,7 +272,7 @@ export default function WorkoutScreen() {
     try {
       console.log('🌐 Loading user info from API in workout page');
       const response = await userProfileService.getUserProfile();
-      
+
       if (response.success) {
         if (response.data) {
           setUserInfo(response.data);
@@ -294,6 +298,8 @@ export default function WorkoutScreen() {
       router.push('/(dashboard)/diet');
     } else if (tab === 'gym') {
       router.push('/(dashboard)/gym');
+    } else if (tab === 'progress') {
+      router.push('/(dashboard)/progress');
     } else {
       console.log('Feature coming soon:', tab);
     }
@@ -323,10 +329,10 @@ export default function WorkoutScreen() {
 
     setIsGeneratingPlan(true);
     setGenerationProgress('Preparing new plan...');
-    
+
     try {
       console.log('🔄 Generating new workout plan...');
-      
+
       // Clear existing plans from database
       try {
         await aiWorkoutService.clearWorkoutPlanFromDatabase();
@@ -335,13 +341,13 @@ export default function WorkoutScreen() {
         console.warn('⚠️ Could not clear existing plans:', error);
         // Continue anyway
       }
-      
+
       // Clear current plan from UI
       setWorkoutPlan(null);
-      
+
       // Update progress
       setGenerationProgress('Creating your new workout plan...');
-      
+
       // Generate new plan
       const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
       if (response.success && response.data) {
@@ -354,7 +360,7 @@ export default function WorkoutScreen() {
       }
     } catch (error) {
       console.error('❌ Error generating new workout plan:', error);
-      
+
       // Show red alert for any error
       const errorMessage = error instanceof Error ? error.message : String(error);
       showToast('error', `Error: ${errorMessage}`);
@@ -368,16 +374,16 @@ export default function WorkoutScreen() {
   const handleDeletePlan = async () => {
     try {
       console.log('🗑️ Deleting workout plan and returning to profile summary...');
-      
+
       // Clear current plan from UI - this will show the profile summary interface
       setWorkoutPlan(null);
-      
+
       // Clear local storage
       const Storage = await import('../../src/utils/storage');
       await Storage.default.removeItem('cached_workout_plan');
       await Storage.default.removeItem('completed_exercises');
       await Storage.default.removeItem('completed_days');
-      
+
       showToast('success', 'Workout plan deleted. You can now generate a new plan.');
       console.log('✅ Workout plan deleted - showing profile summary interface');
     } catch (error) {
@@ -401,7 +407,7 @@ export default function WorkoutScreen() {
     // If user has workout plan, show the workout plan display within the normal layout
     if (workoutPlan && initialLoadComplete) {
       return (
-        <WorkoutPlanDisplay 
+        <WorkoutPlanDisplay
           workoutPlan={workoutPlan}
           onExercisePress={handleExercisePress}
           onDayPress={(day) => {
@@ -419,12 +425,12 @@ export default function WorkoutScreen() {
       return (
         <View style={styles.profileSummaryContainer}>
           <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
-          
+
           <View style={styles.profileSummaryCard}>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
-            </View> 
+            </View>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.occupation')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.occupationType, 'occupation')}</Text>
@@ -439,8 +445,8 @@ export default function WorkoutScreen() {
             </View>
           </View>
 
-          <TouchableOpacity 
-            style={[styles.confirmGenerateButton, isGeneratingPlan && styles.confirmGenerateButtonDisabled]} 
+          <TouchableOpacity
+            style={[styles.confirmGenerateButton, isGeneratingPlan && styles.confirmGenerateButtonDisabled]}
             onPress={handleGenerateClick}
             disabled={isGeneratingPlan}
           >
@@ -452,7 +458,7 @@ export default function WorkoutScreen() {
                 </Text>
               </View>
             ) : (
-            <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
+              <Text style={styles.confirmGenerateButtonText}>{t('profile.summary.confirm.generate')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -466,17 +472,17 @@ export default function WorkoutScreen() {
           <View style={styles.startCardIconContainer}>
             <Text style={styles.startCardIcon}>🏋️</Text>
           </View>
-          
+
           <Text style={styles.startCardTitle}>
             {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی ورکاؤٹ پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized workout through AI?'}
           </Text>
-          
+
           <Text style={styles.startCardSubtitle}>
             {t('workout.hero.subtitle')}
           </Text>
-          
-          <TouchableOpacity 
-            style={styles.startButton} 
+
+          <TouchableOpacity
+            style={styles.startButton}
             onPress={() => setShowUserInfoModal(true)}
             activeOpacity={0.8}
           >
@@ -488,32 +494,32 @@ export default function WorkoutScreen() {
   };
 
   return (
-      <DecorativeBackground>
-        <SafeAreaView style={styles.safeArea}>
-          <DashboardHeader 
-            userName={user?.fullName || t('common.user')}
-            onProfilePress={handleProfilePress}
-            onNotificationPress={() => console.log('Notifications pressed')}
-            notificationCount={0}
-          />
+    <DecorativeBackground>
+      <SafeAreaView style={styles.safeArea}>
+        <DashboardHeader
+          userName={user?.fullName || t('common.user')}
+          onProfilePress={handleProfilePress}
+          onNotificationPress={() => setShowNotificationModal(true)}
+          notificationCount={unreadCount}
+        />
 
-          <ScrollView 
-            style={styles.container}
-            contentContainerStyle={workoutPlan && initialLoadComplete ? styles.contentNoPadding : styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            {renderContent()}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={workoutPlan && initialLoadComplete ? styles.contentNoPadding : styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderContent()}
 
-            {/* Bottom Spacing - only show when not displaying workout plan */}
-            {!(workoutPlan && initialLoadComplete) && (
-              <View style={styles.bottomSpacing} />
-            )}
-          </ScrollView>
+          {/* Bottom Spacing - only show when not displaying workout plan */}
+          {!(workoutPlan && initialLoadComplete) && (
+            <View style={styles.bottomSpacing} />
+          )}
+        </ScrollView>
 
-          <BottomNavigation 
-            activeTab="workout"
-            onTabPress={handleTabPress}
-          />
+        <BottomNavigation
+          activeTab="workout"
+          onTabPress={handleTabPress}
+        />
 
         <Sidebar
           visible={sidebarVisible}
@@ -529,6 +535,11 @@ export default function WorkoutScreen() {
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
           onCancel={handleCancelUserInfo}
+        />
+
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
         />
 
         {showExerciseDetail && selectedExercise && (
@@ -567,8 +578,8 @@ export default function WorkoutScreen() {
             </View>
           </View>
         )}
-        </SafeAreaView>
-      </DecorativeBackground>
+      </SafeAreaView>
+    </DecorativeBackground>
   );
 }
 
@@ -595,7 +606,7 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100,
   },
-  
+
   // Hero Section (for onboarding)
   heroSection: {
     marginBottom: spacing.xl,
@@ -760,7 +771,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
-  
+
   // Profile Summary Section
   profileSummaryTitle: {
     color: colors.white,

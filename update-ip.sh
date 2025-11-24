@@ -61,3 +61,4 @@ echo -e "   2. Restart your Expo app (npx expo start --clear)"
 echo -e ""
 echo -e "${GREEN}💡 Tip: Run this script whenever you switch networks!${NC}"
 
+

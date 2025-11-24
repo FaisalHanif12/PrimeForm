@@ -60,11 +60,11 @@ export default function StreakScreen() {
   const { t, language } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
-  
+
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'history' | 'achievements'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'streak' | 'history'>('streak');
 
   useEffect(() => {
     loadStreakData();
@@ -73,7 +73,7 @@ export default function StreakScreen() {
   const loadStreakData = async () => {
     try {
       setIsLoading(true);
-      
+
       // Check if user has premium subscription
       const hasSubscription = await checkPremiumSubscription();
       if (!hasSubscription) {
@@ -156,7 +156,7 @@ export default function StreakScreen() {
 
   const renderTabSelector = () => (
     <Animated.View entering={FadeInUp.delay(200)} style={styles.tabSelector}>
-      {(['overview', 'history', 'achievements'] as const).map((tab) => (
+      {(['streak', 'history'] as const).map((tab) => (
         <TouchableOpacity
           key={tab}
           style={[
@@ -169,136 +169,130 @@ export default function StreakScreen() {
             styles.tabButtonText,
             selectedTab === tab && styles.tabButtonTextActive
           ]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'streak' ? 'Maintain Streak' : 'History'}
           </Text>
         </TouchableOpacity>
       ))}
     </Animated.View>
   );
 
-  const renderOverview = () => {
+  const renderStreakMaintenance = () => {
     if (!streakData) return null;
 
     return (
-      <View style={styles.overviewContainer}>
-        {/* Current Streaks */}
-        <Animated.View entering={FadeInUp.delay(300)} style={styles.streakSection}>
-          <Text style={styles.sectionTitle}>🔥 Current Streaks</Text>
-          <View style={styles.streakGrid}>
-            <View style={styles.streakCard}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakIcon}>💪</Text>
-                <Text style={styles.streakLabel}>Workout</Text>
-              </View>
-              <Text style={styles.streakValue}>{streakData.currentWorkoutStreak}</Text>
-              <Text style={styles.streakUnit}>days</Text>
+      <View style={styles.streakMaintenanceContainer}>
+        {/* Main Streak Card */}
+        <Animated.View entering={FadeInUp.delay(300)} style={styles.mainStreakCard}>
+          <View style={styles.mainStreakHeader}>
+            <Text style={styles.mainStreakLabel}>Current Streak</Text>
+            <View style={styles.streakBadge}>
+              <View style={styles.streakBadgeDot} />
+              <Text style={styles.streakBadgeText}>Active</Text>
             </View>
-            
-            <View style={styles.streakCard}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakIcon}>🥗</Text>
-                <Text style={styles.streakLabel}>Diet</Text>
+          </View>
+
+          <View style={styles.mainStreakContent}>
+            <Text style={styles.mainStreakValue}>{streakData.currentOverallStreak}</Text>
+            <Text style={styles.mainStreakUnit}>Days</Text>
+          </View>
+
+          <View style={styles.streakProgressBar}>
+            <View style={[styles.streakProgressFill, { width: `${Math.min((streakData.currentOverallStreak / 30) * 100, 100)}%` }]} />
+          </View>
+          <Text style={styles.streakProgressText}>
+            {streakData.currentOverallStreak < 30 ? `${30 - streakData.currentOverallStreak} days to 30-day milestone` : 'Milestone achieved!'}
+          </Text>
+        </Animated.View>
+
+        {/* Streak Breakdown */}
+        <Animated.View entering={FadeInUp.delay(400)} style={styles.streakBreakdownSection}>
+          <Text style={styles.sectionTitle}>Streak Breakdown</Text>
+
+          <View style={styles.breakdownCard}>
+            <View style={styles.breakdownHeader}>
+              <View style={styles.breakdownIconContainer}>
+                <View style={[styles.breakdownIcon, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[styles.breakdownIconText, { color: colors.primary }]}>W</Text>
+                </View>
               </View>
-              <Text style={styles.streakValue}>{streakData.currentDietStreak}</Text>
-              <Text style={styles.streakUnit}>days</Text>
+              <View style={styles.breakdownContent}>
+                <Text style={styles.breakdownLabel}>Workout Streak</Text>
+                <Text style={styles.breakdownSubtext}>Consecutive workout days</Text>
+              </View>
+              <View style={styles.breakdownValueContainer}>
+                <Text style={styles.breakdownValue}>{streakData.currentWorkoutStreak}</Text>
+                <Text style={styles.breakdownDays}>days</Text>
+              </View>
             </View>
-            
-            <View style={[styles.streakCard, styles.streakCardPrimary]}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakIcon}>⭐</Text>
-                <Text style={styles.streakLabel}>Overall</Text>
+            <View style={styles.breakdownDivider} />
+            <View style={styles.breakdownStats}>
+              <View style={styles.breakdownStat}>
+                <Text style={styles.breakdownStatLabel}>Best</Text>
+                <Text style={styles.breakdownStatValue}>{streakData.longestWorkoutStreak}</Text>
               </View>
-              <Text style={[styles.streakValue, styles.streakValuePrimary]}>
-                {streakData.currentOverallStreak}
-              </Text>
-              <Text style={styles.streakUnit}>days</Text>
+              <View style={styles.breakdownStat}>
+                <Text style={styles.breakdownStatLabel}>This Week</Text>
+                <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.breakdownCard}>
+            <View style={styles.breakdownHeader}>
+              <View style={styles.breakdownIconContainer}>
+                <View style={[styles.breakdownIcon, { backgroundColor: colors.green + '20' }]}>
+                  <Text style={[styles.breakdownIconText, { color: colors.green }]}>D</Text>
+                </View>
+              </View>
+              <View style={styles.breakdownContent}>
+                <Text style={styles.breakdownLabel}>Diet Streak</Text>
+                <Text style={styles.breakdownSubtext}>Consecutive nutrition days</Text>
+              </View>
+              <View style={styles.breakdownValueContainer}>
+                <Text style={styles.breakdownValue}>{streakData.currentDietStreak}</Text>
+                <Text style={styles.breakdownDays}>days</Text>
+              </View>
+            </View>
+            <View style={styles.breakdownDivider} />
+            <View style={styles.breakdownStats}>
+              <View style={styles.breakdownStat}>
+                <Text style={styles.breakdownStatLabel}>Best</Text>
+                <Text style={styles.breakdownStatValue}>{streakData.longestDietStreak}</Text>
+              </View>
+              <View style={styles.breakdownStat}>
+                <Text style={styles.breakdownStatLabel}>This Week</Text>
+                <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
+              </View>
             </View>
           </View>
         </Animated.View>
 
-        {/* Best Streaks */}
-        <Animated.View entering={FadeInUp.delay(400)} style={styles.bestStreakSection}>
-          <Text style={styles.sectionTitle}>🏆 Personal Records</Text>
-          <View style={styles.bestStreakGrid}>
-            <View style={styles.bestStreakCard}>
-              <Text style={styles.bestStreakIcon}>💪</Text>
-              <Text style={styles.bestStreakValue}>{streakData.longestWorkoutStreak}</Text>
-              <Text style={styles.bestStreakLabel}>Best Workout Streak</Text>
-            </View>
-            
-            <View style={styles.bestStreakCard}>
-              <Text style={styles.bestStreakIcon}>🥗</Text>
-              <Text style={styles.bestStreakValue}>{streakData.longestDietStreak}</Text>
-              <Text style={styles.bestStreakLabel}>Best Diet Streak</Text>
-            </View>
-            
-            <View style={styles.bestStreakCard}>
-              <Text style={styles.bestStreakIcon}>⭐</Text>
-              <Text style={styles.bestStreakValue}>{streakData.longestOverallStreak}</Text>
-              <Text style={styles.bestStreakLabel}>Best Overall Streak</Text>
-            </View>
-          </View>
-        </Animated.View>
+        {/* Consistency Stats */}
+        <Animated.View entering={FadeInUp.delay(500)} style={styles.consistencyStatsSection}>
+          <Text style={styles.sectionTitle}>Consistency Overview</Text>
 
-        {/* Consistency Metrics */}
-        <Animated.View entering={FadeInUp.delay(500)} style={styles.consistencySection}>
-          <Text style={styles.sectionTitle}>📊 Consistency</Text>
           <View style={styles.consistencyGrid}>
-            <View style={styles.consistencyCard}>
-              <Text style={styles.consistencyLabel}>Weekly</Text>
-              <View style={styles.consistencyBar}>
-                <View 
-                  style={[
-                    styles.consistencyFill, 
-                    { width: `${streakData.weeklyConsistency}%` }
-                  ]} 
-                />
+            <View style={styles.consistencyStatCard}>
+              <Text style={styles.consistencyStatValue}>{streakData.weeklyConsistency}%</Text>
+              <Text style={styles.consistencyStatLabel}>Weekly</Text>
+              <View style={styles.miniProgressBar}>
+                <View style={[styles.miniProgressFill, { width: `${streakData.weeklyConsistency}%` }]} />
               </View>
-              <Text style={styles.consistencyValue}>{streakData.weeklyConsistency}%</Text>
             </View>
-            
-            <View style={styles.consistencyCard}>
-              <Text style={styles.consistencyLabel}>Monthly</Text>
-              <View style={styles.consistencyBar}>
-                <View 
-                  style={[
-                    styles.consistencyFill, 
-                    { width: `${streakData.monthlyConsistency}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.consistencyValue}>{streakData.monthlyConsistency}%</Text>
-            </View>
-            
-            <View style={styles.consistencyCard}>
-              <Text style={styles.consistencyLabel}>Total Active Days</Text>
-              <Text style={styles.totalDaysValue}>{streakData.totalActiveDays}</Text>
-              <Text style={styles.totalDaysLabel}>days</Text>
-            </View>
-          </View>
-        </Animated.View>
 
-        {/* Milestones */}
-        <Animated.View entering={FadeInUp.delay(600)} style={styles.milestonesSection}>
-          <Text style={styles.sectionTitle}>🎯 Milestones</Text>
-          <View style={styles.milestonesGrid}>
-            {streakData.milestones.map((milestone, index) => (
-              <View key={index} style={[
-                styles.milestoneCard,
-                milestone.achieved && styles.milestoneCardAchieved
-              ]}>
-                <Text style={[
-                  styles.milestoneTarget,
-                  milestone.achieved && styles.milestoneTargetAchieved
-                ]}>
-                  {milestone.target}
-                </Text>
-                <Text style={styles.milestoneTitle}>{milestone.title}</Text>
-                {milestone.achieved && (
-                  <Text style={styles.milestoneAchieved}>✓ Achieved</Text>
-                )}
+            <View style={styles.consistencyStatCard}>
+              <Text style={styles.consistencyStatValue}>{streakData.monthlyConsistency}%</Text>
+              <Text style={styles.consistencyStatLabel}>Monthly</Text>
+              <View style={styles.miniProgressBar}>
+                <View style={[styles.miniProgressFill, { width: `${streakData.monthlyConsistency}%` }]} />
               </View>
-            ))}
+            </View>
+
+            <View style={styles.consistencyStatCard}>
+              <Text style={styles.consistencyStatValue}>{streakData.totalActiveDays}</Text>
+              <Text style={styles.consistencyStatLabel}>Total Days</Text>
+              <Text style={styles.consistencyStatSubtext}>All time active</Text>
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -312,47 +306,59 @@ export default function StreakScreen() {
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
-        <Text style={styles.sectionTitle}>📅 Last 30 Days</Text>
-        <View style={styles.calendarGrid}>
-          {last30Days.map((day, index) => (
-            <View key={index} style={[
-              styles.calendarDay,
-              day.overallCompleted && styles.calendarDayCompleted,
-              day.workoutCompleted && !day.dietCompleted && styles.calendarDayPartial,
-              !day.workoutCompleted && day.dietCompleted && styles.calendarDayPartial,
-            ]}>
-              <Text style={styles.calendarDayNumber}>
-                {new Date(day.date).getDate()}
-              </Text>
-              <View style={styles.calendarDayIndicators}>
-                <View style={[
-                  styles.calendarIndicator,
-                  day.workoutCompleted && styles.calendarIndicatorActive
-                ]}>
-                  <Text style={styles.calendarIndicatorText}>W</Text>
-                </View>
-                <View style={[
-                  styles.calendarIndicator,
-                  day.dietCompleted && styles.calendarIndicatorActive
-                ]}>
-                  <Text style={styles.calendarIndicatorText}>D</Text>
-                </View>
-              </View>
-            </View>
-          ))}
+        <View style={styles.historyHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Activity History</Text>
+            <Text style={styles.historySubtitle}>Last 30 days of activity</Text>
+          </View>
         </View>
-        
+
+        <View style={styles.calendarGrid}>
+          {last30Days.map((day, index) => {
+            const date = new Date(day.date);
+            const dayNumber = date.getDate();
+            const isComplete = day.overallCompleted;
+            const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+
+            return (
+              <View key={index} style={[
+                styles.calendarDay,
+                isComplete && styles.calendarDayCompleted,
+                isPartial && styles.calendarDayPartial,
+              ]}>
+                <Text style={[
+                  styles.calendarDayNumber,
+                  isComplete && styles.calendarDayNumberActive,
+                  isPartial && styles.calendarDayNumberPartial
+                ]}>
+                  {dayNumber}
+                </Text>
+                {(isComplete || isPartial) && (
+                  <View style={styles.calendarDayDots}>
+                    {day.workoutCompleted && (
+                      <View style={[styles.activityDot, { backgroundColor: colors.primary }]} />
+                    )}
+                    {day.dietCompleted && (
+                      <View style={[styles.activityDot, { backgroundColor: colors.green }]} />
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>Both Complete</Text>
+            <View style={[styles.legendIndicator, { backgroundColor: colors.primary }]} />
+            <Text style={styles.legendText}>Workout</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: colors.gold }]} />
-            <Text style={styles.legendText}>Partial</Text>
+            <View style={[styles.legendIndicator, { backgroundColor: colors.green }]} />
+            <Text style={styles.legendText}>Diet</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: colors.cardBorder }]} />
+            <View style={[styles.legendIndicator, { backgroundColor: colors.cardBorder }]} />
             <Text style={styles.legendText}>Missed</Text>
           </View>
         </View>
@@ -360,46 +366,12 @@ export default function StreakScreen() {
     );
   };
 
-  const renderAchievements = () => {
-    if (!streakData) return null;
-
-    return (
-      <Animated.View entering={FadeInUp.delay(300)} style={styles.achievementsContainer}>
-        <Text style={styles.sectionTitle}>🏅 Achievements</Text>
-        <View style={styles.achievementsList}>
-          {streakData.achievements.map((achievement) => (
-            <View key={achievement.id} style={styles.achievementCard}>
-              <Text style={styles.achievementIcon}>{achievement.icon}</Text>
-              <View style={styles.achievementContent}>
-                <Text style={styles.achievementTitle}>{achievement.title}</Text>
-                <Text style={styles.achievementDescription}>{achievement.description}</Text>
-                <Text style={styles.achievementDate}>
-                  Unlocked: {new Date(achievement.unlockedAt).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={[
-                styles.achievementBadge,
-                { backgroundColor: 
-                  achievement.category === 'workout' ? colors.primary :
-                  achievement.category === 'diet' ? colors.green : colors.gold
-                }
-              ]}>
-                <Text style={styles.achievementBadgeText}>
-                  {achievement.category.toUpperCase()}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </Animated.View>
-    );
-  };
 
   if (isLoading) {
     return (
       <DecorativeBackground>
         <SafeAreaView style={styles.safeArea}>
-          <DashboardHeader 
+          <DashboardHeader
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
             onNotificationPress={() => console.log('Notifications pressed')}
@@ -409,8 +381,8 @@ export default function StreakScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading your streak data...</Text>
           </View>
-          <BottomNavigation 
-            activeTab="progress"
+          <BottomNavigation
+            activeTab=""
             onTabPress={handleTabPress}
           />
         </SafeAreaView>
@@ -421,38 +393,37 @@ export default function StreakScreen() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        <DashboardHeader 
+        <DashboardHeader
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
           onNotificationPress={() => console.log('Notifications pressed')}
           notificationCount={0}
         />
 
-        <ScrollView 
+        <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
           {/* Hero Section */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
-            <Text style={styles.heroTitle}>🔥 Streak Tracker</Text>
-            <Text style={styles.heroSubtitle}>Premium Feature - Track Your Consistency</Text>
+            <Text style={styles.heroTitle}>Streak Tracker</Text>
+            <Text style={styles.heroSubtitle}>Track your consistency and maintain momentum</Text>
           </Animated.View>
 
           {/* Tab Selector */}
           {renderTabSelector()}
 
           {/* Content */}
-          {selectedTab === 'overview' && renderOverview()}
+          {selectedTab === 'streak' && renderStreakMaintenance()}
           {selectedTab === 'history' && renderHistory()}
-          {selectedTab === 'achievements' && renderAchievements()}
 
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
 
-        <BottomNavigation 
-          activeTab="progress"
+        <BottomNavigation
+          activeTab=""
           onTabPress={handleTabPress}
         />
 
@@ -502,16 +473,17 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: '900',
+    fontSize: 28,
+    fontWeight: '800',
     fontFamily: fonts.heading,
     textAlign: 'center',
     marginBottom: spacing.xs,
+    letterSpacing: 0.5,
   },
   heroSubtitle: {
-    color: colors.gold,
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.mutedText,
+    fontSize: 15,
+    fontWeight: '500',
     fontFamily: fonts.body,
     textAlign: 'center',
   },
@@ -544,209 +516,262 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // Overview
-  overviewContainer: {
-    gap: spacing.xl,
-  },
+  // Section Title
   sectionTitle: {
     color: colors.white,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     fontFamily: fonts.heading,
     marginBottom: spacing.lg,
+    letterSpacing: 0.3,
   },
 
-  // Streak Section
-  streakSection: {
-    marginBottom: spacing.lg,
+  // Streak Maintenance
+  streakMaintenanceContainer: {
+    gap: spacing.xl,
   },
-  streakGrid: {
+
+  // Main Streak Card
+  mainStreakCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    borderWidth: 2,
+    borderColor: colors.primary + '40',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  mainStreakHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  mainStreakLabel: {
+    color: colors.mutedText,
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    letterSpacing: 0.5,
+  },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.green + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    gap: spacing.xs,
+  },
+  streakBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.green,
+  },
+  streakBadgeText: {
+    color: colors.green,
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  mainStreakContent: {
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  mainStreakValue: {
+    color: colors.white,
+    fontSize: 72,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+    lineHeight: 80,
+  },
+  mainStreakUnit: {
+    color: colors.mutedText,
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginTop: spacing.xs,
+    letterSpacing: 1,
+  },
+  streakProgressBar: {
+    height: 8,
+    backgroundColor: colors.cardBorder + '40',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  streakProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  streakProgressText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+
+  // Streak Breakdown Section
+  streakBreakdownSection: {
     gap: spacing.md,
   },
-  streakCard: {
-    flex: 1,
+  breakdownCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  streakCardPrimary: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
-  },
-  streakHeader: {
+  breakdownHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  streakIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
+  breakdownIconContainer: {
+    marginRight: spacing.md,
   },
-  streakLabel: {
+  breakdownIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  breakdownIconText: {
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+  },
+  breakdownContent: {
+    flex: 1,
+  },
+  breakdownLabel: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs / 2,
+  },
+  breakdownSubtext: {
     color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     fontFamily: fonts.body,
   },
-  streakValue: {
+  breakdownValueContainer: {
+    alignItems: 'flex-end',
+  },
+  breakdownValue: {
     color: colors.white,
     fontSize: 28,
     fontWeight: '900',
     fontFamily: fonts.heading,
   },
-  streakValuePrimary: {
-    color: colors.primary,
-  },
-  streakUnit: {
+  breakdownDays: {
     color: colors.mutedText,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     fontFamily: fonts.body,
   },
-
-  // Best Streak Section
-  bestStreakSection: {
-    marginBottom: spacing.lg,
+  breakdownDivider: {
+    height: 1,
+    backgroundColor: colors.cardBorder + '60',
+    marginVertical: spacing.md,
   },
-  bestStreakGrid: {
-    gap: spacing.md,
-  },
-  bestStreakCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+  breakdownStats: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
+    gap: spacing.lg,
   },
-  bestStreakIcon: {
-    fontSize: 32,
-    marginRight: spacing.md,
-  },
-  bestStreakValue: {
-    color: colors.gold,
-    fontSize: 24,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginRight: spacing.md,
-  },
-  bestStreakLabel: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
+  breakdownStat: {
     flex: 1,
+    alignItems: 'center',
+  },
+  breakdownStatLabel: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginBottom: spacing.xs,
+  },
+  breakdownStatValue: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
   },
 
-  // Consistency Section
-  consistencySection: {
-    marginBottom: spacing.lg,
+  // Consistency Stats Section
+  consistencyStatsSection: {
+    gap: spacing.md,
   },
   consistencyGrid: {
-    gap: spacing.md,
-  },
-  consistencyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  consistencyLabel: {
-    color: colors.mutedText,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    marginBottom: spacing.sm,
-  },
-  consistencyBar: {
-    height: 8,
-    backgroundColor: colors.cardBorder,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  consistencyFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  consistencyValue: {
-    color: colors.primary,
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    textAlign: 'right',
-  },
-  totalDaysValue: {
-    color: colors.white,
-    fontSize: 32,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    textAlign: 'center',
-  },
-  totalDaysLabel: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    textAlign: 'center',
-  },
-
-  // Milestones Section
-  milestonesSection: {
-    marginBottom: spacing.lg,
-  },
-  milestonesGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.md,
   },
-  milestoneCard: {
-    width: (screenWidth - spacing.lg * 2 - spacing.md) / 2,
+  consistencyStatCard: {
+    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  milestoneCardAchieved: {
-    borderColor: colors.green,
-    backgroundColor: colors.green + '10',
-  },
-  milestoneTarget: {
-    color: colors.mutedText,
+  consistencyStatValue: {
+    color: colors.primary,
     fontSize: 24,
     fontWeight: '900',
     fontFamily: fonts.heading,
     marginBottom: spacing.xs,
   },
-  milestoneTargetAchieved: {
-    color: colors.green,
-  },
-  milestoneTitle: {
-    color: colors.white,
+  consistencyStatLabel: {
+    color: colors.mutedText,
     fontSize: 12,
     fontWeight: '600',
     fontFamily: fonts.body,
     textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
-  milestoneAchieved: {
-    color: colors.green,
-    fontSize: 10,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
+  consistencyStatSubtext: {
+    color: colors.mutedText + '80',
+    fontSize: 11,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  miniProgressBar: {
+    width: '100%',
+    height: 4,
+    backgroundColor: colors.cardBorder + '40',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  miniProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 2,
   },
 
-  // History
+  // History Section
   historyContainer: {
-    gap: spacing.lg,
+    gap: spacing.xl,
+  },
+  historyHeader: {
+    marginBottom: spacing.md,
+  },
+  historySubtitle: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    marginTop: spacing.xs,
   },
   calendarGrid: {
     flexDirection: 'row',
@@ -758,126 +783,67 @@ const styles = StyleSheet.create({
     width: (screenWidth - spacing.lg * 2 - spacing.xs * 6) / 7,
     aspectRatio: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.cardBorder,
   },
   calendarDayCompleted: {
-    backgroundColor: colors.green + '20',
-    borderColor: colors.green,
+    backgroundColor: colors.green + '15',
+    borderColor: colors.green + '60',
   },
   calendarDayPartial: {
-    backgroundColor: colors.gold + '20',
-    borderColor: colors.gold,
+    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary + '60',
   },
   calendarDayNumber: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
-    marginBottom: 2,
-  },
-  calendarDayIndicators: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  calendarIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarIndicatorActive: {
-    backgroundColor: colors.primary,
-  },
-  calendarIndicatorText: {
-    fontSize: 6,
+    color: colors.mutedText,
+    fontSize: 13,
     fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs / 2,
+  },
+  calendarDayNumberActive: {
     color: colors.white,
+  },
+  calendarDayNumberPartial: {
+    color: colors.white,
+  },
+  calendarDayDots: {
+    flexDirection: 'row',
+    gap: 3,
+  },
+  activityDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
-  legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  legendIndicator: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
   },
   legendText: {
     color: colors.mutedText,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     fontFamily: fonts.body,
-  },
-
-  // Achievements
-  achievementsContainer: {
-    gap: spacing.lg,
-  },
-  achievementsList: {
-    gap: spacing.md,
-  },
-  achievementCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  achievementIcon: {
-    fontSize: 32,
-    marginRight: spacing.md,
-  },
-  achievementContent: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  achievementTitle: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
-  },
-  achievementDescription: {
-    color: colors.mutedText,
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    marginBottom: spacing.xs,
-  },
-  achievementDate: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-  },
-  achievementBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  achievementBadgeText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '800',
-    fontFamily: fonts.heading,
   },
 
   // Bottom Spacing

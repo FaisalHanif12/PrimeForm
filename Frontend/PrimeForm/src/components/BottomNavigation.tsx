@@ -15,7 +15,7 @@ interface Tab {
 }
 
 interface Props {
-  activeTab: TabType;
+  activeTab: TabType | string;
   onTabPress: (tab: TabType) => void;
 }
 
@@ -33,7 +33,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   const indicatorPosition = useSharedValue(0); // Keeping for potential future use but indicator removed
   const containerWidth = useSharedValue(0);
 
-  const getTabIndex = (tab: TabType) => tabs.findIndex(t => t.key === tab);
+  const getTabIndex = (tab: TabType | string) => tabs.findIndex(t => t.key === tab);
 
   React.useEffect(() => {
     const activeIndex = getTabIndex(activeTab);
@@ -47,7 +47,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
   return (
     <View
-      style={[styles.container, { 
+      style={[styles.container, {
         paddingBottom: Math.max(insets.bottom, spacing.xs),
         marginBottom: spacing.md, // Add visible margin from bottom edge
       }]}
@@ -55,7 +55,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
         containerWidth.value = nativeEvent.layout.width;
       }}
     >
-      
+
       {/* Tab buttons */}
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;

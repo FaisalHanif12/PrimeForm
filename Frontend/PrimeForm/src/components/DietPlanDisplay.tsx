@@ -302,10 +302,17 @@ export default function DietPlanDisplay({
   }, [dietPlan]);
 
   // Add focus effect to reload completion states when screen is focused
+  // Only reload if data might have changed (e.g., after coming back from another screen)
+  const lastFocusTime = React.useRef<number>(0);
   useFocusEffect(
     React.useCallback(() => {
-      if (isInitialized) {
+      const now = Date.now();
+      // Only reload if it's been more than 2 seconds since last focus
+      // This prevents unnecessary reloads on quick navigation
+      if (isInitialized && now - lastFocusTime.current > 2000) {
+        console.log('🔄 DietPlanDisplay: Reloading completion states after focus');
         loadCompletionStates();
+        lastFocusTime.current = now;
       }
     }, [isInitialized])
   );

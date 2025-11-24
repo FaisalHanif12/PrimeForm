@@ -314,6 +314,8 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     gap: 12,
+    alignSelf: 'center',
+    width: '100%',
   },
   signupButtonText: {
     color: '#000',
@@ -333,14 +335,11 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     color: '#000',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
     textAlign: 'center',
-    lineHeight: 28,
-    textAlignVertical: 'center',
     includeFontPadding: false,
-    height: 28,
-    width: 28,
+    marginTop: -2,
   },
 });
 
