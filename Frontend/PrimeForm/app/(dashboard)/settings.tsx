@@ -102,6 +102,9 @@ export default function SettingsPage() {
         case 'language':
           router.push('/(dashboard)/language');
           break;
+        case 'sport-mode':
+          router.push('/(dashboard)/sport-mode');
+          break;
         default:
           console.log('Unknown sidebar action:', action);
       }

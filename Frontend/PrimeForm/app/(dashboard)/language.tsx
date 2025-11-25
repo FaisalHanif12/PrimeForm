@@ -92,6 +92,9 @@ export default function LanguagePreferencesPage() {
         case 'language':
           // Already on language page
           break;
+        case 'sport-mode':
+          router.push('/(dashboard)/sport-mode');
+          break;
         case 'logout':
           // Handle logout
           break;

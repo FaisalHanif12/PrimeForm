@@ -582,6 +582,9 @@ export default function DashboardScreen() {
         // Navigate to language preferences page
         router.push('/(dashboard)/language');
         break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
       default:
         console.log('Unknown action:', action);
     }

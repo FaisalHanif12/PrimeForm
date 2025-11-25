@@ -74,6 +74,12 @@ export default function DashboardLayout() {
           title: 'Language',
         }}
       />
+      <Stack.Screen 
+        name="sport-mode" 
+        options={{
+          title: 'Sport Mode',
+        }}
+      />
     </Stack>
   );
 }

@@ -41,6 +41,7 @@ interface Props {
 
 const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
+  { icon: 'basketball-outline', label: 'Sport Mode', action: 'sport-mode', color: colors.primary },
   { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak' },
   { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer' },
   { icon: 'language-outline', label: 'Language', action: 'language' },
@@ -54,6 +55,11 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
   const handleMenuPress = (action: string) => {
     if (action === 'profile') {
       onMenuItemPress('profile');
+      onClose();
+      return;
+    }
+    if (action === 'sport-mode') {
+      onMenuItemPress('sport-mode');
       onClose();
       return;
     }

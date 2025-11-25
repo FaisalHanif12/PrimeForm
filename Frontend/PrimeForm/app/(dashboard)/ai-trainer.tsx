@@ -154,6 +154,9 @@ export default function AITrainerScreen() {
       case 'language':
         router.push('/(dashboard)/language');
         break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
       case 'settings':
         router.push('/(dashboard)/settings');
         break;
