@@ -129,93 +129,52 @@ export default function SportModePage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Page Title */}
+        <Text style={styles.pageTitle}>Choose Your Sport</Text>
+        <Text style={styles.pageSubtitle}>Select a category to start training</Text>
+
         {/* Categories Grid */}
         <View style={styles.categoriesContainer}>
           {sportCategories.map((category, index) => (
             <Animated.View
               key={category.id}
-              entering={FadeInDown.delay(100 + index * 100).duration(600)}
+              entering={FadeInDown.delay(index * 100).duration(500)}
             >
               <TouchableOpacity
-                style={styles.categoryCard}
+                style={styles.card}
                 onPress={() => handleCategoryPress(category.id)}
-                activeOpacity={0.85}
+                activeOpacity={0.7}
               >
-                {/* Main Card Background */}
                 <LinearGradient
-                  colors={['rgba(30, 35, 50, 0.95)', 'rgba(20, 25, 40, 0.98)']}
-                  style={styles.categoryGradient}
+                  colors={[category.color + '20', category.color + '05']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
+                  style={styles.cardGradient}
                 >
-                  {/* Glow Effect Background */}
-                  <View style={[styles.glowEffect, { backgroundColor: category.color + '12' }]} />
-                  
-                  {/* Top Section - Icon and Arrow */}
-                  <View style={styles.topSection}>
-                    {/* Icon Container with Gradient */}
-                    <LinearGradient
-                      colors={[category.color + '25', category.color + '10']}
-                      style={styles.iconGradientContainer}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={[styles.iconInnerGlow, { backgroundColor: category.color + '15' }]}>
-                        <Text style={styles.categoryIcon}>{category.icon}</Text>
-                      </View>
-                    </LinearGradient>
-
-                    {/* Arrow with Animated Border */}
-                    <View style={[styles.arrowContainer, { borderColor: category.color + '30' }]}>
-                      <LinearGradient
-                        colors={[category.color + '20', category.color + '10']}
-                        style={styles.arrowGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <Ionicons name="arrow-forward" size={18} color={category.color} />
-                      </LinearGradient>
+                  {/* Left Side - Icon and Content */}
+                  <View style={styles.cardLeft}>
+                    {/* Icon */}
+                    <View style={[styles.iconCircle, { backgroundColor: category.color + '25' }]}>
+                      <Text style={styles.icon}>{category.icon}</Text>
                     </View>
-                  </View>
 
-                  {/* Content Section */}
-                  <View style={styles.contentSection}>
-                    {/* Title */}
-                    <Text style={styles.categoryTitle}>{category.name}</Text>
-                    
-                    {/* Exercise Count Badge */}
-                    <View style={[styles.exerciseBadge, { backgroundColor: category.color + '18' }]}>
-                      <View style={[styles.badgeDot, { backgroundColor: category.color }]} />
-                      <Text style={[styles.exerciseBadgeText, { color: category.color }]}>
+                    {/* Content */}
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle}>{category.name}</Text>
+                      <Text style={[styles.exerciseCount, { color: category.color }]}>
                         {category.exercises.length} Exercises
                       </Text>
                     </View>
-
-                    {/* Description */}
-                    <Text style={styles.categoryDescriptionNew} numberOfLines={2}>
-                      {category.description}
-                    </Text>
                   </View>
 
-                  {/* Bottom Accent Line */}
-                  <LinearGradient
-                    colors={[category.color + '00', category.color + '40', category.color + '00']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.accentLine}
-                  />
+                  {/* Right Side - Arrow */}
+                  <View style={[styles.arrowCircle, { backgroundColor: category.color + '20' }]}>
+                    <Ionicons name="chevron-forward" size={22} color={colors.white} />
+                  </View>
 
-                  {/* Decorative Elements */}
-                  <View style={[styles.decorativeDot1, { backgroundColor: category.color + '20' }]} />
-                  <View style={[styles.decorativeDot2, { backgroundColor: category.color + '15' }]} />
-                  <View style={[styles.decorativeDot3, { backgroundColor: category.color + '10' }]} />
+                  {/* Bottom Border */}
+                  <View style={[styles.bottomBorder, { backgroundColor: category.color }]} />
                 </LinearGradient>
-
-                {/* Card Border Glow */}
-                <View style={[styles.cardBorderGlow, { 
-                  shadowColor: category.color,
-                  borderColor: category.color + '15'
-                }]} />
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -265,173 +224,82 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: 120,
   },
-  categoriesContainer: {
-    gap: spacing.lg,
-  },
-  categoryCard: {
-    borderRadius: 28,
-    overflow: 'hidden',
-    position: 'relative',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
-  },
-  categoryGradient: {
-    padding: spacing.xl,
-    minHeight: 200,
-    position: 'relative',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  glowEffect: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.4,
-  },
-  topSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
-    zIndex: 2,
-  },
-  iconGradientContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 20,
-    padding: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconInnerGlow: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  categoryIcon: {
-    fontSize: 36,
-  },
-  arrowContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-  },
-  arrowGradient: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contentSection: {
-    zIndex: 2,
-    gap: spacing.sm,
-  },
-  categoryTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.headingBold,
-    letterSpacing: 0.5,
     marginBottom: spacing.xs,
   },
-  exerciseBadge: {
+  pageSubtitle: {
+    fontSize: 16,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    marginBottom: spacing.xl,
+  },
+  categoriesContainer: {
+    gap: spacing.md,
+  },
+  card: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  cardGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 20,
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    minHeight: 100,
+    position: 'relative',
   },
-  badgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
   },
-  exerciseBadgeText: {
-    fontSize: 13,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  icon: {
+    fontSize: 32,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    fontFamily: fonts.heading,
-    letterSpacing: 0.3,
+    color: colors.white,
+    fontFamily: fonts.headingBold,
+    marginBottom: 4,
   },
-  categoryDescriptionNew: {
+  exerciseCount: {
     fontSize: 14,
-    color: colors.mutedText,
-    lineHeight: 22,
-    fontFamily: fonts.body,
-    opacity: 0.9,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
   },
-  accentLine: {
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomBorder: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 3,
-  },
-  decorativeDot1: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    bottom: -35,
-    right: -35,
-    opacity: 0.3,
-  },
-  decorativeDot2: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    bottom: 40,
-    right: 30,
-    opacity: 0.2,
-  },
-  decorativeDot3: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    top: 40,
-    right: -15,
-    opacity: 0.15,
-  },
-  cardBorderGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 28,
-    borderWidth: 1,
-    ...Platform.select({
-      ios: {
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 12,
-      },
-    }),
   },
 });
 
