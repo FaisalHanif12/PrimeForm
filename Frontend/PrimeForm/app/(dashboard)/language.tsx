@@ -203,7 +203,10 @@ export default function LanguagePreferencesPage() {
       {/* Profile Page */}
       <ProfilePage
         visible={showProfilePage}
-        onClose={() => setShowProfilePage(false)}
+        onClose={() => {
+          setShowProfilePage(false);
+          setSidebarVisible(true);
+        }}
         userInfo={userInfo}
         onUpdateUserInfo={handleUpdateUserInfo}
       />

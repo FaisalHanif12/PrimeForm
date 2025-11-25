@@ -20,6 +20,7 @@ const workoutPlanRoutes = require('./routes/workoutPlanRoutes');
 const dietPlanRoutes = require('./routes/dietPlanRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const aiTrainerRoutes = require('./routes/aiTrainerRoutes');
+const streakRoutes = require('./routes/streakRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -172,6 +173,7 @@ app.use('/api/workout-plans', workoutPlanRoutes);
 app.use('/api/diet-plans', dietPlanRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/ai-trainer', aiTrainerRoutes);
+app.use('/api/streak', streakRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
