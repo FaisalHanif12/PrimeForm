@@ -105,11 +105,6 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           exiting={FadeOutLeft.duration(300)}
           style={styles.sidebar}
         >
-          {/* Close Button */}
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color={colors.mutedText} />
-          </TouchableOpacity>
-
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.profileSection}>
@@ -117,9 +112,13 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Ionicons name="person" size={32} color={colors.gold} />
               </View>
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{userName}</Text>
-                <Text style={styles.userEmail}>{userEmail}</Text>
+                <Text style={styles.userName}>{userName || 'User'}</Text>
+                <Text style={styles.userEmail}>{userEmail || 'user@primeform.com'}</Text>
               </View>
+              {/* Close Button */}
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color={colors.mutedText} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -240,15 +239,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   closeButton: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 40, // Increased top spacing for better visibility
-    right: spacing.lg,
     padding: spacing.sm,
     backgroundColor: colors.cardBackground,
     borderRadius: radius.lg,
-    zIndex: 1,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    marginLeft: spacing.sm,
   },
   menuContainer: {
     flex: 1,

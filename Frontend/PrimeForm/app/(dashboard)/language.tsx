@@ -221,9 +221,6 @@ export default function LanguagePreferencesPage() {
       >
         {/* Hero Section */}
         <View style={styles.heroSection}>
-          <View style={styles.heroIconContainer}>
-            <Ionicons name="globe-outline" size={56} color={colors.gold} />
-          </View>
           <Text style={styles.heroTitle}>Language Preferences</Text>
           <Text style={styles.heroSubtitle}>
             Choose your preferred language for the app interface
@@ -328,22 +325,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-  },
-  heroIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-    borderWidth: 3,
-    borderColor: colors.gold,
-    elevation: 8,
-    shadowColor: colors.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   heroTitle: {
     color: colors.white,

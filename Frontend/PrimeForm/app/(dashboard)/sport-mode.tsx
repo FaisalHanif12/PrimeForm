@@ -107,6 +107,10 @@ export default function SportModePage() {
   };
 
   React.useEffect(() => {
+    loadUserInfo();
+  }, []);
+
+  React.useEffect(() => {
     if (showProfilePage) {
       loadUserInfo();
     }
@@ -129,46 +133,51 @@ export default function SportModePage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Page Title */}
+        <Text style={styles.pageTitle}>Choose Your Sport</Text>
+        <Text style={styles.pageSubtitle}>Select a category to start training</Text>
+
         {/* Categories Grid */}
         <View style={styles.categoriesContainer}>
           {sportCategories.map((category, index) => (
             <Animated.View
               key={category.id}
-              entering={FadeInDown.delay(100 + index * 100).duration(600)}
+              entering={FadeInDown.delay(index * 100).duration(500)}
             >
               <TouchableOpacity
-                style={styles.categoryCard}
+                style={styles.card}
                 onPress={() => handleCategoryPress(category.id)}
-                activeOpacity={0.8}
+                activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={[category.color + '15', category.color + '08']}
-                  style={styles.categoryGradient}
+                  colors={[category.color + '20', category.color + '05']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.cardGradient}
                 >
-                  {/* Icon */}
-                  <View style={[styles.categoryIconContainer, { backgroundColor: category.color + '20' }]}>
-                    <Text style={styles.categoryIcon}>{category.icon}</Text>
+                  {/* Left Side - Icon and Content */}
+                  <View style={styles.cardLeft}>
+                    {/* Icon */}
+                    <View style={[styles.iconCircle, { backgroundColor: category.color + '25' }]}>
+                      <Text style={styles.icon}>{category.icon}</Text>
+                    </View>
+
+                    {/* Content */}
+                    <View style={styles.cardContent}>
+                      <Text style={styles.cardTitle}>{category.name}</Text>
+                      <Text style={[styles.exerciseCount, { color: category.color }]}>
+                        {category.exercises.length} Exercises
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Content */}
-                  <View style={styles.categoryContent}>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                    <Text style={styles.categoryExerciseCount}>
-                      {category.exercises.length} Exercises
-                    </Text>
-                    <Text style={styles.categoryDescription} numberOfLines={2}>
-                      {category.description}
-                    </Text>
+                  {/* Right Side - Arrow */}
+                  <View style={[styles.arrowCircle, { backgroundColor: category.color + '20' }]}>
+                    <Ionicons name="chevron-forward" size={22} color={colors.white} />
                   </View>
 
-                  {/* Arrow */}
-                  <View style={[styles.categoryArrow, { backgroundColor: category.color + '15' }]}>
-                    <Ionicons name="chevron-forward" size={20} color={category.color} />
-                  </View>
-
-                  {/* Decorative Circles */}
-                  <View style={[styles.decorativeCircle1, { backgroundColor: category.color + '10' }]} />
-                  <View style={[styles.decorativeCircle2, { backgroundColor: category.color + '08' }]} />
+                  {/* Bottom Border */}
+                  <View style={[styles.bottomBorder, { backgroundColor: category.color }]} />
                 </LinearGradient>
               </TouchableOpacity>
             </Animated.View>
@@ -219,85 +228,85 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: 120,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.headingBold,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  pageSubtitle: {
+    fontSize: 16,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   categoriesContainer: {
     gap: spacing.md,
   },
-  categoryCard: {
-    borderRadius: 24,
+  card: {
+    borderRadius: 20,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    backgroundColor: colors.surface,
+    marginTop: spacing.xs,
   },
-  categoryGradient: {
+  cardGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: spacing.lg,
-    minHeight: 180,
+    minHeight: 100,
     position: 'relative',
   },
-  categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  cardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
   },
-  categoryIcon: {
+  icon: {
     fontSize: 32,
   },
-  categoryContent: {
+  cardContent: {
     flex: 1,
   },
-  categoryName: {
-    fontSize: 24,
+  cardTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: colors.white,
-    marginBottom: spacing.xs,
     fontFamily: fonts.headingBold,
+    marginBottom: 4,
   },
-  categoryExerciseCount: {
+  exerciseCount: {
     fontSize: 14,
-    color: colors.primary,
     fontWeight: '600',
-    marginBottom: spacing.sm,
     fontFamily: fonts.heading,
   },
-  categoryDescription: {
-    fontSize: 14,
-    color: colors.mutedText,
-    lineHeight: 20,
-    fontFamily: fonts.body,
-  },
-  categoryArrow: {
-    position: 'absolute',
-    top: spacing.lg,
-    right: spacing.lg,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  decorativeCircle1: {
+  bottomBorder: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    bottom: -30,
-    right: -30,
-  },
-  decorativeCircle2: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    top: -20,
-    right: 60,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
   },
 });
 
