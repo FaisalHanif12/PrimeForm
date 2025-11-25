@@ -107,6 +107,10 @@ export default function SportModePage() {
   };
 
   React.useEffect(() => {
+    loadUserInfo();
+  }, []);
+
+  React.useEffect(() => {
     if (showProfilePage) {
       loadUserInfo();
     }
@@ -233,12 +237,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontFamily: fonts.headingBold,
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   pageSubtitle: {
     fontSize: 16,
     color: colors.mutedText,
     fontFamily: fonts.body,
     marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   categoriesContainer: {
     gap: spacing.md,
@@ -247,6 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: colors.surface,
+    marginTop: spacing.xs,
   },
   cardGradient: {
     flexDirection: 'row',
