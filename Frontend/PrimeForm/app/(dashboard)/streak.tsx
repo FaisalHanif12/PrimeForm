@@ -15,9 +15,12 @@ import { colors, spacing, typography, fonts, radius } from '../../src/theme/colo
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
+import NotificationModal from '../../src/components/NotificationModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import streakService from '../../src/services/streakService';
 
@@ -62,6 +65,9 @@ export default function StreakScreen() {
   const { showToast } = useToast();
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [streakData, setStreakData] = useState<StreakData | null>(null);
   const [selectedTab, setSelectedTab] = useState<'streak' | 'history'>('streak');
@@ -105,16 +111,25 @@ export default function StreakScreen() {
     setSidebarVisible(true);
   };
 
+  const handleNotificationPress = () => {
+    setNotificationModalVisible(true);
+  };
+
   const handleSidebarMenuPress = async (action: string) => {
+    setSidebarVisible(false);
+    
     switch (action) {
       case 'profile':
-        router.push('/(dashboard)');
+        setShowProfilePage(true);
         break;
       case 'streak':
         // Already on streak page
         break;
       case 'ai-trainer':
         router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');
@@ -139,6 +154,28 @@ export default function StreakScreen() {
         console.log('Unknown action:', action);
     }
   };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      if (response && response.success && response.data) {
+        setUserInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = (updatedInfo: any) => {
+    setUserInfo(updatedInfo);
+  };
+
+  // Load user info when profile page is opened
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     if (tab === 'home') {
@@ -374,7 +411,7 @@ export default function StreakScreen() {
           <DashboardHeader
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
-            onNotificationPress={() => console.log('Notifications pressed')}
+            onNotificationPress={handleNotificationPress}
             notificationCount={0}
           />
           <View style={styles.loadingContainer}>
@@ -435,6 +472,23 @@ export default function StreakScreen() {
           userEmail={user?.email || 'user@example.com'}
           userInfo={null}
           badges={[]}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          visible={notificationModalVisible}
+          onClose={() => setNotificationModalVisible(false)}
+        />
+
+        {/* Profile Page */}
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => {
+            setShowProfilePage(false);
+            setSidebarVisible(true);
+          }}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
       </SafeAreaView>
     </DecorativeBackground>

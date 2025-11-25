@@ -373,7 +373,10 @@ export default function SettingsPage() {
       {/* Profile Page */}
       <ProfilePage
         visible={showProfilePage}
-        onClose={() => setShowProfilePage(false)}
+        onClose={() => {
+          setShowProfilePage(false);
+          setSidebarVisible(true);
+        }}
         userInfo={userInfo}
         onUpdateUserInfo={handleUpdateUserInfo}
       />
