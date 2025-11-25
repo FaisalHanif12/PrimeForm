@@ -41,7 +41,7 @@ interface Props {
 
 const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
-  { icon: 'basketball-outline', label: 'Sport Mode', action: 'sport-mode', color: colors.primary },
+  { icon: 'basketball-outline', label: 'Sport Mode', action: 'sport-mode', color: colors.white },
   { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak' },
   { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer' },
   { icon: 'language-outline', label: 'Language', action: 'language' },

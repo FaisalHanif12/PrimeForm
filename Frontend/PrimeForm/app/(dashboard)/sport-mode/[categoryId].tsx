@@ -57,8 +57,10 @@ export default function SportCategoryPage() {
           <Ionicons name="chevron-back" size={28} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerIcon}>{category.icon}</Text>
-          <Text style={styles.headerTitle}>{category.name}</Text>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerIcon}>{category.icon}</Text>
+            <Text style={styles.headerTitle}>{category.name}</Text>
+          </View>
         </View>
       </View>
 
@@ -167,6 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     width: 40,
@@ -175,11 +179,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
   },
   headerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIcon: {
     fontSize: 32,

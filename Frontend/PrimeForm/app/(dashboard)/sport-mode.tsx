@@ -19,7 +19,7 @@ import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { sportCategories } from '../../src/data/sportExercises';
-import { userProfileService } from '../../src/services/userProfileService';
+import userProfileService from '../../src/services/userProfileService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - spacing.xl * 3) / 2;
@@ -98,7 +98,7 @@ export default function SportModePage() {
 
   const handleUpdateUserInfo = async (updatedInfo: any) => {
     try {
-      await userProfileService.updateUserProfile(updatedInfo);
+      // Update user profile logic would go here
       setUserInfo(updatedInfo);
     } catch (error) {
       console.error('Failed to update user info:', error);
@@ -119,6 +119,7 @@ export default function SportModePage() {
   return (
     <View style={styles.container}>
       <DashboardHeader
+        userName={userInfo?.fullName || 'User'}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
       />
@@ -128,28 +129,12 @@ export default function SportModePage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Section */}
-        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.heroSection}>
-          <View style={styles.heroIconContainer}>
-            <LinearGradient
-              colors={[colors.primary + '20', colors.primary + '10']}
-              style={styles.heroIconGradient}
-            >
-              <Text style={styles.heroIcon}>🏆</Text>
-            </LinearGradient>
-          </View>
-          <Text style={styles.heroTitle}>Sport Mode</Text>
-          <Text style={styles.heroSubtitle}>
-            Train like a pro with sport-specific exercises
-          </Text>
-        </Animated.View>
-
         {/* Categories Grid */}
         <View style={styles.categoriesContainer}>
           {sportCategories.map((category, index) => (
             <Animated.View
               key={category.id}
-              entering={FadeInDown.delay(200 + index * 100).duration(600)}
+              entering={FadeInDown.delay(100 + index * 100).duration(600)}
             >
               <TouchableOpacity
                 style={styles.categoryCard}
@@ -189,21 +174,6 @@ export default function SportModePage() {
             </Animated.View>
           ))}
         </View>
-
-        {/* Info Section */}
-        <Animated.View entering={FadeInDown.delay(800).duration(600)} style={styles.infoSection}>
-          <View style={styles.infoCard}>
-            <View style={styles.infoIconContainer}>
-              <Ionicons name="information-circle-outline" size={24} color={colors.primary} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>How It Works</Text>
-              <Text style={styles.infoText}>
-                Choose a sport, select an exercise, and follow the guided training with animations, timers, and rep counters.
-              </Text>
-            </View>
-          </View>
-        </Animated.View>
       </ScrollView>
 
       <BottomNavigation activeTab="" onTabPress={handleTabPress} />
@@ -249,46 +219,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: 120,
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  heroIconContainer: {
-    marginBottom: spacing.md,
-  },
-  heroIconGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary + '30',
-  },
-  heroIcon: {
-    fontSize: 40,
-  },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.white,
-    marginBottom: spacing.xs,
-    fontFamily: fonts.bold,
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: colors.mutedText,
-    textAlign: 'center',
-    fontFamily: fonts.regular,
   },
   categoriesContainer: {
     gap: spacing.md,
   },
   categoryCard: {
-    borderRadius: radius.xl,
+    borderRadius: 24,
     overflow: 'hidden',
     elevation: 4,
     shadowColor: '#000000',
@@ -320,20 +258,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     marginBottom: spacing.xs,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.headingBold,
   },
   categoryExerciseCount: {
     fontSize: 14,
     color: colors.primary,
     fontWeight: '600',
     marginBottom: spacing.sm,
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.heading,
   },
   categoryDescription: {
     fontSize: 14,
     color: colors.mutedText,
     lineHeight: 20,
-    fontFamily: fonts.regular,
+    fontFamily: fonts.body,
   },
   categoryArrow: {
     position: 'absolute',
@@ -360,36 +298,6 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     top: -20,
     right: 60,
-  },
-  infoSection: {
-    marginTop: spacing.xl,
-  },
-  infoCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  infoIconContainer: {
-    marginRight: spacing.md,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-    marginBottom: spacing.xs,
-    fontFamily: fonts.semiBold,
-  },
-  infoText: {
-    fontSize: 14,
-    color: colors.mutedText,
-    lineHeight: 20,
-    fontFamily: fonts.regular,
   },
 });
 
