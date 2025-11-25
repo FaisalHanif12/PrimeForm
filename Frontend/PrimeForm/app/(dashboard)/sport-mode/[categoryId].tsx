@@ -62,6 +62,7 @@ export default function SportCategoryPage() {
             <Text style={styles.headerTitle}>{category.name}</Text>
           </View>
         </View>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -69,22 +70,6 @@ export default function SportCategoryPage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Category Info */}
-        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.infoCard}>
-          <LinearGradient
-            colors={[category.color + '15', category.color + '08']}
-            style={styles.infoGradient}
-          >
-            <Text style={styles.infoDescription}>{category.description}</Text>
-            <View style={styles.infoStats}>
-              <View style={styles.statItem}>
-                <Ionicons name="fitness-outline" size={20} color={category.color} />
-                <Text style={styles.statText}>{category.exercises.length} Exercises</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Animated.View>
-
         {/* Exercise List */}
         <View style={styles.exerciseList}>
           <Text style={styles.sectionTitle}>Available Exercises</Text>
@@ -190,6 +175,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerSpacer: {
+    width: 40,
+  },
   headerIcon: {
     fontSize: 32,
     marginRight: spacing.sm,
@@ -198,7 +186,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: colors.white,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.headingBold,
   },
   scrollView: {
     flex: 1,
@@ -208,37 +196,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  infoCard: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    marginBottom: spacing.xl,
-  },
-  infoGradient: {
-    padding: spacing.lg,
-  },
-  infoDescription: {
-    fontSize: 15,
-    color: colors.white,
-    lineHeight: 22,
-    marginBottom: spacing.md,
-    fontFamily: fonts.regular,
-  },
-  infoStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  statText: {
-    fontSize: 14,
-    color: colors.white,
-    fontWeight: '600',
-    fontFamily: fonts.semiBold,
-  },
   exerciseList: {
     gap: spacing.md,
   },
@@ -247,7 +204,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.white,
     marginBottom: spacing.md,
-    fontFamily: fonts.bold,
+    fontFamily: fonts.headingBold,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
