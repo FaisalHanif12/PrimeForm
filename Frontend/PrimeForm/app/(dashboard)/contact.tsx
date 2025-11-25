@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -16,9 +16,12 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
+import NotificationModal from '../../src/components/NotificationModal';
 import { useAuthContext } from '../../src/context/AuthContext';
 import api from '../../src/config/api';
 
@@ -37,6 +40,9 @@ export default function ContactPage() {
   const { user, isAuthenticated, logout } = useAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [formData, setFormData] = useState<ContactForm>({
     name: '',
     email: '',
@@ -103,20 +109,25 @@ export default function ContactPage() {
   };
 
   const handleNotificationPress = () => {
-    showToast('info', 'Notifications are coming soon!');
+    setNotificationModalVisible(true);
   };
 
   const handleSidebarMenuPress = async (action: string) => {
+    setSidebarVisible(false);
+    
     try {
       switch (action) {
         case 'profile':
-          router.push('/(dashboard)');
+          setShowProfilePage(true);
           break;
         case 'streak':
           router.push('/(dashboard)/streak');
           break;
         case 'ai-trainer':
           router.push('/(dashboard)/ai-trainer');
+          break;
+        case 'language':
+          router.push('/(dashboard)/language');
           break;
         case 'settings':
           router.push('/(dashboard)/settings');
@@ -139,10 +150,30 @@ export default function ContactPage() {
     } catch (error) {
       console.error('Sidebar action failed:', error);
       showToast('error', 'Something went wrong. Please try again.');
-    } finally {
-      setSidebarVisible(false);
     }
   };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      if (response && response.success && response.data) {
+        setUserInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = (updatedInfo: any) => {
+    setUserInfo(updatedInfo);
+  };
+
+  // Load user info when profile page is opened
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   const renderContactForm = () => (
     <View style={styles.formContainer}>
@@ -251,6 +282,20 @@ export default function ContactPage() {
           isGuest={!isAuthenticated}
           userInfo={null}
           badges={[]}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          visible={notificationModalVisible}
+          onClose={() => setNotificationModalVisible(false)}
+        />
+
+        {/* Profile Page */}
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
       </SafeAreaView>
     </DecorativeBackground>
