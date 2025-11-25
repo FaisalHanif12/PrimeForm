@@ -83,9 +83,12 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
       'http://localhost:5001', // Backend API
-      'http://192.168.48.129:8081', // CURRENT network IP (Expo dev server)
-      'http://192.168.48.129:5001', // CURRENT network IP (Backend API)
-      'exp://192.168.48.129:8081',  // CURRENT network IP (Expo protocol)
+      'http://192.168.135.70:8081', // CURRENT network IP (Expo dev server)
+      'http://192.168.135.70:5001', // CURRENT network IP (Backend API)
+      'exp://192.168.135.70:8081',  // CURRENT network IP (Expo protocol)
+      'http://192.168.48.129:8081', // Previous network IP (Expo dev server)
+      'http://192.168.48.129:5001', // Previous network IP (Backend API)
+      'exp://192.168.48.129:8081',  // Previous network IP (Expo protocol)
       'http://192.168.0.112:8081', // Previous network IP (Expo dev server)
       'http://192.168.0.112:5000', // Previous network IP (API)
       'http://192.168.49.223:8081', // Previous network IP (Expo dev server)
