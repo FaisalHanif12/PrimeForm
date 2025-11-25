@@ -125,7 +125,8 @@ const dietPlanSchema = new mongoose.Schema({
   goal: {
     type: String,
     required: true,
-    enum: ['Muscle Gain', 'Fat Loss', 'General Health']
+    trim: true
+    // Removed enum restriction to allow flexible AI-generated goals
   },
   duration: {
     type: String,

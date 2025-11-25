@@ -19,6 +19,8 @@ const contactRoutes = require('./routes/contactRoutes');
 const workoutPlanRoutes = require('./routes/workoutPlanRoutes');
 const dietPlanRoutes = require('./routes/dietPlanRoutes');
 const progressRoutes = require('./routes/progressRoutes');
+const aiTrainerRoutes = require('./routes/aiTrainerRoutes');
+const streakRoutes = require('./routes/streakRoutes');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -71,22 +73,44 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // In development, be more permissive
     if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
-    
+
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
-      'http://192.168.0.117:8081', // Your specific IP address
-      'http://192.168.0.117:5000', // Your API IP
-      'exp://192.168.0.117:8081',  // Expo protocol
+      'http://localhost:5001', // Backend API
+      'http://192.168.48.129:8081', // CURRENT network IP (Expo dev server)
+      'http://192.168.48.129:5001', // CURRENT network IP (Backend API)
+      'exp://192.168.48.129:8081',  // CURRENT network IP (Expo protocol)
+      'http://192.168.0.112:8081', // Previous network IP (Expo dev server)
+      'http://192.168.0.112:5000', // Previous network IP (API)
+      'http://192.168.49.223:8081', // Previous network IP (Expo dev server)
+      'http://192.168.49.223:5000', // Previous network IP (API)
+      'http://192.168.48.66:8081', // Your previous network IP
+      'http://192.168.48.66:5000', // Your previous API IP
+      'http://192.168.75.66:8081', // Your previous mobile data IP
+      'http://192.168.75.66:5000', // Your previous mobile data API IP
+      'http://192.168.100.33:8081', // Your previous network IP
+      'http://192.168.100.33:5000', // Your previous API IP
+      'http://192.168.0.117:8081', // Your old IP address
+      'http://192.168.0.117:5000', // Your old API IP
+      'exp://192.168.0.112:8081',  // Expo protocol - previous network
+      'exp://192.168.49.223:8081',  // Expo protocol - previous network
+      'exp://192.168.48.66:8081',  // Expo protocol - previous network
+      'exp://192.168.75.66:8081',  // Expo protocol - previous mobile data
+      'exp://192.168.100.33:8081', // Expo protocol - previous network
+      'exp://192.168.0.117:8081',  // Expo protocol - old network
       'exp://localhost:8081',       // Expo localhost
+      'http://192.168.111.70:8081', // Previous network IP (Expo dev server)
+      'http://192.168.111.70:5000', // Previous network IP (API)
+      'exp://192.168.111.70:8081',  // Previous network IP (Expo protocol)
       process.env.FRONTEND_URL
     ].filter(Boolean);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -148,6 +172,8 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/workout-plans', workoutPlanRoutes);
 app.use('/api/diet-plans', dietPlanRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/ai-trainer', aiTrainerRoutes);
+app.use('/api/streak', streakRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -180,10 +206,15 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🏃‍♂️ PrimeForm API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.0.117:${PORT}`);
+  console.log(`🌐 Network: http://192.168.111.70:${PORT}`); // Current network IP
+  console.log(`🌐 Previous Network: http://192.168.0.112:${PORT}`); // Previous network IP for reference
+  console.log(`🌐 Previous Network: http://192.168.48.66:${PORT}`); // Previous network IP for reference
+  console.log(`🌐 Previous Mobile Data: http://192.168.75.66:${PORT}`); // Previous mobile data IP for reference
+  console.log(`🌐 Previous Network: http://192.168.100.33:${PORT}`); // Previous network IP for reference
+  console.log(`🌐 Old Network: http://192.168.0.117:${PORT}`); // Keep old IP for reference
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
-  
+
   // Test email configuration on startup
   console.log('📧 Testing email configuration...');
   const emailTest = await testEmailConfiguration();
@@ -192,7 +223,7 @@ const server = app.listen(PORT, HOST, async () => {
   } else {
     console.log('⚠️  Email service configuration issue - check your .env file');
   }
-  
+
   console.log('🚀 ================================');
 });
 

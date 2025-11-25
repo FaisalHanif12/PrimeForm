@@ -194,7 +194,7 @@ export default function ExerciseWorkoutScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
 
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
 
   const exerciseLevels = getExerciseLevels(exerciseId);

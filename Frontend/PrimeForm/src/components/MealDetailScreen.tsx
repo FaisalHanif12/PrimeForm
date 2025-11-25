@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   StatusBar,
+  SafeAreaView,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietMeal } from '../services/aiDietService';
@@ -30,11 +31,25 @@ export default function MealDetailScreen({
 }: MealDetailScreenProps) {
   const [portionMultiplier, setPortionMultiplier] = useState(1);
 
+  // Manage StatusBar when modal opens/closes to prevent layout issues
+  useEffect(() => {
+    if (visible) {
+      StatusBar.setBarStyle('light-content');
+      StatusBar.setHidden(false);
+    } else {
+      // Restore status bar when modal closes  
+      StatusBar.setBarStyle('light-content');
+      StatusBar.setHidden(false);
+    }
+  }, [visible]);
+
   if (!meal) return null;
 
   const handleCompletemeal = () => {
     if (onComplete && canComplete) {
+      console.log('🍽️ Meal marked as eaten - completing and closing');
       onComplete();
+      // Close modal immediately without delay
       onClose();
     }
   };
@@ -48,11 +63,13 @@ export default function MealDetailScreen({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent={false}
+      hardwareAccelerated={true}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} translucent={false} />
+      <SafeAreaView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -185,7 +202,7 @@ export default function MealDetailScreen({
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }

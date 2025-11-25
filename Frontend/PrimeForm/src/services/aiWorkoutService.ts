@@ -49,6 +49,33 @@ export interface AIWorkoutResponse {
 }
 
 class AIWorkoutService {
+  private loadingCache: Map<string, Promise<any>> = new Map();
+  private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  private getCachedData(key: string): any | null {
+    const cached = this.dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      console.log(`📦 Using cached data for ${key}`);
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setCachedData(key: string, data: any): void {
+    this.dataCache.set(key, { data, timestamp: Date.now() });
+  }
+
+  private clearCache(key?: string): void {
+    if (key) {
+      this.dataCache.delete(key);
+      this.loadingCache.delete(key);
+    } else {
+      this.dataCache.clear();
+      this.loadingCache.clear();
+    }
+  }
+
   private generatePrompt(userProfile: UserProfile): string {
     const prompt = `
 You are a world-class certified fitness trainer with 15+ years of experience in highly personalized training programs.  
@@ -110,26 +137,51 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 **Day 1: [Workout Focus + Icon]**  
 - Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
 - Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
-- Note How to do the exercise correctly.   
+- Note: How to do the exercise correctly.   
 - ✅ Warm-up (5–10 min) & Cool-down (5–10 min)  
 
 ---
 
-**Day 2: Active Recovery 🏃‍♂️**  
-- Light jogging or brisk walking: 20-30 minutes
-- Yoga or stretching: 15-20 minutes
-- Focus on mobility and flexibility
----
-
-**Day 3: [Workout Focus + Icon]**  
+**Day 2: [Workout Focus + Icon]**  
 - Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
-- Note How to do the exercise correctly.
+- Note: How to do the exercise correctly.
 - Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
 - ✅ Warm-up & Cool-down included  
 
 ---
 
-…continue for all 7 days.  
+**Day 3: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 4: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 5: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 6: [Workout Focus + Icon]**  
+- Exercise 1 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- Exercise 2 – [Sets × Reps] – Rest [X]s – Muscles: [target muscles] – ~[cal] kcal  
+- ✅ Warm-up & Cool-down included  
+
+---
+
+**Day 7: [Rest/Recovery Day + Icon]**  
+- Active Recovery Activities
+- Light stretching and mobility work
+- ✅ Focus on recovery and preparation for next week
 
 Generate the **final personalized plan now.**
     `;
@@ -154,11 +206,11 @@ Generate the **final personalized plan now.**
       const startTime = Date.now();
       console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
-      // Make API call without timeout - let it take as long as needed for better UX
+      // Make API call without timeout - let it generate as fast as possible
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json', 
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
           'HTTP-Referer': SITE_URL,
           'X-Title': SITE_NAME,
@@ -171,10 +223,10 @@ Generate the **final personalized plan now.**
               content: prompt
             }
           ],
-          temperature: 0.3, // Optimal for Gemini
-          max_tokens: 2000, // Gemini handles more tokens efficiently
+          temperature: 0.3, // Lower temperature for faster, more consistent responses
+          max_tokens: 3000, // Reduced for faster generation
           stream: false,
-          top_p: 0.9, // Good for Gemini
+          top_p: 0.8, // Slightly lower for faster responses
           frequency_penalty: 0.0,
           presence_penalty: 0.0,
         }),
@@ -254,27 +306,54 @@ Generate the **final personalized plan now.**
 
   // Load workout plan from database
   async loadWorkoutPlanFromDatabase(): Promise<WorkoutPlan | null> {
-    try {
-      const response = await workoutPlanService.getActiveWorkoutPlan();
-      if (response.success && response.data) {
-        console.log('📱 Loading workout plan from database');
-        return response.data;
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not load workout plan from database:', error);
-
-      // Try to load from local cache as fallback
-      try {
-        const cachedPlan = await Storage.getItem('cached_workout_plan');
-        if (cachedPlan) {
-          console.log('📱 Loading workout plan from local cache');
-          return JSON.parse(cachedPlan);
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Could not load from cache either:', cacheError);
-      }
+    const cacheKey = 'workout-plan-active';
+    
+    // Check if there's already a request in flight
+    if (this.loadingCache.has(cacheKey)) {
+      console.log('🔄 Request already in flight, waiting for existing request...');
+      return this.loadingCache.get(cacheKey);
     }
-    return null;
+
+    // Check memory cache first
+    const cachedData = this.getCachedData(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // Create new request and cache the promise to prevent duplicates
+    const request = (async () => {
+      try {
+        const response = await workoutPlanService.getActiveWorkoutPlan();
+        if (response.success && response.data) {
+          console.log('📱 Loaded workout plan from database');
+          this.setCachedData(cacheKey, response.data);
+          return response.data;
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not load workout plan from database:', error);
+
+        // Try to load from local cache as fallback
+        try {
+          const cachedPlan = await Storage.getItem('cached_workout_plan');
+          if (cachedPlan) {
+            console.log('📱 Loading workout plan from local cache');
+            const plan = JSON.parse(cachedPlan);
+            this.setCachedData(cacheKey, plan);
+            return plan;
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Could not load from cache either:', cacheError);
+        }
+      } finally {
+        // Remove from loading cache after request completes
+        this.loadingCache.delete(cacheKey);
+      }
+      return null;
+    })();
+
+    // Cache the promise to prevent duplicate requests
+    this.loadingCache.set(cacheKey, request);
+    return request;
   }
 
   // Clear workout plan from database
@@ -286,6 +365,9 @@ Generate the **final personalized plan now.**
       // Also clear local cache
       await Storage.removeItem('cached_workout_plan');
       console.log('🗑️ Local workout plan cache cleared');
+      
+      // Clear memory cache
+      this.clearCache('workout-plan-active');
     } catch (error) {
       console.warn('⚠️ Could not clear workout plans from database:', error);
     }

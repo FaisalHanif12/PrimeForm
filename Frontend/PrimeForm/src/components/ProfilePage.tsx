@@ -39,7 +39,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   userInfo?: UserInfo;
-  onUpdateUserInfo: (userInfo: UserInfo | { age: number } & Omit<UserInfo, 'age'>) => void;
+  onUpdateUserInfo?: (userInfo: UserInfo | { age: number } & Omit<UserInfo, 'age'>) => void;
 }
 
 const countries = [
@@ -139,7 +139,22 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   // Load user info when component mounts or userInfo prop changes
   useEffect(() => {
     if (userInfo) {
-      setEditedUserInfo(userInfo);
+      // Convert UserProfile format to UserInfo format for editing
+      const convertedUserInfo: UserInfo = {
+        country: userInfo.country || '',
+        age: typeof userInfo.age === 'number' ? userInfo.age.toString() : (userInfo.age || ''),
+        gender: userInfo.gender || '',
+        height: userInfo.height || '',
+        currentWeight: userInfo.currentWeight || '',
+        targetWeight: userInfo.targetWeight || '',
+        bodyGoal: userInfo.bodyGoal || '',
+        medicalConditions: userInfo.medicalConditions || '',
+        occupationType: userInfo.occupationType || '',
+        availableEquipment: userInfo.availableEquipment || '',
+        dietPreference: userInfo.dietPreference || '',
+      };
+      console.log('🔍 ProfilePage - Converting userInfo prop:', { original: userInfo, converted: convertedUserInfo });
+      setEditedUserInfo(convertedUserInfo);
     } else if (visible) {
       // Only load if visible and no userInfo
       loadUserInfo();
@@ -152,38 +167,50 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
   const handleSave = async () => {
     try {
+      // Convert age to number for backend compatibility
+      const ageNumber = parseInt(editedUserInfo.age, 10);
+      
+      // Validate age conversion
+      if (isNaN(ageNumber) || ageNumber < 13 || ageNumber > 120) {
+        showToast('error', 'Please enter a valid age between 13 and 120');
+        return;
+      }
+
       // Convert localized values back to English for backend compatibility
       const processedUserInfo = {
         ...editedUserInfo,
+        age: ageNumber, // Ensure age is a number
         country: getEnglishValue(editedUserInfo.country, countries),
         gender: getEnglishValue(editedUserInfo.gender, genderOptions),
         bodyGoal: getEnglishValue(editedUserInfo.bodyGoal, bodyGoals),
         occupationType: getEnglishValue(editedUserInfo.occupationType, occupationTypes),
         availableEquipment: getEnglishValue(editedUserInfo.availableEquipment, equipmentOptions),
-        dietPreference: getEnglishValue(editedUserInfo.dietPreference, dietPreferences)
+        dietPreference: getEnglishValue(editedUserInfo.dietPreference, dietPreferences),
+        // Only include targetWeight if it's not empty
+        ...(editedUserInfo.targetWeight && { targetWeight: editedUserInfo.targetWeight })
       };
+
+      console.log('🔍 ProfilePage - Sending data to backend:', processedUserInfo);
 
       // Update in backend database
       const response = await userProfileService.createOrUpdateProfile(processedUserInfo);
       
+      console.log('🔍 ProfilePage - Backend response:', response);
+      
       if (response.success) {
-        onUpdateUserInfo(processedUserInfo);
+        if (onUpdateUserInfo) {
+          onUpdateUserInfo(processedUserInfo);
+        }
         setIsEditing(false);
         showToast('success', 'Profile information updated successfully in database!');
-        console.log('Profile updated in database:', response.data);
+        console.log('✅ Profile updated in database:', response.data);
       } else {
-        console.error('Failed to update in database:', response.message);
-        // Fallback to local update if database fails (maintains functionality)
-        onUpdateUserInfo(processedUserInfo);
-        setIsEditing(false);
-        showToast('success', 'Profile information updated successfully!');
+        console.error('❌ Failed to update in database:', response.message);
+        showToast('error', `Failed to update profile: ${response.message}`);
       }
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      // Fallback to local update if database fails (maintains functionality)
-      onUpdateUserInfo(editedUserInfo);
-      setIsEditing(false);
-      showToast('success', 'Profile information updated successfully!');
+      console.error('💥 Failed to update profile:', error);
+      showToast('error', 'Failed to update profile. Please try again.');
     }
   };
 
@@ -205,10 +232,12 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       const response = await userProfileService.createOrUpdateProfile(newUserInfo);
       
       if (response.success) {
-        onUpdateUserInfo(newUserInfo);
+        if (onUpdateUserInfo) {
+          onUpdateUserInfo(newUserInfo);
+        }
         setShowUserInfoModal(false);
         showToast('success', 'Profile information completed successfully in database!');
-        console.log('Profile completed in database:', response.data);
+        console.log('✅ Profile completed in database:', response.data);
       } else {
         console.error('Failed to save to database:', response.message);
         showToast('error', 'Failed to save profile. Please try again.');
@@ -425,7 +454,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: 'rgba(26, 31, 46, 0.95)',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',

@@ -104,30 +104,30 @@ class AuthService {
     try {
       // Clear auth token
       await this.clearToken();
-      
+
       // Clear any cached user profile data
       await AsyncStorage.removeItem('userProfileData');
       await AsyncStorage.removeItem('userProfileImage'); // Clear profile image
       await AsyncStorage.removeItem('primeform_user_info_completed');
       await AsyncStorage.removeItem('primeform_user_info_cancelled');
       await AsyncStorage.removeItem('primeform_permission_modal_seen');
-      
+
       // Clear any other user-specific data
       const keys = await AsyncStorage.getAllKeys();
-      const userDataKeys = keys.filter(key => 
-        key.includes('user') || 
-        key.includes('profile') || 
+      const userDataKeys = keys.filter(key =>
+        key.includes('user') ||
+        key.includes('profile') ||
         key.includes('primeform') ||
         key.includes('image') ||
         key.includes('avatar') ||
         key.includes('photo')
       );
-      
+
       if (userDataKeys.length > 0) {
         await AsyncStorage.multiRemove(userDataKeys);
         console.log('Cleared user data keys:', userDataKeys);
       }
-      
+
       // Clear user profile service cache
       try {
         const { default: userProfileService } = await import('./userProfileService');
@@ -136,7 +136,7 @@ class AuthService {
       } catch (error) {
         console.log('User profile service not available for cache clearing');
       }
-      
+
       console.log('✅ All user data cleared successfully');
     } catch (error) {
       console.error('Error clearing user data:', error);
@@ -156,7 +156,7 @@ class AuthService {
       if (response.success && response.token) {
         // Clear any existing user data before storing new token
         await this.clearAllUserData();
-        
+
         // Store new token
         await this.storeToken(response.token);
         return response;
@@ -199,21 +199,21 @@ class AuthService {
         // Clear any existing user data before storing new token
         await this.clearAllUserData();
         await this.storeToken(response.token);
-        
+
         // Check if this is the first time this user has signed up
         const hasSignedUpBefore = await AsyncStorage.getItem(`user_${payload.email}_has_signed_up`);
-        
+
         if (!hasSignedUpBefore) {
           // This is the first time this user has signed up
           // Send welcome notification for new user
           await this.sendWelcomeNotification(payload.email);
-          
+
           // Mark that this user has received their welcome notification
           await AsyncStorage.setItem(`user_${payload.email}_welcome_sent`, 'true');
-          
+
           // Mark that this user has signed up before
           await AsyncStorage.setItem(`user_${payload.email}_has_signed_up`, 'true');
-          
+
           // Mark that user has ever signed up (for app-wide tracking)
           await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
         }
@@ -239,7 +239,7 @@ class AuthService {
     try {
       // Import notification service dynamically to avoid circular dependencies
       const { default: notificationService } = await import('./notificationService');
-      
+
       const result = await notificationService.sendWelcomeNotification(userEmail);
       if (result.success) {
         console.log('✅ Welcome notification sent for new user:', userEmail);

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
-import Badge from './Badge';
+
+const { height: screenHeight, width: screenWidth } = Dimensions.get('screen');
 
 interface UserInfo {
   country: string;
@@ -40,42 +41,40 @@ interface Props {
 
 const menuItems: MenuItem[] = [
   { icon: 'person-outline', label: 'Profile', action: 'profile' },
+  { icon: 'basketball-outline', label: 'Sport Mode', action: 'sport-mode', color: colors.white },
   { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak' },
   { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer' },
-  { icon: 'card-outline', label: 'Subscription Plan', action: 'subscription' },
   { icon: 'language-outline', label: 'Language', action: 'language' },
   { icon: 'mail-outline', label: 'Contact Us', action: 'contact' },
   { icon: 'settings-outline', label: 'Settings', action: 'settings' },
 ];
 
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
-  const { t, language, changeLanguage } = useLanguage();
-  const [showLanguageToggle, setShowLanguageToggle] = useState(false);
+  const { t } = useLanguage();
 
   const handleMenuPress = (action: string) => {
-    if (action === 'language') {
-      setShowLanguageToggle(!showLanguageToggle);
-      return;
-    }
     if (action === 'profile') {
-      // Navigate to profile page instead of showing dropdown
       onMenuItemPress('profile');
       onClose();
       return;
     }
+    if (action === 'sport-mode') {
+      onMenuItemPress('sport-mode');
+      onClose();
+      return;
+    }
     if (action === 'contact') {
-      // Navigate to contact page
       onMenuItemPress('contact');
+      onClose();
+      return;
+    }
+    if (action === 'language') {
+      onMenuItemPress('language');
       onClose();
       return;
     }
     onMenuItemPress(action);
     onClose();
-  };
-
-  const handleLanguageChange = async (lang: 'en' | 'ur') => {
-    await changeLanguage(lang);
-    setShowLanguageToggle(false);
   };
 
   return (
@@ -84,25 +83,26 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
       transparent
       animationType="none"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
       <View style={styles.overlay}>
         {/* Background overlay */}
-        <Animated.View 
-          entering={FadeIn} 
-          exiting={FadeOut}
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(200)}
           style={styles.backdrop}
         >
-          <TouchableOpacity 
-            style={StyleSheet.absoluteFillObject} 
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
             onPress={onClose}
             activeOpacity={1}
           />
         </Animated.View>
 
         {/* Sidebar content */}
-        <Animated.View 
-          entering={FadeInLeft.springify().damping(15)} 
-          exiting={FadeOutLeft.springify().damping(15)}
+        <Animated.View
+          entering={FadeInLeft.duration(300)}
+          exiting={FadeOutLeft.duration(300)}
           style={styles.sidebar}
         >
           {/* Close Button */}
@@ -121,144 +121,55 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Text style={styles.userEmail}>{userEmail}</Text>
               </View>
             </View>
-            
-            {/* Badge Display */}
-            {badges && badges.includes('profile_completion') && (
-              <View style={styles.badgeSection}>
-                <Badge type="profile_completion" size="small" showLabel={false} />
-                <Text style={styles.badgeText}>
-                  {language === 'en' ? 'Profile Completed!' : 'پروفائل مکمل!'}
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Menu Items */}
-          <ScrollView 
+          <ScrollView
             style={styles.menuContainer}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.menuContent}
           >
             {menuItems
-              .filter(item => !isGuest || item.action !== 'logout') // Hide logout for guests (though logout is now in footer)
+              .filter(item => !isGuest || item.action !== 'logout')
               .map((item, index) => (
-                <View key={item.action}>
-                  <TouchableOpacity
-                    style={[
-                      styles.menuItem,
-                      item.action === 'language' && showLanguageToggle && styles.languageMenuItemActive
-                    ]}
-                    onPress={() => handleMenuPress(item.action)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.menuItemContent}>
-                      <Ionicons 
-                        name={item.icon} 
-                        size={22} 
-                        color={item.color || colors.white} 
-                      />
-                      <View style={styles.menuItemTextContainer}>
-                        <View style={styles.menuItemTextRow}>
-                          <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
-                            {item.label}
-                          </Text>
-                          {item.action === 'subscription' && (
-                            <View style={styles.upgradeTag}>
-                              <Text style={styles.upgradeTagText}>
-                                {language === 'en' ? 'UPGRADE' : 'اپ گریڈ'}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                    <View style={styles.menuItemRight}>
-                      {item.action === 'language' ? (
-                        <Ionicons 
-                          name={showLanguageToggle ? "chevron-up" : "chevron-down"} 
-                          size={20} 
-                          color={colors.mutedText} 
-                        />
-                      ) : (
-                        <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                  
-                  {/* Language Toggle Options */}
-                  {item.action === 'language' && showLanguageToggle && (
-                    <Animated.View 
-                      entering={FadeIn.duration(200)}
-                      exiting={FadeOut.duration(200)}
-                      style={styles.languageToggleContainer}
-                    >
-                      <View style={styles.languageToggleHeader}>
-                        <Text style={styles.languageToggleTitle}>
-                          {t('language.choose')}
+                <TouchableOpacity
+                  key={item.action}
+                  style={styles.menuItem}
+                  onPress={() => handleMenuPress(item.action)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.menuItemContent}>
+                    <Ionicons
+                      name={item.icon}
+                      size={22}
+                      color={item.color || colors.white}
+                    />
+                    <View style={styles.menuItemTextContainer}>
+                      <View style={styles.menuItemTextRow}>
+                        <Text style={[styles.menuItemText, item.color && { color: item.color }]}>
+                          {item.label}
                         </Text>
                       </View>
-                      <View style={styles.languageToggleSwitch}>
-                        <TouchableOpacity 
-                          style={[
-                            styles.languageToggleOption, 
-                            language === 'en' && styles.languageToggleActive
-                          ]}
-                          onPress={() => handleLanguageChange('en')}
-                        >
-                          <View style={styles.languageToggleContent}>
-                            <Text style={styles.languageToggleFlag}>🇺🇸</Text>
-                            <Text style={[
-                              styles.languageToggleText, 
-                              language === 'en' && styles.languageToggleTextActive
-                            ]}>
-                              English
-                            </Text>
-                          </View>
-                          {language === 'en' && (
-                            <View style={styles.languageToggleCheckmark}>
-                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity 
-                          style={[
-                            styles.languageToggleOption, 
-                            language === 'ur' && styles.languageToggleActive
-                          ]}
-                          onPress={() => handleLanguageChange('ur')}
-                        >
-                          <View style={styles.languageToggleContent}>
-                            <Text style={styles.languageToggleFlag}>🇵🇰</Text>
-                            <Text style={[
-                              styles.languageToggleText, 
-                              language === 'ur' && styles.languageToggleTextActive
-                            ]}>
-                              اردو
-                            </Text>
-                          </View>
-                          {language === 'ur' && (
-                            <View style={styles.languageToggleCheckmark}>
-                              <Ionicons name="checkmark-circle" size={20} color={colors.gold} />
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                      </View>
-                    </Animated.View>
-                  )}
-                </View>
+                    </View>
+                  </View>
+                  <View style={styles.menuItemRight}>
+                    <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                  </View>
+                </TouchableOpacity>
               ))}
           </ScrollView>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.logoutButton}
               onPress={() => handleMenuPress('logout')}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Ionicons name="log-out-outline" size={20} color={colors.error} />
-              <Text style={styles.logoutButtonText}>Log Out</Text>
+              <View style={styles.logoutContent}>
+                <Ionicons name="power" size={22} color={colors.gold} />
+                <Text style={styles.logoutButtonText}>Log Out</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -279,9 +190,9 @@ const styles = StyleSheet.create({
   sidebar: {
     width: '100%',
     maxWidth: undefined,
-    height: '100%',
+    height: screenHeight, // Force full screen height
     backgroundColor: colors.background,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     elevation: 20,
     shadowColor: '#000',
     shadowOffset: { width: 5, height: 0 },
@@ -330,7 +241,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 15,
+    top: Platform.OS === 'ios' ? 50 : 40, // Increased top spacing for better visibility
     right: spacing.lg,
     padding: spacing.sm,
     backgroundColor: colors.cardBackground,
@@ -500,50 +411,29 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
   },
   footer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
-    minHeight: 60,
+    backgroundColor: colors.background,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xl + 20 : spacing.xl + 10, // Ensure coverage of bottom area
   },
   logoutButton: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    shadowRadius: 4,
+    elevation: 2,
   },
-  logoutButtonText: {
-    color: colors.error,
-    fontSize: typography.small,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    marginLeft: spacing.xs,
-  },
-
-
-  // Badge styles
-  badgeSection: {
+  logoutContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    gap: spacing.sm,
+    backgroundColor: 'transparent', // Ensure no background color
   },
-  badgeText: {
+  logoutButtonText: {
     color: colors.gold,
-    fontSize: typography.small,
-    fontFamily: fonts.body,
+    fontSize: typography.body,
     fontWeight: '600',
-    marginLeft: spacing.sm,
+    fontFamily: fonts.body,
+    letterSpacing: 0.5,
   },
 });

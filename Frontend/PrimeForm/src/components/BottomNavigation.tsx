@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography, fonts } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -14,7 +15,7 @@ interface Tab {
 }
 
 interface Props {
-  activeTab: TabType;
+  activeTab: TabType | string;
   onTabPress: (tab: TabType) => void;
 }
 
@@ -28,10 +29,11 @@ const tabs: Tab[] = [
 
 export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const indicatorPosition = useSharedValue(0); // Keeping for potential future use but indicator removed
   const containerWidth = useSharedValue(0);
 
-  const getTabIndex = (tab: TabType) => tabs.findIndex(t => t.key === tab);
+  const getTabIndex = (tab: TabType | string) => tabs.findIndex(t => t.key === tab);
 
   React.useEffect(() => {
     const activeIndex = getTabIndex(activeTab);
@@ -45,12 +47,15 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, {
+        paddingBottom: Math.max(insets.bottom, spacing.xs),
+        marginBottom: spacing.md, // Add visible margin from bottom edge
+      }]}
       onLayout={({ nativeEvent }) => {
         containerWidth.value = nativeEvent.layout.width;
       }}
     >
-      
+
       {/* Tab buttons */}
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
@@ -80,12 +85,15 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
     borderRadius: 20,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.xl + spacing.md, // Increased bottom margin
-    paddingVertical: spacing.xs,
+    paddingTop: spacing.md, // More top padding to center content exactly
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
@@ -100,9 +108,12 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     zIndex: 1,
+    justifyContent: 'center', // Center content vertically
+    alignItems: 'center', // Center content horizontally
   },
   tabContent: {
     alignItems: 'center',
+    justifyContent: 'center', // Center content vertically
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: 16,

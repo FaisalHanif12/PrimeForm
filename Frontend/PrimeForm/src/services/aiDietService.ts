@@ -64,131 +64,90 @@ export interface AIDietResponse {
 }
 
 class AIDietService {
+  private loadingCache: Map<string, Promise<any>> = new Map();
+  private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  private getCachedData(key: string): any | null {
+    const cached = this.dataCache.get(key);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      console.log(`📦 Using cached data for ${key}`);
+      return cached.data;
+    }
+    return null;
+  }
+
+  private setCachedData(key: string, data: any): void {
+    this.dataCache.set(key, { data, timestamp: Date.now() });
+  }
+
+  private clearCache(key?: string): void {
+    if (key) {
+      this.dataCache.delete(key);
+      this.loadingCache.delete(key);
+    } else {
+      this.dataCache.clear();
+      this.loadingCache.clear();
+    }
+  }
+
   private generatePrompt(userProfile: UserProfile): string {
+    const dailyCalories = userProfile.gender === 'Male' ? 
+      Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : 
+      Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4;
+      
     const prompt = `
-You are a world-renowned nutritionist and certified dietitian with 20+ years of experience in creating EXTREMELY PERSONALIZED nutrition plans.  
-Create a HIGHLY SPECIFIC and STRICTLY PERSONALIZED **7-day diet plan** based on this EXACT user profile:
+You are a certified nutritionist. Create a **7-day diet plan** for this user:
 
-### CRITICAL USER ANALYSIS
-- Age: ${userProfile.age} years (${userProfile.age < 25 ? 'Young adult - higher metabolism, can handle more carbs' : userProfile.age < 40 ? 'Adult - balanced metabolism, moderate portions' : userProfile.age < 55 ? 'Middle-aged - slower metabolism, portion control important' : 'Mature - focus on nutrient density, smaller portions'})
-- Gender: ${userProfile.gender} (${userProfile.gender === 'Male' ? 'Higher caloric needs, more protein required' : 'Moderate caloric needs, focus on iron and calcium'})
-- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg → ${userProfile.targetWeight || userProfile.currentWeight} kg
-- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - INCREASE CALORIES, FOCUS ON HEALTHY WEIGHT GAIN' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - MAINTAIN WITH BALANCED NUTRITION' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - CREATE CALORIC DEFICIT, HIGH PROTEIN' : 'OBESE - SIGNIFICANT CALORIC DEFICIT, MEDICAL SUPERVISION'})
-- PRIMARY GOAL: ${userProfile.bodyGoal} (THIS IS THE #1 PRIORITY - EVERY MEAL MUST SUPPORT THIS GOAL)
-- Diet Preference: ${userProfile.dietPreference || 'No specific preference'} (STRICTLY FOLLOW - NO EXCEPTIONS)
-- Country: ${userProfile.country || 'Not specified'} (USE ONLY LOCAL CUISINES AND AVAILABLE INGREDIENTS)
-- Medical Conditions: ${userProfile.medicalConditions || 'None'} (${userProfile.medicalConditions ? 'CRITICAL - MODIFY ALL MEALS FOR MEDICAL SAFETY' : 'NO DIETARY RESTRICTIONS'})
-- Calculated Daily Calories: ${userProfile.gender === 'Male' ? Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4} kcal (Harris-Benedict equation with activity factor)
+**USER PROFILE:**
+- Age: ${userProfile.age}, Gender: ${userProfile.gender}, Height: ${userProfile.height}cm, Weight: ${userProfile.currentWeight}kg
+- Goal: ${userProfile.bodyGoal} (PRIORITY)
+- Diet: ${userProfile.dietPreference || 'No restriction'}
+- Country: ${userProfile.country || 'International'}
+- Calories: ${dailyCalories} kcal/day
+- Medical: ${userProfile.medicalConditions || 'None'}
 
-### STRICT PERSONALIZATION RULES
-1. **DIET PREFERENCE COMPLIANCE** (ABSOLUTE REQUIREMENT):
-   - **Vegetarian**: ABSOLUTELY NO meat, fish, or poultry - ONLY plant-based proteins
-   - **Vegan**: ZERO animal products - no dairy, eggs, honey, or any animal derivatives
-   - **Non-Vegetarian**: Include variety of proteins including meat, fish, poultry
-   - **Pescatarian**: Fish and seafood ONLY - NO meat or poultry
-   - **Flexitarian**: Primarily plant-based with occasional meat/fish
-   - NEVER suggest foods that violate the user's dietary preference!
+**REQUIREMENTS:**
+- Follow ${userProfile.dietPreference || 'no restrictions'} diet strictly
+- Use ${userProfile.country || 'international'} cuisine 
+- ${userProfile.bodyGoal.includes('Gain') ? 'High protein, caloric surplus' : userProfile.bodyGoal.includes('Loss') || userProfile.bodyGoal.includes('Fat') ? 'High protein, caloric deficit' : 'Balanced nutrition'}
+- ${userProfile.medicalConditions ? `Modify for: ${userProfile.medicalConditions}` : 'No medical restrictions'}
 
-2. **GOAL ALIGNMENT** (CRITICAL):
-   - **Muscle Gain**: Higher protein (1.8-2.2g/kg body weight), caloric surplus of 300-500 kcal
-   - **Fat Loss**: Caloric deficit of 500-750 kcal, high protein (1.6-2.0g/kg) to preserve muscle
-   - **Maintain Weight**: Maintenance calories, balanced macros (40% carbs, 30% protein, 30% fats)
-   - **General Training**: Well-rounded nutrition supporting active lifestyle
-   - Every meal must directly support the user's specific goal!
-
-3. **COUNTRY-SPECIFIC CUISINE** (MANDATORY): 
-   - Use ONLY traditional foods and cooking methods from ${userProfile.country || 'the user\'s region'}
-   - Include ONLY locally available ingredients and seasonal produce
-   - Respect cultural dietary customs and meal timing preferences
-   - Feature authentic regional dishes and cooking techniques
-   - NEVER suggest foods not commonly available in the user's country!
-
-4. **MEDICAL SAFETY** (NON-NEGOTIABLE):
-   - ${userProfile.medicalConditions ? `CRITICAL MODIFICATIONS REQUIRED for: ${userProfile.medicalConditions}` : 'No medical restrictions - full dietary freedom'}
-   - Account for any medical conditions with appropriate food modifications
-   - Ensure nutritional safety and balance for this specific user
-
-5. **CALORIC PRECISION**:
-   - Target: ${userProfile.gender === 'Male' ? Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4} kcal/day
-   - Adjust based on goal: ${userProfile.bodyGoal.includes('Gain') ? '+300-500 kcal surplus' : userProfile.bodyGoal.includes('Loss') || userProfile.bodyGoal.includes('Fat') ? '-500-750 kcal deficit' : 'maintenance level'}
-
-### MANDATORY STRUCTURE REQUIREMENTS
-1. **Duration Analysis**: 
-   - If goal = **Muscle Gain** → Recommend **3–6-9 months** duration (depending on target weight difference)
-   - If goal = **Fat Loss/Lose Fat** → Recommend **3–6-9 months** duration  
-   - If goal = **Maintain Weight/General Training** → Recommend **6–12 months** for lifestyle maintenance
-   - Clearly show the chosen duration in the output
-
-5. **7-Day Plan Structure**:
-   - Each day must include: Breakfast, Lunch, Dinner, 2-3 Snacks
-   - Provide exact calories, protein, carbs, fats for each meal
-   - Include preparation time and serving size
-   - Add brief cooking instructions for complex dishes
-   - Suggest daily water intake
-   - Include helpful notes and tips
-
-6. **Medical Considerations**:
-   - Account for any medical conditions mentioned
-   - Ensure nutritional safety and balance
-   - Provide modifications if needed
-
-7. **Practical Guidelines**:
-   - Use easily available ingredients
-   - Provide meal prep tips where applicable
-   - Include portion control guidance
-   - Suggest healthy alternatives and substitutions
-
-8. **Output Format** (must follow exactly):
+**OUTPUT FORMAT:**
 
 **Goal:** [goal]  
-**Duration:** [calculated duration]  
-**Target Daily Calories:** [calculated calories]
-**Country Cuisine:** [country-specific focus]
+**Duration:** [duration]  
+**Target Daily Calories:** [calories]
 
----
+#### 🍽️ 7-Day Plan  
 
-#### 🍽️ Week 1 — Daily Meal Plan  
+**Day 1: [Day Name]**  
+**Breakfast:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+- Ingredients: [list]
+- Instructions: [brief method]
 
-**Day 1: [Day Name] 🌅**  
-**Breakfast:** [Meal Name] – [Calories] kcal | Protein: [X]g | Carbs: [X]g | Fats: [X]g – Prep: [X] min  
-- Ingredients: [list ingredients]
-- Instructions: [brief cooking method]
+**Lunch:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+- Ingredients: [list]
+- Instructions: [brief method]
 
-**Lunch:** [Meal Name] – [Calories] kcal | Protein: [X]g | Carbs: [X]g | Fats: [X]g – Prep: [X] min  
-- Ingredients: [list ingredients]
-- Instructions: [brief cooking method]
-
-**Dinner:** [Meal Name] – [Calories] kcal | Protein: [X]g | Carbs: [X]g | Fats: [X]g – Prep: [X] min  
-- Ingredients: [list ingredients]
-- Instructions: [brief cooking method]
+**Dinner:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+- Ingredients: [list]
+- Instructions: [brief method]
 
 **Snacks:**
-- Snack 1: [Name] – [Calories] kcal | [macros]
-- Snack 2: [Name] – [Calories] kcal | [macros]
+- Snack 1: [Name] – [Cal] kcal
+- Snack 2: [Name] – [Cal] kcal
 
-**Daily Totals:** [Total Calories] kcal | Protein: [X]g | Carbs: [X]g | Fats: [X]g  
+**Daily Totals:** [Total] kcal | P: [X]g | C: [X]g | F: [X]g  
 **Water Intake:** [X] liters  
-**Notes:** [helpful tips for the day]
+**Notes:** [tips]
 
 ---
 
-**Day 2: [Day Name] 🌤️**  
-[Same format as Day 1]
+**Day 2: [Day Name]**  
+[Same concise format for remaining 6 days]
 
----
-
-Continue for all 7 days with varied, culturally appropriate, and goal-specific meals.
-
-### Important Guidelines:
-- Make meals **delicious and culturally authentic**
-- Ensure **nutritional balance** throughout the week
-- Provide **realistic preparation times**
-- Include **seasonal and local ingredients**
-- Add **practical cooking tips**
-- Ensure **dietary preference compliance**
-- Calculate **accurate nutritional values**
-
-Generate the **complete personalized 7-day diet plan now.**
+Generate complete 7-day plan now.
     `;
 
     return prompt;
@@ -228,10 +187,10 @@ Generate the **complete personalized 7-day diet plan now.**
               content: prompt
             }
           ],
-          temperature: 0.3, // Optimal for Gemini
-          max_tokens: 3000, // More tokens for detailed diet plans
+          temperature: 0.3, // Lower temperature for faster, more consistent responses
+          max_tokens: 3000, // Reduced for faster generation
           stream: false,
-          top_p: 0.9,
+          top_p: 0.8, // Slightly lower for faster responses
           frequency_penalty: 0.0,
           presence_penalty: 0.0,
         }),
@@ -310,27 +269,54 @@ Generate the **complete personalized 7-day diet plan now.**
 
   // Load diet plan from database
   async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
-    try {
-      const response = await dietPlanService.getActiveDietPlan();
-      if (response.success && response.data) {
-        console.log('📱 Loading diet plan from database');
-        return response.data;
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not load diet plan from database:', error);
-
-      // Try to load from local cache as fallback
-      try {
-        const cachedPlan = await Storage.getItem('cached_diet_plan');
-        if (cachedPlan) {
-          console.log('📱 Loading diet plan from local cache');
-          return JSON.parse(cachedPlan);
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ Could not load from cache either:', cacheError);
-      }
+    const cacheKey = 'diet-plan-active';
+    
+    // Check if there's already a request in flight
+    if (this.loadingCache.has(cacheKey)) {
+      console.log('🔄 Request already in flight, waiting for existing request...');
+      return this.loadingCache.get(cacheKey);
     }
-    return null;
+
+    // Check memory cache first
+    const cachedData = this.getCachedData(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // Create new request and cache the promise to prevent duplicates
+    const request = (async () => {
+      try {
+        const response = await dietPlanService.getActiveDietPlan();
+        if (response.success && response.data) {
+          console.log('📱 Loaded diet plan from database');
+          this.setCachedData(cacheKey, response.data);
+          return response.data;
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not load diet plan from database:', error);
+
+        // Try to load from local cache as fallback
+        try {
+          const cachedPlan = await Storage.getItem('cached_diet_plan');
+          if (cachedPlan) {
+            console.log('📱 Loading diet plan from local cache');
+            const plan = JSON.parse(cachedPlan);
+            this.setCachedData(cacheKey, plan);
+            return plan;
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ Could not load from cache either:', cacheError);
+        }
+      } finally {
+        // Remove from loading cache after request completes
+        this.loadingCache.delete(cacheKey);
+      }
+      return null;
+    })();
+
+    // Cache the promise to prevent duplicate requests
+    this.loadingCache.set(cacheKey, request);
+    return request;
   }
 
   // Clear diet plan from database
@@ -342,6 +328,9 @@ Generate the **complete personalized 7-day diet plan now.**
       // Also clear local cache
       await Storage.removeItem('cached_diet_plan');
       console.log('🗑️ Local diet plan cache cleared');
+      
+      // Clear memory cache
+      this.clearCache('diet-plan-active');
     } catch (error) {
       console.warn('⚠️ Could not clear diet plans from database:', error);
     }
@@ -354,7 +343,18 @@ Generate the **complete personalized 7-day diet plan now.**
     const caloriesMatch = aiResponse.match(/\*\*Target Daily Calories:\*\*\s*(\d+)/i);
     const countryMatch = aiResponse.match(/\*\*Country Cuisine:\*\*\s*(.+?)(?:\n|$)/i);
 
-    const goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Health';
+    // Ensure goal matches user profile more closely and normalize format
+    let goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Health';
+    
+    // Normalize goal to match expected values
+    if (goal.toLowerCase().includes('gain') && goal.toLowerCase().includes('muscle')) {
+      goal = 'Muscle Gain';
+    } else if (goal.toLowerCase().includes('lose') || goal.toLowerCase().includes('fat')) {
+      goal = 'Fat Loss';
+    } else if (goal.toLowerCase().includes('maintain') || goal.toLowerCase().includes('general')) {
+      goal = 'General Health';
+    }
+    
     const duration = durationMatch ? durationMatch[1].trim() : '12 weeks';
     const targetCalories = caloriesMatch ? parseInt(caloriesMatch[1]) : 2000;
     const country = countryMatch ? countryMatch[1].trim() : userProfile.country || 'International';
@@ -403,15 +403,23 @@ Generate the **complete personalized 7-day diet plan now.**
   }
 
   private parseAIDietDays(aiResponse: string): DietDay[] {
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const weeklyPlan: DietDay[] = [];
 
     // Split the response into day sections using --- as delimiter
     const daySections = aiResponse.split(/---/).filter(section => section.trim());
     
+    // Get today's day of week to start first week from current day
+    const today = new Date();
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() + i);
+      
+      // Calculate the day name based on current day rotation
+      const actualDayIndex = (currentDayOfWeek + i) % 7;
+      const dayName = days[actualDayIndex];
       
       // Find the corresponding day section - look for Day 1:, Day 2:, etc.
       const dayNumber = i + 1;
@@ -430,7 +438,7 @@ Generate the **complete personalized 7-day diet plan now.**
         
         weeklyPlan.push({
           day: i + 1,
-          dayName: days[i],
+          dayName: dayName, // Use calculated day name
           date: date.toISOString().split('T')[0],
           totalCalories: dailyTotals.calories,
           totalProtein: dailyTotals.protein,
@@ -444,7 +452,7 @@ Generate the **complete personalized 7-day diet plan now.**
         // If no day section found, create a default day
         weeklyPlan.push({
           day: i + 1,
-          dayName: days[i],
+          dayName: dayName, // Use calculated day name
           date: date.toISOString().split('T')[0],
           totalCalories: 2000,
           totalProtein: 100,
@@ -492,14 +500,14 @@ Generate the **complete personalized 7-day diet plan now.**
       return {
         name: name.trim(),
         emoji: this.getMealEmoji(name.trim()),
-        ingredients: ingredients,
+        ingredients: ingredients.length > 0 ? ingredients : ['Healthy ingredients'],
         calories: parseInt(calories) || 0,
         protein: parseInt(protein) || 0,
         carbs: parseInt(carbs) || 0,
         fats: parseInt(fats) || 0,
         preparationTime: prepTime.trim(),
         servingSize: '1 serving',
-        instructions: instructions
+        instructions: instructions || 'Prepare according to standard cooking methods'
       };
     }
     
@@ -522,7 +530,8 @@ Generate the **complete personalized 7-day diet plan now.**
         carbs: Math.round(parseInt(calories) * 0.6 / 4), // Estimate
         fats: Math.round(parseInt(calories) * 0.25 / 9), // Estimate
         preparationTime: '5 min',
-        servingSize: '1 serving'
+        servingSize: '1 serving',
+        instructions: 'Enjoy as a healthy snack'
       });
     }
     
@@ -591,7 +600,7 @@ Generate the **complete personalized 7-day diet plan now.**
       fats: 10,
       preparationTime: '15 min',
       servingSize: '1 serving',
-      instructions: 'Prepare with fresh, wholesome ingredients'
+      instructions: 'Prepare with fresh, wholesome ingredients according to standard cooking methods'
     };
   }
 

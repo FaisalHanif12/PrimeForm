@@ -1,8 +1,6 @@
 ⚖️ Primeform Project Rules & Instructions
 
 
-
-
 Animations: Must be integrated in UI (React Native Reanimated + Lottie). Exercise demos always animated, not static.
 
 🛠️ Technology

@@ -7,13 +7,20 @@ import {
   StyleSheet,
   Switch,
   Alert,
-  Dimensions
+  Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
+import DashboardHeader from '../../src/components/DashboardHeader';
+import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useAuthContext } from '../../src/context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +42,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+  const { user, isAuthenticated, logout } = useAuthContext();
   
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     pushNotifications: true,
@@ -51,11 +59,82 @@ export default function SettingsPage() {
   });
 
   const [isUpdating, setIsUpdating] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
-  // Handle back navigation - return to sidebar menu
-  const handleBack = () => {
-    router.back();
+  const handleProfilePress = () => {
+    setSidebarVisible(true);
   };
+
+  const handleNotificationPress = () => {
+    setNotificationModalVisible(true);
+  };
+
+  const handleSidebarMenuPress = async (action: string) => {
+    setSidebarVisible(false);
+    
+    try {
+      switch (action) {
+        case 'profile':
+          setShowProfilePage(true);
+          break;
+        case 'streak':
+          router.push('/(dashboard)/streak');
+          break;
+        case 'ai-trainer':
+          router.push('/(dashboard)/ai-trainer');
+          break;
+        case 'settings':
+          // already here
+          break;
+        case 'subscription':
+          router.push('/(dashboard)/subscription');
+          break;
+        case 'contact':
+          router.push('/(dashboard)/contact');
+          break;
+        case 'logout':
+          await logout();
+          router.replace('/auth/login');
+          break;
+        case 'language':
+          router.push('/(dashboard)/language');
+          break;
+        case 'sport-mode':
+          router.push('/(dashboard)/sport-mode');
+          break;
+        default:
+          console.log('Unknown sidebar action:', action);
+      }
+    } catch (error) {
+      console.error('Sidebar action failed:', error);
+      showToast('error', 'Unable to complete that action. Please try again.');
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      if (response && response.success && response.data) {
+        setUserInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = (updatedInfo: any) => {
+    setUserInfo(updatedInfo);
+  };
+
+  // Load user info when profile page is opened
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   // Load saved notification settings
   useEffect(() => {
@@ -123,19 +202,6 @@ export default function SettingsPage() {
   };
 
     
-
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={handleBack}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.gold} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{t('sidebar.settings')}</Text>
-      <View style={styles.headerRight} />
-    </View>
-  );
 
   const renderNotificationSection = () => (
     <View style={styles.section}>
@@ -269,50 +335,66 @@ export default function SettingsPage() {
   );
 
   return (
-    <View style={styles.container}>
-      {renderHeader()}
-      
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {renderNotificationSection()}
-        {renderSoftwareUpdateSection()}
-        {renderAppInfoSection()}
-        
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <DashboardHeader
+        userName={user?.fullName || t('common.user')}
+        onProfilePress={handleProfilePress}
+        onNotificationPress={handleNotificationPress}
+        notificationCount={0}
+      />
+      <View style={styles.container}>
+        <ScrollView 
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {renderNotificationSection()}
+          {renderSoftwareUpdateSection()}
+          {renderAppInfoSection()}
+          
+          <View style={styles.bottomPadding} />
+        </ScrollView>
+      </View>
+
+      <Sidebar
+        visible={sidebarVisible}
+        onClose={() => setSidebarVisible(false)}
+        onMenuItemPress={handleSidebarMenuPress}
+        userName={user?.fullName || t('common.user')}
+        userEmail={user?.email || 'user@primeform.com'}
+        isGuest={!isAuthenticated}
+        userInfo={null}
+        badges={[]}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        visible={notificationModalVisible}
+        onClose={() => setNotificationModalVisible(false)}
+      />
+
+      {/* Profile Page */}
+      <ProfilePage
+        visible={showProfilePage}
+        onClose={() => {
+          setShowProfilePage(false);
+          setSidebarVisible(true);
+        }}
+        userInfo={userInfo}
+        onUpdateUserInfo={handleUpdateUserInfo}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-  },
-  backButton: {
-    padding: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: typography.h3,
-    fontWeight: 'bold',
-    color: colors.gold,
-    fontFamily: fonts.heading,
-  },
-  headerRight: {
-    width: 40,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,

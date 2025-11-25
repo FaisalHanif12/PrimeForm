@@ -24,6 +24,27 @@ export default function RootLayout() {
                 <Stack.Screen name="auth/otp-verification" />
                 <Stack.Screen name="auth/reset-password" />
                 <Stack.Screen name="(dashboard)" />
+                <Stack.Screen
+                  name="gym-exercises"
+                  options={{
+                    presentation: 'card',
+                    animation: 'slide_from_right',
+                  }}
+                />
+                <Stack.Screen
+                  name="exercise-workout"
+                  options={{
+                    presentation: 'fullScreenModal',
+                    animation: 'slide_from_bottom',
+                  }}
+                />
+                <Stack.Screen
+                  name="workout-player"
+                  options={{
+                    presentation: 'fullScreenModal',
+                    animation: 'slide_from_bottom',
+                  }}
+                />
               </Stack>
             </NotificationHandler>
           </NotificationProvider>

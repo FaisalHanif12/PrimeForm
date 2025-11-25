@@ -16,12 +16,30 @@ interface Props {
   title: string;
   meals: MealItem[];
   totalCalories: number;
+  completedMeals?: Set<string>;
   onPress?: () => void;
   delay?: number;
 }
 
-export default function MealPlanCard({ title, meals, totalCalories, onPress, delay = 0 }: Props) {
+export default function MealPlanCard({ title, meals, totalCalories, completedMeals = new Set(), onPress, delay = 0 }: Props) {
   const { t } = useLanguage();
+  
+  // Helper function to check if meal is completed
+  const isMealCompleted = (meal: MealItem): boolean => {
+    // Get today's date in local timezone to avoid UTC offset
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const year = todayDate.getFullYear();
+    const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const day = String(todayDate.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+    
+    const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
+    
+    return Array.from(completedMeals).some(completedKey => 
+      typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
+    );
+  };
   return (
     <Animated.View 
       entering={FadeInDown.delay(delay)} 
@@ -38,21 +56,28 @@ export default function MealPlanCard({ title, meals, totalCalories, onPress, del
             </View>
             
             <View style={styles.mealList}>
-              {meals.map((meal, index) => (
+              {meals.map((meal, index) => {
+                const isCompleted = isMealCompleted(meal);
+                return (
                 <View key={index} style={styles.mealItem}>
                   <View style={styles.mealIcon}>
-                    <Ionicons name="restaurant" size={16} color={colors.mutedText} />
+                    {isCompleted ? (
+                      <Text style={styles.checkmark}>✓</Text>
+                    ) : (
+                      <Ionicons name="restaurant" size={16} color={colors.mutedText} />
+                    )}
                   </View>
                   
                   <View style={styles.mealContent}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
+                    <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>{meal.name}</Text>
                     <View style={styles.mealDetails}>
-                      <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-                      <Text style={styles.mealWeight}>{meal.weight}</Text>
+                      <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>{meal.calories} kcal</Text>
+                      <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>{meal.weight}</Text>
                     </View>
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </View>
             
             {onPress && (
@@ -137,6 +162,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginBottom: 2,
   },
+  mealNameCompleted: {
+    textDecorationLine: 'line-through',
+    color: colors.mutedText,
+    opacity: 0.6,
+  },
   mealDetails: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -146,9 +176,23 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: '600',
   },
+  mealCaloriesCompleted: {
+    textDecorationLine: 'line-through',
+    color: colors.mutedText,
+    opacity: 0.6,
+  },
   mealWeight: {
     color: colors.mutedText,
     fontSize: typography.small,
+  },
+  mealWeightCompleted: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+  },
+  checkmark: {
+    color: colors.green,
+    fontSize: 18,
+    fontWeight: '700',
   },
   viewAllButton: {
     flexDirection: 'row',

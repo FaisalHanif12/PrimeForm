@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -16,7 +16,13 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import DashboardHeader from '../../src/components/DashboardHeader';
+import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
+import NotificationModal from '../../src/components/NotificationModal';
+import { useAuthContext } from '../../src/context/AuthContext';
 import api from '../../src/config/api';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -31,17 +37,17 @@ export default function ContactPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { showToast } = useToast();
+  const { user, isAuthenticated, logout } = useAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [formData, setFormData] = useState<ContactForm>({
     name: '',
     email: '',
     problem: ''
   });
-
-  // Handle back navigation - return to sidebar menu
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleInputChange = (field: keyof ContactForm, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -97,6 +103,80 @@ export default function ContactPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleProfilePress = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleNotificationPress = () => {
+    setNotificationModalVisible(true);
+  };
+
+  const handleSidebarMenuPress = async (action: string) => {
+    setSidebarVisible(false);
+    
+    try {
+      switch (action) {
+        case 'profile':
+          setShowProfilePage(true);
+          break;
+        case 'streak':
+          router.push('/(dashboard)/streak');
+          break;
+        case 'ai-trainer':
+          router.push('/(dashboard)/ai-trainer');
+          break;
+        case 'language':
+          router.push('/(dashboard)/language');
+          break;
+        case 'sport-mode':
+          router.push('/(dashboard)/sport-mode');
+          break;
+        case 'settings':
+          router.push('/(dashboard)/settings');
+          break;
+        case 'subscription':
+          router.push('/(dashboard)/subscription');
+          break;
+        case 'contact':
+          // Already here
+          break;
+        case 'logout':
+          await logout();
+          router.replace('/auth/login');
+          break;
+        case 'language':
+          break;
+        default:
+          console.log('Unknown sidebar action:', action);
+      }
+    } catch (error) {
+      console.error('Sidebar action failed:', error);
+      showToast('error', 'Something went wrong. Please try again.');
+    }
+  };
+
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      if (response && response.success && response.data) {
+        setUserInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = (updatedInfo: any) => {
+    setUserInfo(updatedInfo);
+  };
+
+  // Load user info when profile page is opened
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   const renderContactForm = () => (
     <View style={styles.formContainer}>
@@ -181,23 +261,48 @@ export default function ContactPage() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
+        <DashboardHeader
+          userName={user?.fullName || t('common.user')}
+          onProfilePress={handleProfilePress}
+          onNotificationPress={handleNotificationPress}
+          notificationCount={0}
+        />
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBack}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.gold} />
-          </TouchableOpacity>
-          
           {renderContactForm()}
           
           <View style={styles.bottomSpacing} />
         </ScrollView>
+        <Sidebar
+          visible={sidebarVisible}
+          onClose={() => setSidebarVisible(false)}
+          onMenuItemPress={handleSidebarMenuPress}
+          userName={user?.fullName || t('common.user')}
+          userEmail={user?.email || 'user@primeform.com'}
+          isGuest={!isAuthenticated}
+          userInfo={null}
+          badges={[]}
+        />
+
+        {/* Notification Modal */}
+        <NotificationModal
+          visible={notificationModalVisible}
+          onClose={() => setNotificationModalVisible(false)}
+        />
+
+        {/* Profile Page */}
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => {
+            setShowProfilePage(false);
+            setSidebarVisible(true);
+          }}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -207,16 +312,20 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-
+  container: {
+    flex: 1,
+  },
   content: {
     padding: spacing.lg,
     paddingTop: spacing.xl,
   },
-
-  backButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.md,
+  formContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
    formHeader: {
     alignItems: 'center',
@@ -226,12 +335,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    backgroundColor: 'rgba(0, 201, 124, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
     borderWidth: 2,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    borderColor: colors.gold,
   },
   formTitle: {
     fontSize: typography.h3,
