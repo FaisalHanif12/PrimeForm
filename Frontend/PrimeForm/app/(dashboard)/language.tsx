@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import Sidebar from '../../src/components/Sidebar';
 import BottomNavigation from '../../src/components/BottomNavigation';
+import NotificationModal from '../../src/components/NotificationModal';
+import ProfilePage from '../../src/components/ProfilePage';
 import { useAuthContext } from '../../src/context/AuthContext';
 
 interface LanguageOption {
@@ -49,6 +52,9 @@ export default function LanguagePreferencesPage() {
   const { showToast } = useToast();
   const { user } = useAuthContext();
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [isChanging, setIsChanging] = useState(false);
   const [scaleAnim] = useState(new Animated.Value(1));
 
@@ -57,14 +63,16 @@ export default function LanguagePreferencesPage() {
   };
 
   const handleNotificationPress = () => {
-    showToast('info', 'Notifications are coming soon!');
+    setNotificationModalVisible(true);
   };
 
   const handleSidebarMenuPress = async (action: string) => {
+    setSidebarVisible(false);
+    
     try {
       switch (action) {
         case 'profile':
-          router.push('/(dashboard)');
+          setShowProfilePage(true);
           break;
         case 'streak':
           router.push('/(dashboard)/streak');
@@ -93,8 +101,6 @@ export default function LanguagePreferencesPage() {
     } catch (error) {
       console.error('Sidebar action failed:', error);
       showToast('error', 'Unable to complete that action. Please try again.');
-    } finally {
-      setSidebarVisible(false);
     }
   };
 
@@ -149,6 +155,28 @@ export default function LanguagePreferencesPage() {
     }
   };
 
+  const loadUserInfo = async () => {
+    try {
+      const response = await userProfileService.getUserProfile();
+      if (response && response.success && response.data) {
+        setUserInfo(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load user info:', error);
+    }
+  };
+
+  const handleUpdateUserInfo = (updatedInfo: any) => {
+    setUserInfo(updatedInfo);
+  };
+
+  // Load user info when profile page is opened
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -164,6 +192,20 @@ export default function LanguagePreferencesPage() {
         onMenuItemPress={handleSidebarMenuPress}
         userName={user?.fullName || 'Guest User'}
         userEmail={user?.email || 'guest@primeform.com'}
+      />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        visible={notificationModalVisible}
+        onClose={() => setNotificationModalVisible(false)}
+      />
+
+      {/* Profile Page */}
+      <ProfilePage
+        visible={showProfilePage}
+        onClose={() => setShowProfilePage(false)}
+        userInfo={userInfo}
+        onUpdateUserInfo={handleUpdateUserInfo}
       />
 
       <ScrollView
