@@ -46,6 +46,25 @@ export default function WorkoutPlanDisplay({
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Define callbacks BEFORE early return to ensure they always exist
+  // This prevents them from becoming undefined during re-renders
+  const handleShowCompletion = useCallback(() => {
+    console.log('========================================');
+    console.log('🎉 WorkoutPlanDisplay: handleShowCompletion called');
+    console.log('   Current state:');
+    console.log('   - exerciseModalVisible:', exerciseModalVisible);
+    console.log('   - completionModalVisible:', completionModalVisible);
+    console.log('   - selectedExercise:', selectedExercise?.name);
+    console.log('========================================');
+    
+    // Close exercise detail modal and show completion modal
+    setExerciseModalVisible(false);
+    setCompletionModalVisible(true);
+    // Keep selectedExercise set so completion screen can display it
+    
+    console.log('✅ WorkoutPlanDisplay: Modals switched - detail closed, completion opened');
+  }, [exerciseModalVisible, completionModalVisible, selectedExercise]);
+
   // Safety checks for workout plan structure
   if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
     return (
@@ -569,23 +588,6 @@ export default function WorkoutPlanDisplay({
       await loadCompletionStates();
     }
   };
-
-  const handleShowCompletion = useCallback(() => {
-    console.log('========================================');
-    console.log('🎉 WorkoutPlanDisplay: handleShowCompletion called');
-    console.log('   Current state:');
-    console.log('   - exerciseModalVisible:', exerciseModalVisible);
-    console.log('   - completionModalVisible:', completionModalVisible);
-    console.log('   - selectedExercise:', selectedExercise?.name);
-    console.log('========================================');
-    
-    // Close exercise detail modal and show completion modal
-    setExerciseModalVisible(false);
-    setCompletionModalVisible(true);
-    // Keep selectedExercise set so completion screen can display it
-    
-    console.log('✅ WorkoutPlanDisplay: Modals switched - detail closed, completion opened');
-  }, [exerciseModalVisible, completionModalVisible, selectedExercise]);
 
   const handleBackToWorkout = () => {
     console.log('🔙 WorkoutPlanDisplay: Back to workout from completion screen');
