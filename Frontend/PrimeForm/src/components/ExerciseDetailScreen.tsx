@@ -45,23 +45,29 @@ export default function ExerciseDetailScreen({
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
   const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
+  const prevVisibleRef = React.useRef(visible);
 
-  // Reset state when modal opens - simple and reliable
+  // Reset state ONLY when modal transitions from closed to open (fresh open)
   useEffect(() => {
-    if (visible && exercise) {
-      console.log('🔄 ExerciseDetailScreen: Modal opened with exercise:', exercise.name);
-      console.log('🔄 ExerciseDetailScreen: lastExerciseName:', lastExerciseName);
+    const wasHidden = !prevVisibleRef.current;
+    const isNowVisible = visible;
+    
+    if (wasHidden && isNowVisible && exercise) {
+      console.log('🔄 ExerciseDetailScreen: Fresh modal open with exercise:', exercise.name);
+      console.log('🔄 ExerciseDetailScreen: Resetting all state to empty');
       
-      // Reset state for a fresh start every time modal opens
-      // This ensures completed sets are always empty when opening the detail screen
+      // Reset state for a fresh start ONLY when freshly opening
       setCurrentSet(1);
       setCompletedSets(new Set());
       setIsCompleting(false);
       setLastExerciseName(exercise.name);
       
-      console.log('🔄 ExerciseDetailScreen: State reset for fresh start');
+      console.log('✅ ExerciseDetailScreen: State reset complete - ready for user input');
     }
-  }, [visible, exercise?.name]);
+    
+    // Update ref for next render
+    prevVisibleRef.current = visible;
+  }, [visible, exercise]);
 
   // Simple animation effects
   useEffect(() => {
