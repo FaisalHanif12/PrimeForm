@@ -20,8 +20,7 @@ interface ExerciseDetailScreenProps {
   exercise: WorkoutExercise | null;
   visible: boolean;
   onClose: () => void;
-  onComplete?: () => void;
-  onShowCompletion?: () => void;
+  onComplete?: () => Promise<void>;
   isCompleted?: boolean;
   canComplete?: boolean;
   selectedDay?: any;
@@ -32,9 +31,9 @@ export default function ExerciseDetailScreen({
   visible,
   onClose,
   onComplete,
-  onShowCompletion,
   isCompleted = false,
   canComplete = true,
+  selectedDay,
 }: ExerciseDetailScreenProps) {
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const [isCompleting, setIsCompleting] = useState(false);
@@ -44,6 +43,7 @@ export default function ExerciseDetailScreen({
   // Reset state when modal opens with a new exercise
   useEffect(() => {
     if (visible && exercise) {
+      console.log('🔄 ExerciseDetailScreen: Opening with exercise:', exercise.name);
       setCompletedSets(new Set());
       setIsCompleting(false);
     }
@@ -85,8 +85,11 @@ export default function ExerciseDetailScreen({
     setCompletedSets(newCompletedSets);
   };
 
-  const handleCompleteExercise = () => {
-    if (!canComplete || isCompleting) return;
+  const handleCompleteExercise = async () => {
+    if (!canComplete || isCompleting) {
+      console.log('⚠️ Cannot complete - already completing or not allowed');
+      return;
+    }
     
     if (completedSets.size !== exercise.sets) {
       Alert.alert(
@@ -97,26 +100,32 @@ export default function ExerciseDetailScreen({
       return;
     }
 
+    console.log('========================================');
+    console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
+    console.log('   Exercise:', exercise.name);
+    console.log('   Completed sets:', Array.from(completedSets));
+    console.log('========================================');
+    
     setIsCompleting(true);
-    
-    console.log('✅ ExerciseDetailScreen: Exercise completed - showing completion screen');
-    
-    // Call completion callbacks immediately
-    if (onShowCompletion) {
-      onShowCompletion();
-    }
-    
-    // Call backend update in background
-    if (onComplete) {
-      Promise.resolve(onComplete()).catch((error: any) => {
-        console.error('❌ Background completion error:', error);
-      });
-    }
-    
-    // Reset state after a brief delay
-    setTimeout(() => {
+
+    try {
+      // Mark exercise as complete in backend
+      if (onComplete) {
+        console.log('🔄 Calling onComplete to mark exercise as complete...');
+        await onComplete();
+        console.log('✅ Exercise marked as complete in backend');
+      }
+      
+      // Close this modal - parent will handle showing completion screen
+      console.log('🚪 Closing detail modal...');
+      onClose();
+      console.log('✅ Detail modal closed, parent will show completion screen');
+      
+    } catch (error) {
+      console.error('❌ Error completing exercise:', error);
+      Alert.alert('Error', 'Failed to complete exercise. Please try again.');
       setIsCompleting(false);
-    }, 500);
+    }
   };
 
   const allSetsCompleted = completedSets.size === exercise.sets;
@@ -151,7 +160,7 @@ export default function ExerciseDetailScreen({
 
           {/* Content */}
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Exercise Card */}
+            {/* Exercise Info Card */}
             <View style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View style={styles.exerciseIcon}>
@@ -187,7 +196,7 @@ export default function ExerciseDetailScreen({
             </View>
 
             {/* Progress Card */}
-            {canComplete && (
+            {canComplete && !isCompleted && (
               <View style={styles.progressCard}>
                 <Text style={styles.sectionTitle}>Progress</Text>
                 <View style={styles.progressBar}>
@@ -205,7 +214,7 @@ export default function ExerciseDetailScreen({
             )}
 
             {/* Set Tracker */}
-            {canComplete && (
+            {canComplete && !isCompleted && (
               <View style={styles.setTracker}>
                 <Text style={styles.sectionTitle}>Track Your Sets</Text>
                 <View style={styles.setsGrid}>
@@ -266,7 +275,7 @@ export default function ExerciseDetailScreen({
           </ScrollView>
 
           {/* Bottom Action */}
-          {canComplete && (
+          {canComplete && !isCompleted && (
             <View style={styles.bottomAction}>
               <TouchableOpacity
                 style={[
@@ -293,6 +302,7 @@ export default function ExerciseDetailScreen({
               </TouchableOpacity>
             </View>
           )}
+
         </Animated.View>
       </SafeAreaView>
     </Modal>
