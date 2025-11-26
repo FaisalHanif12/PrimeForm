@@ -161,30 +161,31 @@ export default function ExerciseDetailScreen({
     setIsCompleting(true);
 
     try {
-      // Step 1: Mark exercise as complete in backend
-      if (onCompleteRef.current) {
-        console.log('🔄 ExerciseDetailScreen: Step 1 - Calling onComplete...');
-        await onCompleteRef.current();
-        console.log('✅ ExerciseDetailScreen: Step 1 DONE - Exercise marked as complete');
-      }
-
-      // Step 2: Wait a moment to ensure all state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Step 3: Show completion screen using ref (to avoid stale closure)
-      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback from ref...');
-      console.log('   onShowCompletion prop exists?', !!onShowCompletion);
-      console.log('   onShowCompletion prop type:', typeof onShowCompletion);
+      // CRITICAL FIX: Show completion screen FIRST, before any async operations
+      // This prevents the callback from becoming undefined during state updates
+      console.log('🎉 ExerciseDetailScreen: Step 1 - Showing completion screen IMMEDIATELY...');
+      console.log('   onShowCompletion exists?', !!onShowCompletion);
       console.log('   onShowCompletionRef.current exists?', !!onShowCompletionRef.current);
-      console.log('   onShowCompletionRef.current type:', typeof onShowCompletionRef.current);
       
       if (onShowCompletionRef.current) {
-        console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen via ref...');
         onShowCompletionRef.current();
-        console.log('✅ ExerciseDetailScreen: Step 2 DONE - Completion screen displayed');
+        console.log('✅ ExerciseDetailScreen: Step 1 DONE - Completion screen displayed');
+      } else if (onShowCompletion) {
+        // Fallback to prop if ref is undefined
+        onShowCompletion();
+        console.log('✅ ExerciseDetailScreen: Step 1 DONE - Completion screen displayed (via prop)');
       } else {
-        console.error('❌ ExerciseDetailScreen: onShowCompletionRef.current is NOT defined!');
-        console.error('   This is a stale closure issue - the callback was lost!');
+        console.error('❌ ExerciseDetailScreen: No completion callback available!');
+      }
+      
+      // Step 2: Mark exercise as complete in backend (AFTER showing completion screen)
+      if (onCompleteRef.current) {
+        console.log('🔄 ExerciseDetailScreen: Step 2 - Marking exercise as complete in background...');
+        // Don't await - let it complete in background
+        Promise.resolve(onCompleteRef.current()).catch((error: Error) => {
+          console.error('❌ Background completion failed:', error);
+        });
+        console.log('✅ ExerciseDetailScreen: Step 2 - Completion triggered');
       }
       
       console.log('========================================');
