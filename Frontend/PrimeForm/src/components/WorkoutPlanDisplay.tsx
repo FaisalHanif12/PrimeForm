@@ -925,8 +925,10 @@ export default function WorkoutPlanDisplay({
         exercise={selectedExercise}
         visible={exerciseModalVisible}
         onClose={() => {
+          console.log('🚪 WorkoutPlanDisplay: Closing exercise detail modal');
           setExerciseModalVisible(false);
           setSelectedExercise(null);
+          console.log('✅ WorkoutPlanDisplay: Exercise detail modal closed');
         }}
         onComplete={handleExerciseModalComplete}
         isCompleted={selectedExercise && selectedDay ?

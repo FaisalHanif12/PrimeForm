@@ -151,7 +151,13 @@ export default function ExerciseDetailScreen({
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={() => {
+                console.log('🚪 Close button pressed, closing modal');
+                onClose();
+              }}
+            >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Exercise Details</Text>
