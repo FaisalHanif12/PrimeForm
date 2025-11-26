@@ -571,18 +571,27 @@ export default function WorkoutPlanDisplay({
   };
 
   const handleShowCompletion = () => {
+    console.log('🎉 WorkoutPlanDisplay: Showing completion screen');
+    // Close exercise detail modal and show completion modal
     setExerciseModalVisible(false);
     setCompletionModalVisible(true);
+    // Keep selectedExercise set so completion screen can display it
   };
 
   const handleBackToWorkout = () => {
+    console.log('🔙 WorkoutPlanDisplay: Back to workout from completion screen');
     setCompletionModalVisible(false);
     setSelectedExercise(null);
+    // Reload completion states to reflect the new completion
+    loadCompletionStates();
   };
 
   const handleCloseCompletion = () => {
+    console.log('❌ WorkoutPlanDisplay: Closing completion screen');
     setCompletionModalVisible(false);
     setSelectedExercise(null);
+    // Reload completion states to reflect the new completion
+    loadCompletionStates();
   };
 
   // Removed delete plan handler and button per new requirement

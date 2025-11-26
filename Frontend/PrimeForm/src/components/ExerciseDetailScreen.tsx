@@ -44,15 +44,30 @@ export default function ExerciseDetailScreen({
   const [isCompleting, setIsCompleting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
+  const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
 
-  // Simple state reset when exercise changes
+  // Reset state only when modal opens with a new exercise or when modal closes
   useEffect(() => {
-    if (exercise) {
-      setCurrentSet(1);
-      setCompletedSets(new Set());
-      setIsCompleting(false);
+    if (visible && exercise) {
+      // Only reset if it's a different exercise or if modal was just opened
+      if (lastExerciseName !== exercise.name) {
+        console.log('🔄 ExerciseDetailScreen: Resetting state for new exercise:', exercise.name);
+        setCurrentSet(1);
+        setCompletedSets(new Set());
+        setIsCompleting(false);
+        setLastExerciseName(exercise.name);
+      } else {
+        console.log('📌 ExerciseDetailScreen: Same exercise, keeping state:', exercise.name);
+      }
+    } else if (!visible) {
+      // Reset tracking when modal closes, but keep state for completion flow
+      console.log('🚪 ExerciseDetailScreen: Modal closed');
+      if (!isCompleting) {
+        // Only reset if we're not in the middle of completing
+        setLastExerciseName(null);
+      }
     }
-  }, [exercise]);
+  }, [visible, exercise?.name, isCompleting]);
 
   // Simple animation effects
   useEffect(() => {
@@ -102,28 +117,49 @@ export default function ExerciseDetailScreen({
       return;
     }
 
+    console.log('✅ ExerciseDetailScreen: Starting completion flow for:', exercise.name);
     setIsCompleting(true);
 
     try {
       // Complete the exercise
       if (onComplete) {
+        console.log('✅ ExerciseDetailScreen: Calling onComplete...');
         await onComplete();
       }
 
+      // Small delay to ensure state updates are processed
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Navigate to completion screen
       if (onShowCompletion) {
+        console.log('✅ ExerciseDetailScreen: Calling onShowCompletion...');
         onShowCompletion();
       }
     } catch (error) {
-      console.error('Error completing exercise:', error);
+      console.error('❌ ExerciseDetailScreen: Error completing exercise:', error);
       Alert.alert('Error', 'Failed to complete exercise. Please try again.');
-    } finally {
       setIsCompleting(false);
     }
+    // Don't reset isCompleting here - let the modal close handle it
   };
 
   const allSetsCompleted = completedSets.size === exercise.sets;
   const completionPercentage = (completedSets.size / exercise.sets) * 100;
+
+  // Reset state when modal is fully closed
+  useEffect(() => {
+    if (!visible && !isCompleting) {
+      // Use a timeout to ensure this happens after animations
+      const timer = setTimeout(() => {
+        console.log('🧹 ExerciseDetailScreen: Cleaning up after modal close');
+        setCurrentSet(1);
+        setCompletedSets(new Set());
+        setIsCompleting(false);
+        setLastExerciseName(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, isCompleting]);
 
   return (
     <Modal
