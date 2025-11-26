@@ -48,14 +48,14 @@ export default function ExerciseDetailScreen({
   const prevVisibleRef = React.useRef(visible);
   
   // Store callbacks in refs to avoid stale closure issues
+  // CRITICAL: Initialize refs with current prop values to avoid race conditions
   const onCompleteRef = React.useRef(onComplete);
   const onShowCompletionRef = React.useRef(onShowCompletion);
   
-  // Update refs whenever callbacks change
-  useEffect(() => {
-    onCompleteRef.current = onComplete;
-    onShowCompletionRef.current = onShowCompletion;
-  }, [onComplete, onShowCompletion]);
+  // ALWAYS update refs on EVERY render to ensure latest callback
+  // This runs synchronously during render, not in useEffect
+  onCompleteRef.current = onComplete;
+  onShowCompletionRef.current = onShowCompletion;
   
   // Debug: Log props on every render
   useEffect(() => {
