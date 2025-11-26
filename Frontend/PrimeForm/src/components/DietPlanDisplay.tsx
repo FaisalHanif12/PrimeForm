@@ -779,7 +779,7 @@ export default function DietPlanDisplay({
                 activeOpacity={0.8}
               >
                 {/* Background Glow Effect - Removed for cleaner look */}
-
+                
                 {/* Status Badge */}
                 <View style={[styles.premiumStatusBadge, 
                   status === 'in_progress' && styles.premiumStatusBadgeProgress,

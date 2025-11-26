@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroSubtitle: {
-    color: colors.mutedText,
+    color: colors.primary,
     fontSize: 15,
     fontWeight: '500',
     fontFamily: fonts.body,
