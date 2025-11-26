@@ -12,7 +12,7 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
 import WorkoutPlanDisplay from '../../src/components/WorkoutPlanDisplay';
-import ExerciseDetailScreen from '../../src/components/ExerciseDetailScreen';
+// ExerciseDetailScreen removed - WorkoutPlanDisplay handles it internally
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import LoadingModal from '../../src/components/LoadingModal';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,7 +38,7 @@ export default function WorkoutScreen() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
-  const [showExerciseDetail, setShowExerciseDetail] = useState(false);
+  // showExerciseDetail removed - WorkoutPlanDisplay handles modals internally
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const [generationTimer, setGenerationTimer] = useState(0);
   const [showGenerationModal, setShowGenerationModal] = useState(false);
@@ -306,18 +306,19 @@ export default function WorkoutScreen() {
   };
 
   const handleExercisePress = (exercise: WorkoutExercise) => {
+    // WorkoutPlanDisplay handles exercise modals internally
+    // No need to manage state here
     setSelectedExercise(exercise);
-    setShowExerciseDetail(true);
   };
 
   const handleExerciseComplete = (exercise: WorkoutExercise) => {
+    // WorkoutPlanDisplay handles exercise completion internally
     showToast('success', `${exercise.name} completed! Great job!`);
-    setShowExerciseDetail(false);
     setSelectedExercise(null);
   };
 
   const handleExerciseBack = () => {
-    setShowExerciseDetail(false);
+    // WorkoutPlanDisplay handles exercise modals internally
     setSelectedExercise(null);
   };
 
@@ -542,15 +543,8 @@ export default function WorkoutScreen() {
           onClose={() => setShowNotificationModal(false)}
         />
 
-        {showExerciseDetail && selectedExercise && (
-          <ExerciseDetailScreen
-            exercise={selectedExercise}
-            visible={showExerciseDetail}
-            onClose={handleExerciseBack}
-            onComplete={() => handleExerciseComplete(selectedExercise)}
-            selectedDay={null} // This will be handled by WorkoutPlanDisplay
-          />
-        )}
+        {/* ExerciseDetailScreen is now handled internally by WorkoutPlanDisplay */}
+        {/* No need to render it here as it would create duplicate modals */}
 
         {/* Beautiful Loading Modal */}
         <LoadingModal
