@@ -797,14 +797,16 @@ export default function WorkoutPlanDisplay({
                     style={[
                       styles.modernExerciseCard,
                       isCompleted && styles.modernExerciseCardCompleted,
-                      !canComplete && !isCompleted && styles.modernExerciseCardDisabled,
+                      isCompleted && styles.modernExerciseCardDisabled,
                     ]}
                     onPress={() => {
-                      // Allow viewing all exercises, but only show completion UI for current day
-                      handleExercisePress(exercise);
+                      // Only allow opening incomplete exercises
+                      if (!isCompleted) {
+                        handleExercisePress(exercise);
+                      }
                     }}
-                    activeOpacity={0.8}
-                    disabled={false}
+                    activeOpacity={isCompleted ? 1 : 0.8}
+                    disabled={isCompleted}
                   >
                     {/* Exercise Number Badge */}
                     <View style={[styles.exerciseNumber, isCompleted && styles.exerciseNumberCompleted]}>
