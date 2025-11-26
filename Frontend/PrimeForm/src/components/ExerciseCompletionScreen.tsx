@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
-import { WorkoutExercise } from '../services/aiWorkoutS ervice';
+import { WorkoutExercise } from '../services/aiWorkoutService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   },
   container: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: 24,
     padding: spacing.xl,
     alignItems: 'center',
     width: '100%',

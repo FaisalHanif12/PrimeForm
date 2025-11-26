@@ -44,15 +44,30 @@ export default function ExerciseDetailScreen({
   const [isCompleting, setIsCompleting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
+  const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
+  const prevVisibleRef = React.useRef(visible);
 
-  // Simple state reset when exercise changes
+  // Reset state ONLY when modal transitions from closed to open (fresh open)
   useEffect(() => {
-    if (exercise) {
+    const wasHidden = !prevVisibleRef.current;
+    const isNowVisible = visible;
+    
+    if (wasHidden && isNowVisible && exercise) {
+      console.log('🔄 ExerciseDetailScreen: Fresh modal open with exercise:', exercise.name);
+      console.log('🔄 ExerciseDetailScreen: Resetting all state to empty');
+      
+      // Reset state for a fresh start ONLY when freshly opening
       setCurrentSet(1);
       setCompletedSets(new Set());
       setIsCompleting(false);
+      setLastExerciseName(exercise.name);
+      
+      console.log('✅ ExerciseDetailScreen: State reset complete - ready for user input');
     }
-  }, [exercise]);
+    
+    // Update ref for next render
+    prevVisibleRef.current = visible;
+  }, [visible, exercise]);
 
   // Simple animation effects
   useEffect(() => {
@@ -76,6 +91,15 @@ export default function ExerciseDetailScreen({
     }
   }, [visible]);
 
+  // Cleanup when modal closes
+  useEffect(() => {
+    if (!visible) {
+      console.log('🚪 ExerciseDetailScreen: Modal closed, cleaning up');
+      // Reset tracking when modal closes
+      setLastExerciseName(null);
+    }
+  }, [visible]);
+
   if (!exercise) return null;
 
   const handleSetComplete = (setNumber: number) => {
@@ -91,7 +115,10 @@ export default function ExerciseDetailScreen({
   };
 
   const handleCompleteExercise = async () => {
-    if (!canComplete || isCompleting) return;
+    if (!canComplete || isCompleting) {
+      console.log('⚠️ ExerciseDetailScreen: Cannot complete - canComplete:', canComplete, 'isCompleting:', isCompleting);
+      return;
+    }
     
     if (completedSets.size !== exercise.sets) {
       Alert.alert(
@@ -102,22 +129,49 @@ export default function ExerciseDetailScreen({
       return;
     }
 
+    console.log('========================================');
+    console.log('✅ ExerciseDetailScreen: Starting completion flow');
+    console.log('   Exercise:', exercise.name);
+    console.log('   Completed sets:', Array.from(completedSets));
+    console.log('   Total sets required:', exercise.sets);
+    console.log('========================================');
+    
     setIsCompleting(true);
 
     try {
-      // Complete the exercise
+      // Step 1: Mark exercise as complete in backend
       if (onComplete) {
+        console.log('🔄 ExerciseDetailScreen: Step 1 - Calling onComplete...');
         await onComplete();
+        console.log('✅ ExerciseDetailScreen: Step 1 DONE - Exercise marked as complete');
       }
 
-      // Navigate to completion screen
+      // Step 2: Wait a moment to ensure all state updates propagate
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Step 3: Show completion screen
+      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback...');
+      console.log('   onShowCompletion exists?', !!onShowCompletion);
+      console.log('   onShowCompletion type:', typeof onShowCompletion);
+      
       if (onShowCompletion) {
+        console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen...');
         onShowCompletion();
+        console.log('✅ ExerciseDetailScreen: Step 2 DONE - Completion screen displayed');
+      } else {
+        console.error('❌ ExerciseDetailScreen: onShowCompletion is NOT defined!');
+        console.error('   This is why the completion screen is not showing!');
       }
+      
+      console.log('========================================');
+      console.log('✅ COMPLETION FLOW FINISHED SUCCESSFULLY');
+      console.log('========================================');
+      
     } catch (error) {
-      console.error('Error completing exercise:', error);
+      console.error('========================================');
+      console.error('❌ ExerciseDetailScreen: ERROR in completion flow:', error);
+      console.error('========================================');
       Alert.alert('Error', 'Failed to complete exercise. Please try again.');
-    } finally {
       setIsCompleting(false);
     }
   };
