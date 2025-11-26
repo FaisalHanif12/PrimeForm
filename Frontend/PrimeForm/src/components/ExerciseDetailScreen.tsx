@@ -46,28 +46,22 @@ export default function ExerciseDetailScreen({
   const [scaleAnim] = useState(new Animated.Value(0.9));
   const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
 
-  // Reset state only when modal opens with a new exercise or when modal closes
+  // Reset state when modal opens - simple and reliable
   useEffect(() => {
     if (visible && exercise) {
-      // Only reset if it's a different exercise or if modal was just opened
-      if (lastExerciseName !== exercise.name) {
-        console.log('🔄 ExerciseDetailScreen: Resetting state for new exercise:', exercise.name);
-        setCurrentSet(1);
-        setCompletedSets(new Set());
-        setIsCompleting(false);
-        setLastExerciseName(exercise.name);
-      } else {
-        console.log('📌 ExerciseDetailScreen: Same exercise, keeping state:', exercise.name);
-      }
-    } else if (!visible) {
-      // Reset tracking when modal closes, but keep state for completion flow
-      console.log('🚪 ExerciseDetailScreen: Modal closed');
-      if (!isCompleting) {
-        // Only reset if we're not in the middle of completing
-        setLastExerciseName(null);
-      }
+      console.log('🔄 ExerciseDetailScreen: Modal opened with exercise:', exercise.name);
+      console.log('🔄 ExerciseDetailScreen: lastExerciseName:', lastExerciseName);
+      
+      // Reset state for a fresh start every time modal opens
+      // This ensures completed sets are always empty when opening the detail screen
+      setCurrentSet(1);
+      setCompletedSets(new Set());
+      setIsCompleting(false);
+      setLastExerciseName(exercise.name);
+      
+      console.log('🔄 ExerciseDetailScreen: State reset for fresh start');
     }
-  }, [visible, exercise?.name, isCompleting]);
+  }, [visible, exercise?.name]);
 
   // Simple animation effects
   useEffect(() => {
@@ -91,20 +85,14 @@ export default function ExerciseDetailScreen({
     }
   }, [visible]);
 
-  // Reset state when modal is fully closed (cleanup)
+  // Cleanup when modal closes
   useEffect(() => {
-    if (!visible && !isCompleting) {
-      // Use a timeout to ensure this happens after animations
-      const timer = setTimeout(() => {
-        console.log('🧹 ExerciseDetailScreen: Cleaning up after modal close');
-        setCurrentSet(1);
-        setCompletedSets(new Set());
-        setIsCompleting(false);
-        setLastExerciseName(null);
-      }, 300);
-      return () => clearTimeout(timer);
+    if (!visible) {
+      console.log('🚪 ExerciseDetailScreen: Modal closed, cleaning up');
+      // Reset tracking when modal closes
+      setLastExerciseName(null);
     }
-  }, [visible, isCompleting]);
+  }, [visible]);
 
   if (!exercise) return null;
 
@@ -133,6 +121,7 @@ export default function ExerciseDetailScreen({
     }
 
     console.log('✅ ExerciseDetailScreen: Starting completion flow for:', exercise.name);
+    console.log('✅ ExerciseDetailScreen: Completed sets:', Array.from(completedSets));
     setIsCompleting(true);
 
     try {
@@ -142,20 +131,23 @@ export default function ExerciseDetailScreen({
         await onComplete();
       }
 
-      // Small delay to ensure state updates are processed
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('✅ ExerciseDetailScreen: onComplete finished, now showing completion screen');
 
-      // Navigate to completion screen
+      // Navigate to completion screen immediately
       if (onShowCompletion) {
         console.log('✅ ExerciseDetailScreen: Calling onShowCompletion...');
         onShowCompletion();
       }
+      
+      // Reset isCompleting after showing completion screen
+      // This allows the cleanup to happen when modal closes
+      setIsCompleting(false);
+      
     } catch (error) {
       console.error('❌ ExerciseDetailScreen: Error completing exercise:', error);
       Alert.alert('Error', 'Failed to complete exercise. Please try again.');
       setIsCompleting(false);
     }
-    // Don't reset isCompleting here - let the modal close handle it
   };
 
   const allSetsCompleted = completedSets.size === exercise.sets;
