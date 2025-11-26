@@ -155,7 +155,15 @@ export default function ExerciseDetailScreen({
               style={styles.closeButton} 
               onPress={() => {
                 console.log('🚪 Close button pressed, closing modal');
-                onClose();
+                console.log('   onClose type:', typeof onClose);
+                console.log('   onClose exists?', !!onClose);
+                if (onClose) {
+                  console.log('   Calling onClose()...');
+                  onClose();
+                  console.log('   onClose() called successfully');
+                } else {
+                  console.error('❌ onClose is not defined!');
+                }
               }}
             >
               <Text style={styles.closeButtonText}>✕</Text>
