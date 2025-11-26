@@ -150,10 +150,17 @@ export default function ExerciseDetailScreen({
       await new Promise(resolve => setTimeout(resolve, 200));
       
       // Step 3: Show completion screen
+      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback...');
+      console.log('   onShowCompletion exists?', !!onShowCompletion);
+      console.log('   onShowCompletion type:', typeof onShowCompletion);
+      
       if (onShowCompletion) {
         console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen...');
         onShowCompletion();
         console.log('✅ ExerciseDetailScreen: Step 2 DONE - Completion screen displayed');
+      } else {
+        console.error('❌ ExerciseDetailScreen: onShowCompletion is NOT defined!');
+        console.error('   This is why the completion screen is not showing!');
       }
       
       console.log('========================================');
