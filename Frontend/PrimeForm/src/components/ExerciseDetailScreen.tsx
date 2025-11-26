@@ -7,26 +7,23 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
-  StatusBar,
   Alert,
   Animated,
   SafeAreaView,
 } from 'react-native';
-import { colors, spacing, typography, fonts, radius } from '../theme/colors';
+import { colors, spacing, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
-import { DeviceEventEmitter } from 'react-native';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 interface ExerciseDetailScreenProps {
   exercise: WorkoutExercise | null;
   visible: boolean;
   onClose: () => void;
-  onComplete?: () => void;
-  onShowCompletion?: () => void;
+  onComplete?: () => Promise<void>;
   isCompleted?: boolean;
   canComplete?: boolean;
-  selectedDay?: any; // Add selectedDay prop for proper completion tracking
+  selectedDay?: any;
 }
 
 export default function ExerciseDetailScreen({
@@ -34,42 +31,25 @@ export default function ExerciseDetailScreen({
   visible,
   onClose,
   onComplete,
-  onShowCompletion,
   isCompleted = false,
   canComplete = true,
   selectedDay,
 }: ExerciseDetailScreenProps) {
-  const [currentSet, setCurrentSet] = useState(1);
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const [isCompleting, setIsCompleting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.9));
-  const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
-  const prevVisibleRef = React.useRef(visible);
 
-  // Reset state ONLY when modal transitions from closed to open (fresh open)
+  // Reset state when modal opens with a new exercise
   useEffect(() => {
-    const wasHidden = !prevVisibleRef.current;
-    const isNowVisible = visible;
-    
-    if (wasHidden && isNowVisible && exercise) {
-      console.log('🔄 ExerciseDetailScreen: Fresh modal open with exercise:', exercise.name);
-      console.log('🔄 ExerciseDetailScreen: Resetting all state to empty');
-      
-      // Reset state for a fresh start ONLY when freshly opening
-      setCurrentSet(1);
+    if (visible && exercise) {
+      console.log('🔄 ExerciseDetailScreen: Opening with exercise:', exercise.name);
       setCompletedSets(new Set());
       setIsCompleting(false);
-      setLastExerciseName(exercise.name);
-      
-      console.log('✅ ExerciseDetailScreen: State reset complete - ready for user input');
     }
-    
-    // Update ref for next render
-    prevVisibleRef.current = visible;
-  }, [visible, exercise]);
+  }, [visible, exercise?.name]);
 
-  // Simple animation effects
+  // Animate modal entrance
   useEffect(() => {
     if (visible) {
       Animated.parallel([
@@ -91,15 +71,6 @@ export default function ExerciseDetailScreen({
     }
   }, [visible]);
 
-  // Cleanup when modal closes
-  useEffect(() => {
-    if (!visible) {
-      console.log('🚪 ExerciseDetailScreen: Modal closed, cleaning up');
-      // Reset tracking when modal closes
-      setLastExerciseName(null);
-    }
-  }, [visible]);
-
   if (!exercise) return null;
 
   const handleSetComplete = (setNumber: number) => {
@@ -116,7 +87,7 @@ export default function ExerciseDetailScreen({
 
   const handleCompleteExercise = async () => {
     if (!canComplete || isCompleting) {
-      console.log('⚠️ ExerciseDetailScreen: Cannot complete - canComplete:', canComplete, 'isCompleting:', isCompleting);
+      console.log('⚠️ Cannot complete - already completing or not allowed');
       return;
     }
     
@@ -130,47 +101,28 @@ export default function ExerciseDetailScreen({
     }
 
     console.log('========================================');
-    console.log('✅ ExerciseDetailScreen: Starting completion flow');
+    console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
     console.log('   Exercise:', exercise.name);
     console.log('   Completed sets:', Array.from(completedSets));
-    console.log('   Total sets required:', exercise.sets);
     console.log('========================================');
     
     setIsCompleting(true);
 
     try {
-      // Step 1: Mark exercise as complete in backend
+      // Mark exercise as complete in backend
       if (onComplete) {
-        console.log('🔄 ExerciseDetailScreen: Step 1 - Calling onComplete...');
+        console.log('🔄 Calling onComplete to mark exercise as complete...');
         await onComplete();
-        console.log('✅ ExerciseDetailScreen: Step 1 DONE - Exercise marked as complete');
-      }
-
-      // Step 2: Wait a moment to ensure all state updates propagate
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Step 3: Show completion screen
-      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback...');
-      console.log('   onShowCompletion exists?', !!onShowCompletion);
-      console.log('   onShowCompletion type:', typeof onShowCompletion);
-      
-      if (onShowCompletion) {
-        console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen...');
-        onShowCompletion();
-        console.log('✅ ExerciseDetailScreen: Step 2 DONE - Completion screen displayed');
-      } else {
-        console.error('❌ ExerciseDetailScreen: onShowCompletion is NOT defined!');
-        console.error('   This is why the completion screen is not showing!');
+        console.log('✅ Exercise marked as complete in backend');
       }
       
-      console.log('========================================');
-      console.log('✅ COMPLETION FLOW FINISHED SUCCESSFULLY');
-      console.log('========================================');
+      // Close this modal - parent will handle showing completion screen
+      console.log('🚪 Closing detail modal...');
+      onClose();
+      console.log('✅ Detail modal closed, parent will show completion screen');
       
     } catch (error) {
-      console.error('========================================');
-      console.error('❌ ExerciseDetailScreen: ERROR in completion flow:', error);
-      console.error('========================================');
+      console.error('❌ Error completing exercise:', error);
       Alert.alert('Error', 'Failed to complete exercise. Please try again.');
       setIsCompleting(false);
     }
@@ -197,159 +149,173 @@ export default function ExerciseDetailScreen({
             },
           ]}
         >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Exercise Details</Text>
-          <View style={styles.placeholder} />
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.closeButton} 
+              onPress={onClose}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Exercise Details</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-        {/* Exercise Details */}
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Exercise Info Card */}
-          <View style={styles.exerciseCard}>
-            <View style={styles.exerciseHeader}>
-              <View style={styles.exerciseIcon}>
-                <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
+          {/* Content */}
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Exercise Info Card */}
+            <View style={styles.exerciseCard}>
+              <View style={styles.exerciseHeader}>
+                <View style={styles.exerciseIcon}>
+                  <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
+                </View>
+                <View style={styles.exerciseInfo}>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <Text style={styles.exerciseStats}>
+                    {exercise.sets} sets × {exercise.reps} reps
+                  </Text>
+                </View>
+                {isCompleted && (
+                  <View style={styles.completedBadge}>
+                    <Text style={styles.completedText}>✓</Text>
+                  </View>
+                )}
               </View>
-              <View style={styles.exerciseInfo}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseStats}>
-                  {exercise.sets} sets × {exercise.reps} reps
+
+              <View style={styles.exerciseDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Rest Time</Text>
+                  <Text style={styles.detailValue}>{exercise.rest}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Target Muscles</Text>
+                  <Text style={styles.detailValue}>{exercise.targetMuscles.join(', ')}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Calories Burned</Text>
+                  <Text style={styles.detailValue}>{exercise.caloriesBurned} kcal</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Progress Card - Always show, but only interactive when canComplete */}
+            {!isCompleted && (
+              <View style={styles.progressCard}>
+                <Text style={styles.sectionTitle}>Progress</Text>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${completionPercentage}%` }
+                    ]} 
+                  />
+                </View>
+                <Text style={styles.progressText}>
+                  {completedSets.size} of {exercise.sets} sets completed ({Math.round(completionPercentage)}%)
                 </Text>
               </View>
-              {isCompleted && (
-                <View style={styles.completedBadge}>
-                  <Text style={styles.completedText}>✓</Text>
+            )}
+
+            {/* Set Tracker - Always show, but only interactive when canComplete */}
+            {!isCompleted && (
+              <View style={styles.setTracker}>
+                <Text style={styles.sectionTitle}>
+                  {canComplete ? 'Track Your Sets' : 'Sets Overview'}
+                </Text>
+                <View style={styles.setsGrid}>
+                  {Array.from({ length: exercise.sets }, (_, index) => {
+                    const setNumber = index + 1;
+                    const isSetCompleted = completedSets.has(setNumber);
+                    
+                    return (
+                      <TouchableOpacity
+                        key={setNumber}
+                        style={[
+                          styles.setButton,
+                          isSetCompleted && styles.setButtonCompleted,
+                          !canComplete && styles.setButtonDisabled,
+                        ]}
+                        onPress={() => canComplete && handleSetComplete(setNumber)}
+                        activeOpacity={canComplete ? 0.8 : 1}
+                        disabled={!canComplete}
+                      >
+                        <Text style={[
+                          styles.setButtonText,
+                          isSetCompleted && styles.setButtonTextCompleted,
+                          !canComplete && styles.setButtonTextDisabled,
+                        ]}>
+                          {setNumber}
+                        </Text>
+                        <Text style={[
+                          styles.setRepsText,
+                          isSetCompleted && styles.setRepsTextCompleted,
+                          !canComplete && styles.setRepsTextDisabled,
+                        ]}>
+                          {exercise.reps} reps
+                        </Text>
+                        {isSetCompleted && (
+                          <Text style={styles.setCheckmark}>✓</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              )}
-            </View>
+                {!canComplete && (
+                  <Text style={styles.viewOnlyNote}>
+                    View only - Complete today's exercises to track progress
+                  </Text>
+                )}
+              </View>
+            )}
 
-            <View style={styles.exerciseDetails}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Rest Time</Text>
-                <Text style={styles.detailValue}>{exercise.rest}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Target Muscles</Text>
-                <Text style={styles.detailValue}>{exercise.targetMuscles.join(', ')}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Calories Burned</Text>
-                <Text style={styles.detailValue}>{exercise.caloriesBurned} kcal</Text>
+            {/* Exercise Tips */}
+            <View style={styles.tipsSection}>
+              <Text style={styles.sectionTitle}>💡 Exercise Tips</Text>
+              <View style={styles.tipCard}>
+                <Text style={styles.tipText}>
+                  • Focus on proper form over speed
+                </Text>
+                <Text style={styles.tipText}>
+                  • Breathe steadily throughout the movement
+                </Text>
+                <Text style={styles.tipText}>
+                  • Take the full rest time between sets
+                </Text>
+                <Text style={styles.tipText}>
+                  • Stop if you feel any pain or discomfort
+                </Text>
               </View>
             </View>
-          </View>
+          </ScrollView>
 
-          {/* Progress Card */}
-          {canComplete && (
-            <View style={styles.progressCard}>
-              <Text style={styles.sectionTitle}>Progress</Text>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${completionPercentage}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {completedSets.size} of {exercise.sets} sets completed ({Math.round(completionPercentage)}%)
-              </Text>
-            </View>
-          )}
-
-          {/* Set Tracker */}
-          {canComplete && (
-            <View style={styles.setTracker}>
-              <Text style={styles.sectionTitle}>Track Your Sets</Text>
-              <View style={styles.setsGrid}>
-                {Array.from({ length: exercise.sets }, (_, index) => {
-                  const setNumber = index + 1;
-                  const isSetCompleted = completedSets.has(setNumber);
-                  
-                  return (
-                    <TouchableOpacity
-                      key={setNumber}
-                      style={[
-                        styles.setButton,
-                        isSetCompleted && styles.setButtonCompleted,
-                      ]}
-                      onPress={() => handleSetComplete(setNumber)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[
-                        styles.setButtonText,
-                        isSetCompleted && styles.setButtonTextCompleted,
-                      ]}>
-                        {setNumber}
-                      </Text>
-                      <Text style={[
-                        styles.setRepsText,
-                        isSetCompleted && styles.setRepsTextCompleted,
-                      ]}>
-                        {exercise.reps} reps
-                      </Text>
-                      {isSetCompleted && (
-                        <Text style={styles.setCheckmark}>✓</Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+          {/* Bottom Action */}
+          {canComplete && !isCompleted && (
+            <View style={styles.bottomAction}>
+              <TouchableOpacity
+                style={[
+                  styles.completeButton,
+                  allSetsCompleted && styles.completeButtonActive,
+                  isCompleting && styles.completeButtonDisabled,
+                ]}
+                onPress={handleCompleteExercise}
+                disabled={!allSetsCompleted || isCompleting}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.completeButtonText,
+                  allSetsCompleted && styles.completeButtonTextActive,
+                  isCompleting && styles.completeButtonTextDisabled,
+                ]}>
+                  {isCompleting 
+                    ? 'Completing...' 
+                    : allSetsCompleted 
+                      ? 'Complete Exercise ✓' 
+                      : `Complete ${completedSets.size}/${exercise.sets} sets`
+                  }
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
-
-          {/* Exercise Tips */}
-          <View style={styles.tipsSection}>
-            <Text style={styles.sectionTitle}>💡 Exercise Tips</Text>
-            <View style={styles.tipCard}>
-              <Text style={styles.tipText}>
-                • Focus on proper form over speed
-              </Text>
-              <Text style={styles.tipText}>
-                • Breathe steadily throughout the movement
-              </Text>
-              <Text style={styles.tipText}>
-                • Take the full rest time between sets
-              </Text>
-              <Text style={styles.tipText}>
-                • Stop if you feel any pain or discomfort
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Bottom Action */}
-        {canComplete && (
-          <View style={styles.bottomAction}>
-            <TouchableOpacity
-              style={[
-                styles.completeButton,
-                allSetsCompleted && styles.completeButtonActive,
-                isCompleting && styles.completeButtonDisabled,
-              ]}
-              onPress={handleCompleteExercise}
-              disabled={!allSetsCompleted || isCompleting}
-              activeOpacity={0.8}
-            >
-              <Text style={[
-                styles.completeButtonText,
-                allSetsCompleted && styles.completeButtonTextActive,
-                isCompleting && styles.completeButtonTextDisabled,
-              ]}>
-                {isCompleting 
-                  ? 'Completing...' 
-                  : allSetsCompleted 
-                    ? 'Complete Exercise ✓' 
-                    : `Complete ${completedSets.size}/${exercise.sets} sets`
-                }
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         </Animated.View>
       </SafeAreaView>
@@ -540,6 +506,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green + '20',
     borderColor: colors.green,
   },
+  setButtonDisabled: {
+    backgroundColor: colors.cardBorder + '20',
+    borderColor: colors.cardBorder + '40',
+    opacity: 0.6,
+  },
   setButtonText: {
     color: colors.white,
     fontSize: 18,
@@ -550,6 +521,9 @@ const styles = StyleSheet.create({
   setButtonTextCompleted: {
     color: colors.green,
   },
+  setButtonTextDisabled: {
+    color: colors.mutedText,
+  },
   setRepsText: {
     color: colors.mutedText,
     fontSize: 12,
@@ -558,6 +532,10 @@ const styles = StyleSheet.create({
   },
   setRepsTextCompleted: {
     color: colors.green + 'CC',
+  },
+  setRepsTextDisabled: {
+    color: colors.mutedText,
+    opacity: 0.5,
   },
   setCheckmark: {
     position: 'absolute',
@@ -583,6 +561,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     lineHeight: 20,
     marginBottom: spacing.sm,
+  },
+  viewOnlyNote: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
   bottomAction: {
     padding: spacing.lg,

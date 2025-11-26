@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -45,6 +45,27 @@ export default function WorkoutPlanDisplay({
   const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Handle exercise completion - simplified flow
+  const handleExerciseModalComplete = async () => {
+    if (selectedExercise && selectedDay) {
+      console.log('🎯 WorkoutPlanDisplay: Exercise complete button clicked');
+      console.log('   Exercise:', selectedExercise.name);
+      
+      // Mark exercise as complete
+      await handleExerciseComplete(selectedExercise);
+      await loadCompletionStates();
+      
+      // Close detail modal first
+      setExerciseModalVisible(false);
+      
+      // Wait for modal to close animation, then show completion screen
+      setTimeout(() => {
+        console.log('🎉 WorkoutPlanDisplay: Showing completion screen');
+        setCompletionModalVisible(true);
+      }, 300);
+    }
+  };
 
   // Safety checks for workout plan structure
   if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
@@ -392,16 +413,17 @@ export default function WorkoutPlanDisplay({
     const planStartDate = new Date(workoutPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
 
-    // Check if day is completed (50% completion criteria)
-    if (completedDays.has(day.date)) {
-      console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
-      return 'completed';
-    }
-
-    // Current day - show as in progress
+    // Current day - ALWAYS show as in progress (even if 50%+ completed)
+    // This allows users to complete remaining exercises today
     if (dayDate.getTime() === today.getTime()) {
       console.log('📊 Day Status: Current day - showing as in_progress:', day.date);
       return 'in_progress';
+    }
+
+    // Check if day is completed (50% completion criteria) - ONLY for past days
+    if (completedDays.has(day.date)) {
+      console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
+      return 'completed';
     }
 
     // Days before plan generation should be 'upcoming' (not missed)
@@ -561,30 +583,6 @@ export default function WorkoutPlanDisplay({
     setSelectedExercise(exercise);
     setExerciseModalVisible(true);
     onExercisePress?.(exercise);
-  };
-
-  const handleExerciseModalComplete = async () => {
-    if (selectedExercise && selectedDay) {
-      await handleExerciseComplete(selectedExercise);
-      await loadCompletionStates();
-    }
-  };
-
-  const handleShowCompletion = () => {
-    console.log('========================================');
-    console.log('🎉 WorkoutPlanDisplay: handleShowCompletion called');
-    console.log('   Current state:');
-    console.log('   - exerciseModalVisible:', exerciseModalVisible);
-    console.log('   - completionModalVisible:', completionModalVisible);
-    console.log('   - selectedExercise:', selectedExercise?.name);
-    console.log('========================================');
-    
-    // Close exercise detail modal and show completion modal
-    setExerciseModalVisible(false);
-    setCompletionModalVisible(true);
-    // Keep selectedExercise set so completion screen can display it
-    
-    console.log('✅ WorkoutPlanDisplay: Modals switched - detail closed, completion opened');
   };
 
   const handleBackToWorkout = () => {
@@ -800,14 +798,16 @@ export default function WorkoutPlanDisplay({
                     style={[
                       styles.modernExerciseCard,
                       isCompleted && styles.modernExerciseCardCompleted,
-                      !canComplete && styles.modernExerciseCardDisabled,
+                      isCompleted && styles.modernExerciseCardDisabled,
                     ]}
                     onPress={() => {
-                      if (!canComplete) return;
-                      handleExercisePress(exercise);
+                      // Only allow opening incomplete exercises
+                      if (!isCompleted) {
+                        handleExercisePress(exercise);
+                      }
                     }}
-                    activeOpacity={canComplete ? 0.8 : 1}
-                    disabled={!canComplete}
+                    activeOpacity={isCompleted ? 1 : 0.8}
+                    disabled={isCompleted}
                   >
                     {/* Exercise Number Badge */}
                     <View style={[styles.exerciseNumber, isCompleted && styles.exerciseNumberCompleted]}>
@@ -930,7 +930,6 @@ export default function WorkoutPlanDisplay({
           setSelectedExercise(null);
         }}
         onComplete={handleExerciseModalComplete}
-        onShowCompletion={handleShowCompletion}
         isCompleted={selectedExercise && selectedDay ?
           exerciseCompletionService.isExerciseCompleted(`${selectedDay.date}-${selectedExercise.name}`) : false}
         canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
