@@ -47,6 +47,16 @@ export default function ExerciseDetailScreen({
   const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
   const prevVisibleRef = React.useRef(visible);
   
+  // Store callbacks in refs to avoid stale closure issues
+  const onCompleteRef = React.useRef(onComplete);
+  const onShowCompletionRef = React.useRef(onShowCompletion);
+  
+  // Update refs whenever callbacks change
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+    onShowCompletionRef.current = onShowCompletion;
+  }, [onComplete, onShowCompletion]);
+  
   // Debug: Log props on every render
   useEffect(() => {
     console.log('🔍 ExerciseDetailScreen: Props update detected:', {
@@ -55,6 +65,7 @@ export default function ExerciseDetailScreen({
       hasOnComplete: !!onComplete,
       hasOnShowCompletion: !!onShowCompletion,
       onShowCompletionType: typeof onShowCompletion,
+      refHasOnShowCompletion: !!onShowCompletionRef.current,
     });
   }, [exercise, visible, onComplete, onShowCompletion]);
 
@@ -151,27 +162,29 @@ export default function ExerciseDetailScreen({
 
     try {
       // Step 1: Mark exercise as complete in backend
-      if (onComplete) {
+      if (onCompleteRef.current) {
         console.log('🔄 ExerciseDetailScreen: Step 1 - Calling onComplete...');
-        await onComplete();
+        await onCompleteRef.current();
         console.log('✅ ExerciseDetailScreen: Step 1 DONE - Exercise marked as complete');
       }
 
       // Step 2: Wait a moment to ensure all state updates propagate
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Step 3: Show completion screen
-      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback...');
-      console.log('   onShowCompletion exists?', !!onShowCompletion);
-      console.log('   onShowCompletion type:', typeof onShowCompletion);
+      // Step 3: Show completion screen using ref (to avoid stale closure)
+      console.log('🔍 ExerciseDetailScreen: Checking onShowCompletion callback from ref...');
+      console.log('   onShowCompletion prop exists?', !!onShowCompletion);
+      console.log('   onShowCompletion prop type:', typeof onShowCompletion);
+      console.log('   onShowCompletionRef.current exists?', !!onShowCompletionRef.current);
+      console.log('   onShowCompletionRef.current type:', typeof onShowCompletionRef.current);
       
-      if (onShowCompletion) {
-        console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen...');
-        onShowCompletion();
+      if (onShowCompletionRef.current) {
+        console.log('🎉 ExerciseDetailScreen: Step 2 - Showing completion screen via ref...');
+        onShowCompletionRef.current();
         console.log('✅ ExerciseDetailScreen: Step 2 DONE - Completion screen displayed');
       } else {
-        console.error('❌ ExerciseDetailScreen: onShowCompletion is NOT defined!');
-        console.error('   This is why the completion screen is not showing!');
+        console.error('❌ ExerciseDetailScreen: onShowCompletionRef.current is NOT defined!');
+        console.error('   This is a stale closure issue - the callback was lost!');
       }
       
       console.log('========================================');
