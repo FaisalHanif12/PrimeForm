@@ -925,16 +925,8 @@ export default function WorkoutPlanDisplay({
         exercise={selectedExercise}
         visible={exerciseModalVisible}
         onClose={() => {
-          console.log('========================================');
-          console.log('🚪 WorkoutPlanDisplay: onClose handler called!');
-          console.log('   Current exerciseModalVisible:', exerciseModalVisible);
-          console.log('   Current selectedExercise:', selectedExercise?.name);
           setExerciseModalVisible(false);
           setSelectedExercise(null);
-          console.log('   After setState - exerciseModalVisible should be false');
-          console.log('   After setState - selectedExercise should be null');
-          console.log('✅ WorkoutPlanDisplay: Exercise detail modal state updated');
-          console.log('========================================');
         }}
         onComplete={handleExerciseModalComplete}
         isCompleted={selectedExercise && selectedDay ?

@@ -153,18 +153,7 @@ export default function ExerciseDetailScreen({
           <View style={styles.header}>
             <TouchableOpacity 
               style={styles.closeButton} 
-              onPress={() => {
-                console.log('🚪 Close button pressed, closing modal');
-                console.log('   onClose type:', typeof onClose);
-                console.log('   onClose exists?', !!onClose);
-                if (onClose) {
-                  console.log('   Calling onClose()...');
-                  onClose();
-                  console.log('   onClose() called successfully');
-                } else {
-                  console.error('❌ onClose is not defined!');
-                }
-              }}
+              onPress={onClose}
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
