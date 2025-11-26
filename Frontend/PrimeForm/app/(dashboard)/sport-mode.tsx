@@ -20,11 +20,13 @@ import NotificationModal from '../../src/components/NotificationModal';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { sportCategories } from '../../src/data/sportExercises';
 import userProfileService from '../../src/services/userProfileService';
+import { useAuthContext } from '../../src/context/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - spacing.xl * 3) / 2;
 
 export default function SportModePage() {
+  const { user } = useAuthContext();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
@@ -123,7 +125,7 @@ export default function SportModePage() {
   return (
     <View style={styles.container}>
       <DashboardHeader
-        userName={userInfo?.fullName || 'User'}
+        userName={user?.fullName || 'User'}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
       />
@@ -191,8 +193,8 @@ export default function SportModePage() {
         visible={sidebarVisible}
         onClose={() => setSidebarVisible(false)}
         onMenuItemPress={handleSidebarMenuPress}
-        userName={userInfo?.fullName || 'User'}
-        userEmail={userInfo?.email || ''}
+        userName={user?.fullName || 'User'}
+        userEmail={user?.email || 'user@primeform.com'}
         userInfo={userInfo}
       />
 
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
   },
   pageSubtitle: {
     fontSize: 16,
-    color: colors.mutedText,
+    color: colors.primary,
     fontFamily: fonts.body,
     marginBottom: spacing.xl,
     textAlign: 'center',

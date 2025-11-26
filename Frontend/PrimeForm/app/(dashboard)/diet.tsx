@@ -24,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function DietScreen() {
+  const { user } = useAuthContext();
   const { t, language } = useLanguage();
   const router = useRouter();
   const { unreadCount } = useNotifications();
@@ -382,7 +383,7 @@ export default function DietScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.mainContainer}>
           <DashboardHeader
-            userName={t('common.user')}
+            userName={user?.fullName || 'User'}
             onProfilePress={handleProfilePress}
             onNotificationPress={() => setShowNotificationModal(true)}
             notificationCount={unreadCount}
@@ -411,8 +412,8 @@ export default function DietScreen() {
           visible={sidebarVisible}
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
-          userName={t('common.user')}
-          userEmail="user@example.com"
+          userName={user?.fullName || 'User'}
+          userEmail={user?.email || 'user@primeform.com'}
           userInfo={userInfo}
           badges={userInfo?.badges || []}
         />
