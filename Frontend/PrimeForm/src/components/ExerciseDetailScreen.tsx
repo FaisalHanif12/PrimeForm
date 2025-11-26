@@ -201,8 +201,8 @@ export default function ExerciseDetailScreen({
               </View>
             </View>
 
-            {/* Progress Card */}
-            {canComplete && !isCompleted && (
+            {/* Progress Card - Always show, but only interactive when canComplete */}
+            {!isCompleted && (
               <View style={styles.progressCard}>
                 <Text style={styles.sectionTitle}>Progress</Text>
                 <View style={styles.progressBar}>
@@ -219,10 +219,12 @@ export default function ExerciseDetailScreen({
               </View>
             )}
 
-            {/* Set Tracker */}
-            {canComplete && !isCompleted && (
+            {/* Set Tracker - Always show, but only interactive when canComplete */}
+            {!isCompleted && (
               <View style={styles.setTracker}>
-                <Text style={styles.sectionTitle}>Track Your Sets</Text>
+                <Text style={styles.sectionTitle}>
+                  {canComplete ? 'Track Your Sets' : 'Sets Overview'}
+                </Text>
                 <View style={styles.setsGrid}>
                   {Array.from({ length: exercise.sets }, (_, index) => {
                     const setNumber = index + 1;
@@ -234,19 +236,23 @@ export default function ExerciseDetailScreen({
                         style={[
                           styles.setButton,
                           isSetCompleted && styles.setButtonCompleted,
+                          !canComplete && styles.setButtonDisabled,
                         ]}
-                        onPress={() => handleSetComplete(setNumber)}
-                        activeOpacity={0.8}
+                        onPress={() => canComplete && handleSetComplete(setNumber)}
+                        activeOpacity={canComplete ? 0.8 : 1}
+                        disabled={!canComplete}
                       >
                         <Text style={[
                           styles.setButtonText,
                           isSetCompleted && styles.setButtonTextCompleted,
+                          !canComplete && styles.setButtonTextDisabled,
                         ]}>
                           {setNumber}
                         </Text>
                         <Text style={[
                           styles.setRepsText,
                           isSetCompleted && styles.setRepsTextCompleted,
+                          !canComplete && styles.setRepsTextDisabled,
                         ]}>
                           {exercise.reps} reps
                         </Text>
@@ -257,6 +263,11 @@ export default function ExerciseDetailScreen({
                     );
                   })}
                 </View>
+                {!canComplete && (
+                  <Text style={styles.viewOnlyNote}>
+                    View only - Complete today's exercises to track progress
+                  </Text>
+                )}
               </View>
             )}
 
@@ -498,6 +509,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.green + '20',
     borderColor: colors.green,
   },
+  setButtonDisabled: {
+    backgroundColor: colors.cardBorder + '20',
+    borderColor: colors.cardBorder + '40',
+    opacity: 0.6,
+  },
   setButtonText: {
     color: colors.white,
     fontSize: 18,
@@ -508,6 +524,9 @@ const styles = StyleSheet.create({
   setButtonTextCompleted: {
     color: colors.green,
   },
+  setButtonTextDisabled: {
+    color: colors.mutedText,
+  },
   setRepsText: {
     color: colors.mutedText,
     fontSize: 12,
@@ -516,6 +535,10 @@ const styles = StyleSheet.create({
   },
   setRepsTextCompleted: {
     color: colors.green + 'CC',
+  },
+  setRepsTextDisabled: {
+    color: colors.mutedText,
+    opacity: 0.5,
   },
   setCheckmark: {
     position: 'absolute',
@@ -541,6 +564,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     lineHeight: 20,
     marginBottom: spacing.sm,
+  },
+  viewOnlyNote: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
   bottomAction: {
     padding: spacing.lg,
