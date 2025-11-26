@@ -413,16 +413,17 @@ export default function WorkoutPlanDisplay({
     const planStartDate = new Date(workoutPlan.startDate);
     planStartDate.setHours(0, 0, 0, 0);
 
-    // Check if day is completed (50% completion criteria)
-    if (completedDays.has(day.date)) {
-      console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
-      return 'completed';
-    }
-
-    // Current day - show as in progress
+    // Current day - ALWAYS show as in progress (even if 50%+ completed)
+    // This allows users to complete remaining exercises today
     if (dayDate.getTime() === today.getTime()) {
       console.log('📊 Day Status: Current day - showing as in_progress:', day.date);
       return 'in_progress';
+    }
+
+    // Check if day is completed (50% completion criteria) - ONLY for past days
+    if (completedDays.has(day.date)) {
+      console.log('📊 Day Status: Day marked as completed in completedDays set:', day.date);
+      return 'completed';
     }
 
     // Days before plan generation should be 'upcoming' (not missed)
