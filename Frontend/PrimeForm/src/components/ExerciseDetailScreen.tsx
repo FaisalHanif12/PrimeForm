@@ -46,6 +46,17 @@ export default function ExerciseDetailScreen({
   const [scaleAnim] = useState(new Animated.Value(0.9));
   const [lastExerciseName, setLastExerciseName] = useState<string | null>(null);
   const prevVisibleRef = React.useRef(visible);
+  
+  // Debug: Log props on every render
+  useEffect(() => {
+    console.log('🔍 ExerciseDetailScreen: Props update detected:', {
+      exercise: exercise?.name,
+      visible,
+      hasOnComplete: !!onComplete,
+      hasOnShowCompletion: !!onShowCompletion,
+      onShowCompletionType: typeof onShowCompletion,
+    });
+  }, [exercise, visible, onComplete, onShowCompletion]);
 
   // Reset state ONLY when modal transitions from closed to open (fresh open)
   useEffect(() => {

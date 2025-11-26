@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -570,7 +570,7 @@ export default function WorkoutPlanDisplay({
     }
   };
 
-  const handleShowCompletion = () => {
+  const handleShowCompletion = useCallback(() => {
     console.log('========================================');
     console.log('🎉 WorkoutPlanDisplay: handleShowCompletion called');
     console.log('   Current state:');
@@ -585,7 +585,7 @@ export default function WorkoutPlanDisplay({
     // Keep selectedExercise set so completion screen can display it
     
     console.log('✅ WorkoutPlanDisplay: Modals switched - detail closed, completion opened');
-  };
+  }, [exerciseModalVisible, completionModalVisible, selectedExercise]);
 
   const handleBackToWorkout = () => {
     console.log('🔙 WorkoutPlanDisplay: Back to workout from completion screen');
@@ -922,20 +922,33 @@ export default function WorkoutPlanDisplay({
       </View>
 
       {/* Exercise Detail Modal */}
-      <ExerciseDetailScreen
-        exercise={selectedExercise}
-        visible={exerciseModalVisible}
-        onClose={() => {
-          setExerciseModalVisible(false);
-          setSelectedExercise(null);
-        }}
-        onComplete={handleExerciseModalComplete}
-        onShowCompletion={handleShowCompletion}
-        isCompleted={selectedExercise && selectedDay ?
-          exerciseCompletionService.isExerciseCompleted(`${selectedDay.date}-${selectedExercise.name}`) : false}
-        canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
-        selectedDay={selectedDay}
-      />
+      {(() => {
+        // Debug: Check if callback exists before passing to modal
+        console.log('🔍 WorkoutPlanDisplay: Rendering ExerciseDetailScreen with props:', {
+          exercise: selectedExercise?.name,
+          visible: exerciseModalVisible,
+          hasOnComplete: !!handleExerciseModalComplete,
+          hasOnShowCompletion: !!handleShowCompletion,
+          onShowCompletionType: typeof handleShowCompletion,
+        });
+        
+        return (
+          <ExerciseDetailScreen
+            exercise={selectedExercise}
+            visible={exerciseModalVisible}
+            onClose={() => {
+              setExerciseModalVisible(false);
+              setSelectedExercise(null);
+            }}
+            onComplete={handleExerciseModalComplete}
+            onShowCompletion={handleShowCompletion}
+            isCompleted={selectedExercise && selectedDay ?
+              exerciseCompletionService.isExerciseCompleted(`${selectedDay.date}-${selectedExercise.name}`) : false}
+            canComplete={selectedDay ? (isCurrentDay(selectedDay) && getDayStatus(selectedDay, 0) === 'in_progress') : false}
+            selectedDay={selectedDay}
+          />
+        );
+      })()}
 
       {/* Exercise Completion Modal */}
       <ExerciseCompletionScreen
