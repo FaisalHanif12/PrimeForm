@@ -91,6 +91,21 @@ export default function ExerciseDetailScreen({
     }
   }, [visible]);
 
+  // Reset state when modal is fully closed (cleanup)
+  useEffect(() => {
+    if (!visible && !isCompleting) {
+      // Use a timeout to ensure this happens after animations
+      const timer = setTimeout(() => {
+        console.log('🧹 ExerciseDetailScreen: Cleaning up after modal close');
+        setCurrentSet(1);
+        setCompletedSets(new Set());
+        setIsCompleting(false);
+        setLastExerciseName(null);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, isCompleting]);
+
   if (!exercise) return null;
 
   const handleSetComplete = (setNumber: number) => {
@@ -145,21 +160,6 @@ export default function ExerciseDetailScreen({
 
   const allSetsCompleted = completedSets.size === exercise.sets;
   const completionPercentage = (completedSets.size / exercise.sets) * 100;
-
-  // Reset state when modal is fully closed
-  useEffect(() => {
-    if (!visible && !isCompleting) {
-      // Use a timeout to ensure this happens after animations
-      const timer = setTimeout(() => {
-        console.log('🧹 ExerciseDetailScreen: Cleaning up after modal close');
-        setCurrentSet(1);
-        setCompletedSets(new Set());
-        setIsCompleting(false);
-        setLastExerciseName(null);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [visible, isCompleting]);
 
   return (
     <Modal
