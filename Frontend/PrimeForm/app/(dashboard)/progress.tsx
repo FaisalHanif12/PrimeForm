@@ -228,6 +228,24 @@ export default function ProgressScreen() {
     // Already on progress page
   };
 
+  // Get month name from month number
+  const getMonthName = (monthNum: number): string => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Calculate actual month based on plan start
+    const now = new Date();
+    const monthIndex = (now.getMonth() - (availableMonths.length - monthNum) + 12) % 12;
+    return months[monthIndex];
+  };
+
+  // Check if week/month is current
+  const isCurrentWeek = (week: number): boolean => {
+    return week === availableWeeks[availableWeeks.length - 1];
+  };
+
+  const isCurrentMonth = (month: number): boolean => {
+    return month === availableMonths[availableMonths.length - 1];
+  };
+
   const renderPeriodSelector = () => (
     <Animated.View entering={FadeInUp.delay(200)} style={styles.periodSelectorContainer}>
       {/* Main Period Selector */}
@@ -256,54 +274,177 @@ export default function ProgressScreen() {
         ))}
       </View>
 
-      {/* Sub-Period Selector for Weekly */}
+      {/* Premium Week Timeline Selector */}
       {selectedPeriod === 'weekly' && availableWeeks.length > 1 && (
-        <View style={styles.subPeriodSelector}>
-          <Text style={styles.subPeriodLabel}>Week:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subPeriodScroll}>
-            {availableWeeks.map((week) => (
-              <TouchableOpacity
-                key={week}
-                style={[
-                  styles.subPeriodButton,
-                  selectedWeek === week && styles.subPeriodButtonActive
-                ]}
-                onPress={() => setSelectedWeek(week)}
-              >
-                <Text style={[
-                  styles.subPeriodButtonText,
-                  selectedWeek === week && styles.subPeriodButtonTextActive
-                ]}>
-                  {week}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.timelineContainer}>
+          <View style={styles.timelineHeader}>
+            <View style={styles.timelineHeaderLeft}>
+              <Text style={styles.timelineIcon}>📅</Text>
+              <Text style={styles.timelineTitle}>Select Week</Text>
+            </View>
+            <View style={styles.timelineBadge}>
+              <Text style={styles.timelineBadgeText}>
+                {availableWeeks.length} weeks
+              </Text>
+            </View>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.timelineScroll}
+            contentContainerStyle={styles.timelineScrollContent}
+          >
+            {availableWeeks.map((week, index) => {
+              const isCurrent = isCurrentWeek(week);
+              const isSelected = selectedWeek === week;
+              const isPast = week < availableWeeks[availableWeeks.length - 1];
+              
+              return (
+                <TouchableOpacity
+                  key={week}
+                  style={[
+                    styles.timelineItem,
+                    isPast && styles.timelineItemPast,
+                    isCurrent && styles.timelineItemCurrent,
+                    isSelected && styles.timelineItemSelected,
+                  ]}
+                  onPress={() => setSelectedWeek(week)}
+                  activeOpacity={0.7}
+                >
+                  {/* Connection line */}
+                  {index > 0 && (
+                    <View style={[
+                      styles.timelineConnector,
+                      isPast && styles.timelineConnectorPast,
+                    ]} />
+                  )}
+                  
+                  {/* Week card */}
+                  <View style={[
+                    styles.timelineCard,
+                    isPast && styles.timelineCardPast,
+                    isCurrent && styles.timelineCardCurrent,
+                    isSelected && styles.timelineCardSelected,
+                  ]}>
+                    {isCurrent && (
+                      <View style={styles.currentBadge}>
+                        <Text style={styles.currentBadgeText}>NOW</Text>
+                      </View>
+                    )}
+                    <Text style={[
+                      styles.timelineWeekNum,
+                      isPast && styles.timelineWeekNumPast,
+                      isCurrent && styles.timelineWeekNumCurrent,
+                      isSelected && styles.timelineWeekNumSelected,
+                    ]}>
+                      W{week}
+                    </Text>
+                    <Text style={[
+                      styles.timelineWeekLabel,
+                      isPast && styles.timelineWeekLabelPast,
+                      isCurrent && styles.timelineWeekLabelCurrent,
+                      isSelected && styles.timelineWeekLabelSelected,
+                    ]}>
+                      Week {week}
+                    </Text>
+                    {isPast && !isCurrent && (
+                      <View style={styles.completedIndicator}>
+                        <Text style={styles.completedIndicatorText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
 
-      {/* Sub-Period Selector for Monthly */}
+      {/* Premium Month Timeline Selector */}
       {selectedPeriod === 'monthly' && availableMonths.length > 1 && (
-        <View style={styles.subPeriodSelector}>
-          <Text style={styles.subPeriodLabel}>Month:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subPeriodScroll}>
-            {availableMonths.map((month) => (
-              <TouchableOpacity
-                key={month}
-                style={[
-                  styles.subPeriodButton,
-                  selectedMonth === month && styles.subPeriodButtonActive
-                ]}
-                onPress={() => setSelectedMonth(month)}
-              >
-                <Text style={[
-                  styles.subPeriodButtonText,
-                  selectedMonth === month && styles.subPeriodButtonTextActive
-                ]}>
-                  {month}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        <View style={styles.timelineContainer}>
+          <View style={styles.timelineHeader}>
+            <View style={styles.timelineHeaderLeft}>
+              <Text style={styles.timelineIcon}>📆</Text>
+              <Text style={styles.timelineTitle}>Select Month</Text>
+            </View>
+            <View style={styles.timelineBadge}>
+              <Text style={styles.timelineBadgeText}>
+                {availableMonths.length} months
+              </Text>
+            </View>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.timelineScroll}
+            contentContainerStyle={styles.timelineScrollContent}
+          >
+            {availableMonths.map((month, index) => {
+              const isCurrent = isCurrentMonth(month);
+              const isSelected = selectedMonth === month;
+              const isPast = month < availableMonths[availableMonths.length - 1];
+              
+              return (
+                <TouchableOpacity
+                  key={month}
+                  style={[
+                    styles.timelineItem,
+                    isPast && styles.timelineItemPast,
+                    isCurrent && styles.timelineItemCurrent,
+                    isSelected && styles.timelineItemSelected,
+                  ]}
+                  onPress={() => setSelectedMonth(month)}
+                  activeOpacity={0.7}
+                >
+                  {/* Connection line */}
+                  {index > 0 && (
+                    <View style={[
+                      styles.timelineConnector,
+                      isPast && styles.timelineConnectorPast,
+                    ]} />
+                  )}
+                  
+                  {/* Month card */}
+                  <View style={[
+                    styles.timelineCard,
+                    styles.timelineCardMonth,
+                    isPast && styles.timelineCardPast,
+                    isCurrent && styles.timelineCardCurrent,
+                    isSelected && styles.timelineCardSelected,
+                  ]}>
+                    {isCurrent && (
+                      <View style={styles.currentBadge}>
+                        <Text style={styles.currentBadgeText}>NOW</Text>
+                      </View>
+                    )}
+                    <Text style={[
+                      styles.timelineMonthName,
+                      isPast && styles.timelineMonthNamePast,
+                      isCurrent && styles.timelineMonthNameCurrent,
+                      isSelected && styles.timelineMonthNameSelected,
+                    ]}>
+                      {getMonthName(month)}
+                    </Text>
+                    <Text style={[
+                      styles.timelineMonthNum,
+                      isPast && styles.timelineMonthNumPast,
+                      isCurrent && styles.timelineMonthNumCurrent,
+                      isSelected && styles.timelineMonthNumSelected,
+                    ]}>
+                      Month {month}
+                    </Text>
+                    {isPast && !isCurrent && (
+                      <View style={styles.completedIndicator}>
+                        <Text style={styles.completedIndicatorText}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       )}
@@ -693,46 +834,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  subPeriodSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface + '80',
-    borderRadius: radius.md,
-    padding: spacing.sm,
-  },
-  subPeriodLabel: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
-    marginRight: spacing.sm,
-    minWidth: 50,
-  },
-  subPeriodScroll: {
-    flex: 1,
-  },
-  subPeriodButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    marginRight: spacing.xs,
-    borderRadius: radius.sm,
-    backgroundColor: colors.cardBorder + '30',
-    minWidth: 35,
-    alignItems: 'center',
-  },
-  subPeriodButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  subPeriodButtonText: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-  },
-  subPeriodButtonTextActive: {
-    color: colors.white,
-    fontWeight: '600',
-  },
   periodButton: {
     flex: 1,
     paddingVertical: spacing.sm,
@@ -751,6 +852,216 @@ const styles = StyleSheet.create({
   },
   periodButtonTextActive: {
     color: colors.white,
+  },
+
+  // Premium Timeline Selector
+  timelineContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.lg,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.cardBorder + '40',
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  timelineHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  timelineHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  timelineIcon: {
+    fontSize: 20,
+  },
+  timelineTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  timelineBadge: {
+    backgroundColor: colors.primary + '20',
+    borderRadius: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  timelineBadgeText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  timelineScroll: {
+    marginHorizontal: -spacing.sm,
+  },
+  timelineScrollContent: {
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs,
+  },
+  timelineItem: {
+    position: 'relative',
+    marginRight: spacing.sm,
+  },
+  timelineItemPast: {},
+  timelineItemCurrent: {},
+  timelineItemSelected: {},
+  timelineConnector: {
+    position: 'absolute',
+    left: -spacing.sm - 2,
+    top: '50%',
+    width: spacing.sm + 4,
+    height: 3,
+    backgroundColor: colors.cardBorder + '50',
+    borderRadius: 2,
+  },
+  timelineConnectorPast: {
+    backgroundColor: colors.primary + '40',
+  },
+  timelineCard: {
+    width: 72,
+    height: 90,
+    backgroundColor: colors.cardBorder + '20',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.cardBorder + '40',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  timelineCardMonth: {
+    width: 85,
+    height: 95,
+  },
+  timelineCardPast: {
+    backgroundColor: colors.primary + '08',
+    borderColor: colors.primary + '25',
+  },
+  timelineCardCurrent: {
+    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary,
+    borderWidth: 2,
+    elevation: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  timelineCardSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    elevation: 6,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  currentBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  currentBadgeText: {
+    color: colors.white,
+    fontSize: 8,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    letterSpacing: 0.5,
+  },
+  timelineWeekNum: {
+    color: colors.mutedText,
+    fontSize: 22,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  timelineWeekNumPast: {
+    color: colors.primary + '80',
+  },
+  timelineWeekNumCurrent: {
+    color: colors.primary,
+  },
+  timelineWeekNumSelected: {
+    color: colors.white,
+  },
+  timelineWeekLabel: {
+    color: colors.mutedText + '80',
+    fontSize: 10,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  timelineWeekLabelPast: {
+    color: colors.primary + '60',
+  },
+  timelineWeekLabelCurrent: {
+    color: colors.primary + '80',
+  },
+  timelineWeekLabelSelected: {
+    color: colors.white + 'CC',
+  },
+  timelineMonthName: {
+    color: colors.mutedText,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  timelineMonthNamePast: {
+    color: colors.primary + '80',
+  },
+  timelineMonthNameCurrent: {
+    color: colors.primary,
+  },
+  timelineMonthNameSelected: {
+    color: colors.white,
+  },
+  timelineMonthNum: {
+    color: colors.mutedText + '80',
+    fontSize: 10,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+  },
+  timelineMonthNumPast: {
+    color: colors.primary + '60',
+  },
+  timelineMonthNumCurrent: {
+    color: colors.primary + '80',
+  },
+  timelineMonthNumSelected: {
+    color: colors.white + 'CC',
+  },
+  completedIndicator: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedIndicatorText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: '900',
   },
 
   // Overview Section
