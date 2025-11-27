@@ -870,9 +870,10 @@ const styles = StyleSheet.create({
   },
   timelineHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    gap: spacing.sm,
   },
   timelineHeaderLeft: {
     flexDirection: 'row',
@@ -880,25 +881,25 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   timelineIcon: {
-    fontSize: 16,
+    fontSize: 14,
   },
   timelineTitle: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     fontFamily: fonts.heading,
   },
   timelineBadge: {
     backgroundColor: colors.primary + '20',
-    borderRadius: 10,
-    paddingHorizontal: spacing.xs,
+    borderRadius: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
     borderColor: colors.primary + '30',
   },
   timelineBadgeText: {
     color: colors.primary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     fontFamily: fonts.body,
   },
@@ -931,14 +932,15 @@ const styles = StyleSheet.create({
   timelineCard: {
     width: 56,
     height: 70,
-    backgroundColor: colors.cardBorder + '20',
+    backgroundColor: colors.cardBorder + '15',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: colors.cardBorder + '40',
+    borderColor: colors.cardBorder + '30',
     position: 'relative',
     overflow: 'hidden',
+    opacity: 0.7,
   },
   timelineCardMonth: {
     width: 64,
@@ -947,6 +949,7 @@ const styles = StyleSheet.create({
   timelineCardPast: {
     backgroundColor: colors.primary + '08',
     borderColor: colors.primary + '25',
+    opacity: 0.85,
   },
   timelineCardCurrent: {
     backgroundColor: colors.primary + '15',
@@ -957,6 +960,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
+    opacity: 1,
   },
   timelineCardSelected: {
     backgroundColor: colors.primary,
@@ -966,6 +970,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.35,
     shadowRadius: 4,
+    opacity: 1,
   },
   currentBadge: {
     position: 'absolute',
@@ -1000,19 +1005,19 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   timelineWeekLabel: {
-    color: colors.mutedText + '80',
-    fontSize: 8,
+    color: colors.mutedText + '60',
+    fontSize: 7,
     fontWeight: '500',
     fontFamily: fonts.body,
   },
   timelineWeekLabelPast: {
-    color: colors.primary + '60',
+    color: colors.primary + '50',
   },
   timelineWeekLabelCurrent: {
-    color: colors.primary + '80',
+    color: colors.primary + '70',
   },
   timelineWeekLabelSelected: {
-    color: colors.white + 'CC',
+    color: colors.white + 'AA',
   },
   timelineMonthName: {
     color: colors.mutedText,
@@ -1033,19 +1038,19 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   timelineMonthNum: {
-    color: colors.mutedText + '80',
-    fontSize: 8,
+    color: colors.mutedText + '60',
+    fontSize: 7,
     fontWeight: '500',
     fontFamily: fonts.body,
   },
   timelineMonthNumPast: {
-    color: colors.primary + '60',
+    color: colors.primary + '50',
   },
   timelineMonthNumCurrent: {
-    color: colors.primary + '80',
+    color: colors.primary + '70',
   },
   timelineMonthNumSelected: {
-    color: colors.white + 'CC',
+    color: colors.white + 'AA',
   },
   completedIndicator: {
     position: 'absolute',
