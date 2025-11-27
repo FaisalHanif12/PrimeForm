@@ -941,8 +941,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   timelineCardMonth: {
-    width: 85,
-    height: 95,
+    width: 72,
+    height: 90,
   },
   timelineCardPast: {
     backgroundColor: colors.primary + '12',
@@ -1016,12 +1016,12 @@ const styles = StyleSheet.create({
   },
   timelineMonthName: {
     color: colors.white,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     fontFamily: fonts.heading,
     marginBottom: 2,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   timelineMonthNamePast: {
     color: colors.white,
