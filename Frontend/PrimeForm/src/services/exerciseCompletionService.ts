@@ -1,5 +1,6 @@
 import Storage from '../utils/storage';
 import workoutPlanService from './workoutPlanService';
+import streakService from './streakService';
 import { DeviceEventEmitter } from 'react-native';
 
 interface CompletionData {
@@ -31,7 +32,7 @@ class ExerciseCompletionService {
       // Load from AsyncStorage
       const [exercisesData, daysData] = await Promise.all([
         Storage.getItem('completed_exercises'),
-        Storage.getItem('completed_days'),
+        Storage.getItem('completed_workout_days'),
       ]);
 
       this.completionData.completedExercises = exercisesData ? JSON.parse(exercisesData) : [];
@@ -135,6 +136,13 @@ class ExerciseCompletionService {
         console.warn('⚠️ Failed to save to database, but continuing with local storage:', dbError);
       }
 
+      // Update streak data for workout completion
+      try {
+        await streakService.updateStreakData('workout', true);
+      } catch (streakError) {
+        // Streak update failed, but continue
+      }
+
       // Broadcast day completion event
       DeviceEventEmitter.emit('dayCompleted', {
         dayDate,
@@ -181,7 +189,7 @@ class ExerciseCompletionService {
     try {
       await Promise.all([
         Storage.setItem('completed_exercises', JSON.stringify(this.completionData.completedExercises)),
-        Storage.setItem('completed_days', JSON.stringify(this.completionData.completedDays)),
+        Storage.setItem('completed_workout_days', JSON.stringify(this.completionData.completedDays)),
       ]);
       console.log('💾 Completion data saved to storage');
     } catch (error) {
@@ -203,7 +211,7 @@ class ExerciseCompletionService {
 
       await Promise.all([
         Storage.removeItem('completed_exercises'),
-        Storage.removeItem('completed_days'),
+        Storage.removeItem('completed_workout_days'),
       ]);
 
       console.log('✅ All completion data cleared');

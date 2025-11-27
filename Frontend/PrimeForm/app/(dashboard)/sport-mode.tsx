@@ -89,12 +89,15 @@ export default function SportModePage() {
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Use cached data - no API call on page visit
+  const loadUserInfo = () => {
     try {
-      const data = await userProfileService.getUserProfile();
-      setUserInfo(data);
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.data) {
+        setUserInfo(cachedData.data);
+      }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info from cache
     }
   };
 
@@ -103,7 +106,6 @@ export default function SportModePage() {
       // Update user profile logic would go here
       setUserInfo(updatedInfo);
     } catch (error) {
-      console.error('Failed to update user info:', error);
       throw error;
     }
   };

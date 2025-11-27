@@ -51,12 +51,11 @@ export interface AIWorkoutResponse {
 class AIWorkoutService {
   private loadingCache: Map<string, Promise<any>> = new Map();
   private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache - workout plan rarely changes
 
   private getCachedData(key: string): any | null {
     const cached = this.dataCache.get(key);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      console.log(`📦 Using cached data for ${key}`);
       return cached.data;
     }
     return null;
@@ -191,20 +190,14 @@ Generate the **final personalized plan now.**
 
   async generateWorkoutPlan(userProfile: UserProfile): Promise<AIWorkoutResponse> {
     try {
-      console.log('🤖 Generating AI workout plan for user:', userProfile);
-      console.log('🔑 Using OpenRouter API Key:', OPENROUTER_API_KEY ? 'Present' : 'Missing');
-      console.log('🌐 API URL:', OPENROUTER_API_URL);
-
       // Check if API key is available
       if (!OPENROUTER_API_KEY) {
         throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
       }
       
       const prompt = this.generatePrompt(userProfile);
-      console.log('📝 Prompt length:', prompt.length, 'characters');
 
       const startTime = Date.now();
-      console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
       // Make API call without timeout - let it generate as fast as possible
       const response = await fetch(OPENROUTER_API_URL, {
@@ -234,28 +227,23 @@ Generate the **final personalized plan now.**
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ OpenRouter API Error Response:', errorText);
         throw new Error(`API request failed with status: ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
       const endTime = Date.now();
       const responseTime = endTime - startTime;
-      console.log(`⚡ API Response time: ${responseTime}ms (${(responseTime / 1000).toFixed(2)}s)`);
-      console.log('🤖 OpenRouter AI Response received:', data);
 
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         throw new Error('Invalid response format from AI');
       }
 
       const aiResponse = data.choices[0].message.content;
-      console.log('🤖 AI Generated Content:', aiResponse);
 
       // Parse the AI response into structured data
       const workoutPlan = this.parseAIResponse(aiResponse, userProfile);
 
       // Store the response in database for persistence with retry logic
-      console.log('💾 Attempting to save workout plan to database...');
       let saveResponse;
       let retryCount = 0;
       const maxRetries = 3;
@@ -264,24 +252,18 @@ Generate the **final personalized plan now.**
         try {
           saveResponse = await workoutPlanService.createWorkoutPlan(workoutPlan);
           if (saveResponse.success) {
-            console.log('✅ Workout plan saved to database successfully');
-
             // Also cache locally as backup
             await Storage.setItem('cached_workout_plan', JSON.stringify(workoutPlan));
-            console.log('💾 Workout plan cached locally as backup');
             break;
           } else {
             throw new Error(`Database save failed: ${saveResponse.message}`);
           }
         } catch (error) {
           retryCount++;
-          console.warn(`⚠️ Database save attempt ${retryCount} failed:`, error);
           
           if (retryCount >= maxRetries) {
-            console.error('❌ All database save attempts failed. Caching locally only.');
             // Cache locally as fallback
             await Storage.setItem('cached_workout_plan', JSON.stringify(workoutPlan));
-            console.log('💾 Workout plan cached locally as fallback');
             // Don't throw error - allow user to use the plan even if not saved to DB
           } else {
             // Wait before retry
@@ -297,52 +279,64 @@ Generate the **final personalized plan now.**
       };
 
     } catch (error) {
-      console.error('❌ Error generating workout plan:', error);
-
       // Re-throw the error to be handled by the calling component
       throw error;
     }
   }
 
-  // Load workout plan from database
-  async loadWorkoutPlanFromDatabase(): Promise<WorkoutPlan | null> {
+  // Load workout plan - prioritizes local cache to minimize API calls
+  async loadWorkoutPlanFromDatabase(forceRefresh = false): Promise<WorkoutPlan | null> {
     const cacheKey = 'workout-plan-active';
     
     // Check if there's already a request in flight
     if (this.loadingCache.has(cacheKey)) {
-      console.log('🔄 Request already in flight, waiting for existing request...');
       return this.loadingCache.get(cacheKey);
     }
 
-    // Check memory cache first
+    // Check memory cache first (unless forcing refresh)
+    if (!forceRefresh) {
     const cachedData = this.getCachedData(cacheKey);
     if (cachedData) {
       return cachedData;
+      }
     }
 
     // Create new request and cache the promise to prevent duplicates
     const request = (async () => {
       try {
+        // OPTIMIZATION: Try local storage first to avoid API call
+        if (!forceRefresh) {
+          try {
+            const cachedPlan = await Storage.getItem('cached_workout_plan');
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              this.setCachedData(cacheKey, plan);
+              return plan;
+            }
+          } catch (cacheError) {
+            // Could not load from local cache
+          }
+        }
+
+        // Only call API if no local cache or forcing refresh
         const response = await workoutPlanService.getActiveWorkoutPlan();
         if (response.success && response.data) {
-          console.log('📱 Loaded workout plan from database');
           this.setCachedData(cacheKey, response.data);
+          // Also update local cache
+          await Storage.setItem('cached_workout_plan', JSON.stringify(response.data));
           return response.data;
         }
       } catch (error) {
-        console.warn('⚠️ Could not load workout plan from database:', error);
-
         // Try to load from local cache as fallback
         try {
           const cachedPlan = await Storage.getItem('cached_workout_plan');
           if (cachedPlan) {
-            console.log('📱 Loading workout plan from local cache');
             const plan = JSON.parse(cachedPlan);
             this.setCachedData(cacheKey, plan);
             return plan;
           }
         } catch (cacheError) {
-          console.warn('⚠️ Could not load from cache either:', cacheError);
+          // Could not load from cache either
         }
       } finally {
         // Remove from loading cache after request completes
@@ -356,20 +350,23 @@ Generate the **final personalized plan now.**
     return request;
   }
 
+  // Force refresh workout plan from database (use after completing actions)
+  async refreshWorkoutPlanFromDatabase(): Promise<WorkoutPlan | null> {
+    return this.loadWorkoutPlanFromDatabase(true);
+  }
+
   // Clear workout plan from database
   async clearWorkoutPlanFromDatabase(): Promise<void> {
     try {
       await workoutPlanService.clearAllWorkoutPlans();
-      console.log('🗑️ Workout plans cleared from database');
 
       // Also clear local cache
       await Storage.removeItem('cached_workout_plan');
-      console.log('🗑️ Local workout plan cache cleared');
       
       // Clear memory cache
       this.clearCache('workout-plan-active');
     } catch (error) {
-      console.warn('⚠️ Could not clear workout plans from database:', error);
+      // Could not clear workout plans from database
     }
   }
 

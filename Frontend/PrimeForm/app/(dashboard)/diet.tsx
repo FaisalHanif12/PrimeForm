@@ -13,6 +13,7 @@ import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
+import ProfilePage from '../../src/components/ProfilePage';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DietPlanDisplay from '../../src/components/DietPlanDisplay';
 import LoadingModal from '../../src/components/LoadingModal';
@@ -31,6 +32,7 @@ export default function DietScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dietPlan, setDietPlan] = useState<any>(null);
@@ -41,8 +43,6 @@ export default function DietScreen() {
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
   const translateValue = (value: string, type: 'goal' | 'diet') => {
-    console.log('🔍 Diet translateValue called with:', { value, type, language });
-
     if (language === 'ur' && value) {
       // Use the same arrays as ProfilePage for consistency
       const bodyGoals = [
@@ -73,7 +73,6 @@ export default function DietScreen() {
       // Find the matching option and return Urdu text
       const option = options.find(opt => opt.en === value);
       if (option) {
-        console.log('🔍 Diet Found Urdu translation:', option.ur);
         return option.ur;
       }
     }
@@ -83,12 +82,20 @@ export default function DietScreen() {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        await Promise.all([
-          loadUserInfo(),
-          loadDietPlan()
-        ]);
+        // OPTIMIZATION: Use cached data only - no API calls on page visit
+        const cachedData = userProfileService.getCachedData();
+        if (cachedData && cachedData.data) {
+          setUserInfo(cachedData.data);
+          setIsLoading(false);
+        } else {
+          // No cached data - show profile creation UI
+          setIsLoading(false);
+        }
+
+        // Load diet plan from local cache only (no API call)
+        await loadDietPlan();
       } catch (error) {
-        console.warn('⚠️ Error during initialization:', error);
+        // Error during initialization
       } finally {
         setIsLoadingPlan(false);
         setInitialLoadComplete(true);
@@ -120,10 +127,22 @@ export default function DietScreen() {
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        router.push('/(dashboard)');
+        setShowProfilePage(true);
         break;
       case 'edit_profile':
         setShowUserInfoModal(true);
+        break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');
@@ -140,12 +159,11 @@ export default function DietScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout. Please try again.');
         }
         break;
       default:
-        console.log('Unknown action:', action);
+        break;
     }
   };
 
@@ -163,9 +181,7 @@ export default function DietScreen() {
           showToast('error', 'Failed to generate diet plan. Please try again.');
         }
       } catch (error) {
-        console.error('Diet generation failed:', error);
-
-        // Show interactive error alert instead of console logging
+        // Show interactive error alert
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
 
         if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
@@ -188,13 +204,9 @@ export default function DietScreen() {
     try {
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
 
-      console.log('🔍 Diet Page - Full response:', response);
-      console.log('🔍 Diet Page - Response.success:', response?.success);
-
       if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        console.log('✅ User profile saved to database:', response.data);
         showToast('success', 'Profile created! Now generating your diet plan...');
 
         // Automatically generate diet plan after profile creation
@@ -209,17 +221,14 @@ export default function DietScreen() {
             showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
           }
         } catch (error) {
-          console.error('Diet generation after profile creation failed:', error);
           showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
         } finally {
           setIsGenerating(false);
         }
       } else {
-        console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('💥 Exception in diet page:', error);
       showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
@@ -228,10 +237,47 @@ export default function DietScreen() {
     try {
       setShowUserInfoModal(false);
     } catch (error) {
-      console.error('Failed to handle cancellation:', error);
+      // Failed to handle cancellation
     }
   };
 
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+      } else {
+        showToast('error', 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
+  };
+
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      const loadUserInfoForProfile = async () => {
+        try {
+          const cachedData = userProfileService.getCachedData();
+          if (cachedData && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+    }
+  };
+      loadUserInfoForProfile();
+    }
+  }, [showProfilePage]);
+
+  // NOTE: loadUserInfo is kept for cases where profile needs to be loaded after creation
+  // but it's not called on page initialization to avoid unnecessary API calls
   const loadUserInfo = async () => {
     try {
       const response = await userProfileService.getUserProfile();
@@ -239,16 +285,12 @@ export default function DietScreen() {
       if (response.success) {
         if (response.data) {
           setUserInfo(response.data);
-          console.log('User profile loaded:', response.data);
         } else {
-          console.log('No profile found for new user:', response.message);
           setUserInfo(null);
         }
-      } else {
-        console.error('Failed to load user info from backend:', response.message);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info
     } finally {
       setIsLoading(false);
     }
@@ -259,10 +301,9 @@ export default function DietScreen() {
       const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase();
       if (dietPlanFromDB) {
         setDietPlan(dietPlanFromDB);
-        console.log('Diet plan loaded:', dietPlanFromDB);
       }
     } catch (error) {
-      console.error('Failed to load diet plan:', error);
+      // Failed to load diet plan
     }
   };
 
@@ -275,8 +316,6 @@ export default function DietScreen() {
       router.push('/(dashboard)/gym');
     } else if (tab === 'progress') {
       router.push('/(dashboard)/progress');
-    } else {
-      console.log('Feature coming soon:', tab);
     }
   };
 
@@ -303,7 +342,6 @@ export default function DietScreen() {
               setDietPlan(null);
               showToast('info', 'Previous diet plan cleared. You can now generate a new one.');
             } catch (error) {
-              console.error('Failed to clear diet plan:', error);
               showToast('error', 'Failed to clear previous plan. Please try again.');
             }
           }}
@@ -422,6 +460,13 @@ export default function DietScreen() {
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
           onCancel={handleCancelUserInfo}
+        />
+
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
 
         <NotificationModal

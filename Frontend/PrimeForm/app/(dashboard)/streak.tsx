@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
@@ -76,35 +77,58 @@ export default function StreakScreen() {
     loadStreakData();
   }, []);
 
+  // Listen for completion events to update streak data immediately
+  useEffect(() => {
+    const listeners = [
+      DeviceEventEmitter.addListener('exerciseCompleted', () => {
+        // Refresh streak data when exercise is completed
+        loadStreakData();
+      }),
+      DeviceEventEmitter.addListener('mealCompleted', () => {
+        // Refresh streak data when meal is completed
+        loadStreakData();
+      }),
+      DeviceEventEmitter.addListener('dayCompleted', () => {
+        // Refresh streak data when day is completed
+        loadStreakData();
+      }),
+      DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
+        // Refresh streak data when workout progress is updated
+        loadStreakData();
+      }),
+      DeviceEventEmitter.addListener('dietProgressUpdated', () => {
+        // Refresh streak data when diet progress is updated
+        loadStreakData();
+      }),
+    ];
+
+    return () => {
+      listeners.forEach(listener => {
+        try {
+          listener.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      });
+    };
+  }, []);
+
+  // OPTIMIZATION: Calculate from local data - no API call on page visit
   const loadStreakData = async () => {
     try {
       setIsLoading(true);
 
-      // Check if user has premium subscription
-      const hasSubscription = await checkPremiumSubscription();
-      if (!hasSubscription) {
-        showToast('warning', 'Streak Tracker is available for Premium subscribers only.');
-        router.push('/(dashboard)/subscription');
-        return;
-      }
-
-      const response = await streakService.getStreakData();
+      // Calculate streak data from local storage only (no API call)
+      const response = await streakService.getStreakData(true);
       if (response.success && response.data) {
         setStreakData(response.data);
       }
 
     } catch (error) {
-      console.error('Failed to load streak data:', error);
-      showToast('error', 'Failed to load streak data. Please try again.');
+      // Failed to load streak data
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const checkPremiumSubscription = async (): Promise<boolean> => {
-    // TODO: Implement actual subscription check
-    // For now, return true for development
-    return true;
   };
 
   const handleProfilePress = () => {
@@ -149,23 +173,23 @@ export default function StreakScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout. Please try again.');
         }
         break;
       default:
-        console.log('Unknown action:', action);
+        break;
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Use cached data - no API call on page visit
+  const loadUserInfo = () => {
     try {
-      const response = await userProfileService.getUserProfile();
-      if (response && response.success && response.data) {
-        setUserInfo(response.data);
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.data) {
+        setUserInfo(cachedData.data);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info from cache
     }
   };
 
@@ -221,29 +245,6 @@ export default function StreakScreen() {
 
     return (
       <View style={styles.streakMaintenanceContainer}>
-        {/* Main Streak Card */}
-        <Animated.View entering={FadeInUp.delay(300)} style={styles.mainStreakCard}>
-          <View style={styles.mainStreakHeader}>
-            <Text style={styles.mainStreakLabel}>Current Streak</Text>
-            <View style={styles.streakBadge}>
-              <View style={styles.streakBadgeDot} />
-              <Text style={styles.streakBadgeText}>Active</Text>
-            </View>
-          </View>
-
-          <View style={styles.mainStreakContent}>
-            <Text style={styles.mainStreakValue}>{streakData.currentOverallStreak}</Text>
-            <Text style={styles.mainStreakUnit}>Days</Text>
-          </View>
-
-          <View style={styles.streakProgressBar}>
-            <View style={[styles.streakProgressFill, { width: `${Math.min((streakData.currentOverallStreak / 30) * 100, 100)}%` }]} />
-          </View>
-          <Text style={styles.streakProgressText}>
-            {streakData.currentOverallStreak < 30 ? `${30 - streakData.currentOverallStreak} days to 30-day milestone` : 'Milestone achieved!'}
-          </Text>
-        </Animated.View>
-
         {/* Streak Breakdown */}
         <Animated.View entering={FadeInUp.delay(400)} style={styles.streakBreakdownSection}>
           <Text style={styles.sectionTitle}>Streak Breakdown</Text>
@@ -303,35 +304,6 @@ export default function StreakScreen() {
                 <Text style={styles.breakdownStatLabel}>This Week</Text>
                 <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
               </View>
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Consistency Stats */}
-        <Animated.View entering={FadeInUp.delay(500)} style={styles.consistencyStatsSection}>
-          <Text style={styles.sectionTitle}>Consistency Overview</Text>
-
-          <View style={styles.consistencyGrid}>
-            <View style={styles.consistencyStatCard}>
-              <Text style={styles.consistencyStatValue}>{streakData.weeklyConsistency}%</Text>
-              <Text style={styles.consistencyStatLabel}>Weekly</Text>
-              <View style={styles.miniProgressBar}>
-                <View style={[styles.miniProgressFill, { width: `${streakData.weeklyConsistency}%` }]} />
-              </View>
-            </View>
-
-            <View style={styles.consistencyStatCard}>
-              <Text style={styles.consistencyStatValue}>{streakData.monthlyConsistency}%</Text>
-              <Text style={styles.consistencyStatLabel}>Monthly</Text>
-              <View style={styles.miniProgressBar}>
-                <View style={[styles.miniProgressFill, { width: `${streakData.monthlyConsistency}%` }]} />
-              </View>
-            </View>
-
-            <View style={styles.consistencyStatCard}>
-              <Text style={styles.consistencyStatValue}>{streakData.totalActiveDays}</Text>
-              <Text style={styles.consistencyStatLabel}>Total Days</Text>
-              <Text style={styles.consistencyStatSubtext}>All time active</Text>
             </View>
           </View>
         </Animated.View>
@@ -436,7 +408,7 @@ export default function StreakScreen() {
         <DashboardHeader
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
-          onNotificationPress={() => console.log('Notifications pressed')}
+          onNotificationPress={() => {}}
           notificationCount={0}
         />
 
@@ -588,92 +560,6 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
 
-  // Main Streak Card
-  mainStreakCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.xl,
-    borderWidth: 2,
-    borderColor: colors.primary + '40',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  mainStreakHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  mainStreakLabel: {
-    color: colors.mutedText,
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    letterSpacing: 0.5,
-  },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.green + '20',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    gap: spacing.xs,
-  },
-  streakBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.green,
-  },
-  streakBadgeText: {
-    color: colors.green,
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  mainStreakContent: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  mainStreakValue: {
-    color: colors.white,
-    fontSize: 72,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    lineHeight: 80,
-  },
-  mainStreakUnit: {
-    color: colors.mutedText,
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    marginTop: spacing.xs,
-    letterSpacing: 1,
-  },
-  streakProgressBar: {
-    height: 8,
-    backgroundColor: colors.cardBorder + '40',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  streakProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 4,
-  },
-  streakProgressText: {
-    color: colors.mutedText,
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    textAlign: 'center',
-  },
-
   // Streak Breakdown Section
   streakBreakdownSection: {
     gap: spacing.md,
@@ -761,59 +647,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     fontFamily: fonts.heading,
-  },
-
-  // Consistency Stats Section
-  consistencyStatsSection: {
-    gap: spacing.md,
-  },
-  consistencyGrid: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  consistencyStatCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  consistencyStatValue: {
-    color: colors.primary,
-    fontSize: 24,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.xs,
-  },
-  consistencyStatLabel: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  consistencyStatSubtext: {
-    color: colors.mutedText + '80',
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  miniProgressBar: {
-    width: '100%',
-    height: 4,
-    backgroundColor: colors.cardBorder + '40',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  miniProgressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 2,
   },
 
   // History Section

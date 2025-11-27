@@ -11,6 +11,7 @@ import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import UserInfoModal from '../../src/components/UserInfoModal';
+import ProfilePage from '../../src/components/ProfilePage';
 import WorkoutPlanDisplay from '../../src/components/WorkoutPlanDisplay';
 // ExerciseDetailScreen removed - WorkoutPlanDisplay handles it internally
 import DecorativeBackground from '../../src/components/DecorativeBackground';
@@ -29,6 +30,7 @@ export default function WorkoutScreen() {
   const { user } = useAuthContext();
   const { unreadCount } = useNotifications();
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -46,8 +48,6 @@ export default function WorkoutScreen() {
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
   const translateValue = (value: string, type: 'goal' | 'occupation' | 'equipment') => {
-    console.log('🔍 Workout translateValue called with:', { value, type, language });
-
     if (language === 'ur' && value) {
       // Use the same arrays as ProfilePage for consistency
       const bodyGoals = [
@@ -89,7 +89,6 @@ export default function WorkoutScreen() {
       // Find the matching option and return Urdu text
       const option = options.find(opt => opt.en === value);
       if (option) {
-        console.log('🔍 Workout Found Urdu translation:', option.ur);
         return option.ur;
       }
     }
@@ -99,27 +98,24 @@ export default function WorkoutScreen() {
   useEffect(() => {
     const initializeData = async () => {
       try {
-        // Load user info first
+        // OPTIMIZATION: Use cached data only - no API calls on page visit
+        // User profile is passed from dashboard or loaded from cache
         const cachedData = userProfileService.getCachedData();
-        if (cachedData) {
+        if (cachedData && cachedData.data) {
           setUserInfo(cachedData.data);
           setIsLoading(false);
-          console.log('📦 Using cached user profile data in workout page');
         } else {
-          await loadUserInfo();
+          // No cached data - show profile creation UI
+          setIsLoading(false);
         }
 
-        // Try to load workout plan from database
-        console.log('📱 Attempting to load workout plan from database...');
+        // Load workout plan from local cache only (no API call)
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
         if (plan) {
           setWorkoutPlan(plan);
-          console.log('✅ Loaded workout plan from database successfully');
-        } else {
-          console.log('ℹ️ No workout plan found in database');
         }
       } catch (error) {
-        console.warn('⚠️ Error during initialization:', error);
+        // Error during initialization
       } finally {
         setIsLoadingPlan(false);
         setInitialLoadComplete(true);
@@ -147,10 +143,22 @@ export default function WorkoutScreen() {
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        router.push('/(dashboard)');
+        setShowProfilePage(true);
         break;
       case 'edit_profile':
         setShowUserInfoModal(true);
+        break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');
@@ -167,12 +175,11 @@ export default function WorkoutScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout. Please try again.');
         }
         break;
       default:
-        console.log('Unknown action:', action);
+        break;
     }
   };
 
@@ -195,27 +202,21 @@ export default function WorkoutScreen() {
       }, 1000);
 
       try {
-        console.log('🚀 Starting workout plan generation...');
-
         const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
 
         if (response.success && response.data) {
           setWorkoutPlan(response.data);
           showToast('success', 'Your personalized workout plan is ready!');
-          console.log('✅ Workout plan generated and saved successfully');
 
           // Clear timer and hide modal immediately when plan is ready
           clearInterval(timerInterval);
           setShowGenerationModal(false);
           setGenerationTimer(0);
         } else {
-          console.error('❌ Workout plan generation failed:', response.message);
           showToast('error', response.message || 'Failed to generate workout plan');
         }
       } catch (error) {
-        console.error('❌ Error generating workout plan:', error);
-
-        // Show interactive error alert instead of console logging
+        // Show interactive error alert
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
 
         if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
@@ -244,18 +245,15 @@ export default function WorkoutScreen() {
       if (response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        console.log('User profile saved to database:', response.data);
         showToast('success', 'Profile created! Now generating your workout plan...');
         // Here you would typically call the workout plan generation API
         setTimeout(() => {
           showToast('success', 'Your personalized workout plan is ready! This feature will be available soon.');
         }, 2000);
       } else {
-        console.error('Failed to save to database:', response.message);
         showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to save user info:', error);
       showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
   };
@@ -264,28 +262,60 @@ export default function WorkoutScreen() {
     try {
       setShowUserInfoModal(false);
     } catch (error) {
-      console.error('Failed to handle cancellation:', error);
+      // Failed to handle cancellation
     }
   };
 
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+      } else {
+        showToast('error', 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
+  };
+
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
   const loadUserInfo = async () => {
     try {
-      console.log('🌐 Loading user info from API in workout page');
+          const cachedData = userProfileService.getCachedData();
+          if (cachedData && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+        }
+      };
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
+
+  // NOTE: loadUserInfo is kept for cases where profile needs to be loaded after creation
+  // but it's not called on page initialization to avoid unnecessary API calls
+  const loadUserInfo = async () => {
+    try {
       const response = await userProfileService.getUserProfile();
 
       if (response.success) {
         if (response.data) {
           setUserInfo(response.data);
-          console.log('User profile loaded from API:', response.data);
         } else {
-          console.log('No profile found for new user:', response.message);
           setUserInfo(null);
         }
-      } else {
-        console.error('Failed to load user info from backend:', response.message);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info
     } finally {
       setIsLoading(false);
     }
@@ -300,8 +330,6 @@ export default function WorkoutScreen() {
       router.push('/(dashboard)/gym');
     } else if (tab === 'progress') {
       router.push('/(dashboard)/progress');
-    } else {
-      console.log('Feature coming soon:', tab);
     }
   };
 
@@ -332,14 +360,10 @@ export default function WorkoutScreen() {
     setGenerationProgress('Preparing new plan...');
 
     try {
-      console.log('🔄 Generating new workout plan...');
-
       // Clear existing plans from database
       try {
         await aiWorkoutService.clearWorkoutPlanFromDatabase();
-        console.log('🗑️ Cleared existing plans');
       } catch (error) {
-        console.warn('⚠️ Could not clear existing plans:', error);
         // Continue anyway
       }
 
@@ -354,14 +378,10 @@ export default function WorkoutScreen() {
       if (response.success && response.data) {
         setWorkoutPlan(response.data);
         showToast('success', 'New workout plan generated successfully!');
-        console.log('✅ New workout plan generated and saved');
       } else {
-        console.error('❌ Failed to generate new workout plan:', response.message);
         showToast('error', response.message || 'Failed to generate new workout plan. Please try again.');
       }
     } catch (error) {
-      console.error('❌ Error generating new workout plan:', error);
-
       // Show red alert for any error
       const errorMessage = error instanceof Error ? error.message : String(error);
       showToast('error', `Error: ${errorMessage}`);
@@ -374,8 +394,6 @@ export default function WorkoutScreen() {
   // Handle delete plan - reset to profile summary interface
   const handleDeletePlan = async () => {
     try {
-      console.log('🗑️ Deleting workout plan and returning to profile summary...');
-
       // Clear current plan from UI - this will show the profile summary interface
       setWorkoutPlan(null);
 
@@ -386,9 +404,7 @@ export default function WorkoutScreen() {
       await Storage.default.removeItem('completed_days');
 
       showToast('success', 'Workout plan deleted. You can now generate a new plan.');
-      console.log('✅ Workout plan deleted - showing profile summary interface');
     } catch (error) {
-      console.error('❌ Error deleting workout plan:', error);
       showToast('error', 'Failed to delete workout plan. Please try again.');
     }
   };
@@ -412,7 +428,6 @@ export default function WorkoutScreen() {
           workoutPlan={workoutPlan}
           onExercisePress={handleExercisePress}
           onDayPress={(day) => {
-            console.log('Day pressed:', day);
             // Handle day press - could show day details
           }}
           onGenerateNew={handleDeletePlan}
@@ -536,6 +551,13 @@ export default function WorkoutScreen() {
           visible={showUserInfoModal}
           onComplete={handleCompleteUserInfo}
           onCancel={handleCancelUserInfo}
+        />
+
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
 
         <NotificationModal

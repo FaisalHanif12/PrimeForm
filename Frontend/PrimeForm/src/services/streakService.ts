@@ -43,10 +43,18 @@ interface StreakServiceResponse<T> {
 
 class StreakService {
 
-  // Get comprehensive streak data
-  async getStreakData(): Promise<StreakServiceResponse<StreakData>> {
+  // Get comprehensive streak data (with optional API call)
+  async getStreakData(useLocalOnly = false): Promise<StreakServiceResponse<StreakData>> {
     try {
-      console.log('📊 Loading streak data...');
+      // If useLocalOnly is true, skip API call and calculate from local data
+      if (useLocalOnly) {
+        const localStreakData = await this.calculateLocalStreakData();
+        return {
+          success: true,
+          message: 'Streak data calculated from local data',
+          data: localStreakData
+        };
+      }
 
       // Try to get data from backend first
       try {
@@ -55,7 +63,7 @@ class StreakService {
           return response.data;
         }
       } catch (error) {
-        console.warn('⚠️ Backend not available, calculating from local data');
+        // Backend not available, calculate from local data
       }
 
       // Calculate from local data as fallback
@@ -86,8 +94,40 @@ class StreakService {
 
       const exercisesList = JSON.parse(completedExercises);
       const mealsList = JSON.parse(completedMeals);
-      const workoutDaysList = JSON.parse(completedWorkoutDays);
-      const dietDaysList = JSON.parse(completedDietDays);
+      let workoutDaysList = JSON.parse(completedWorkoutDays);
+      let dietDaysList = JSON.parse(completedDietDays);
+
+      // Extract unique dates from exercise IDs and merge with day list
+      // Exercise IDs format: "YYYY-MM-DD-exerciseName"
+      const exerciseDates = new Set<string>(workoutDaysList);
+      exercisesList.forEach((exerciseId: string) => {
+        // Extract date from exercise ID (format: "YYYY-MM-DD-exerciseName")
+        const parts = exerciseId.split('-');
+        if (parts.length >= 3) {
+          // Check if first 3 parts form a valid date (YYYY-MM-DD)
+          const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            exerciseDates.add(dateStr);
+          }
+        }
+      });
+      workoutDaysList = Array.from(exerciseDates).sort();
+
+      // Extract unique dates from meal IDs and merge with day list
+      // Meal IDs format: "YYYY-MM-DD-mealType-mealName"
+      const mealDates = new Set<string>(dietDaysList);
+      mealsList.forEach((mealId: string) => {
+        // Extract date from meal ID (format: "YYYY-MM-DD-mealType-mealName")
+        const parts = mealId.split('-');
+        if (parts.length >= 3) {
+          // Check if first 3 parts form a valid date (YYYY-MM-DD)
+          const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            mealDates.add(dateStr);
+          }
+        }
+      });
+      dietDaysList = Array.from(mealDates).sort();
 
       // Generate daily activity history for last 90 days
       const streakHistory = this.generateStreakHistory(workoutDaysList, dietDaysList);
@@ -194,24 +234,56 @@ class StreakService {
   private calculateCurrentStreak(completedDays: string[]): number {
     if (completedDays.length === 0) return 0;
 
+    // Normalize dates to YYYY-MM-DD format and remove duplicates
+    const normalizedDays = completedDays
+      .map(day => {
+        // If day is already in YYYY-MM-DD format, use it
+        if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+          return day;
+        }
+        // Try to parse as date
+        try {
+          const date = new Date(day);
+          return date.toISOString().split('T')[0];
+        } catch {
+          return null;
+        }
+      })
+      .filter((day): day is string => day !== null);
+
+    if (normalizedDays.length === 0) return 0;
+
+    // Sort dates and get unique values
+    const uniqueDays = Array.from(new Set(normalizedDays)).sort();
     const today = new Date().toISOString().split('T')[0];
-    const sortedDays = completedDays.sort().reverse();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    let streak = 0;
-    const currentDate = new Date();
+    // Find the most recent completed day (today or yesterday)
+    const mostRecentDay = uniqueDays[uniqueDays.length - 1];
+    const startDate = mostRecentDay === today ? today : 
+                     (mostRecentDay === yesterdayStr ? yesterdayStr : mostRecentDay);
     
-    // Check if today is included
-    if (!sortedDays.includes(today)) {
-      return 0; // Streak broken if today not completed
+    // If the most recent day is more than 1 day ago, streak is broken
+    const startDateObj = new Date(startDate);
+    const todayObj = new Date(today);
+    const daysDiff = Math.floor((todayObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 1) {
+      return 0; // Streak broken - gap of more than 1 day
     }
     
-    // Count consecutive days backwards from today
+    // Count consecutive days backwards from the most recent completed day
+    let streak = 0;
+    const currentDate = new Date(startDate);
+    
     for (let i = 0; i < 365; i++) { // Check up to a year
       const checkDate = new Date(currentDate);
       checkDate.setDate(currentDate.getDate() - i);
       const dateString = checkDate.toISOString().split('T')[0];
       
-      if (sortedDays.includes(dateString)) {
+      if (uniqueDays.includes(dateString)) {
         streak++;
       } else {
         break;
