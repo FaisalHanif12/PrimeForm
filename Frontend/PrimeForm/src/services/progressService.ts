@@ -60,26 +60,21 @@ class ProgressService {
         return;
       }
 
-      console.log('🧹 Performing periodic data cleanup...');
       await Storage.setItem('last_progress_cleanup', today);
       this.lastCleanupDate = today;
-      
-      console.log('✅ Periodic cleanup completed');
     } catch (error) {
-      console.error('❌ Error during periodic cleanup:', error);
+      // Error during periodic cleanup
     }
   }
 
   // Get comprehensive progress statistics
-  async getProgressStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number): Promise<ProgressServiceResponse<ProgressStats>> {
+  async getProgressStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number, forceRefresh = false): Promise<ProgressServiceResponse<ProgressStats>> {
     try {
-      console.log('📊 Loading progress statistics for period:', period);
-
       // Always initialize services first
       await this.initialize();
 
       // Calculate from local data directly - this ensures accuracy
-      const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth);
+      const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth, forceRefresh);
       return {
         success: true,
         message: 'Progress stats calculated from real-time data',
@@ -87,7 +82,6 @@ class ProgressService {
       };
 
     } catch (error) {
-      console.error('❌ Error getting progress stats:', error);
       return {
         success: false,
         message: 'Failed to load progress statistics'
@@ -96,13 +90,16 @@ class ProgressService {
   }
 
   // Calculate statistics from real workout and diet plan completion data
-  private async calculateRealTimeStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number): Promise<ProgressStats> {
+  private async calculateRealTimeStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number, forceRefresh = false): Promise<ProgressStats> {
     try {
-      console.log(`📊 Calculating real-time ${period} stats for week: ${selectedWeek}, month: ${selectedMonth}`);
       
-      // Load workout and diet plans
-      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      // OPTIMIZATION: Load workout and diet plans using cached data unless forcing refresh
+      const workoutPlan = forceRefresh 
+        ? await aiWorkoutService.refreshWorkoutPlanFromDatabase()
+        : await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      const dietPlan = forceRefresh
+        ? await aiDietService.refreshDietPlanFromDatabase()
+        : await aiDietService.loadDietPlanFromDatabase();
 
       // Get completion data from services (already initialized)
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
@@ -114,17 +111,8 @@ class ProgressService {
       const waterData = JSON.parse(waterIntakeData);
       const waterCompleted = JSON.parse(waterCompletedData);
 
-      console.log('📊 Raw completion data:', {
-        completedExercises: exerciseCompletionData.completedExercises.length,
-        completedMeals: mealCompletionData.completedMeals.length,
-        completedExerciseDays: exerciseCompletionData.completedDays.length,
-        completedMealDays: mealCompletionData.completedDays.length
-      });
-
       // Calculate date range based on period
       const { startDate, endDate } = this.getDateRange(period, workoutPlan, dietPlan, selectedWeek, selectedMonth);
-      
-      console.log(`📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
 
       // Filter completion data by date range
       const filteredExercises = this.filterCompletionsByDateRange(
@@ -140,12 +128,6 @@ class ProgressService {
       );
 
       const filteredWater = this.filterWaterByDateRange(waterData, waterCompleted, startDate, endDate);
-
-      console.log('📊 Filtered completion data:', {
-        filteredExercises: filteredExercises.length,
-        filteredMeals: filteredMeals.length,
-        waterDates: Object.keys(filteredWater.intake).length
-      });
 
       // Calculate actual consumption from completed meals
       let caloriesConsumed = 0;
@@ -214,13 +196,9 @@ class ProgressService {
         bodyFatProgress: 0
       };
 
-      console.log('📊 Final calculated stats:', stats);
-
       return stats;
 
     } catch (error) {
-      console.error('❌ Error calculating real-time stats:', error);
-      
       // Return default stats on error
       return {
         caloriesConsumed: 0,
@@ -570,18 +548,20 @@ class ProgressService {
   }
 
   // Get chart data for visualization
-  async getChartData(period: 'daily' | 'weekly' | 'monthly'): Promise<ProgressServiceResponse<{
+  async getChartData(period: 'daily' | 'weekly' | 'monthly', forceRefresh = false): Promise<ProgressServiceResponse<{
     calories: ChartData;
     macros: ChartData;
     workouts: ChartData;
     water: ChartData;
   }>> {
     try {
-      console.log('📈 Loading chart data for period:', period);
-
-      // Load real data for charts
-      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      // OPTIMIZATION: Load real data for charts using cached data unless forcing refresh
+      const workoutPlan = forceRefresh
+        ? await aiWorkoutService.refreshWorkoutPlanFromDatabase()
+        : await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      const dietPlan = forceRefresh
+        ? await aiDietService.refreshDietPlanFromDatabase()
+        : await aiDietService.loadDietPlanFromDatabase();
       
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
       const mealCompletionData = mealCompletionService.getCompletionData();
@@ -637,7 +617,6 @@ class ProgressService {
       };
 
     } catch (error) {
-      console.error('❌ Error getting chart data:', error);
       return {
         success: false,
         message: 'Failed to load chart data'
@@ -863,8 +842,6 @@ class ProgressService {
   // Get AI-powered health remarks
   async getHealthRemarks(): Promise<ProgressServiceResponse<string[]>> {
     try {
-      console.log('🤖 Loading health remarks...');
-
       const defaultRemarks = [
         "Your consistency is the key to long-term success. Keep up the great work!",
         "Consider tracking your sleep quality to optimize recovery and performance.",
@@ -880,7 +857,6 @@ class ProgressService {
       };
 
     } catch (error) {
-      console.error('❌ Error getting health remarks:', error);
       return {
         success: false,
         message: 'Failed to load health remarks',
@@ -889,9 +865,10 @@ class ProgressService {
     }
   }
 
-  // Get available weeks for filtering
+  // Get available weeks for filtering - uses cached data
   async getAvailableWeeks(): Promise<number[]> {
     try {
+      // OPTIMIZATION: Uses cached data by default - no unnecessary API calls
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
       
@@ -910,14 +887,14 @@ class ProgressService {
       }
       return weeks;
     } catch (error) {
-      console.error('❌ Error getting available weeks:', error);
       return [1];
     }
   }
 
-  // Get available months for filtering
+  // Get available months for filtering - uses cached data
   async getAvailableMonths(): Promise<number[]> {
     try {
+      // OPTIMIZATION: Uses cached data by default - no unnecessary API calls
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
       
@@ -937,7 +914,6 @@ class ProgressService {
       }
       return months;
     } catch (error) {
-      console.error('❌ Error getting available months:', error);
       return [1];
     }
   }
@@ -949,10 +925,9 @@ class ProgressService {
     workoutPlan: any;
   }): Promise<void> {
     try {
-      console.log('🔄 Syncing workout progress data...');
-      console.log('✅ Workout progress synced successfully');
+      // Syncing workout progress data
     } catch (error) {
-      console.error('❌ Error syncing workout progress:', error);
+      // Error syncing workout progress
     }
   }
 
@@ -964,10 +939,9 @@ class ProgressService {
     waterIntake: { [key: string]: number };
   }): Promise<void> {
     try {
-      console.log('🔄 Syncing diet progress data...');
-      console.log('✅ Diet progress synced successfully');
+      // Syncing diet progress data
     } catch (error) {
-      console.error('❌ Error syncing diet progress:', error);
+      // Error syncing diet progress
     }
   }
 
@@ -979,9 +953,8 @@ class ProgressService {
       await Storage.removeItem('water_intake');
       await Storage.removeItem('water_completed');
       await Storage.removeItem('last_progress_cleanup');
-      console.log('🗑️ Progress data cleared');
     } catch (error) {
-      console.error('❌ Error clearing progress data:', error);
+      // Error clearing progress data
     }
   }
 }

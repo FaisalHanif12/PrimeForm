@@ -87,7 +87,6 @@ export default function AITrainerScreen() {
       }
 
     } catch (error) {
-      console.error('Failed to load AI trainer data:', error);
       showToast('error', 'Failed to load chat history.');
     } finally {
       setIsLoading(false);
@@ -124,7 +123,6 @@ export default function AITrainerScreen() {
         setChatMessages(prev => [...prev, aiMessage]);
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
       showToast('error', 'Failed to send message. Please try again.');
     } finally {
       setIsTyping(false);
@@ -172,7 +170,6 @@ export default function AITrainerScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout.');
         }
         break;
@@ -185,14 +182,15 @@ export default function AITrainerScreen() {
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Use cached data - no API call on page visit
+  const loadUserInfo = () => {
     try {
-      const response = await userProfileService.getUserProfile();
-      if (response && response.success && response.data) {
-        setUserInfo(response.data);
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.data) {
+        setUserInfo(cachedData.data);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info from cache
     }
   };
 

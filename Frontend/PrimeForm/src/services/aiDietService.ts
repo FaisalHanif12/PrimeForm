@@ -66,12 +66,11 @@ export interface AIDietResponse {
 class AIDietService {
   private loadingCache: Map<string, Promise<any>> = new Map();
   private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache - diet plan rarely changes
 
   private getCachedData(key: string): any | null {
     const cached = this.dataCache.get(key);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      console.log(`📦 Using cached data for ${key}`);
       return cached.data;
     }
     return null;
@@ -155,20 +154,14 @@ Generate complete 7-day plan now.
 
   async generateDietPlan(userProfile: UserProfile): Promise<AIDietResponse> {
     try {
-      console.log('🍽️ Generating AI diet plan for user:', userProfile);
-      console.log('🔑 Using OpenRouter API Key:', OPENROUTER_API_KEY ? 'Present' : 'Missing');
-      console.log('🌐 API URL:', OPENROUTER_API_URL);
-
       // Check if API key is available
       if (!OPENROUTER_API_KEY) {
         throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
       }
       
       const prompt = this.generatePrompt(userProfile);
-      console.log('📝 Prompt length:', prompt.length, 'characters');
 
       const startTime = Date.now();
-      console.log('🚀 Calling OpenRouter API with Gemini Flash 2.0 model...');
 
       // Make API call without timeout - let it take as long as needed for better UX
       const response = await fetch(OPENROUTER_API_URL, {
@@ -198,28 +191,23 @@ Generate complete 7-day plan now.
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ OpenRouter API Error Response:', errorText);
         throw new Error(`API request failed with status: ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
       const endTime = Date.now();
       const responseTime = endTime - startTime;
-      console.log(`⚡ API Response time: ${responseTime}ms (${(responseTime / 1000).toFixed(2)}s)`);
-      console.log('🤖 OpenRouter AI Response received:', data);
 
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         throw new Error('Invalid response format from AI');
       }
 
       const aiResponse = data.choices[0].message.content;
-      console.log('🤖 AI Generated Content:', aiResponse);
 
       // Parse the AI response into structured data
       const dietPlan = this.parseAIResponse(aiResponse, userProfile);
 
       // Store the response in database for persistence with retry logic
-      console.log('💾 Attempting to save diet plan to database...');
       let saveResponse;
       let retryCount = 0;
       const maxRetries = 3;
@@ -228,24 +216,18 @@ Generate complete 7-day plan now.
         try {
           saveResponse = await dietPlanService.createDietPlan(dietPlan);
           if (saveResponse.success) {
-            console.log('✅ Diet plan saved to database successfully');
-
             // Also cache locally as backup
             await Storage.setItem('cached_diet_plan', JSON.stringify(dietPlan));
-            console.log('💾 Diet plan cached locally as backup');
             break;
           } else {
             throw new Error(`Database save failed: ${saveResponse.message}`);
           }
         } catch (error) {
           retryCount++;
-          console.warn(`⚠️ Database save attempt ${retryCount} failed:`, error);
           
           if (retryCount >= maxRetries) {
-            console.error('❌ All database save attempts failed. Caching locally only.');
             // Cache locally as fallback
             await Storage.setItem('cached_diet_plan', JSON.stringify(dietPlan));
-            console.log('💾 Diet plan cached locally as fallback');
             // Don't throw error - allow user to use the plan even if not saved to DB
           } else {
             // Wait before retry
@@ -261,51 +243,64 @@ Generate complete 7-day plan now.
       };
 
     } catch (error) {
-      console.error('❌ Error generating diet plan:', error);
       throw error;
     }
   }
 
 
-  // Load diet plan from database
-  async loadDietPlanFromDatabase(): Promise<DietPlan | null> {
+  // Load diet plan - prioritizes local cache to minimize API calls
+  async loadDietPlanFromDatabase(forceRefresh = false): Promise<DietPlan | null> {
     const cacheKey = 'diet-plan-active';
     
     // Check if there's already a request in flight
     if (this.loadingCache.has(cacheKey)) {
-      console.log('🔄 Request already in flight, waiting for existing request...');
       return this.loadingCache.get(cacheKey);
     }
 
-    // Check memory cache first
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) {
-      return cachedData;
+    // Check memory cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cachedData = this.getCachedData(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
     }
 
     // Create new request and cache the promise to prevent duplicates
     const request = (async () => {
       try {
+        // OPTIMIZATION: Try local storage first to avoid API call
+        if (!forceRefresh) {
+          try {
+            const cachedPlan = await Storage.getItem('cached_diet_plan');
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              this.setCachedData(cacheKey, plan);
+              return plan;
+            }
+          } catch (cacheError) {
+            // Could not load from local cache
+          }
+        }
+
+        // Only call API if no local cache or forcing refresh
         const response = await dietPlanService.getActiveDietPlan();
         if (response.success && response.data) {
-          console.log('📱 Loaded diet plan from database');
           this.setCachedData(cacheKey, response.data);
+          // Also update local cache
+          await Storage.setItem('cached_diet_plan', JSON.stringify(response.data));
           return response.data;
         }
       } catch (error) {
-        console.warn('⚠️ Could not load diet plan from database:', error);
-
         // Try to load from local cache as fallback
         try {
           const cachedPlan = await Storage.getItem('cached_diet_plan');
           if (cachedPlan) {
-            console.log('📱 Loading diet plan from local cache');
             const plan = JSON.parse(cachedPlan);
             this.setCachedData(cacheKey, plan);
             return plan;
           }
         } catch (cacheError) {
-          console.warn('⚠️ Could not load from cache either:', cacheError);
+          // Could not load from cache either
         }
       } finally {
         // Remove from loading cache after request completes
@@ -319,20 +314,23 @@ Generate complete 7-day plan now.
     return request;
   }
 
+  // Force refresh diet plan from database (use after completing actions)
+  async refreshDietPlanFromDatabase(): Promise<DietPlan | null> {
+    return this.loadDietPlanFromDatabase(true);
+  }
+
   // Clear diet plan from database
   async clearDietPlanFromDatabase(): Promise<void> {
     try {
       await dietPlanService.clearAllDietPlans();
-      console.log('🗑️ Diet plans cleared from database');
 
       // Also clear local cache
       await Storage.removeItem('cached_diet_plan');
-      console.log('🗑️ Local diet plan cache cleared');
       
       // Clear memory cache
       this.clearCache('diet-plan-active');
     } catch (error) {
-      console.warn('⚠️ Could not clear diet plans from database:', error);
+      // Could not clear diet plans from database
     }
   }
 

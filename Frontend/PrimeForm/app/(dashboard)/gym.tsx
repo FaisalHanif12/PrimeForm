@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
@@ -8,8 +8,10 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { useToast } from '../../src/context/ToastContext';
+import userProfileService from '../../src/services/userProfileService';
 import NotificationModal from '../../src/components/NotificationModal';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 // Using Expo Vector Icons instead
@@ -84,6 +86,8 @@ export default function GymScreen() {
   const { unreadCount } = useNotifications();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [selectedGender, setSelectedGender] = useState<'men' | 'women'>('men');
 
   const handleProfilePress = () => {
@@ -93,10 +97,22 @@ export default function GymScreen() {
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        router.push('/(dashboard)');
+        setShowProfilePage(true);
         break;
       case 'edit_profile':
         showToast('info', 'Edit profile feature coming soon!');
+        break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');
@@ -113,15 +129,46 @@ export default function GymScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout. Please try again.');
         }
         break;
-      default:
-        console.log('Unknown action:', action);
     }
-    setSidebarVisible(false);
   };
+
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+      } else {
+        showToast('error', 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
+  };
+
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      const loadUserInfo = async () => {
+        try {
+          const cachedData = userProfileService.getCachedData();
+          if (cachedData && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+        }
+      };
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     if (tab === 'home') {
@@ -289,8 +336,15 @@ export default function GymScreen() {
           onMenuItemPress={handleSidebarMenuPress}
           userName={user?.fullName || 'User'}
           userEmail={user?.email || 'user@example.com'}
-          userInfo={null}
-          badges={[]}
+          userInfo={userInfo}
+          badges={userInfo?.badges || []}
+        />
+
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
 
         <NotificationModal

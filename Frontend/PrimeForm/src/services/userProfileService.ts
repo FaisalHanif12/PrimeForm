@@ -44,7 +44,7 @@ export interface ProfileCompletionStatus {
 
 class UserProfileService {
   private cache: { data: any; timestamp: number } | null = null;
-  private cacheTimeout = 300000; // 5 minutes cache
+  private cacheTimeout = 30 * 60 * 1000; // 30 minutes cache - profile rarely changes
   private isLoading = false;
   private pendingCall: Promise<any> | null = null;
   private hasInitialized = false;
@@ -52,20 +52,17 @@ class UserProfileService {
   // Clear cache when user changes (called from auth service)
   clearCache() {
     this.cache = null;
-    console.log('🗑️ User profile cache cleared');
   }
 
   // Get user profile with caching and debouncing
   async getUserProfile(forceRefresh = false): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
     // If not forcing refresh and we have cached data, return it
     if (!forceRefresh && this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-      console.log('📦 Using cached user profile data');
       return this.cache.data;
     }
 
     // If already loading, return the pending call
     if (this.isLoading && this.pendingCall) {
-      console.log('⏳ Returning pending API call');
       return this.pendingCall;
     }
 
@@ -103,7 +100,6 @@ class UserProfileService {
   // Private method for actual API call with retry logic
   private async _getUserProfile(retryCount = 0): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
     try {
-      console.log(`🌐 Making API call to getUserProfile (attempt ${retryCount + 1})`);
       const response = await api.get('/user-profile');
       
       // Check if response exists and has data
@@ -118,22 +114,17 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error(`Error getting user profile (attempt ${retryCount + 1}):`, error);
-      
       // Check if it's a rate limiting error and we can retry
       if (error.message && error.message.includes('Too many requests') && retryCount < 2) {
         const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
-        console.log(`⏳ Rate limited, retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return this._getUserProfile(retryCount + 1);
       }
       
       // Check if it's a rate limiting error
       if (error.message && error.message.includes('Too many requests')) {
-        console.warn('⚠️ Rate limit exceeded, using cached data if available');
         // Return cached data if available, otherwise return error
         if (this.cache) {
-          console.log('📦 Returning cached data due to rate limiting');
           return this.cache.data;
         }
         return {
@@ -180,24 +171,13 @@ class UserProfileService {
         };
       }
       
-      console.log('🔍 userProfileService - Sending data:', processedUserInfo);
-      
       const response = await api.post('/user-profile', processedUserInfo);
       
-      console.log('🔍 userProfileService - Raw API response:', response);
-      console.log('🔍 userProfileService - Response structure:', {
-        success: response?.success,
-        hasData: !!response?.data,
-        message: response?.message
-      });
-      
       if (response && response.success) {
-        console.log('✅ userProfileService - Returning success response');
         // Clear cache when profile is updated
         this.clearCache();
         return response;
       } else {
-        console.log('❌ userProfileService - Invalid response structure');
         return {
           success: false,
           data: null,
@@ -205,13 +185,6 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('💥 userProfileService - Exception:', error);
-      console.error('💥 userProfileService - Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      
       return {
         success: false,
         data: null,
@@ -235,8 +208,6 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error updating profile field:', error);
-      
       return {
         success: false,
         data: null,
@@ -259,8 +230,6 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error deleting user profile:', error);
-      
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to delete user profile'
@@ -283,8 +252,6 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error checking profile completion:', error);
-      
       return {
         success: false,
         data: null,
@@ -308,8 +275,6 @@ class UserProfileService {
         };
       }
     } catch (error: any) {
-      console.error('Error getting user badges:', error);
-      
       return {
         success: false,
         data: null,

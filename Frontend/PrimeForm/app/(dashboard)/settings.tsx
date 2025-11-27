@@ -106,22 +106,22 @@ export default function SettingsPage() {
           router.push('/(dashboard)/sport-mode');
           break;
         default:
-          console.log('Unknown sidebar action:', action);
+          break;
       }
     } catch (error) {
-      console.error('Sidebar action failed:', error);
       showToast('error', 'Unable to complete that action. Please try again.');
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Use cached data - no API call on page visit
+  const loadUserInfo = () => {
     try {
-      const response = await userProfileService.getUserProfile();
-      if (response && response.success && response.data) {
-        setUserInfo(response.data);
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.data) {
+        setUserInfo(cachedData.data);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info from cache
     }
   };
 
@@ -145,19 +145,16 @@ export default function SettingsPage() {
     try {
       // In a real app, you would load these from AsyncStorage or your backend
       // For now, we'll use the default values
-      console.log('Loading notification settings...');
     } catch (error) {
-      console.error('Failed to load notification settings:', error);
+      // Failed to load notification settings
     }
   };
 
   const saveNotificationSettings = async (settings: NotificationSettings) => {
     try {
       // In a real app, you would save these to AsyncStorage or your backend
-      console.log('Saving notification settings:', settings);
       showToast('success', 'Notification settings saved successfully!');
     } catch (error) {
-      console.error('Failed to save notification settings:', error);
       showToast('error', 'Failed to save notification settings');
     }
   };

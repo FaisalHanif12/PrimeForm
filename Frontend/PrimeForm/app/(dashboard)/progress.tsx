@@ -22,8 +22,10 @@ import { useNotifications } from '../../src/contexts/NotificationContext';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import ProgressChart from '../../src/components/ProgressChart';
+import userProfileService from '../../src/services/userProfileService';
 import HealthRemarks from '../../src/components/HealthRemarks';
 import progressService from '../../src/services/progressService';
 
@@ -66,6 +68,8 @@ export default function ProgressScreen() {
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
@@ -81,45 +85,44 @@ export default function ProgressScreen() {
   } | null>(null);
   const [healthRemarks, setHealthRemarks] = useState<string[]>([]);
 
-  // Load data when component mounts or period changes
+  // Track if initial load has happened
+  const [hasLoadedInitially, setHasLoadedInitially] = React.useState(false);
+
+  // Load data only when period changes (not on every focus)
   useEffect(() => {
     loadProgressData();
   }, [selectedPeriod, selectedWeek, selectedMonth]);
 
-  // Reload data when screen comes into focus
+  // OPTIMIZATION: Don't reload data on every focus - only load once initially
   useFocusEffect(
     useCallback(() => {
-      console.log('📊 Progress screen focused - reloading data');
-      loadProgressData();
-    }, [selectedPeriod, selectedWeek, selectedMonth])
+      if (!hasLoadedInitially) {
+        loadProgressData();
+        setHasLoadedInitially(true);
+      }
+    }, [hasLoadedInitially])
   );
 
-  // Listen for progress updates from workout and diet screens
+  // Listen for progress updates from workout and diet screens - only refresh on actions
   useEffect(() => {
     const listeners = [
       DeviceEventEmitter.addListener('exerciseCompleted', () => {
-        console.log('📊 Exercise completed event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
       DeviceEventEmitter.addListener('mealCompleted', () => {
-        console.log('📊 Meal completed event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
       DeviceEventEmitter.addListener('dayCompleted', () => {
-        console.log('📊 Day completed event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
       DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
-        console.log('📊 Workout progress updated event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
       DeviceEventEmitter.addListener('dietProgressUpdated', () => {
-        console.log('📊 Diet progress updated event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
       DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
-        console.log('📊 Water intake updated event - refreshing progress');
-        loadProgressData();
+        loadProgressData(true); // Force refresh after action
       }),
     ];
 
@@ -134,7 +137,8 @@ export default function ProgressScreen() {
     };
   }, [selectedPeriod, selectedWeek, selectedMonth]);
 
-  const loadProgressData = async () => {
+  // OPTIMIZATION: Load progress data with optional force refresh
+  const loadProgressData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
 
@@ -156,26 +160,26 @@ export default function ProgressScreen() {
       const statsResponse = await progressService.getProgressStats(
         selectedPeriod,
         selectedPeriod === 'weekly' ? selectedWeek || weeks[weeks.length - 1] : undefined,
-        selectedPeriod === 'monthly' ? selectedMonth || months[months.length - 1] : undefined
+        selectedPeriod === 'monthly' ? selectedMonth || months[months.length - 1] : undefined,
+        forceRefresh
       );
       if (statsResponse.success && statsResponse.data) {
         setProgressStats(statsResponse.data);
       }
 
       // Load chart data
-      const chartResponse = await progressService.getChartData(selectedPeriod);
+      const chartResponse = await progressService.getChartData(selectedPeriod, forceRefresh);
       if (chartResponse.success && chartResponse.data) {
         setChartData(chartResponse.data);
       }
 
-      // Load health remarks
+      // Load health remarks (no need to force refresh - static content)
       const remarksResponse = await progressService.getHealthRemarks();
       if (remarksResponse.success && remarksResponse.data) {
         setHealthRemarks(remarksResponse.data);
       }
 
     } catch (error) {
-      console.error('Failed to load progress data:', error);
       showToast('error', 'Failed to load progress data. Please try again.');
     } finally {
       setIsLoading(false);
@@ -186,10 +190,57 @@ export default function ProgressScreen() {
     setSidebarVisible(true);
   };
 
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+      } else {
+        showToast('error', 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
+  };
+
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      const loadUserInfo = async () => {
+        try {
+          const cachedData = userProfileService.getCachedData();
+          if (cachedData && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+        }
+      };
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
+
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
       case 'profile':
-        router.push('/(dashboard)');
+        setShowProfilePage(true);
+        break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
         break;
       case 'settings':
         router.push('/(dashboard)/settings');
@@ -206,12 +257,11 @@ export default function ProgressScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          console.error('Logout failed:', error);
           showToast('error', 'Failed to logout. Please try again.');
         }
         break;
       default:
-        console.log('Unknown action:', action);
+        break;
     }
   };
 
@@ -759,8 +809,15 @@ export default function ProgressScreen() {
           onMenuItemPress={handleSidebarMenuPress}
           userName={user?.fullName || t('common.user')}
           userEmail={user?.email || 'user@example.com'}
-          userInfo={null}
-          badges={[]}
+          userInfo={userInfo}
+          badges={userInfo?.badges || []}
+        />
+
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
         />
 
         <NotificationModal

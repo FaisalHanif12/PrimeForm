@@ -118,7 +118,6 @@ export default function DashboardScreen() {
   useEffect(() => {
     if (isAuthenticated || hasCompletedSignup) {
       // Don't load immediately - let user trigger it
-      console.log('📱 Dashboard mounted, ready to load data when needed');
     }
   }, [isAuthenticated, hasCompletedSignup]);
 
@@ -135,12 +134,11 @@ export default function DashboardScreen() {
         const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
 
         if (lastCheckedDay !== today) {
-          console.log('🌅 New day detected! Refreshing dashboard data...');
           await AsyncStorage.setItem('last_checked_day', today);
           await loadDynamicData();
         }
       } catch (error) {
-        console.error('Error checking for new day:', error);
+        // Error checking for new day
       } finally {
         isChecking = false;
       }
@@ -150,32 +148,32 @@ export default function DashboardScreen() {
     checkForNewDay();
   }, []);
 
-  // Production-optimized refresh system - ONLY when needed
+  // OPTIMIZATION: Only refresh on new day, use cached data otherwise
   useEffect(() => {
     let isRefreshing = false; // Prevent concurrent refreshes
 
     const handleAppStateChange = async (nextAppState: string) => {
       if (nextAppState === 'active' && !isRefreshing) {
-        console.log('📱 App became active, refreshing data...');
         isRefreshing = true;
 
         try {
-          // First check for new day
+          // Only force refresh if it's a new day
           const today = new Date().toDateString();
           const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
 
           if (lastCheckedDay !== today) {
-            console.log('🌅 New day detected! Refreshing dashboard data...');
             await AsyncStorage.setItem('last_checked_day', today);
-          }
-
-          // Refresh both completion states and meal/workout data
+            // Force refresh only on new day
           await Promise.all([
-            loadCompletionStates(),
-            loadDynamicData()
+              loadCompletionStates(true),
+              loadDynamicData(true)
           ]);
+          } else {
+            // Not a new day - just reload from local storage, no API call
+            await loadCompletionStates();
+          }
         } catch (error) {
-          console.error('Error refreshing data:', error);
+          // Error refreshing data
         } finally {
           isRefreshing = false;
         }
@@ -193,21 +191,18 @@ export default function DashboardScreen() {
   // Listen for meal completion events to update dashboard in real-time
   useEffect(() => {
     const mealCompletedListener = DeviceEventEmitter.addListener('mealCompleted', async (data) => {
-      console.log('📊 Dashboard: Received mealCompleted event', data);
-      // Reload completion states to reflect the change
-      await loadCompletionStates();
+      // Force refresh completion states to reflect the change
+      await loadCompletionStates(true);
     });
 
     const dayCompletedListener = DeviceEventEmitter.addListener('dayCompleted', async (data) => {
-      console.log('📊 Dashboard: Received dayCompleted event', data);
-      // Reload completion states to reflect the change
-      await loadCompletionStates();
+      // Force refresh completion states to reflect the change
+      await loadCompletionStates(true);
     });
 
     const exerciseCompletedListener = DeviceEventEmitter.addListener('exerciseCompleted', async (data) => {
-      console.log('📊 Dashboard: Received exerciseCompleted event', data);
-      // Reload completion states to reflect the change
-      await loadCompletionStates();
+      // Force refresh completion states to reflect the change
+      await loadCompletionStates(true);
     });
 
     return () => {
@@ -226,18 +221,9 @@ export default function DashboardScreen() {
         const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
         const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
 
-        console.log('🔍 App State Check:', {
-          isFirstLaunch,
-          hasSelectedLanguage,
-          isAuthenticated,
-          deviceLanguageSelected,
-          hasEverSignedUp
-        });
-
         // CRITICAL: Language modal should ONLY show for first-time guest users
         // According to workflow Phase 4: After sign-up, language modal NEVER appears again
         if (hasEverSignedUp === 'true' || isAuthenticated) {
-          console.log('🚫 User has signed up before or is authenticated - language modal will NOT be shown');
           // Ensure language modal never shows for users who have ever signed up
           await AsyncStorage.setItem('primeform_device_language_selected', 'true');
           setShowLanguageModal(false);
@@ -246,18 +232,10 @@ export default function DashboardScreen() {
 
         // Check if this is the first time ANY user has opened the app on this device
         if (isFirstLaunch === null && !deviceLanguageSelected) {
-          console.log('🌍 First device launch detected - showing language modal for guest user');
           // Mark as first launch and device language selection
           await AsyncStorage.setItem('primeform_first_launch', 'false');
           await AsyncStorage.setItem('primeform_device_language_selected', 'true');
           setShowLanguageModal(true);
-        } else {
-          console.log('✅ Language modal conditions not met:', {
-            isFirstLaunch,
-            hasSelectedLanguage,
-            deviceLanguageSelected,
-            hasEverSignedUp
-          });
         }
 
         // Check if user has completed signup - check both authentication and signup completion
@@ -268,7 +246,6 @@ export default function DashboardScreen() {
           setHasCompletedSignup(true);
           await AsyncStorage.setItem('primeform_signup_completed', 'true');
           await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
-          console.log('✅ User authenticated - signup marked as completed');
         } else if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
           // User has completed signup but might not be authenticated
           // This could happen if token expired but user hasn't logged out
@@ -279,18 +256,17 @@ export default function DashboardScreen() {
             const isStillAuth = await authService.isAuthenticated();
             if (!isStillAuth) {
               // Token is truly expired, user needs to login again
-              console.log('Token expired, user needs to login again');
               // Don't redirect here, let the main app logic handle it
             }
           } catch (error) {
-            console.log('Auth refresh failed, but user has completed signup');
+            // Auth refresh failed, but user has completed signup
           }
         } else {
           // If not authenticated and no signup completion, ensure no access
           setHasCompletedSignup(false);
         }
       } catch (error) {
-        console.error('Failed to check app state:', error);
+        // Failed to check app state
       }
     };
     checkAppState();
@@ -298,17 +274,7 @@ export default function DashboardScreen() {
 
   // Additional effect to handle authentication state changes
   useEffect(() => {
-    console.log('🔄 Authentication state changed:', {
-      isAuthenticated,
-      user: user?.fullName,
-      hasCompletedSignup,
-      userEmail: user?.email
-    });
-    if (isAuthenticated && user) {
-      console.log('✅ User is authenticated with name:', user.fullName);
-    } else {
-      console.log('❌ User is not authenticated or no user data');
-    }
+    // Handle authentication state changes silently
   }, [isAuthenticated, user, hasCompletedSignup]);
 
   // Language selection modal is now controlled by hasSelectedLanguage from context
@@ -337,7 +303,7 @@ export default function DashboardScreen() {
         notifications: []
       });
     } catch (error) {
-      console.error('Failed to load dashboard:', error);
+      // Failed to load dashboard
     } finally {
       setLoading(false);
     }
@@ -345,22 +311,27 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboard();
-    // Removed checkOnboardingStatus();
-    loadUserInfo();
-    // Removed checkUserInfoStatus();
-    // Check backend availability in background without blocking
-    checkBackendAvailability();
+    // OPTIMIZATION: Load user info from cache if available, only call API if no cache
+    loadUserInfoFromCacheFirst();
   }, []);
 
-  const checkBackendAvailability = async () => {
-    try {
-      // Simple check - try to get user profile to see if backend is working
-      const response = await userProfileService.getUserProfile();
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo && isAuthenticated) {
+      // Profile page opened but no user info - load it
+      loadUserInfo();
+    }
+  }, [showProfilePage, isAuthenticated]);
+
+  // OPTIMIZATION: Check backend availability using cached data only - no API call
+  const checkBackendAvailability = () => {
+    // Use cached data to determine availability - no API call needed
+    const cachedProfile = userProfileService.getCachedData();
+    if (cachedProfile) {
       setBackendAvailable(true);
       setOfflineMode(false);
-      console.log('Backend is available');
-    } catch (error: any) {
-      console.log('Backend is not available:', error.message);
+    } else {
+      // No cached data - assume offline mode
       setBackendAvailable(false);
       setOfflineMode(true);
     }
@@ -369,10 +340,12 @@ export default function DashboardScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Use cached data - no API calls unless data is stale
+      // API calls are only made when user actually updates/saves data
       await loadDashboard();
-      await loadDynamicData(); // Also reload meal and workout plans
+      await loadCompletionStates();
     } catch (error) {
-      console.error('Failed to refresh dashboard:', error);
+      // Failed to refresh dashboard
     } finally {
       setRefreshing(false);
     }
@@ -389,23 +362,15 @@ export default function DashboardScreen() {
       // Save to backend database
       const response = await userProfileService.createOrUpdateProfile(userInfoData);
 
-      console.log('🔍 Full response from userProfileService:', response);
-      console.log('🔍 Response type:', typeof response);
-      console.log('🔍 Response.success:', response.success);
-      console.log('🔍 Response.data:', response.data);
-
       if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        console.log('✅ User profile saved to database:', response.data);
         showToast('success', 'Profile created successfully!');
       } else {
-        console.error('❌ Failed to save to database:', response?.message || 'Unknown error');
         // Show error to user
         showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('💥 Exception in handleCompleteUserInfo:', error);
       // Show error to user
       showToast('error', 'Failed to save profile. Please check your connection and try again.');
     }
@@ -417,25 +382,56 @@ export default function DashboardScreen() {
       // Removed AsyncStorage dependency
       setShowUserInfoModal(false);
     } catch (error) {
-      console.error('Failed to save cancellation status:', error);
+      // Failed to save cancellation status
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Load user info from cache first, fallback to API only if authenticated and no cache
+  const loadUserInfoFromCacheFirst = async () => {
+    try {
+      // Check if we have cached data first
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.success && cachedData.data) {
+        setUserInfo(cachedData.data);
+        setBackendAvailable(true);
+        setOfflineMode(false);
+      } else {
+        // No cached data - but if user is authenticated, load from API once to populate cache
+        if (isAuthenticated) {
+          await loadUserInfo();
+        } else {
+          // Not authenticated - set to null
+          setUserInfo(null);
+          setBackendAvailable(false);
+          setOfflineMode(true);
+        }
+      }
+    } catch (error) {
+      // Failed to load user info from cache
+      if (isAuthenticated) {
+        // Try API as fallback
+        await loadUserInfo();
+      } else {
+        setUserInfo(null);
+      }
+    }
+  };
+
+  // Load user info from API (only called when cache is empty or forced)
+  const loadUserInfo = async (forceRefresh = false) => {
     try {
       // Load user profile from backend database
-      const response = await userProfileService.getUserProfile();
+      const response = await userProfileService.getUserProfile(forceRefresh);
 
       if (response.success && response.data) {
         setUserInfo(response.data);
-        console.log('User profile loaded from database:', response.data);
+        setBackendAvailable(true);
+        setOfflineMode(false);
       } else {
         // No profile exists yet or failed to load
         setUserInfo(null);
-        console.log('No user profile found or failed to load:', response.message);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
       setUserInfo(null);
     }
   };
@@ -449,13 +445,12 @@ export default function DashboardScreen() {
 
       if (response.success) {
         setUserInfo(updatedUserInfo);
-        console.log('User profile updated in database:', response.data);
+        // Refresh cache with updated data (API call is necessary here to sync cache)
+        await userProfileService.getUserProfile(true);
       } else {
-        console.error('Failed to update in database:', response.message);
         showToast('error', 'Failed to update profile. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to update user info:', error);
       showToast('error', 'Failed to update profile. Please check your connection and try again.');
     }
   };
@@ -467,14 +462,12 @@ export default function DashboardScreen() {
       await authLogout();
       router.replace('/auth/login');
     } catch (error) {
-      console.error('Logout error:', error);
       router.replace('/auth/login'); // Navigate anyway
     }
   };
 
   const handleQuickAction = (action: string) => {
     // Feature coming soon - no action needed
-    console.log('Feature coming soon:', action);
   };
 
   const handleProfilePress = () => {
@@ -488,7 +481,6 @@ export default function DashboardScreen() {
       setShowSignupModal(true);
       return;
     }
-    console.log('Notifications pressed');
     setShowNotificationModal(true);
   };
 
@@ -573,7 +565,6 @@ export default function DashboardScreen() {
             // Don't clear primeform_has_ever_signed_up - preserve historical record
             router.replace('/auth/login');
           } catch (error) {
-            console.error('Logout failed:', error);
             showToast('error', 'Failed to logout. Please try again.');
           }
         }
@@ -586,15 +577,14 @@ export default function DashboardScreen() {
         router.push('/(dashboard)/sport-mode');
         break;
       default:
-        console.log('Unknown action:', action);
+        break;
     }
   };
 
-  // Load dynamic data
-  const loadDynamicData = useCallback(async () => {
+  // Load dynamic data - with optional force refresh
+  const loadDynamicData = useCallback(async (forceRefresh = false) => {
     // Prevent concurrent calls
     if (loadingInProgress.current) {
-      console.log('⏭️ Load already in progress, skipping duplicate call');
       return;
     }
 
@@ -603,22 +593,17 @@ export default function DashboardScreen() {
       setIsLoadingPlans(true);
       setPlansLoaded(false);
 
-      // Load both plans in parallel to ensure consistent loading
+      // Load both plans in parallel - uses cache by default, API only when needed
       const [dietPlanData, workoutPlanData] = await Promise.allSettled([
-        aiDietService.loadDietPlanFromDatabase(),
-        aiWorkoutService.loadWorkoutPlanFromDatabase()
+        forceRefresh ? aiDietService.refreshDietPlanFromDatabase() : aiDietService.loadDietPlanFromDatabase(),
+        forceRefresh ? aiWorkoutService.refreshWorkoutPlanFromDatabase() : aiWorkoutService.loadWorkoutPlanFromDatabase()
       ]);
 
       // Handle results with proper error handling
       const dietPlan = dietPlanData.status === 'fulfilled' ? dietPlanData.value : null;
       const workoutPlan = workoutPlanData.status === 'fulfilled' ? workoutPlanData.value : null;
 
-      if (dietPlanData.status === 'rejected') {
-        console.error('Failed to load diet plan:', dietPlanData.reason);
-      }
-      if (workoutPlanData.status === 'rejected') {
-        console.error('Failed to load workout plan:', workoutPlanData.reason);
-      }
+      // Handle rejected promises silently
 
       // Process diet plan
       if (dietPlan) {
@@ -627,27 +612,9 @@ export default function DashboardScreen() {
         // Get today's meals using centralized date logic
         const dateInfo = getStandardizedDateInfo(dietPlan.startDate);
 
-        console.log('📅 Dashboard Diet Date Debug:', {
-          today: dateInfo.today.toDateString(),
-          startDate: dateInfo.startDate.toDateString(),
-          daysDiff: dateInfo.daysDiff,
-          currentWeek: dateInfo.currentWeek,
-          dayOfWeek: dateInfo.dayOfWeek,
-          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateInfo.dayOfWeek],
-          planGenerationDay: dateInfo.planGenerationDay
-        });
-
         // Get the day from the 7-day pattern
         // Diet weeklyPlan starts with Sunday at index 0, so we use dayOfWeek directly
         const todayMealData = dietPlan.weeklyPlan[dateInfo.dayOfWeek];
-
-        console.log('🍽️ Dashboard Meal Loading:', {
-          currentWeek: dateInfo.currentWeek,
-          dayOfWeek: dateInfo.dayOfWeek,
-          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateInfo.dayOfWeek],
-          hasMealData: !!todayMealData,
-          mealCount: todayMealData?.meals ? Object.keys(todayMealData.meals).length : 0
-        });
 
         if (todayMealData) {
           const meals = [
@@ -672,31 +639,11 @@ export default function DashboardScreen() {
         // Get today's workout using centralized date logic
         const workoutDateInfo = getStandardizedDateInfo(workoutPlan.startDate);
 
-        console.log('📅 Dashboard Workout Date Debug:', {
-          today: workoutDateInfo.today.toDateString(),
-          startDate: workoutDateInfo.startDate.toDateString(),
-          daysDiff: workoutDateInfo.daysDiff,
-          currentWeek: workoutDateInfo.currentWeek,
-          dayOfWeek: workoutDateInfo.dayOfWeek,
-          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][workoutDateInfo.dayOfWeek],
-          planGenerationDay: workoutDateInfo.planGenerationDay
-        });
-
         // Get the day from the 7-day pattern
         // Workout weeklyPlan starts with Monday at index 0, so we need to adjust:
         // Sunday (0) -> 6, Monday (1) -> 0, Tuesday (2) -> 1, etc.
         const workoutDayIndex = workoutDateInfo.dayOfWeek === 0 ? 6 : workoutDateInfo.dayOfWeek - 1;
         const todayWorkoutData = workoutPlan.weeklyPlan[workoutDayIndex];
-
-        console.log('💪 Dashboard Workout Loading:', {
-          currentWeek: workoutDateInfo.currentWeek,
-          dayOfWeek: workoutDateInfo.dayOfWeek,
-          workoutDayIndex,
-          dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][workoutDateInfo.dayOfWeek],
-          hasWorkoutData: !!todayWorkoutData,
-          isRestDay: todayWorkoutData?.isRestDay,
-          exerciseCount: todayWorkoutData?.exercises?.length || 0
-        });
 
         if (todayWorkoutData && !todayWorkoutData.isRestDay) {
           const workouts = todayWorkoutData.exercises.map((exercise: any) => ({
@@ -718,70 +665,34 @@ export default function DashboardScreen() {
       // Mark plans as loaded
       setPlansLoaded(true);
     } catch (error) {
-      console.error('Failed to load dynamic data:', error);
+      // Failed to load dynamic data
     } finally {
       setIsLoadingPlans(false);
       loadingInProgress.current = false;
     }
   }, []);
 
-  const loadCompletionStates = async () => {
+  // OPTIMIZATION: Load completion states from local storage first, avoid API calls
+  const loadCompletionStates = async (forceRefresh = false) => {
     try {
-      // Load from database first
-      const [workoutPlan, dietPlan] = await Promise.allSettled([
-        aiWorkoutService.loadWorkoutPlanFromDatabase(),
-        aiDietService.loadDietPlanFromDatabase()
-      ]);
+      // OPTIMIZATION: Load from local storage first - no API call needed
+      let localMeals = new Set<string>();
+      let localExercises = new Set<string>();
 
-      // Load completed exercises from database
-      if (workoutPlan.status === 'fulfilled' && workoutPlan.value && workoutPlan.value.completedExercises) {
-        console.log('📊 Dashboard: Loading completed exercises from database:', workoutPlan.value.completedExercises);
-        setCompletedExercises(new Set(workoutPlan.value.completedExercises as string[]));
-      }
-
-      // Load completed meals from database
-      if (dietPlan.status === 'fulfilled' && dietPlan.value && dietPlan.value.completedMeals) {
-        console.log('📊 Dashboard: Loading completed meals from database:', dietPlan.value.completedMeals);
-        setCompletedMeals(new Set(dietPlan.value.completedMeals as string[]));
-      }
-
-      // Also load from local storage as backup/sync
       try {
-        // Load completed meals
+        // Load completed meals from local storage
         const completedMealsData = await AsyncStorage.getItem('completed_meals');
         if (completedMealsData) {
-          const localMeals = new Set(JSON.parse(completedMealsData) as string[]);
-          console.log('📊 Dashboard: Loading completed meals from local storage:', Array.from(localMeals));
-
-          // Merge with database data
-          if (dietPlan.status === 'fulfilled' && dietPlan.value && dietPlan.value.completedMeals) {
-            const dbMeals = new Set(dietPlan.value.completedMeals as string[]);
-            const mergedMeals = new Set([...localMeals, ...dbMeals]);
-            setCompletedMeals(mergedMeals);
-            console.log('📊 Dashboard: Merged completed meals:', Array.from(mergedMeals));
-          } else {
-            setCompletedMeals(localMeals);
-          }
+          localMeals = new Set(JSON.parse(completedMealsData) as string[]);
         }
 
-        // Load completed exercises
+        // Load completed exercises from local storage
         const completedExercisesData = await AsyncStorage.getItem('completed_exercises');
         if (completedExercisesData) {
-          const localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
-          console.log('📊 Dashboard: Loading completed exercises from local storage:', Array.from(localExercises));
-
-          // Merge with database data
-          if (workoutPlan.status === 'fulfilled' && workoutPlan.value && workoutPlan.value.completedExercises) {
-            const dbExercises = new Set(workoutPlan.value.completedExercises as string[]);
-            const mergedExercises = new Set([...localExercises, ...dbExercises]);
-            setCompletedExercises(mergedExercises);
-            console.log('📊 Dashboard: Merged completed exercises:', Array.from(mergedExercises));
-          } else {
-            setCompletedExercises(localExercises);
-          }
+          localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
         }
 
-        // Load water intake
+        // Load water intake from local storage
         const waterData = await AsyncStorage.getItem('water_intake');
         if (waterData) {
           const waterObj = JSON.parse(waterData);
@@ -789,7 +700,7 @@ export default function DashboardScreen() {
           setWaterIntake(waterObj[today] || 0);
         }
 
-        // Load water completion status
+        // Load water completion status from local storage
         const waterCompletedData = await AsyncStorage.getItem('water_completed');
         if (waterCompletedData) {
           const waterCompletedObj = JSON.parse(waterCompletedData);
@@ -797,23 +708,46 @@ export default function DashboardScreen() {
           setWaterCompleted(waterCompletedObj[today] || false);
         }
       } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
+        // Could not load from local storage
+      }
+
+      // Set local data immediately for fast UI update
+      if (localMeals.size > 0) setCompletedMeals(localMeals);
+      if (localExercises.size > 0) setCompletedExercises(localExercises);
+
+      // Only fetch from database if forcing refresh or after completing an action
+      if (forceRefresh) {
+        const [workoutPlan, dietPlan] = await Promise.allSettled([
+          aiWorkoutService.refreshWorkoutPlanFromDatabase(),
+          aiDietService.refreshDietPlanFromDatabase()
+        ]);
+
+        // Merge database data with local data
+        if (workoutPlan.status === 'fulfilled' && workoutPlan.value?.completedExercises) {
+          const dbExercises = new Set(workoutPlan.value.completedExercises as string[]);
+          const mergedExercises = new Set([...localExercises, ...dbExercises]);
+          setCompletedExercises(mergedExercises);
+        }
+
+        if (dietPlan.status === 'fulfilled' && dietPlan.value?.completedMeals) {
+          const dbMeals = new Set(dietPlan.value.completedMeals as string[]);
+          const mergedMeals = new Set([...localMeals, ...dbMeals]);
+          setCompletedMeals(mergedMeals);
+        }
       }
     } catch (error) {
-      console.error('Failed to load completion states:', error);
+      // Failed to load completion states
     }
   };
 
   // Function to refresh dashboard data (can be called from other components)
   const refreshDashboardData = async () => {
-    console.log('🔄 Refreshing dashboard data...');
     await loadDynamicData();
   };
 
   // Load data when user actually needs it (lazy loading)
   const loadDataIfNeeded = async () => {
     if (!plansLoaded && !isLoadingPlans) {
-      console.log('📊 Loading dashboard data on demand...');
       await loadDynamicData();
     }
   };
@@ -908,17 +842,14 @@ export default function DashboardScreen() {
 
   const handleLanguageSelect = async (language: 'en' | 'ur') => {
     try {
-      console.log('🌍 Language selected:', language);
       await changeLanguage(language);
       // Mark device language as selected (this persists across all users on this device)
       await AsyncStorage.setItem('primeform_device_language_selected', 'true');
       // Close the modal and mark first launch as complete
       setShowLanguageModal(false);
       await AsyncStorage.setItem('primeform_first_launch', 'false');
-      console.log('✅ Language modal closed and device language marked as selected');
       showToast('success', 'Language updated successfully!');
     } catch (error) {
-      console.error('Failed to change language:', error);
       showToast('error', 'Failed to update language');
     }
   };
@@ -976,12 +907,10 @@ export default function DashboardScreen() {
               const isStillValid = await authService.isAuthenticated();
               if (!isStillValid) {
                 // Token is expired, user needs to login again
-                console.log('🔐 App returned to foreground - token expired, redirecting to login');
                 router.replace('/auth/login');
                 return;
               }
             } catch (error) {
-              console.log('🔐 Cannot verify token on app return - redirecting to login');
               router.replace('/auth/login');
               return;
             }
@@ -992,7 +921,6 @@ export default function DashboardScreen() {
           }
         } else {
           // User is authenticated, ensure they stay on dashboard
-          console.log('✅ App returned to foreground - user authenticated, staying on dashboard');
           // Data will be refreshed by the optimized AppState listener
         }
       }
@@ -1046,7 +974,7 @@ export default function DashboardScreen() {
       setHasCompletedSignup(false);
       // Don't clear primeform_has_ever_signed_up - preserve historical record
     } catch (error) {
-      console.error('Failed to reset signup status:', error);
+      // Failed to reset signup status
     }
   };
 
@@ -1083,12 +1011,6 @@ export default function DashboardScreen() {
               const displayName = isAuthenticated ?
                 transliterateName((user?.fullName || dashboardData?.user?.fullName || 'User').split(' ')[0]) :
                 'Guest';
-              console.log('🏷️ Dashboard Header Display Name:', {
-                isAuthenticated,
-                userFullName: user?.fullName,
-                dashboardUserFullName: dashboardData?.user?.fullName,
-                displayName
-              });
               return displayName;
             })()}
             onProfilePress={handleProfilePress}
@@ -1264,13 +1186,11 @@ export default function DashboardScreen() {
           visible={showLanguageModal}
           onLanguageSelect={handleLanguageSelect}
           onBack={async () => {
-            console.log('🔙 Language modal back button pressed - setting English as default');
             // When user goes back, set English as default, close modal, and mark first launch as complete
             await changeLanguage('en');
             setShowLanguageModal(false);
             // Mark that first launch is complete (even if user didn't explicitly choose)
             await AsyncStorage.setItem('primeform_first_launch', 'false');
-            console.log('✅ Language modal closed with English default and first launch marked as complete');
           }}
         />
 

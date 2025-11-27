@@ -1,5 +1,6 @@
 import Storage from '../utils/storage';
 import dietPlanService from './dietPlanService';
+import streakService from './streakService';
 import { DeviceEventEmitter } from 'react-native';
 
 interface MealCompletionData {
@@ -138,6 +139,13 @@ class MealCompletionService {
         console.log('✅ Day marked as completed in database');
       } catch (dbError) {
         console.warn('⚠️ Failed to save to database, but continuing with local storage:', dbError);
+      }
+
+      // Update streak data for diet completion
+      try {
+        await streakService.updateStreakData('diet', true);
+      } catch (streakError) {
+        // Streak update failed, but continue
       }
 
       // Broadcast completion event

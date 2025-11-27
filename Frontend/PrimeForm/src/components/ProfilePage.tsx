@@ -136,13 +136,13 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     dietPreference: ''
   });
 
-  // Load user info when component mounts or userInfo prop changes
+  // Sync editedUserInfo when userInfo prop changes (no API call - data comes from parent)
   useEffect(() => {
     if (userInfo) {
       // Convert UserProfile format to UserInfo format for editing
       const convertedUserInfo: UserInfo = {
         country: userInfo.country || '',
-        age: typeof userInfo.age === 'number' ? userInfo.age.toString() : (userInfo.age || ''),
+        age: userInfo.age ? String(userInfo.age) : '',
         gender: userInfo.gender || '',
         height: userInfo.height || '',
         currentWeight: userInfo.currentWeight || '',
@@ -153,13 +153,11 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         availableEquipment: userInfo.availableEquipment || '',
         dietPreference: userInfo.dietPreference || '',
       };
-      console.log('🔍 ProfilePage - Converting userInfo prop:', { original: userInfo, converted: convertedUserInfo });
       setEditedUserInfo(convertedUserInfo);
-    } else if (visible) {
-      // Only load if visible and no userInfo
-      loadUserInfo();
     }
-  }, [userInfo, visible]);
+    // Note: No API call here - profile data is passed from parent component
+    // API is only called when user saves/updates their profile
+  }, [userInfo]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -190,12 +188,8 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         ...(editedUserInfo.targetWeight && { targetWeight: editedUserInfo.targetWeight })
       };
 
-      console.log('🔍 ProfilePage - Sending data to backend:', processedUserInfo);
-
       // Update in backend database
       const response = await userProfileService.createOrUpdateProfile(processedUserInfo);
-      
-      console.log('🔍 ProfilePage - Backend response:', response);
       
       if (response.success) {
         if (onUpdateUserInfo) {
@@ -203,13 +197,10 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         }
         setIsEditing(false);
         showToast('success', 'Profile information updated successfully in database!');
-        console.log('✅ Profile updated in database:', response.data);
       } else {
-        console.error('❌ Failed to update in database:', response.message);
         showToast('error', `Failed to update profile: ${response.message}`);
       }
     } catch (error) {
-      console.error('💥 Failed to update profile:', error);
       showToast('error', 'Failed to update profile. Please try again.');
     }
   };
@@ -237,47 +228,11 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         }
         setShowUserInfoModal(false);
         showToast('success', 'Profile information completed successfully in database!');
-        console.log('✅ Profile completed in database:', response.data);
       } else {
-        console.error('Failed to save to database:', response.message);
         showToast('error', 'Failed to save profile. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to complete profile:', error);
       showToast('error', 'Failed to save profile. Please check your connection and try again.');
-    }
-  };
-
-  const loadUserInfo = async () => {
-    try {
-      console.log('🔍 ProfilePage - loadUserInfo called');
-      const response = await userProfileService.getUserProfile();
-      console.log('🔍 ProfilePage - getUserProfile response:', response);
-      
-      if (response && response.success && response.data) {
-        // Convert UserProfile to UserInfo format
-        const userInfoData: UserInfo = {
-          country: response.data.country,
-          age: response.data.age.toString(), // Convert number to string
-          gender: response.data.gender,
-          height: response.data.height,
-          currentWeight: response.data.currentWeight,
-          targetWeight: response.data.targetWeight || '',
-          bodyGoal: response.data.bodyGoal,
-          medicalConditions: response.data.medicalConditions,
-          occupationType: response.data.occupationType,
-          availableEquipment: response.data.availableEquipment,
-          dietPreference: response.data.dietPreference,
-        };
-        setEditedUserInfo(userInfoData);
-        console.log('✅ ProfilePage - User profile loaded from database:', userInfoData);
-      } else {
-        console.log('❌ ProfilePage - No user profile found or failed to load:', response?.message || 'Unknown error');
-        // Don't show error alert for new users who haven't created a profile yet
-      }
-    } catch (error) {
-      console.error('💥 ProfilePage - Failed to load user info:', error);
-      // Don't show error alert for network issues, just log them
     }
   };
 
@@ -330,13 +285,8 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   );
 
   const renderProfileContent = () => {
-    console.log('🔍 ProfilePage - renderProfileContent called');
-    console.log('🔍 ProfilePage - userInfo:', userInfo);
-    console.log('🔍 ProfilePage - editedUserInfo:', editedUserInfo);
-    
     if (!userInfo) {
       // No profile exists yet - show basic user info
-      console.log('🔍 ProfilePage - No userInfo, showing no profile section');
       return (
         <View style={styles.noProfileSection}>
           <View style={styles.noProfileIcon}>

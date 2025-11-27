@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, ScrollView, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native-reanimated';
+import { router } from 'expo-router';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -115,8 +116,14 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Text style={styles.userName}>{userName || 'User'}</Text>
                 <Text style={styles.userEmail}>{userEmail || 'user@primeform.com'}</Text>
               </View>
-              {/* Close Button */}
-              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              {/* Close Button - Always navigates to home page */}
+              <TouchableOpacity 
+                style={styles.closeButton} 
+                onPress={() => {
+                  onClose();
+                  router.replace('/(dashboard)');
+                }}
+              >
                 <Ionicons name="close" size={24} color={colors.mutedText} />
               </TouchableOpacity>
             </View>

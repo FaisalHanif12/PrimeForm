@@ -97,7 +97,6 @@ export default function ContactPage() {
         showToast('error', response?.message || 'Failed to send email. Please try again.');
       }
     } catch (error: any) {
-      console.error('Error sending contact form:', error);
       showToast('error', error?.message || 'Failed to send message. Please try again later.');
     } finally {
       setIsSubmitting(false);
@@ -148,22 +147,22 @@ export default function ContactPage() {
         case 'language':
           break;
         default:
-          console.log('Unknown sidebar action:', action);
+          break;
       }
     } catch (error) {
-      console.error('Sidebar action failed:', error);
       showToast('error', 'Something went wrong. Please try again.');
     }
   };
 
-  const loadUserInfo = async () => {
+  // OPTIMIZATION: Use cached data - no API call on page visit
+  const loadUserInfo = () => {
     try {
-      const response = await userProfileService.getUserProfile();
-      if (response && response.success && response.data) {
-        setUserInfo(response.data);
+      const cachedData = userProfileService.getCachedData();
+      if (cachedData && cachedData.data) {
+        setUserInfo(cachedData.data);
       }
     } catch (error) {
-      console.error('Failed to load user info:', error);
+      // Failed to load user info from cache
     }
   };
 
