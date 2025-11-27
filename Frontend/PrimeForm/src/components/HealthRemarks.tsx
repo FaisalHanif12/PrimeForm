@@ -328,23 +328,6 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
           </Animated.View>
         ))}
 
-        {/* Additional Remarks from API */}
-        {remarks.length > 0 && (
-          <View style={styles.apiRemarksContainer}>
-            <Text style={styles.apiRemarksTitle}>Additional Insights</Text>
-            {remarks.map((remark, index) => (
-              <Animated.View
-                key={index}
-                entering={FadeInLeft.delay(1200 + index * 100)}
-                style={styles.apiRemarkCard}
-              >
-                <Text style={styles.apiRemarkIcon}>📊</Text>
-                <Text style={styles.apiRemarkText}>{remark}</Text>
-              </Animated.View>
-            ))}
-          </View>
-        )}
-
         {/* Overall Health Score */}
         <Animated.View entering={FadeInUp.delay(1400)} style={styles.healthScoreContainer}>
           <Text style={styles.healthScoreTitle}>Overall Health Score</Text>
@@ -466,39 +449,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     fontFamily: fonts.body,
-    lineHeight: 20,
-  },
-  apiRemarksContainer: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  apiRemarksTitle: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.md,
-  },
-  apiRemarkCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  apiRemarkIcon: {
-    fontSize: 20,
-    marginRight: spacing.md,
-  },
-  apiRemarkText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    flex: 1,
     lineHeight: 20,
   },
   healthScoreContainer: {
