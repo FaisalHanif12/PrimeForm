@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../theme/colors';
 
@@ -290,7 +290,7 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
         <Text style={styles.subtitle}>AI-powered analysis of your progress</Text>
       </View>
 
-      <ScrollView style={styles.insightsContainer} showsVerticalScrollIndicator={false}>
+      <View style={styles.insightsContainer}>
         {healthInsights.map((insight, index) => (
           <Animated.View
             key={index}
@@ -347,7 +347,7 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
             Based on your current progress and consistency
           </Text>
         </Animated.View>
-      </ScrollView>
+      </View>
     </Animated.View>
   );
 }
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   insightsContainer: {
-    maxHeight: 600,
+    // No maxHeight - let parent ScrollView handle scrolling
   },
   insightCard: {
     borderRadius: radius.lg,
