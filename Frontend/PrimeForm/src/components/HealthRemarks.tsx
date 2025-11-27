@@ -268,6 +268,70 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
 
   const healthInsights = generateHealthInsights();
 
+  // Calculate real-time health score based on accumulated data
+  const calculateHealthScore = (): number => {
+    if (!progressStats) return 0;
+
+    // Workout completion score (30% weight)
+    const workoutScore = progressStats.totalWorkouts > 0 
+      ? (progressStats.workoutsCompleted / progressStats.totalWorkouts) * 100 
+      : 0;
+
+    // Meal completion score (25% weight)
+    const mealScore = progressStats.totalMeals > 0 
+      ? (progressStats.mealsCompleted / progressStats.totalMeals) * 100 
+      : 0;
+
+    // Hydration score (20% weight)
+    const hydrationRatio = progressStats.targetWater > 0 
+      ? Math.min(progressStats.waterIntake / progressStats.targetWater, 1.2) 
+      : 0;
+    const hydrationScore = hydrationRatio * (100 / 1.2); // Max out at 100 even if exceeding target
+
+    // Calorie balance score (25% weight) - closer to target = higher score
+    let calorieScore = 0;
+    if (progressStats.targetCalories > 0) {
+      const calorieRatio = progressStats.caloriesConsumed / progressStats.targetCalories;
+      // Perfect score at 100% of target, decreases as you deviate
+      if (calorieRatio >= 0.85 && calorieRatio <= 1.15) {
+        calorieScore = 100; // Within healthy range
+      } else if (calorieRatio >= 0.7 && calorieRatio <= 1.3) {
+        calorieScore = 75; // Slightly off target
+      } else if (calorieRatio >= 0.5 && calorieRatio <= 1.5) {
+        calorieScore = 50; // Moderately off target
+      } else {
+        calorieScore = 25; // Significantly off target
+      }
+    }
+
+    // Weighted average
+    const totalScore = (
+      (workoutScore * 0.30) +
+      (mealScore * 0.25) +
+      (hydrationScore * 0.20) +
+      (calorieScore * 0.25)
+    );
+
+    return Math.round(totalScore);
+  };
+
+  const healthScore = calculateHealthScore();
+
+  // Get score color and status based on score value
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return colors.green;
+    if (score >= 60) return colors.primary;
+    if (score >= 40) return colors.warning;
+    return colors.error;
+  };
+
+  const getScoreStatus = (score: number) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Needs Improvement';
+    return 'Critical';
+  };
+
   const getCategoryStyle = (category: string) => {
     switch (category) {
       case 'excellent':
@@ -283,8 +347,28 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     }
   };
 
+  const scoreColor = getScoreColor(healthScore);
+
   return (
     <Animated.View entering={FadeInUp.delay(900)} style={styles.container}>
+      {/* Overall Health Score - Now at the TOP */}
+      <Animated.View entering={FadeInUp.delay(950)} style={[styles.healthScoreContainer, { borderColor: scoreColor + '60' }]}>
+        <Text style={styles.healthScoreTitle}>Overall Health Score</Text>
+        <View style={[styles.healthScoreCircle, { borderColor: scoreColor, backgroundColor: scoreColor + '15' }]}>
+          <Text style={[styles.healthScoreValue, { color: scoreColor }]}>
+            {healthScore}
+          </Text>
+          <Text style={styles.healthScoreLabel}>/ 100</Text>
+        </View>
+        <View style={[styles.scoreStatusBadge, { backgroundColor: scoreColor + '20' }]}>
+          <Text style={[styles.scoreStatusText, { color: scoreColor }]}>{getScoreStatus(healthScore)}</Text>
+        </View>
+        <Text style={styles.healthScoreDescription}>
+          Based on {progressStats?.workoutsCompleted || 0} workouts, {progressStats?.mealsCompleted || 0} meals & {progressStats?.waterIntake?.toFixed(1) || 0}L water
+        </Text>
+      </Animated.View>
+
+      {/* Health Insights Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Health Insights & Recommendations</Text>
         <Text style={styles.subtitle}>AI-powered analysis of your progress</Text>
@@ -327,26 +411,6 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
             )}
           </Animated.View>
         ))}
-
-        {/* Overall Health Score */}
-        <Animated.View entering={FadeInUp.delay(1400)} style={styles.healthScoreContainer}>
-          <Text style={styles.healthScoreTitle}>Overall Health Score</Text>
-          <View style={styles.healthScoreCircle}>
-            <Text style={styles.healthScoreValue}>
-              {Math.round(
-                (healthInsights.filter(i => i.category === 'excellent').length * 100 +
-                 healthInsights.filter(i => i.category === 'good').length * 80 +
-                 healthInsights.filter(i => i.category === 'warning').length * 60 +
-                 healthInsights.filter(i => i.category === 'critical').length * 40) /
-                healthInsights.length
-              )}
-            </Text>
-            <Text style={styles.healthScoreLabel}>/ 100</Text>
-          </View>
-          <Text style={styles.healthScoreDescription}>
-            Based on your current progress and consistency
-          </Text>
-        </Animated.View>
       </View>
     </Animated.View>
   );
@@ -358,6 +422,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
   title: {
     color: colors.white,
@@ -456,23 +521,23 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.xl,
     alignItems: 'center',
-    marginTop: spacing.lg,
-    borderWidth: 1,
+    marginBottom: spacing.xl,
+    borderWidth: 2,
     borderColor: colors.cardBorder,
   },
   healthScoreTitle: {
     color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     fontFamily: fonts.heading,
     marginBottom: spacing.lg,
   },
   healthScoreCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.primary + '20',
-    borderWidth: 4,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: colors.primary + '15',
+    borderWidth: 5,
     borderColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -480,7 +545,7 @@ const styles = StyleSheet.create({
   },
   healthScoreValue: {
     color: colors.primary,
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: '900',
     fontFamily: fonts.heading,
   },
@@ -490,11 +555,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: fonts.body,
   },
+  scoreStatusBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    marginBottom: spacing.md,
+  },
+  scoreStatusText: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   healthScoreDescription: {
     color: colors.mutedText,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     fontFamily: fonts.body,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
