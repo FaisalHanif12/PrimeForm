@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -79,8 +81,57 @@ export default function ProgressScreen() {
   } | null>(null);
   const [healthRemarks, setHealthRemarks] = useState<string[]>([]);
 
+  // Load data when component mounts or period changes
   useEffect(() => {
     loadProgressData();
+  }, [selectedPeriod, selectedWeek, selectedMonth]);
+
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📊 Progress screen focused - reloading data');
+      loadProgressData();
+    }, [selectedPeriod, selectedWeek, selectedMonth])
+  );
+
+  // Listen for progress updates from workout and diet screens
+  useEffect(() => {
+    const listeners = [
+      DeviceEventEmitter.addListener('exerciseCompleted', () => {
+        console.log('📊 Exercise completed event - refreshing progress');
+        loadProgressData();
+      }),
+      DeviceEventEmitter.addListener('mealCompleted', () => {
+        console.log('📊 Meal completed event - refreshing progress');
+        loadProgressData();
+      }),
+      DeviceEventEmitter.addListener('dayCompleted', () => {
+        console.log('📊 Day completed event - refreshing progress');
+        loadProgressData();
+      }),
+      DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
+        console.log('📊 Workout progress updated event - refreshing progress');
+        loadProgressData();
+      }),
+      DeviceEventEmitter.addListener('dietProgressUpdated', () => {
+        console.log('📊 Diet progress updated event - refreshing progress');
+        loadProgressData();
+      }),
+      DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
+        console.log('📊 Water intake updated event - refreshing progress');
+        loadProgressData();
+      }),
+    ];
+
+    return () => {
+      listeners.forEach(listener => {
+        try {
+          listener.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      });
+    };
   }, [selectedPeriod, selectedWeek, selectedMonth]);
 
   const loadProgressData = async () => {

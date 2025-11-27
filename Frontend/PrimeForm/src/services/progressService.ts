@@ -1,7 +1,9 @@
 import { api } from '../config/api';
 import Storage from '../utils/storage';
-import aiWorkoutService from './aiWorkoutService';
-import aiDietService from './aiDietService';
+import aiWorkoutService, { WorkoutPlan, WorkoutDay, WorkoutExercise } from './aiWorkoutService';
+import aiDietService, { DietPlan, DietDay, DietMeal } from './aiDietService';
+import exerciseCompletionService from './exerciseCompletionService';
+import mealCompletionService from './mealCompletionService';
 
 interface ProgressStats {
   caloriesConsumed: number;
@@ -38,27 +40,49 @@ interface ProgressServiceResponse<T> {
 }
 
 class ProgressService {
+  private lastCleanupDate: string | null = null;
+
+  // Initialize and perform cleanup if needed
+  async initialize(): Promise<void> {
+    await exerciseCompletionService.initialize();
+    await mealCompletionService.initialize();
+    await this.performPeriodicCleanup();
+  }
+
+  // Perform periodic cleanup of old data
+  private async performPeriodicCleanup(): Promise<void> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const lastCleanup = await Storage.getItem('last_progress_cleanup');
+      
+      // Only cleanup once per day
+      if (lastCleanup === today) {
+        return;
+      }
+
+      console.log('🧹 Performing periodic data cleanup...');
+      await Storage.setItem('last_progress_cleanup', today);
+      this.lastCleanupDate = today;
+      
+      console.log('✅ Periodic cleanup completed');
+    } catch (error) {
+      console.error('❌ Error during periodic cleanup:', error);
+    }
+  }
 
   // Get comprehensive progress statistics
   async getProgressStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number): Promise<ProgressServiceResponse<ProgressStats>> {
     try {
       console.log('📊 Loading progress statistics for period:', period);
 
-      // Try to get data from backend first
-      try {
-        const response = await api.get(`/progress/stats?period=${period}`);
-        if (response.data.success) {
-          return response.data;
-        }
-      } catch (error) {
-        console.warn('⚠️ Backend not available, calculating from local data');
-      }
+      // Always initialize services first
+      await this.initialize();
 
-      // Calculate from local data as fallback
-      const localStats = await this.calculateLocalStats(period, selectedWeek, selectedMonth);
+      // Calculate from local data directly - this ensures accuracy
+      const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth);
       return {
         success: true,
-        message: 'Progress stats calculated from local data',
+        message: 'Progress stats calculated from real-time data',
         data: localStats
       };
 
@@ -71,134 +95,57 @@ class ProgressService {
     }
   }
 
-  // Calculate statistics from real workout and diet plan data
-  private async calculateLocalStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number): Promise<ProgressStats> {
+  // Calculate statistics from real workout and diet plan completion data
+  private async calculateRealTimeStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number): Promise<ProgressStats> {
     try {
-      console.log(`📊 Calculating ${period} stats for week: ${selectedWeek}, month: ${selectedMonth}`);
+      console.log(`📊 Calculating real-time ${period} stats for week: ${selectedWeek}, month: ${selectedMonth}`);
       
       // Load workout and diet plans
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
 
-      // Load completion states
-      const completedExercises = await Storage.getItem('completed_exercises') || '[]';
-      const completedMeals = await Storage.getItem('completed_meals') || '[]';
-      const completedDays = await Storage.getItem('completed_workout_days') || '[]';
-      const completedDietDays = await Storage.getItem('completed_diet_days') || '[]';
+      // Get completion data from services (already initialized)
+      const exerciseCompletionData = exerciseCompletionService.getCompletionData();
+      const mealCompletionData = mealCompletionService.getCompletionData();
+      
+      // Load water intake data
       const waterIntakeData = await Storage.getItem('water_intake') || '{}';
-
-      const exercisesList = JSON.parse(completedExercises);
-      const mealsList = JSON.parse(completedMeals);
-      const workoutDaysList = JSON.parse(completedDays);
-      const dietDaysList = JSON.parse(completedDietDays);
+      const waterCompletedData = await Storage.getItem('water_completed') || '{}';
       const waterData = JSON.parse(waterIntakeData);
+      const waterCompleted = JSON.parse(waterCompletedData);
 
-      // Calculate date range based on period and plan start dates
-      const now = new Date();
-      let startDate = new Date();
-      let endDate = new Date();
+      console.log('📊 Raw completion data:', {
+        completedExercises: exerciseCompletionData.completedExercises.length,
+        completedMeals: mealCompletionData.completedMeals.length,
+        completedExerciseDays: exerciseCompletionData.completedDays.length,
+        completedMealDays: mealCompletionData.completedDays.length
+      });
 
-      if (workoutPlan && workoutPlan.startDate) {
-        const planStartDate = new Date(workoutPlan.startDate);
-        
-        switch (period) {
-          case 'daily':
-            // Show today's data
-            startDate = new Date(now);
-            startDate.setHours(0, 0, 0, 0);
-            endDate = new Date(now);
-            endDate.setHours(23, 59, 59, 999);
-            break;
-            
-          case 'weekly':
-            // Calculate which week we're in or use selected week
-            const weekNumber = selectedWeek || this.getCurrentWeekNumber(planStartDate, now);
-            startDate = new Date(planStartDate);
-            startDate.setDate(planStartDate.getDate() + ((weekNumber - 1) * 7));
-            endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
-            break;
-            
-          case 'monthly':
-            // Calculate which month we're in or use selected month
-            const monthNumber = selectedMonth || this.getCurrentMonthNumber(planStartDate, now);
-            startDate = new Date(planStartDate);
-            startDate.setMonth(planStartDate.getMonth() + (monthNumber - 1));
-            endDate = new Date(startDate);
-            endDate.setMonth(startDate.getMonth() + 1);
-            endDate.setDate(endDate.getDate() - 1);
-            break;
-        }
-      }
-
-      console.log(`📅 Calculating stats from ${startDate.toDateString()} to ${endDate.toDateString()}`);
+      // Calculate date range based on period
+      const { startDate, endDate } = this.getDateRange(period, workoutPlan, dietPlan, selectedWeek, selectedMonth);
+      
+      console.log(`📅 Date range: ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
 
       // Filter completion data by date range
-      const filteredExercises = exercisesList.filter((ex: any) => {
-        const exDate = new Date(ex.date || ex.completedAt);
-        return exDate >= startDate && exDate <= endDate;
+      const filteredExercises = this.filterCompletionsByDateRange(
+        exerciseCompletionData.completedExercises, 
+        startDate, 
+        endDate
+      );
+      
+      const filteredMeals = this.filterCompletionsByDateRange(
+        mealCompletionData.completedMeals,
+        startDate,
+        endDate
+      );
+
+      const filteredWater = this.filterWaterByDateRange(waterData, waterCompleted, startDate, endDate);
+
+      console.log('📊 Filtered completion data:', {
+        filteredExercises: filteredExercises.length,
+        filteredMeals: filteredMeals.length,
+        waterDates: Object.keys(filteredWater.intake).length
       });
-
-      const filteredMeals = mealsList.filter((meal: any) => {
-        const mealDate = new Date(meal.date || meal.completedAt);
-        return mealDate >= startDate && mealDate <= endDate;
-      });
-
-      const filteredWaterData = Object.entries(waterData).filter(([date, _]) => {
-        const waterDate = new Date(date);
-        return waterDate >= startDate && waterDate <= endDate;
-      });
-
-      // Calculate real-time statistics based on actual plans
-      let totalWorkouts = 0;
-      let totalMeals = 0;
-      let targetCalories = 0;
-      let targetProtein = 0;
-      let targetCarbs = 0;
-      let targetFats = 0;
-
-      if (period === 'daily') {
-        // Daily targets from current day's plan
-        const currentDayOfWeek = now.getDay() || 7; // Convert Sunday (0) to 7
-        const workoutDay = workoutPlan?.weeklyPlan.find(day => day.day === currentDayOfWeek);
-        const dietDay = dietPlan?.weeklyPlan.find(day => day.day === currentDayOfWeek);
-
-        totalWorkouts = workoutDay?.exercises.length || 0;
-        totalMeals = dietDay ? (3 + (dietDay.meals.snacks?.length || 0)) : 0;
-        targetCalories = dietDay?.totalCalories || dietPlan?.targetCalories || 0;
-        targetProtein = dietDay?.totalProtein || (dietPlan?.targetProtein ? dietPlan.targetProtein / 7 : 0) || 0;
-        targetCarbs = dietDay?.totalCarbs || (dietPlan?.targetCarbs ? dietPlan.targetCarbs / 7 : 0) || 0;
-        targetFats = dietDay?.totalFats || (dietPlan?.targetFats ? dietPlan.targetFats / 7 : 0) || 0;
-      } else if (period === 'weekly') {
-        // Weekly targets from 7-day plan
-        if (workoutPlan) {
-          totalWorkouts = workoutPlan.weeklyPlan.reduce((sum, day) => sum + day.exercises.length, 0);
-        }
-        if (dietPlan) {
-          totalMeals = dietPlan.weeklyPlan.reduce((sum, day) => 
-            sum + 3 + (day.meals.snacks?.length || 0), 0);
-          targetCalories = dietPlan.targetCalories;
-          targetProtein = dietPlan.targetProtein;
-          targetCarbs = dietPlan.targetCarbs;
-          targetFats = dietPlan.targetFats;
-        }
-      } else if (period === 'monthly') {
-        // Monthly targets (weekly * ~4.3)
-        const weeksInMonth = 4.3;
-        if (workoutPlan) {
-          const weeklyWorkouts = workoutPlan.weeklyPlan.reduce((sum, day) => sum + day.exercises.length, 0);
-          totalWorkouts = Math.round(weeklyWorkouts * weeksInMonth);
-        }
-        if (dietPlan) {
-          const weeklyMeals = dietPlan.weeklyPlan.reduce((sum, day) => 
-            sum + 3 + (day.meals.snacks?.length || 0), 0);
-          totalMeals = Math.round(weeklyMeals * weeksInMonth);
-          targetCalories = Math.round(dietPlan.targetCalories * weeksInMonth);
-          targetProtein = Math.round(dietPlan.targetProtein * weeksInMonth);
-          targetCarbs = Math.round(dietPlan.targetCarbs * weeksInMonth);
-          targetFats = Math.round(dietPlan.targetFats * weeksInMonth);
-        }
-      }
 
       // Calculate actual consumption from completed meals
       let caloriesConsumed = 0;
@@ -206,51 +153,75 @@ class ProgressService {
       let carbs = 0;
       let fats = 0;
 
-      filteredMeals.forEach((meal: any) => {
-        caloriesConsumed += meal.calories || 0;
-        protein += meal.protein || 0;
-        carbs += meal.carbs || 0;
-        fats += meal.fats || 0;
-      });
+      if (dietPlan) {
+        for (const mealId of filteredMeals) {
+          const mealData = this.getMealDataFromId(mealId, dietPlan);
+          if (mealData) {
+            caloriesConsumed += mealData.calories || 0;
+            protein += mealData.protein || 0;
+            carbs += mealData.carbs || 0;
+            fats += mealData.fats || 0;
+          }
+        }
+      }
 
       // Calculate calories burned from completed exercises
       let caloriesBurned = 0;
-      filteredExercises.forEach((exercise: any) => {
-        // Estimate calories based on exercise type and duration
-        const estimatedCalories = this.estimateCaloriesBurned(exercise);
-        caloriesBurned += estimatedCalories;
-      });
+      if (workoutPlan) {
+        for (const exerciseId of filteredExercises) {
+          const exerciseData = this.getExerciseDataFromId(exerciseId, workoutPlan);
+          if (exerciseData) {
+            caloriesBurned += exerciseData.caloriesBurned || this.estimateCaloriesBurned(exerciseData);
+          }
+        }
+      }
 
-      // Calculate water intake for the period
-      const waterIntake = filteredWaterData.reduce((sum, [_, amount]) => sum + (amount as number), 0) / 1000; // Convert ml to L
+      // Calculate water intake
+      let waterIntake = 0;
+      for (const [date, amount] of Object.entries(filteredWater.intake)) {
+        if (filteredWater.completed[date]) {
+          waterIntake += Number(amount) || 0;
+        }
+      }
+      // Convert to liters
+      waterIntake = waterIntake / 1000;
 
-      // Calculate completion rates
-      const workoutsCompleted = filteredExercises.length;
-      const mealsCompleted = filteredMeals.length;
+      // Calculate totals for the period
+      const { totalWorkouts, totalMeals, targetCalories, targetWater } = this.calculatePeriodTotals(
+        period, 
+        workoutPlan, 
+        dietPlan, 
+        startDate, 
+        endDate
+      );
 
-      return {
+      const stats: ProgressStats = {
         caloriesConsumed: Math.round(caloriesConsumed),
         caloriesBurned: Math.round(caloriesBurned),
         targetCalories: Math.round(targetCalories),
         waterIntake: Math.round(waterIntake * 10) / 10,
-        targetWater: period === 'daily' ? 3 : period === 'weekly' ? 21 : 90, // 3L daily
+        targetWater,
         protein: Math.round(protein),
         carbs: Math.round(carbs),
         fats: Math.round(fats),
-        workoutsCompleted,
+        workoutsCompleted: filteredExercises.length,
         totalWorkouts: Math.max(totalWorkouts, 1),
-        mealsCompleted,
+        mealsCompleted: filteredMeals.length,
         totalMeals: Math.max(totalMeals, 1),
-        currentStreak: 0, // Removed as requested
-        longestStreak: 0, // Removed as requested
+        currentStreak: 0,
+        longestStreak: 0,
         weightProgress: 0,
         bodyFatProgress: 0
       };
 
+      console.log('📊 Final calculated stats:', stats);
+
+      return stats;
+
     } catch (error) {
       console.error('❌ Error calculating real-time stats:', error);
       
-      // Return realistic default stats
+      // Return default stats on error
       return {
         caloriesConsumed: 0,
         caloriesBurned: 0,
@@ -272,55 +243,330 @@ class ProgressService {
     }
   }
 
-  // Calculate current consistency streak
-  private calculateCurrentStreak(workoutDays: string[], dietDays: string[]): number {
-    const allCompletedDays = [...new Set([...workoutDays, ...dietDays])].sort();
-    
-    if (allCompletedDays.length === 0) return 0;
+  // Get date range based on period
+  private getDateRange(
+    period: 'daily' | 'weekly' | 'monthly',
+    workoutPlan: WorkoutPlan | null,
+    dietPlan: DietPlan | null,
+    selectedWeek?: number,
+    selectedMonth?: number
+  ): { startDate: Date; endDate: Date } {
+    const now = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
 
-    let currentStreak = 0;
-    const today = new Date().toISOString().split('T')[0];
-    const currentDate = new Date();
+    const planStartDate = workoutPlan?.startDate 
+      ? new Date(workoutPlan.startDate) 
+      : dietPlan?.startDate 
+        ? new Date(dietPlan.startDate) 
+        : new Date();
 
-    // Check backwards from today
-    for (let i = 0; i < 30; i++) { // Check last 30 days
-      const checkDate = new Date(currentDate);
-      checkDate.setDate(currentDate.getDate() - i);
-      const dateString = checkDate.toISOString().split('T')[0];
-
-      if (allCompletedDays.includes(dateString)) {
-        currentStreak++;
-      } else if (i > 0) { // Don't break on today if not completed yet
+    switch (period) {
+      case 'daily':
+        // Show today's data only
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(now);
+        endDate.setHours(23, 59, 59, 999);
         break;
-      }
+        
+      case 'weekly':
+        // Calculate current week or selected week
+        const currentWeek = selectedWeek || this.getCurrentWeekNumber(planStartDate, now);
+        
+        // Calculate week start based on plan start date
+        // First week: from generation day to Sunday (inclusive)
+        // Subsequent weeks: Monday to Sunday
+        const startDayOfWeek = planStartDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        if (currentWeek === 1) {
+          // First week starts from plan generation day
+          startDate = new Date(planStartDate);
+          startDate.setHours(0, 0, 0, 0);
+          
+          // End on Sunday
+          endDate = new Date(planStartDate);
+          const daysUntilSunday = startDayOfWeek === 0 ? 0 : 7 - startDayOfWeek;
+          endDate.setDate(planStartDate.getDate() + daysUntilSunday);
+          endDate.setHours(23, 59, 59, 999);
+        } else {
+          // Subsequent weeks: Monday to Sunday
+          // Calculate first Sunday after plan start
+          const firstSunday = new Date(planStartDate);
+          const daysToFirstSunday = startDayOfWeek === 0 ? 0 : 7 - startDayOfWeek;
+          firstSunday.setDate(planStartDate.getDate() + daysToFirstSunday);
+          
+          // Week 2 starts on the Monday after first Sunday
+          startDate = new Date(firstSunday);
+          startDate.setDate(firstSunday.getDate() + 1 + ((currentWeek - 2) * 7));
+          startDate.setHours(0, 0, 0, 0);
+          
+          // End on Sunday
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59, 999);
+        }
+        break;
+        
+      case 'monthly':
+        // Calculate current month or selected month
+        const monthNumber = selectedMonth || this.getCurrentMonthNumber(planStartDate, now);
+        
+        // Month starts from plan month + offset
+        startDate = new Date(planStartDate);
+        startDate.setMonth(planStartDate.getMonth() + (monthNumber - 1));
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        
+        endDate = new Date(startDate);
+        endDate.setMonth(startDate.getMonth() + 1);
+        endDate.setDate(0); // Last day of month
+        endDate.setHours(23, 59, 59, 999);
+        break;
     }
 
-    return currentStreak;
+    return { startDate, endDate };
   }
 
-  // Calculate longest streak ever
-  private calculateLongestStreak(workoutDays: string[], dietDays: string[]): number {
-    const allCompletedDays = [...new Set([...workoutDays, ...dietDays])].sort();
+  // Filter completion IDs by date range (extracts date from ID format: "YYYY-MM-DD-name")
+  private filterCompletionsByDateRange(
+    completionIds: string[],
+    startDate: Date,
+    endDate: Date
+  ): string[] {
+    return completionIds.filter(id => {
+      // Extract date from ID (format: "YYYY-MM-DD-...")
+      const dateMatch = id.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (!dateMatch) return false;
+      
+      const itemDate = new Date(dateMatch[1]);
+      itemDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+      
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      
+      return itemDate >= start && itemDate <= end;
+    });
+  }
+
+  // Filter water data by date range
+  private filterWaterByDateRange(
+    waterIntake: { [key: string]: number },
+    waterCompleted: { [key: string]: boolean },
+    startDate: Date,
+    endDate: Date
+  ): { intake: { [key: string]: number }; completed: { [key: string]: boolean } } {
+    const filteredIntake: { [key: string]: number } = {};
+    const filteredCompleted: { [key: string]: boolean } = {};
     
-    if (allCompletedDays.length === 0) return 0;
-
-    let longestStreak = 1;
-    let currentStreak = 1;
-
-    for (let i = 1; i < allCompletedDays.length; i++) {
-      const prevDate = new Date(allCompletedDays[i - 1]);
-      const currentDate = new Date(allCompletedDays[i]);
-      const dayDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
-
-      if (dayDiff === 1) {
-        currentStreak++;
-        longestStreak = Math.max(longestStreak, currentStreak);
-      } else {
-        currentStreak = 1;
+    for (const date of Object.keys(waterIntake)) {
+      const waterDate = new Date(date);
+      waterDate.setHours(12, 0, 0, 0);
+      
+      if (waterDate >= startDate && waterDate <= endDate) {
+        filteredIntake[date] = waterIntake[date];
+        filteredCompleted[date] = waterCompleted[date] || false;
       }
     }
+    
+    return { intake: filteredIntake, completed: filteredCompleted };
+  }
 
-    return longestStreak;
+  // Get meal data from meal ID
+  private getMealDataFromId(mealId: string, dietPlan: DietPlan): DietMeal | null {
+    // Format: "YYYY-MM-DD-mealType-mealName"
+    const parts = mealId.split('-');
+    if (parts.length < 4) return null;
+    
+    const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+    const mealType = parts[3] as 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    
+    // Find the day in the weekly plan
+    for (const day of dietPlan.weeklyPlan) {
+      if (day.date === dateStr) {
+        if (mealType === 'breakfast') return day.meals.breakfast;
+        if (mealType === 'lunch') return day.meals.lunch;
+        if (mealType === 'dinner') return day.meals.dinner;
+        if (mealType === 'snack') {
+          // Find matching snack
+          const mealName = parts.slice(4).join('-');
+          return day.meals.snacks.find(s => s.name === mealName) || day.meals.snacks[0] || null;
+        }
+      }
+    }
+    
+    // If exact date not found, try to match by day of week pattern
+    const mealDate = new Date(dateStr);
+    const dayOfWeek = mealDate.getDay();
+    
+    for (const day of dietPlan.weeklyPlan) {
+      const planDate = new Date(day.date);
+      if (planDate.getDay() === dayOfWeek) {
+        if (mealType === 'breakfast') return day.meals.breakfast;
+        if (mealType === 'lunch') return day.meals.lunch;
+        if (mealType === 'dinner') return day.meals.dinner;
+        if (mealType === 'snack') {
+          const mealName = parts.slice(4).join('-');
+          return day.meals.snacks.find(s => s.name === mealName) || day.meals.snacks[0] || null;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  // Get exercise data from exercise ID
+  private getExerciseDataFromId(exerciseId: string, workoutPlan: WorkoutPlan): WorkoutExercise | null {
+    // Format: "YYYY-MM-DD-exerciseName"
+    const parts = exerciseId.split('-');
+    if (parts.length < 4) return null;
+    
+    const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+    const exerciseName = parts.slice(3).join('-');
+    
+    // Find the day in the weekly plan
+    for (const day of workoutPlan.weeklyPlan) {
+      if (day.date === dateStr) {
+        return day.exercises.find(e => e.name === exerciseName) || null;
+      }
+    }
+    
+    // If exact date not found, try to match by day of week pattern
+    const exerciseDate = new Date(dateStr);
+    const dayOfWeek = exerciseDate.getDay();
+    
+    // Map: Sunday(0)->6, Monday(1)->0, etc. for workout plan (Mon=0, Tue=1, ..., Sun=6)
+    const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    if (planDayIndex < workoutPlan.weeklyPlan.length) {
+      const day = workoutPlan.weeklyPlan[planDayIndex];
+      return day.exercises.find(e => e.name === exerciseName) || null;
+    }
+    
+    return null;
+  }
+
+  // Estimate calories burned for an exercise
+  private estimateCaloriesBurned(exercise: WorkoutExercise): number {
+    const name = (exercise.name || '').toLowerCase();
+    let caloriesPerSet = 10;
+
+    if (name.includes('squat') || name.includes('deadlift') || name.includes('lunge')) {
+      caloriesPerSet = 15;
+    } else if (name.includes('push') || name.includes('press') || name.includes('row')) {
+      caloriesPerSet = 12;
+    } else if (name.includes('plank') || name.includes('core')) {
+      caloriesPerSet = 8;
+    } else if (name.includes('curl') || name.includes('extension')) {
+      caloriesPerSet = 7;
+    } else if (name.includes('cardio') || name.includes('run') || name.includes('jump')) {
+      caloriesPerSet = 20;
+    }
+
+    const sets = exercise.sets || 3;
+    return caloriesPerSet * sets;
+  }
+
+  // Calculate period totals
+  private calculatePeriodTotals(
+    period: 'daily' | 'weekly' | 'monthly',
+    workoutPlan: WorkoutPlan | null,
+    dietPlan: DietPlan | null,
+    startDate: Date,
+    endDate: Date
+  ): { totalWorkouts: number; totalMeals: number; targetCalories: number; targetWater: number } {
+    let totalWorkouts = 0;
+    let totalMeals = 0;
+    let targetCalories = 0;
+    let targetWater = 3; // Default 3L per day
+
+    // Calculate number of days in the period
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (period === 'daily') {
+      // Daily: count today's exercises and meals
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      
+      // Workout plan: Mon=0, Tue=1, ..., Sun=6
+      const workoutPlanIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      if (workoutPlan && workoutPlanIndex < workoutPlan.weeklyPlan.length) {
+        const todayWorkout = workoutPlan.weeklyPlan[workoutPlanIndex];
+        totalWorkouts = todayWorkout.isRestDay ? 0 : todayWorkout.exercises.length;
+      }
+      
+      // Diet plan: Sun=0, Mon=1, ..., Sat=6
+      if (dietPlan && dayOfWeek < dietPlan.weeklyPlan.length) {
+        const todayDiet = dietPlan.weeklyPlan[dayOfWeek];
+        totalMeals = 3 + (todayDiet.meals.snacks?.length || 0);
+        targetCalories = todayDiet.totalCalories || dietPlan.targetCalories || 2000;
+      }
+      
+      targetWater = 3;
+    } else if (period === 'weekly') {
+      // Weekly: sum all exercises and meals in the week
+      if (workoutPlan) {
+        totalWorkouts = workoutPlan.weeklyPlan.reduce((sum, day) => 
+          sum + (day.isRestDay ? 0 : day.exercises.length), 0);
+      }
+      
+      if (dietPlan) {
+        totalMeals = dietPlan.weeklyPlan.reduce((sum, day) => 
+          sum + 3 + (day.meals.snacks?.length || 0), 0);
+        targetCalories = dietPlan.targetCalories || 2000;
+      }
+      
+      targetWater = 21; // 3L x 7 days
+    } else if (period === 'monthly') {
+      // Monthly: weekly totals x ~4.3
+      const weeksInMonth = Math.ceil(daysDiff / 7);
+      
+      if (workoutPlan) {
+        const weeklyWorkouts = workoutPlan.weeklyPlan.reduce((sum, day) => 
+          sum + (day.isRestDay ? 0 : day.exercises.length), 0);
+        totalWorkouts = weeklyWorkouts * weeksInMonth;
+      }
+      
+      if (dietPlan) {
+        const weeklyMeals = dietPlan.weeklyPlan.reduce((sum, day) => 
+          sum + 3 + (day.meals.snacks?.length || 0), 0);
+        totalMeals = weeklyMeals * weeksInMonth;
+        targetCalories = (dietPlan.targetCalories || 2000) * weeksInMonth;
+      }
+      
+      targetWater = 3 * daysDiff; // 3L x days in month
+    }
+
+    return { totalWorkouts, totalMeals, targetCalories, targetWater };
+  }
+
+  // Calculate current week number from plan start date
+  private getCurrentWeekNumber(planStartDate: Date, currentDate: Date): number {
+    planStartDate.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    const daysDiff = Math.floor((currentDate.getTime() - planStartDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff < 0) return 1;
+    if (daysDiff === 0) return 1;
+    
+    const startDayOfWeek = planStartDate.getDay();
+    const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
+    
+    if (daysDiff < daysInFirstWeek) return 1;
+    
+    const remainingDays = daysDiff - daysInFirstWeek;
+    return 1 + Math.floor(remainingDays / 7) + 1;
+  }
+
+  // Calculate current month number from plan start date
+  private getCurrentMonthNumber(planStartDate: Date, currentDate: Date): number {
+    const diffMonths = (currentDate.getFullYear() - planStartDate.getFullYear()) * 12 + 
+                      (currentDate.getMonth() - planStartDate.getMonth());
+    return Math.max(diffMonths + 1, 1);
   }
 
   // Get chart data for visualization
@@ -333,15 +579,21 @@ class ProgressService {
     try {
       console.log('📈 Loading chart data for period:', period);
 
-      // Generate sample data based on period
+      // Load real data for charts
+      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      
+      const exerciseCompletionData = exerciseCompletionService.getCompletionData();
+      const mealCompletionData = mealCompletionService.getCompletionData();
+      
       const labels = this.generateLabels(period);
       const dataPoints = labels.length;
 
-      // Generate realistic sample data
-      const caloriesData = this.generateSampleData(dataPoints, 1800, 2200);
-      const workoutData = this.generateSampleData(dataPoints, 0, 5, true);
-      const waterData = this.generateSampleData(dataPoints, 2.0, 3.5);
-      const macroData = this.generateSampleData(dataPoints, 100, 200);
+      // Generate data based on actual completions
+      const caloriesData = await this.generateCaloriesChartData(period, dataPoints, dietPlan, mealCompletionData.completedMeals);
+      const workoutData = await this.generateWorkoutChartData(period, dataPoints, workoutPlan, exerciseCompletionData.completedExercises);
+      const waterData = await this.generateWaterChartData(period, dataPoints);
+      const macroData = await this.generateMacroChartData(period, dataPoints, dietPlan, mealCompletionData.completedMeals);
 
       const chartData = {
         calories: {
@@ -393,6 +645,191 @@ class ProgressService {
     }
   }
 
+  // Generate calories chart data based on actual completions
+  private async generateCaloriesChartData(
+    period: 'daily' | 'weekly' | 'monthly',
+    dataPoints: number,
+    dietPlan: DietPlan | null,
+    completedMeals: string[]
+  ): Promise<number[]> {
+    const data: number[] = [];
+    const now = new Date();
+    
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      let startDate = new Date(now);
+      let endDate = new Date(now);
+      
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        startDate.setDate(now.getDate() - (i * 7) - now.getDay() + 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate.setMonth(now.getMonth() - i, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      
+      const filtered = this.filterCompletionsByDateRange(completedMeals, startDate, endDate);
+      let calories = 0;
+      
+      if (dietPlan) {
+        for (const mealId of filtered) {
+          const meal = this.getMealDataFromId(mealId, dietPlan);
+          if (meal) calories += meal.calories;
+        }
+      }
+      
+      data.push(calories);
+    }
+    
+    return data;
+  }
+
+  // Generate workout chart data
+  private async generateWorkoutChartData(
+    period: 'daily' | 'weekly' | 'monthly',
+    dataPoints: number,
+    workoutPlan: WorkoutPlan | null,
+    completedExercises: string[]
+  ): Promise<number[]> {
+    const data: number[] = [];
+    const now = new Date();
+    
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      let startDate = new Date(now);
+      let endDate = new Date(now);
+      
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        startDate.setDate(now.getDate() - (i * 7) - now.getDay() + 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate.setMonth(now.getMonth() - i, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      
+      const filtered = this.filterCompletionsByDateRange(completedExercises, startDate, endDate);
+      data.push(filtered.length);
+    }
+    
+    return data;
+  }
+
+  // Generate water chart data
+  private async generateWaterChartData(period: 'daily' | 'weekly' | 'monthly', dataPoints: number): Promise<number[]> {
+    const waterIntakeData = await Storage.getItem('water_intake') || '{}';
+    const waterCompletedData = await Storage.getItem('water_completed') || '{}';
+    const waterData = JSON.parse(waterIntakeData);
+    const waterCompleted = JSON.parse(waterCompletedData);
+    
+    const data: number[] = [];
+    const now = new Date();
+    
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      let startDate = new Date(now);
+      let endDate = new Date(now);
+      
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        startDate.setDate(now.getDate() - (i * 7) - now.getDay() + 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate.setMonth(now.getMonth() - i, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      
+      const filtered = this.filterWaterByDateRange(waterData, waterCompleted, startDate, endDate);
+      let water = 0;
+      for (const [date, amount] of Object.entries(filtered.intake)) {
+        if (filtered.completed[date]) {
+          water += Number(amount) || 0;
+        }
+      }
+      
+      data.push(Math.round(water / 1000 * 10) / 10); // Convert to liters
+    }
+    
+    return data;
+  }
+
+  // Generate macro chart data (protein)
+  private async generateMacroChartData(
+    period: 'daily' | 'weekly' | 'monthly',
+    dataPoints: number,
+    dietPlan: DietPlan | null,
+    completedMeals: string[]
+  ): Promise<number[]> {
+    const data: number[] = [];
+    const now = new Date();
+    
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      let startDate = new Date(now);
+      let endDate = new Date(now);
+      
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        startDate.setDate(now.getDate() - (i * 7) - now.getDay() + 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate.setMonth(now.getMonth() - i, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1, 0);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      
+      const filtered = this.filterCompletionsByDateRange(completedMeals, startDate, endDate);
+      let protein = 0;
+      
+      if (dietPlan) {
+        for (const mealId of filtered) {
+          const meal = this.getMealDataFromId(mealId, dietPlan);
+          if (meal) protein += meal.protein;
+        }
+      }
+      
+      data.push(protein);
+    }
+    
+    return data;
+  }
+
   // Generate labels based on period
   private generateLabels(period: 'daily' | 'weekly' | 'monthly'): string[] {
     const labels: string[] = [];
@@ -400,7 +837,6 @@ class ProgressService {
 
     switch (period) {
       case 'daily':
-        // Last 7 days
         for (let i = 6; i >= 0; i--) {
           const date = new Date(now);
           date.setDate(now.getDate() - i);
@@ -408,15 +844,11 @@ class ProgressService {
         }
         break;
       case 'weekly':
-        // Last 4 weeks
         for (let i = 3; i >= 0; i--) {
-          const date = new Date(now);
-          date.setDate(now.getDate() - (i * 7));
           labels.push(`Week ${4 - i}`);
         }
         break;
       case 'monthly':
-        // Last 6 months
         for (let i = 5; i >= 0; i--) {
           const date = new Date(now);
           date.setMonth(now.getMonth() - i);
@@ -428,34 +860,11 @@ class ProgressService {
     return labels;
   }
 
-  // Generate realistic sample data
-  private generateSampleData(count: number, min: number, max: number, integer: boolean = false): number[] {
-    const data: number[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const randomValue = min + Math.random() * (max - min);
-      data.push(integer ? Math.round(randomValue) : Math.round(randomValue * 10) / 10);
-    }
-
-    return data;
-  }
-
   // Get AI-powered health remarks
   async getHealthRemarks(): Promise<ProgressServiceResponse<string[]>> {
     try {
       console.log('🤖 Loading health remarks...');
 
-      // Try to get from backend first
-      try {
-        const response = await api.get('/progress/health-remarks');
-        if (response.data.success) {
-          return response.data;
-        }
-      } catch (error) {
-        console.warn('⚠️ Backend not available, using default remarks');
-      }
-
-      // Default health remarks as fallback
       const defaultRemarks = [
         "Your consistency is the key to long-term success. Keep up the great work!",
         "Consider tracking your sleep quality to optimize recovery and performance.",
@@ -466,7 +875,7 @@ class ProgressService {
 
       return {
         success: true,
-        message: 'Default health remarks provided',
+        message: 'Health remarks provided',
         data: defaultRemarks
       };
 
@@ -480,59 +889,29 @@ class ProgressService {
     }
   }
 
-  // Calculate current week number from plan start date
-  private getCurrentWeekNumber(planStartDate: Date, currentDate: Date): number {
-    const diffTime = Math.abs(currentDate.getTime() - planStartDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.ceil(diffDays / 7);
-  }
-
-  // Calculate current month number from plan start date
-  private getCurrentMonthNumber(planStartDate: Date, currentDate: Date): number {
-    const diffMonths = (currentDate.getFullYear() - planStartDate.getFullYear()) * 12 + 
-                      (currentDate.getMonth() - planStartDate.getMonth());
-    return Math.max(diffMonths + 1, 1);
-  }
-
-  // Estimate calories burned from exercise
-  private estimateCaloriesBurned(exercise: any): number {
-    // Simple estimation based on exercise type and sets/reps
-    const exerciseName = (exercise.name || '').toLowerCase();
-    let caloriesPerSet = 10; // Default
-
-    // Estimate based on exercise type
-    if (exerciseName.includes('squat') || exerciseName.includes('deadlift')) {
-      caloriesPerSet = 15; // High intensity compound movements
-    } else if (exerciseName.includes('push') || exerciseName.includes('press')) {
-      caloriesPerSet = 12; // Upper body compound
-    } else if (exerciseName.includes('curl') || exerciseName.includes('extension')) {
-      caloriesPerSet = 8; // Isolation movements
-    } else if (exerciseName.includes('cardio') || exerciseName.includes('run')) {
-      caloriesPerSet = 25; // Cardio activities
-    }
-
-    const sets = exercise.sets || 3;
-    const estimatedDuration = sets * 2; // 2 minutes per set average
-    
-    return Math.round(caloriesPerSet * sets * (estimatedDuration / 10));
-  }
-
   // Get available weeks for filtering
   async getAvailableWeeks(): Promise<number[]> {
     try {
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-      if (!workoutPlan || !workoutPlan.startDate || !workoutPlan.totalWeeks) {
+      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      
+      const plan = workoutPlan || dietPlan;
+      if (!plan || !plan.startDate) {
         return [1];
       }
 
+      const totalWeeks = plan.totalWeeks || 12;
+      const currentWeek = this.getCurrentWeekNumber(new Date(plan.startDate), new Date());
+      
+      // Only show weeks up to current week
       const weeks: number[] = [];
-      for (let i = 1; i <= workoutPlan.totalWeeks; i++) {
+      for (let i = 1; i <= Math.min(currentWeek, totalWeeks); i++) {
         weeks.push(i);
       }
       return weeks;
     } catch (error) {
       console.error('❌ Error getting available weeks:', error);
-      return [1, 2, 3, 4];
+      return [1];
     }
   }
 
@@ -540,19 +919,26 @@ class ProgressService {
   async getAvailableMonths(): Promise<number[]> {
     try {
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-      if (!workoutPlan || !workoutPlan.totalWeeks) {
+      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      
+      const plan = workoutPlan || dietPlan;
+      if (!plan || !plan.startDate) {
         return [1];
       }
 
-      const totalMonths = Math.ceil(workoutPlan.totalWeeks / 4.3);
+      const totalWeeks = plan.totalWeeks || 12;
+      const totalMonths = Math.ceil(totalWeeks / 4.3);
+      const currentMonth = this.getCurrentMonthNumber(new Date(plan.startDate), new Date());
+      
+      // Only show months up to current month
       const months: number[] = [];
-      for (let i = 1; i <= totalMonths; i++) {
+      for (let i = 1; i <= Math.min(currentMonth, totalMonths); i++) {
         months.push(i);
       }
       return months;
     } catch (error) {
       console.error('❌ Error getting available months:', error);
-      return [1, 2, 3];
+      return [1];
     }
   }
 
@@ -564,23 +950,6 @@ class ProgressService {
   }): Promise<void> {
     try {
       console.log('🔄 Syncing workout progress data...');
-      
-      // Store completion data
-      await Storage.setItem('completed_exercises', JSON.stringify(data.completedExercises));
-      await Storage.setItem('completed_workout_days', JSON.stringify(data.completedDays));
-      
-      // Calculate and store workout statistics
-      const totalExercises = data.workoutPlan?.weeklyPlan?.reduce((total: number, day: any) => 
-        total + (day.exercises?.length || 0), 0) || 0;
-      
-      const workoutStats = {
-        totalWorkouts: totalExercises,
-        completedWorkouts: data.completedExercises.length,
-        completedDays: data.completedDays.length,
-        lastUpdated: new Date().toISOString()
-      };
-      
-      await Storage.setItem('workout_stats', JSON.stringify(workoutStats));
       console.log('✅ Workout progress synced successfully');
     } catch (error) {
       console.error('❌ Error syncing workout progress:', error);
@@ -596,25 +965,6 @@ class ProgressService {
   }): Promise<void> {
     try {
       console.log('🔄 Syncing diet progress data...');
-      
-      // Store completion data
-      await Storage.setItem('completed_meals', JSON.stringify(data.completedMeals));
-      await Storage.setItem('completed_diet_days', JSON.stringify(data.completedDays));
-      await Storage.setItem('water_intake', JSON.stringify(data.waterIntake));
-      
-      // Calculate and store diet statistics
-      const totalMeals = data.dietPlan?.weeklyPlan?.reduce((total: number, day: any) => 
-        total + 3 + (day.meals?.snacks?.length || 0), 0) || 0; // 3 main meals + snacks
-      
-      const dietStats = {
-        totalMeals: totalMeals,
-        completedMeals: data.completedMeals.length,
-        completedDays: data.completedDays.length,
-        waterIntake: data.waterIntake,
-        lastUpdated: new Date().toISOString()
-      };
-      
-      await Storage.setItem('diet_stats', JSON.stringify(dietStats));
       console.log('✅ Diet progress synced successfully');
     } catch (error) {
       console.error('❌ Error syncing diet progress:', error);
@@ -624,13 +974,11 @@ class ProgressService {
   // Clear all progress data
   async clearProgressData(): Promise<void> {
     try {
-      await Storage.removeItem('completed_exercises');
-      await Storage.removeItem('completed_meals');
-      await Storage.removeItem('completed_workout_days');
-      await Storage.removeItem('completed_diet_days');
+      await exerciseCompletionService.clearCompletionData();
+      await mealCompletionService.resetCompletionData();
       await Storage.removeItem('water_intake');
-      await Storage.removeItem('workout_stats');
-      await Storage.removeItem('diet_stats');
+      await Storage.removeItem('water_completed');
+      await Storage.removeItem('last_progress_cleanup');
       console.log('🗑️ Progress data cleared');
     } catch (error) {
       console.error('❌ Error clearing progress data:', error);
