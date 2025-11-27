@@ -931,12 +931,12 @@ const styles = StyleSheet.create({
   timelineCard: {
     width: 72,
     height: 90,
-    backgroundColor: colors.cardBorder + '20',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.cardBorder + '40',
+    borderColor: colors.cardBorder + '60',
     position: 'relative',
     overflow: 'hidden',
   },
@@ -945,11 +945,11 @@ const styles = StyleSheet.create({
     height: 95,
   },
   timelineCardPast: {
-    backgroundColor: colors.primary + '08',
-    borderColor: colors.primary + '25',
+    backgroundColor: colors.primary + '12',
+    borderColor: colors.primary + '35',
   },
   timelineCardCurrent: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.surface,
     borderColor: colors.primary,
     borderWidth: 2,
     elevation: 4,
@@ -984,14 +984,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   timelineWeekNum: {
-    color: colors.mutedText,
+    color: colors.white,
     fontSize: 22,
     fontWeight: '900',
     fontFamily: fonts.heading,
     marginBottom: 2,
   },
   timelineWeekNumPast: {
-    color: colors.primary + '80',
+    color: colors.white,
   },
   timelineWeekNumCurrent: {
     color: colors.primary,
@@ -1000,22 +1000,22 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   timelineWeekLabel: {
-    color: colors.mutedText + '80',
+    color: colors.mutedText,
     fontSize: 10,
     fontWeight: '500',
     fontFamily: fonts.body,
   },
   timelineWeekLabelPast: {
-    color: colors.primary + '60',
+    color: colors.mutedText,
   },
   timelineWeekLabelCurrent: {
-    color: colors.primary + '80',
+    color: colors.primary + '90',
   },
   timelineWeekLabelSelected: {
     color: colors.white + 'CC',
   },
   timelineMonthName: {
-    color: colors.mutedText,
+    color: colors.white,
     fontSize: 20,
     fontWeight: '900',
     fontFamily: fonts.heading,
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   timelineMonthNamePast: {
-    color: colors.primary + '80',
+    color: colors.white,
   },
   timelineMonthNameCurrent: {
     color: colors.primary,
@@ -1033,16 +1033,16 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   timelineMonthNum: {
-    color: colors.mutedText + '80',
+    color: colors.mutedText,
     fontSize: 10,
     fontWeight: '500',
     fontFamily: fonts.body,
   },
   timelineMonthNumPast: {
-    color: colors.primary + '60',
+    color: colors.mutedText,
   },
   timelineMonthNumCurrent: {
-    color: colors.primary + '80',
+    color: colors.primary + '90',
   },
   timelineMonthNumSelected: {
     color: colors.white + 'CC',
