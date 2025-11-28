@@ -189,20 +189,21 @@ export default function DashboardScreen() {
   }, []);
 
   // Listen for meal completion events to update dashboard in real-time
+  // OPTIMIZATION: Only update local completion states, do NOT reload full plans
   useEffect(() => {
     const mealCompletedListener = DeviceEventEmitter.addListener('mealCompleted', async (data) => {
-      // Force refresh completion states to reflect the change
-      await loadCompletionStates(true);
+      // Only refresh completion states from local storage - no API calls
+      await loadCompletionStates(false);
     });
 
     const dayCompletedListener = DeviceEventEmitter.addListener('dayCompleted', async (data) => {
-      // Force refresh completion states to reflect the change
-      await loadCompletionStates(true);
+      // Only refresh completion states from local storage - no API calls
+      await loadCompletionStates(false);
     });
 
     const exerciseCompletedListener = DeviceEventEmitter.addListener('exerciseCompleted', async (data) => {
-      // Force refresh completion states to reflect the change
-      await loadCompletionStates(true);
+      // Only refresh completion states from local storage - no API calls
+      await loadCompletionStates(false);
     });
 
     return () => {
@@ -715,26 +716,11 @@ export default function DashboardScreen() {
       if (localMeals.size > 0) setCompletedMeals(localMeals);
       if (localExercises.size > 0) setCompletedExercises(localExercises);
 
-      // Only fetch from database if forcing refresh or after completing an action
-      if (forceRefresh) {
-        const [workoutPlan, dietPlan] = await Promise.allSettled([
-          aiWorkoutService.refreshWorkoutPlanFromDatabase(),
-          aiDietService.refreshDietPlanFromDatabase()
-        ]);
-
-        // Merge database data with local data
-        if (workoutPlan.status === 'fulfilled' && workoutPlan.value?.completedExercises) {
-          const dbExercises = new Set(workoutPlan.value.completedExercises as string[]);
-          const mergedExercises = new Set([...localExercises, ...dbExercises]);
-          setCompletedExercises(mergedExercises);
-        }
-
-        if (dietPlan.status === 'fulfilled' && dietPlan.value?.completedMeals) {
-          const dbMeals = new Set(dietPlan.value.completedMeals as string[]);
-          const mergedMeals = new Set([...localMeals, ...dbMeals]);
-          setCompletedMeals(mergedMeals);
-        }
-      }
+      // OPTIMIZATION: Do NOT refresh full plans when completion events occur
+      // Completion events only need to update local completion states, not reload entire plans
+      // Full plan refresh should only happen on initial load or manual refresh
+      // The completion data is already saved to local storage by the completion services,
+      // so we only need to read from local storage here - no API calls needed
     } catch (error) {
       // Failed to load completion states
     }

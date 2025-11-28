@@ -178,10 +178,10 @@ class ExerciseCompletionService {
     return percentage;
   }
 
-  // Check if day meets completion criteria (60% threshold)
+  // Check if day meets completion criteria (50% threshold)
   isDayFullyCompleted(dayExercises: string[], dayDate: string): boolean {
     const completionPercentage = this.calculateDayCompletion(dayExercises, dayDate);
-    return completionPercentage >= 60;
+    return completionPercentage >= 50; // 50% threshold to match diet and UI display
   }
 
   // Save completion data to storage

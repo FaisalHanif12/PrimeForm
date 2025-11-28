@@ -71,7 +71,7 @@ export default function ProgressScreen() {
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
+  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
@@ -362,14 +362,6 @@ export default function ProgressScreen() {
                   onPress={() => setSelectedWeek(week)}
                   activeOpacity={0.7}
                 >
-                  {/* Connection line */}
-                  {index > 0 && (
-                    <View style={[
-                      styles.timelineConnector,
-                      isPast && styles.timelineConnectorPast,
-                    ]} />
-                  )}
-                  
                   {/* Week card */}
                   <View style={[
                     styles.timelineCard,
@@ -389,14 +381,6 @@ export default function ProgressScreen() {
                       isSelected && styles.timelineWeekNumSelected,
                     ]}>
                       W{week}
-                    </Text>
-                    <Text style={[
-                      styles.timelineWeekLabel,
-                      isPast && styles.timelineWeekLabelPast,
-                      isCurrent && styles.timelineWeekLabelCurrent,
-                      isSelected && styles.timelineWeekLabelSelected,
-                    ]}>
-                      Week {week}
                     </Text>
                     {isPast && !isCurrent && (
                       <View style={styles.completedIndicator}>
@@ -449,14 +433,6 @@ export default function ProgressScreen() {
                   onPress={() => setSelectedMonth(month)}
                   activeOpacity={0.7}
                 >
-                  {/* Connection line */}
-                  {index > 0 && (
-                    <View style={[
-                      styles.timelineConnector,
-                      isPast && styles.timelineConnectorPast,
-                    ]} />
-                  )}
-                  
                   {/* Month card */}
                   <View style={[
                     styles.timelineCard,
@@ -861,14 +837,15 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 32,
-    fontWeight: '900',
+    fontSize: 25,
+    fontWeight: '600',
     fontFamily: fonts.heading,
     textAlign: 'center',
     marginBottom: spacing.xs,
+    opacity: 0.9,
   },
   heroSubtitle: {
-    color: colors.mutedText,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '500',
     fontFamily: fonts.body,

@@ -86,60 +86,55 @@ class StreakService {
   // Calculate streak data from local storage
   private async calculateLocalStreakData(): Promise<StreakData> {
     try {
-      // Load completion data
-      const completedExercises = await Storage.getItem('completed_exercises') || '[]';
-      const completedMeals = await Storage.getItem('completed_meals') || '[]';
-      const completedWorkoutDays = await Storage.getItem('completed_workout_days') || '[]';
-      const completedDietDays = await Storage.getItem('completed_diet_days') || '[]';
+      // Load completion data from storage
+      const [completedExercisesData, completedMealsData] = await Promise.all([
+        Storage.getItem('completed_exercises'),
+        Storage.getItem('completed_meals')
+      ]);
 
-      const exercisesList = JSON.parse(completedExercises);
-      const mealsList = JSON.parse(completedMeals);
-      let workoutDaysList = JSON.parse(completedWorkoutDays);
-      let dietDaysList = JSON.parse(completedDietDays);
+      const completedExercises = completedExercisesData ? JSON.parse(completedExercisesData) as string[] : [];
+      const completedMeals = completedMealsData ? JSON.parse(completedMealsData) as string[] : [];
 
-      // Extract unique dates from exercise IDs and merge with day list
-      // Exercise IDs format: "YYYY-MM-DD-exerciseName"
-      const exerciseDates = new Set<string>(workoutDaysList);
-      exercisesList.forEach((exerciseId: string) => {
-        // Extract date from exercise ID (format: "YYYY-MM-DD-exerciseName")
-        const parts = exerciseId.split('-');
-        if (parts.length >= 3) {
-          // Check if first 3 parts form a valid date (YYYY-MM-DD)
-          const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            exerciseDates.add(dateStr);
-          }
-        }
+      console.log('📊 StreakService: Loaded completion data:', {
+        exercises: completedExercises.length,
+        meals: completedMeals.length,
+        sampleExercises: completedExercises.slice(0, 3),
+        sampleMeals: completedMeals.slice(0, 3)
       });
-      workoutDaysList = Array.from(exerciseDates).sort();
 
-      // Extract unique dates from meal IDs and merge with day list
-      // Meal IDs format: "YYYY-MM-DD-mealType-mealName"
-      const mealDates = new Set<string>(dietDaysList);
-      mealsList.forEach((mealId: string) => {
-        // Extract date from meal ID (format: "YYYY-MM-DD-mealType-mealName")
-        const parts = mealId.split('-');
-        if (parts.length >= 3) {
-          // Check if first 3 parts form a valid date (YYYY-MM-DD)
-          const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-            mealDates.add(dateStr);
-          }
-        }
+      // Convert to Sets for faster lookup
+      const completedExercisesSet = new Set<string>(completedExercises);
+      const completedMealsSet = new Set<string>(completedMeals);
+
+      // Load workout and diet plans from local storage
+      const workoutPlanData = await Storage.getItem('cached_workout_plan');
+      const dietPlanData = await Storage.getItem('cached_diet_plan');
+
+      const workoutPlan = workoutPlanData ? JSON.parse(workoutPlanData) : null;
+      const dietPlan = dietPlanData ? JSON.parse(dietPlanData) : null;
+
+      console.log('📊 StreakService: Plans loaded:', {
+        hasWorkoutPlan: !!workoutPlan,
+        hasDietPlan: !!dietPlan,
+        workoutPlanStartDate: workoutPlan?.startDate,
+        dietPlanStartDate: dietPlan?.startDate
       });
-      dietDaysList = Array.from(mealDates).sort();
+
+      // Calculate completed days based on 50% threshold
+      const workoutDaysList = this.calculateCompletedWorkoutDays(workoutPlan, completedExercisesSet) || [];
+      const dietDaysList = this.calculateCompletedDietDays(dietPlan, completedMealsSet) || [];
 
       // Generate daily activity history for last 90 days
       const streakHistory = this.generateStreakHistory(workoutDaysList, dietDaysList);
 
-      // Calculate current streaks
-      const currentWorkoutStreak = this.calculateCurrentStreak(workoutDaysList);
-      const currentDietStreak = this.calculateCurrentStreak(dietDaysList);
+      // Calculate current streaks (ensure arrays are passed)
+      const currentWorkoutStreak = this.calculateCurrentStreak(Array.isArray(workoutDaysList) ? workoutDaysList : []);
+      const currentDietStreak = this.calculateCurrentStreak(Array.isArray(dietDaysList) ? dietDaysList : []);
       const currentOverallStreak = this.calculateOverallStreak(streakHistory);
 
-      // Calculate longest streaks
-      const longestWorkoutStreak = this.calculateLongestStreak(workoutDaysList);
-      const longestDietStreak = this.calculateLongestStreak(dietDaysList);
+      // Calculate longest streaks (ensure arrays are passed)
+      const longestWorkoutStreak = this.calculateLongestStreak(Array.isArray(workoutDaysList) ? workoutDaysList : []);
+      const longestDietStreak = this.calculateLongestStreak(Array.isArray(dietDaysList) ? dietDaysList : []);
       const longestOverallStreak = this.calculateLongestOverallStreak(streakHistory);
 
       // Calculate consistency percentages
@@ -209,14 +204,18 @@ class StreakService {
     const history = [];
     const today = new Date();
     
+    // Ensure we have arrays (safety check)
+    const workoutDaysArray = Array.isArray(workoutDays) ? workoutDays : [];
+    const dietDaysArray = Array.isArray(dietDays) ? dietDays : [];
+    
     // Generate last 90 days
     for (let i = 89; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const dateString = date.toISOString().split('T')[0];
       
-      const workoutCompleted = workoutDays.includes(dateString);
-      const dietCompleted = dietDays.includes(dateString);
+      const workoutCompleted = workoutDaysArray.includes(dateString);
+      const dietCompleted = dietDaysArray.includes(dateString);
       const overallCompleted = workoutCompleted && dietCompleted;
       
       history.push({
@@ -507,8 +506,215 @@ class StreakService {
     return milestones;
   }
 
+  // Calculate completed workout days based on 50% threshold
+  private calculateCompletedWorkoutDays(workoutPlan: any, completedExercisesSet: Set<string>): string[] {
+    const completedDays: string[] = [];
+    
+    if (completedExercisesSet.size === 0) {
+      console.log('⚠️ StreakService: No completed exercises found');
+      return completedDays;
+    }
+
+    // Extract unique dates from completed exercise IDs
+    // Exercise IDs format: "YYYY-MM-DD-exerciseName"
+    const dateToExercises = new Map<string, Set<string>>();
+    
+    completedExercisesSet.forEach((exerciseId: string) => {
+      // Extract date from exercise ID (format: "YYYY-MM-DD-exerciseName")
+      const parts = exerciseId.split('-');
+      if (parts.length >= 3) {
+        const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          if (!dateToExercises.has(dateStr)) {
+            dateToExercises.set(dateStr, new Set());
+          }
+          dateToExercises.get(dateStr)!.add(exerciseId);
+        }
+      }
+    });
+
+    console.log('📊 StreakService: Extracted dates from exercises:', {
+      uniqueDates: dateToExercises.size,
+      dates: Array.from(dateToExercises.keys()).slice(0, 5)
+    });
+
+    if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
+      console.log('⚠️ StreakService: Invalid workout plan, using date-based approach');
+      // Fallback: if no plan, just use dates that have any completed exercises
+      // This is less accurate but better than nothing
+      dateToExercises.forEach((exercises, date) => {
+        if (exercises.size > 0) {
+          completedDays.push(date);
+        }
+      });
+      return completedDays.sort();
+    }
+
+    const startDate = new Date(workoutPlan.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const totalWeeks = workoutPlan.totalWeeks || 12;
+    
+    // Generate all dates and check completion
+    for (let week = 1; week <= totalWeeks; week++) {
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        const dayDate = new Date(startDate);
+        const daysToAdd = (week - 1) * 7 + dayOfWeek;
+        dayDate.setDate(startDate.getDate() + daysToAdd);
+        dayDate.setHours(0, 0, 0, 0);
+        
+        if (dayDate > today) break;
+        
+        // Format date consistently (use local date, not UTC)
+        const year = dayDate.getFullYear();
+        const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dayDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        
+        // Get the weekly plan day
+        // Workout plan: Monday=0, Tuesday=1, ..., Sunday=6
+        // dayDate.getDay(): Sunday=0, Monday=1, ..., Saturday=6
+        const dayOfWeekJS = dayDate.getDay();
+        const planIndex = dayOfWeekJS === 0 ? 6 : dayOfWeekJS - 1;
+        const planDay = workoutPlan.weeklyPlan[planIndex];
+        
+        if (planDay && planDay.exercises && !planDay.isRestDay) {
+          const expectedExercises = planDay.exercises.map((ex: any) => 
+            `${dateString}-${ex.name}`
+          );
+          
+          if (expectedExercises.length > 0) {
+            const completedForDate = dateToExercises.get(dateString) || new Set();
+            const completedCount = expectedExercises.filter((exId: string) => 
+              completedForDate.has(exId)
+            ).length;
+            const completionPercentage = (completedCount / expectedExercises.length) * 100;
+            
+            if (completionPercentage >= 50) {
+              completedDays.push(dateString);
+            }
+          }
+        }
+      }
+    }
+
+    console.log('📊 StreakService: Workout completed days:', {
+      count: completedDays.length,
+      days: completedDays.slice(0, 5),
+      allDates: completedDays
+    });
+    return completedDays.sort();
+  }
+
+  // Calculate completed diet days based on 50% threshold
+  private calculateCompletedDietDays(dietPlan: any, completedMealsSet: Set<string>): string[] {
+    const completedDays: string[] = [];
+    
+    if (completedMealsSet.size === 0) {
+      console.log('⚠️ StreakService: No completed meals found');
+      return completedDays;
+    }
+
+    // Extract unique dates from completed meal IDs
+    // Meal IDs format: "YYYY-MM-DD-mealType-mealName"
+    const dateToMeals = new Map<string, Set<string>>();
+    
+    completedMealsSet.forEach((mealId: string) => {
+      // Extract date from meal ID (format: "YYYY-MM-DD-mealType-mealName")
+      const parts = mealId.split('-');
+      if (parts.length >= 3) {
+        const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          if (!dateToMeals.has(dateStr)) {
+            dateToMeals.set(dateStr, new Set());
+          }
+          dateToMeals.get(dateStr)!.add(mealId);
+        }
+      }
+    });
+
+    console.log('📊 StreakService: Extracted dates from meals:', {
+      uniqueDates: dateToMeals.size,
+      dates: Array.from(dateToMeals.keys()).slice(0, 5),
+      sampleMealsForDate: Array.from(dateToMeals.entries())[0]
+    });
+
+    if (!dietPlan || !dietPlan.weeklyPlan || !Array.isArray(dietPlan.weeklyPlan)) {
+      console.log('⚠️ StreakService: Invalid diet plan, using date-based approach');
+      // Fallback: if no plan, just use dates that have any completed meals
+      // This is less accurate but better than nothing
+      dateToMeals.forEach((meals, date) => {
+        if (meals.size > 0) {
+          completedDays.push(date);
+        }
+      });
+      return completedDays.sort();
+    }
+
+    const startDate = new Date(dietPlan.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const totalWeeks = dietPlan.totalWeeks || 12;
+    
+    // Generate all dates and check completion
+    for (let week = 1; week <= totalWeeks; week++) {
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        const dayDate = new Date(startDate);
+        const daysToAdd = (week - 1) * 7 + dayOfWeek;
+        dayDate.setDate(startDate.getDate() + daysToAdd);
+        dayDate.setHours(0, 0, 0, 0);
+        
+        if (dayDate > today) break;
+        
+        // Format date consistently (use local date, not UTC)
+        const year = dayDate.getFullYear();
+        const month = String(dayDate.getMonth() + 1).padStart(2, '0');
+        const day = String(dayDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        
+        // Get the weekly plan day
+        // Diet plan: Sunday=0, Monday=1, ..., Saturday=6
+        // dayDate.getDay(): Sunday=0, Monday=1, ..., Saturday=6
+        const planIndex = dayDate.getDay();
+        const planDay = dietPlan.weeklyPlan[planIndex];
+        
+        if (planDay && planDay.meals) {
+          const expectedMeals = [
+            `${dateString}-breakfast-${planDay.meals.breakfast?.name || ''}`,
+            `${dateString}-lunch-${planDay.meals.lunch?.name || ''}`,
+            `${dateString}-dinner-${planDay.meals.dinner?.name || ''}`,
+            ...(planDay.meals.snacks || []).map((snack: any) => 
+              `${dateString}-snack-${snack.name}`
+            )
+          ].filter(mealId => mealId && !mealId.endsWith('-'));
+          
+          if (expectedMeals.length > 0) {
+            const completedForDate = dateToMeals.get(dateString) || new Set();
+            const completedCount = expectedMeals.filter((mealId: string) => 
+              completedForDate.has(mealId)
+            ).length;
+            const completionPercentage = (completedCount / expectedMeals.length) * 100;
+            
+            if (completionPercentage >= 50) {
+              completedDays.push(dateString);
+            }
+          }
+        }
+      }
+    }
+
+    console.log('📊 StreakService: Diet completed days:', {
+      count: completedDays.length,
+      days: completedDays.slice(0, 5),
+      allDates: completedDays
+    });
+    return completedDays.sort();
+  }
+
   // Update streak data when activities are completed
   async updateStreakData(type: 'workout' | 'diet', completed: boolean): Promise<void> {
+    // This method is kept for backward compatibility but is no longer used
+    // Streak calculation now happens in calculateLocalStreakData using 50% threshold
     try {
       const today = new Date().toISOString().split('T')[0];
       const storageKey = type === 'workout' ? 'completed_workout_days' : 'completed_diet_days';

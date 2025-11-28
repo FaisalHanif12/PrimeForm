@@ -327,11 +327,12 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '500',
     fontFamily: fonts.heading,
     marginBottom: spacing.sm,
     textAlign: 'center',
+    opacity: 0.9,
   },
   heroSubtitle: {
     color: colors.mutedText,

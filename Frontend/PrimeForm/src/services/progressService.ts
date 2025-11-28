@@ -159,13 +159,19 @@ class ProgressService {
       }
 
       // Calculate water intake
+      // Calculate water intake
+      // When water is marked as "Done", the amount should be set to 100% of target (stored in ml)
       let waterIntake = 0;
       for (const [date, amount] of Object.entries(filteredWater.intake)) {
+        // If water is marked as completed, use the stored amount (which should be 100% of target)
         if (filteredWater.completed[date]) {
+          waterIntake += Number(amount) || 0;
+        } else if (Number(amount) > 0) {
+          // If not completed but has some intake, add it
           waterIntake += Number(amount) || 0;
         }
       }
-      // Convert to liters
+      // Convert to liters (amounts are stored in ml)
       waterIntake = waterIntake / 1000;
 
       // Calculate totals for the period

@@ -502,12 +502,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: colors.white,
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '500',
     fontFamily: fonts.heading,
     textAlign: 'center',
     marginBottom: spacing.xs,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    opacity: 0.9,
   },
   heroSubtitle: {
     color: colors.primary,
