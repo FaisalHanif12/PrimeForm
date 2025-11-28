@@ -17,7 +17,6 @@ import exerciseCompletionService from '../services/exerciseCompletionService';
 import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
-import ExerciseCompletionScreen from './ExerciseCompletionScreen';
 import DecorativeBackground from './DecorativeBackground';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,7 +41,6 @@ export default function WorkoutPlanDisplay({
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
   const [exerciseModalVisible, setExerciseModalVisible] = useState(false);
-  const [completionModalVisible, setCompletionModalVisible] = useState(false);
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -56,14 +54,11 @@ export default function WorkoutPlanDisplay({
       await handleExerciseComplete(selectedExercise);
       await loadCompletionStates();
       
-      // Close detail modal first
+      // Close detail modal and return to workout plan
       setExerciseModalVisible(false);
+      setSelectedExercise(null);
       
-      // Wait for modal to close animation, then show completion screen
-      setTimeout(() => {
-        console.log('🎉 WorkoutPlanDisplay: Showing completion screen');
-        setCompletionModalVisible(true);
-      }, 300);
+      console.log('✅ WorkoutPlanDisplay: Exercise completed, returning to workout plan');
     }
   };
 
@@ -585,21 +580,6 @@ export default function WorkoutPlanDisplay({
     onExercisePress?.(exercise);
   };
 
-  const handleBackToWorkout = () => {
-    console.log('🔙 WorkoutPlanDisplay: Back to workout from completion screen');
-    setCompletionModalVisible(false);
-    setSelectedExercise(null);
-    // Reload completion states to reflect the new completion
-    loadCompletionStates();
-  };
-
-  const handleCloseCompletion = () => {
-    console.log('❌ WorkoutPlanDisplay: Closing completion screen');
-    setCompletionModalVisible(false);
-    setSelectedExercise(null);
-    // Reload completion states to reflect the new completion
-    loadCompletionStates();
-  };
 
   // Removed delete plan handler and button per new requirement
 
@@ -936,13 +916,6 @@ export default function WorkoutPlanDisplay({
         selectedDay={selectedDay}
       />
 
-      {/* Exercise Completion Modal */}
-      <ExerciseCompletionScreen
-        exercise={selectedExercise}
-        visible={completionModalVisible}
-        onClose={handleCloseCompletion}
-        onBackToWorkout={handleBackToWorkout}
-      />
       </View>
   );
 }

@@ -273,8 +273,8 @@ export default function DietPlanDisplay({
       // Initialize meal completion service
       await mealCompletionService.initialize();
       
-      // Load completion states
-      loadCompletionStates();
+      // ✅ Load completion states from prop data + local storage (NO API CALL)
+      loadCompletionStatesFromProp();
       
       // Use the same logic as dashboard to get today's day data
       const todaysDay = getTodaysDayData();
@@ -310,8 +310,9 @@ export default function DietPlanDisplay({
       // Only reload if it's been more than 2 seconds since last focus
       // This prevents unnecessary reloads on quick navigation
       if (isInitialized && now - lastFocusTime.current > 2000) {
-        console.log('🔄 DietPlanDisplay: Reloading completion states after focus');
-        loadCompletionStates();
+        console.log('🔄 DietPlanDisplay: Reloading completion states from local storage after focus');
+        // ✅ Load from local storage only (NO API CALL)
+        loadCompletionStatesFromLocalStorage();
         lastFocusTime.current = now;
       }
     }, [isInitialized])
@@ -321,24 +322,48 @@ export default function DietPlanDisplay({
   useEffect(() => {
     const mealCompletedListener = (event: any) => {
       console.log('🍽️ Meal completed event received:', event);
-      loadCompletionStates();
+      // ✅ Update state directly from event data (NO API CALL)
+      if (event.mealId) {
+        setCompletedMeals(prev => new Set([...prev, event.mealId]));
+      }
     };
 
     const dayCompletedListener = (event: any) => {
       console.log('📅 Day completed event received:', event);
-      loadCompletionStates();
+      // ✅ Update state directly from event data (NO API CALL)
+      if (event.dayNumber && event.weekNumber) {
+        const dayId = `${event.dayNumber}-${event.weekNumber}`;
+        setCompletedDays(prev => new Set([...prev, dayId]));
+      }
+      // Also add by date format if available
+      if (event.dayDate) {
+        setCompletedDays(prev => new Set([...prev, event.dayDate]));
+      }
     };
 
     const dietProgressUpdatedListener = async () => {
       console.log('🔔 Received dietProgressUpdated event - refreshing completion state');
-      await loadCompletionStates();
+      // ✅ Just recalculate progress from current state (NO API CALL)
       const newProgress = getProgressPercentage();
       setProgressPercentage(newProgress);
     };
 
     const waterIntakeUpdatedListener = async () => {
       console.log('💧 Received waterIntakeUpdated event - refreshing completion state');
-      await loadCompletionStates();
+      // ✅ Load from local storage only (NO API CALL)
+      try {
+        const Storage = await import('../utils/storage');
+        const cachedWaterIntake = await Storage.default.getItem('water_intake');
+        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        if (cachedWaterIntake) {
+          setWaterIntake(JSON.parse(cachedWaterIntake));
+        }
+        if (cachedWaterCompleted) {
+          setWaterCompleted(JSON.parse(cachedWaterCompleted));
+        }
+      } catch (error) {
+        console.warn('Could not load water data from local storage:', error);
+      }
     };
 
     const subscription1 = DeviceEventEmitter.addListener('mealCompleted', mealCompletedListener);
@@ -360,38 +385,88 @@ export default function DietPlanDisplay({
     setProgressPercentage(newProgressPercentage);
   }, [completedDays]);
 
-  const loadCompletionStates = async () => {
+  // ✅ Load completion states from local storage only (NO API CALL)
+  const loadCompletionStatesFromLocalStorage = async () => {
     try {
-      // First try to load from the diet plan database
-      const dietPlan = await dietPlanService.getActiveDietPlan();
-      if (dietPlan.success && dietPlan.data) {
-        console.log('📊 Loading completed meals from database:', dietPlan.data.completedMeals);
-        if (dietPlan.data.completedMeals) {
-          const mealIds = dietPlan.data.completedMeals.map((meal: any) => meal.mealId);
+      const Storage = await import('../utils/storage');
+      const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
+      const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
+      const cachedWaterIntake = await Storage.default.getItem('water_intake');
+      const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+      
+      if (cachedCompletedMeals) {
+        const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
+        console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
+        setCompletedMeals(localMeals);
+      }
+      
+      if (cachedCompletedDays) {
+        const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
+        console.log('📊 Loading completed days from local storage:', Array.from(localDays));
+        setCompletedDays(localDays);
+      }
+      
+      if (cachedWaterIntake) {
+        setWaterIntake(JSON.parse(cachedWaterIntake));
+      }
+      
+      if (cachedWaterCompleted) {
+        setWaterCompleted(JSON.parse(cachedWaterCompleted));
+      }
+    } catch (storageError) {
+      console.warn('Could not load from local storage:', storageError);
+    }
+  };
+
+  // ✅ Load completion states from dietPlan prop + local storage (NO API CALL)
+  const loadCompletionStatesFromProp = async () => {
+    try {
+      // Load from dietPlan prop (already has completedMeals and completedDays from initial API call)
+      if (dietPlan.completedMeals && Array.isArray(dietPlan.completedMeals)) {
+        // Handle both object format {mealId: string} and string array format
+        const mealIds = dietPlan.completedMeals.map((meal: any) => 
+          typeof meal === 'string' ? meal : (meal.mealId || meal)
+        ).filter(Boolean);
+        console.log('📊 Loading completed meals from prop:', mealIds);
+        if (mealIds.length > 0) {
           setCompletedMeals(new Set(mealIds));
         }
-        
-        if (dietPlan.data.completedDays) {
-          const dayIds = dietPlan.data.completedDays.map((day: any) => `${day.day}-${day.week}`);
+      }
+      
+      if (dietPlan.completedDays && Array.isArray(dietPlan.completedDays)) {
+        // Handle both object format {day: number, week: number} and string array format
+        const dayIds = dietPlan.completedDays.map((day: any) => {
+          if (typeof day === 'string') {
+            return day;
+          }
+          return `${day.day}-${day.week}`;
+        }).filter(Boolean);
+        console.log('📊 Loading completed days from prop:', dayIds);
+        if (dayIds.length > 0) {
           setCompletedDays(new Set(dayIds));
         }
       }
 
-      // Also load from local storage as backup/sync
+      // Also load from local storage and merge
       try {
         const Storage = await import('../utils/storage');
         const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
         const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
         const cachedWaterIntake = await Storage.default.getItem('water_intake');
+        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
         
         if (cachedCompletedMeals) {
           const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
           console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
           
-          // Merge with database data
-          if (dietPlan.success && dietPlan.data && dietPlan.data.completedMeals) {
-            const dbMeals = new Set<string>(dietPlan.data.completedMeals.map((meal: any) => meal.mealId));
-            const mergedMeals = new Set<string>([...localMeals, ...dbMeals]);
+          // Merge with prop data
+          if (dietPlan.completedMeals && Array.isArray(dietPlan.completedMeals)) {
+            const propMeals = new Set<string>(
+              dietPlan.completedMeals.map((meal: any) => 
+                typeof meal === 'string' ? meal : (meal.mealId || meal)
+              ).filter(Boolean)
+            );
+            const mergedMeals = new Set<string>([...localMeals, ...propMeals]);
             setCompletedMeals(mergedMeals);
             console.log('📊 Merged completed meals:', Array.from(mergedMeals));
           } else {
@@ -403,10 +478,17 @@ export default function DietPlanDisplay({
           const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
           console.log('📊 Loading completed days from local storage:', Array.from(localDays));
           
-          // Merge with database data
-          if (dietPlan.success && dietPlan.data && dietPlan.data.completedDays) {
-            const dbDays = new Set<string>(dietPlan.data.completedDays.map((day: any) => `${day.day}-${day.week}`));
-            const mergedDays = new Set<string>([...localDays, ...dbDays]);
+          // Merge with prop data
+          if (dietPlan.completedDays && Array.isArray(dietPlan.completedDays)) {
+            const propDays = new Set<string>(
+              dietPlan.completedDays.map((day: any) => {
+                if (typeof day === 'string') {
+                  return day;
+                }
+                return `${day.day}-${day.week}`;
+              }).filter(Boolean)
+            );
+            const mergedDays = new Set<string>([...localDays, ...propDays]);
             setCompletedDays(mergedDays);
             console.log('📊 Merged completed days:', Array.from(mergedDays));
           } else {
@@ -418,8 +500,6 @@ export default function DietPlanDisplay({
           setWaterIntake(JSON.parse(cachedWaterIntake));
         }
         
-        // Load water completion status
-        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
         if (cachedWaterCompleted) {
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
@@ -427,33 +507,9 @@ export default function DietPlanDisplay({
         console.warn('Could not load from local storage:', storageError);
       }
     } catch (error) {
-      console.warn('Could not load completion states from database:', error);
-      
+      console.warn('Could not load completion states from prop:', error);
       // Fallback to local storage only
-      try {
-        const Storage = await import('../utils/storage');
-        const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
-        const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
-        const cachedWaterIntake = await Storage.default.getItem('water_intake');
-        
-        if (cachedCompletedMeals) {
-          setCompletedMeals(new Set(JSON.parse(cachedCompletedMeals)));
-        }
-        if (cachedCompletedDays) {
-          setCompletedDays(new Set(JSON.parse(cachedCompletedDays)));
-        }
-        if (cachedWaterIntake) {
-          setWaterIntake(JSON.parse(cachedWaterIntake));
-        }
-        
-        // Load water completion status
-        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
-        if (cachedWaterCompleted) {
-          setWaterCompleted(JSON.parse(cachedWaterCompleted));
-        }
-      } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
-      }
+      await loadCompletionStatesFromLocalStorage();
     }
   };
 
@@ -672,10 +728,18 @@ export default function DietPlanDisplay({
     // Update UI immediately for better UX
     setWaterCompleted(newWaterCompleted);
       
-      // Also update water intake amount when marking as completed
-      const targetAmount = Number(selectedDay.waterIntake) || 2000;
-      const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
-      setWaterIntake(newWaterIntake);
+    // When marking as completed, set water intake to 100% of target (in ml)
+    // When unmarking, set to 0
+    const targetAmount = Number(selectedDay.waterIntake) || 3000; // Default to 3000ml (3L) if not specified
+    const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
+    setWaterIntake(newWaterIntake);
+    
+    console.log('💧 Water completion toggled:', {
+      date: selectedDay.date,
+      isCompleted: !isCompleted,
+      targetAmount,
+      waterIntake: newWaterIntake[selectedDay.date]
+    });
     
     try {
       const Storage = await import('../utils/storage');
@@ -1252,16 +1316,21 @@ export default function DietPlanDisplay({
                     {waterCompleted[selectedDay.date] ? '✅ Completed' : '⏳ Due'}
                   </Text>
                   <Text style={styles.waterAmountText}>
-                    {waterCompleted[selectedDay.date] ? selectedDay.waterIntake : 0}ml / {selectedDay.waterIntake}ml
+                    {waterCompleted[selectedDay.date] 
+                      ? `${((waterIntake[selectedDay.date] || Number(selectedDay.waterIntake) || 3000) / 1000).toFixed(1)}L` 
+                      : `${((waterIntake[selectedDay.date] || 0) / 1000).toFixed(1)}L`} / {((Number(selectedDay.waterIntake) || 3000) / 1000).toFixed(1)}L
                   </Text>
                 </View>
                 
                 <TouchableOpacity
                   style={[
                     styles.waterCompletionButton,
-                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonCompleted
+                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonCompleted,
+                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonDisabled
                   ]}
-                  onPress={toggleWaterCompletion}
+                  onPress={waterCompleted[selectedDay.date] ? undefined : toggleWaterCompletion}
+                  disabled={waterCompleted[selectedDay.date]}
+                  activeOpacity={waterCompleted[selectedDay.date] ? 1 : 0.7}
                 >
                   <Text style={[
                     styles.waterCompletionButtonText,
@@ -2032,6 +2101,9 @@ const styles = StyleSheet.create({
   waterCompletionButtonCompleted: {
     backgroundColor: colors.green,
     borderColor: colors.green,
+  },
+  waterCompletionButtonDisabled: {
+    opacity: 0.6,
   },
   waterCompletionButtonText: {
     color: colors.primary,

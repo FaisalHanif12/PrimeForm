@@ -377,10 +377,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: colors.white,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '500',
     fontFamily: fonts.heading,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    opacity: 0.9,
   },
   headerSubtitle: {
     color: colors.primary,

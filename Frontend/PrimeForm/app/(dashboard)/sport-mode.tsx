@@ -236,12 +236,13 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   pageTitle: {
-    fontSize: 32,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '500',
     color: colors.white,
-    fontFamily: fonts.headingBold,
+    fontFamily: fonts.heading,
     marginBottom: spacing.xs,
     textAlign: 'center',
+    opacity: 0.9,
   },
   pageSubtitle: {
     fontSize: 16,
