@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fonts, radius } from '../theme/colors';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface ChartData {
   labels: string[];
@@ -21,18 +19,29 @@ interface ProgressChartProps {
 }
 
 export default function ProgressChart({ title, data, type, period }: ProgressChartProps) {
-  const chartWidth = screenWidth - spacing.lg * 2;
-  const chartHeight = 220;
+  // Simple, consistent theme for all charts
+  const getChartColor = () => {
+    if (title === 'Calories Trend') {
+      return colors.primary; // Green for calories
+    } else if (title === 'Workout Performance') {
+      return colors.primary; // Green for workouts
+    } else { // Hydration Tracking
+      return colors.blue; // Blue for hydration
+    }
+  };
 
-  const renderCustomChart = () => {
+  const chartColor = getChartColor();
+
+  const renderChart = () => {
     const values = data.datasets[0]?.data || [];
+    if (values.length === 0) return null;
+
     const maxValue = Math.max(...values, 1);
     const minValue = Math.min(...values, 0);
     const range = maxValue - minValue || 1;
 
     return (
-      <View style={styles.customChart}>
-        {/* Chart Area */}
+      <View style={styles.chartWrapper}>
         <View style={styles.chartArea}>
           {type === 'bar' ? (
             // Bar Chart
@@ -44,27 +53,28 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
                       styles.bar,
                       { 
                         height: `${(value / maxValue) * 100}%`,
-                        backgroundColor: data.datasets[0]?.color || colors.primary
+                        backgroundColor: chartColor
                       }
                     ]} 
                   />
-                  <Text style={styles.barValue}>{Math.round(value)}</Text>
                 </View>
               ))}
             </View>
           ) : (
             // Line/Area Chart
             <View style={styles.lineContainer}>
+              {/* Subtle grid lines */}
               <View style={styles.gridLines}>
                 {[0, 25, 50, 75, 100].map((percent) => (
                   <View key={percent} style={[styles.gridLine, { bottom: `${percent}%` }]} />
                 ))}
               </View>
               
+              {/* Chart line/area */}
               <View style={styles.dataLine}>
                 {values.map((value, index) => {
                   const heightPercent = ((value - minValue) / range) * 100;
-                  const leftPercent = (index / (values.length - 1)) * 100;
+                  const leftPercent = values.length > 1 ? (index / (values.length - 1)) * 100 : 50;
                   
                   return (
                     <View key={index}>
@@ -75,7 +85,7 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
                           {
                             left: `${leftPercent}%`,
                             bottom: `${heightPercent}%`,
-                            backgroundColor: data.datasets[0]?.color || colors.primary
+                            backgroundColor: chartColor
                           }
                         ]} 
                       />
@@ -88,7 +98,7 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
                             {
                               left: `${leftPercent}%`,
                               height: `${heightPercent}%`,
-                              backgroundColor: (data.datasets[0]?.color || colors.primary) + '30'
+                              backgroundColor: chartColor + '20'
                             }
                           ]} 
                         />
@@ -119,48 +129,88 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
     const max = Math.max(...values);
     const min = Math.min(...values);
     const latest = values[values.length - 1];
-    const previous = values[values.length - 2];
+    const previous = values[values.length - 2] || latest;
     const trend = latest > previous ? 'up' : latest < previous ? 'down' : 'stable';
 
-    return { average, max, min, latest, trend };
+    // Find the index of highest and lowest values
+    const maxIndex = values.findIndex(val => val === max);
+    const minIndex = values.findIndex(val => val === min);
+    
+    // Get the period label for highest and lowest
+    const highestPeriod = maxIndex >= 0 && maxIndex < data.labels.length ? data.labels[maxIndex] : '';
+    const lowestPeriod = minIndex >= 0 && minIndex < data.labels.length ? data.labels[minIndex] : '';
+
+    return { average, max, min, latest, trend, highestPeriod, lowestPeriod };
   };
 
   const insights = getInsights();
 
   return (
     <View style={styles.container}>
+      {/* Clean Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.period}>{period.charAt(0).toUpperCase() + period.slice(1)}</Text>
+        <View style={styles.periodBadge}>
+          <Text style={styles.periodText}>
+            {period.charAt(0).toUpperCase() + period.slice(1)}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.chartContainer}>
-        {renderCustomChart()}
-      </View>
+      {/* Chart Visualization */}
+      {renderChart()}
 
+      {/* Clean Insights */}
       {insights && (
         <View style={styles.insightsContainer}>
           <View style={styles.insightRow}>
             <View style={styles.insightItem}>
               <Text style={styles.insightLabel}>Average</Text>
-              <Text style={styles.insightValue}>{Math.round(insights.average)}</Text>
+              <Text style={[styles.insightValue, { color: chartColor }]}>
+                {Math.round(insights.average)}
+              </Text>
             </View>
+
+            <View style={styles.insightDivider} />
+
             <View style={styles.insightItem}>
               <Text style={styles.insightLabel}>Highest</Text>
-              <Text style={styles.insightValue}>{insights.max}</Text>
+              <Text style={[styles.insightValue, { color: chartColor }]}>
+                {Math.round(insights.max)}
+              </Text>
             </View>
+
+            <View style={styles.insightDivider} />
+
             <View style={styles.insightItem}>
               <Text style={styles.insightLabel}>Lowest</Text>
-              <Text style={styles.insightValue}>{insights.min}</Text>
+              <Text style={[styles.insightValue, { color: chartColor }]}>
+                {Math.round(insights.min)}
+              </Text>
             </View>
+
+            <View style={styles.insightDivider} />
+
             <View style={styles.insightItem}>
               <Text style={styles.insightLabel}>Trend</Text>
-              <Text style={[styles.insightValue, {
-                color: insights.trend === 'up' ? colors.green : 
-                      insights.trend === 'down' ? colors.error : colors.mutedText
-              }]}>
-                {insights.trend === 'up' ? '↗️' : insights.trend === 'down' ? '↘️' : '→'}
-              </Text>
+              <View style={[
+                styles.trendBadge,
+                {
+                  backgroundColor: insights.trend === 'up' ? colors.green + '20' : 
+                                 insights.trend === 'down' ? colors.error + '20' : 
+                                 colors.mutedText + '20',
+                }
+              ]}>
+                <Text style={[
+                  styles.trendText,
+                  {
+                    color: insights.trend === 'up' ? colors.green : 
+                          insights.trend === 'down' ? colors.error : colors.mutedText
+                  }
+                ]}>
+                  {insights.trend === 'up' ? '↑' : insights.trend === 'down' ? '↓' : '→'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -173,9 +223,9 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
     marginBottom: spacing.lg,
-    elevation: 4,
+    padding: spacing.lg,
+    elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -185,36 +235,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   title: {
-    color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+    color: colors.white,
+    letterSpacing: 0.3,
   },
-  period: {
-    color: colors.mutedText,
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    backgroundColor: colors.cardBorder + '30',
+  periodBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 4,
     borderRadius: radius.sm,
+    backgroundColor: colors.primary + '15',
   },
-  chartContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
+  periodText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  customChart: {
-    width: '100%',
-    height: 220,
+  chartWrapper: {
+    marginBottom: spacing.lg,
   },
   chartArea: {
-    flex: 1,
-    position: 'relative',
-    marginBottom: spacing.md,
+    height: 180,
+    marginBottom: spacing.sm,
   },
   
   // Bar Chart Styles
@@ -223,7 +272,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     height: '100%',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   barColumn: {
     flex: 1,
@@ -233,16 +282,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   bar: {
-    width: '80%',
-    borderRadius: radius.sm,
-    marginBottom: spacing.xs,
+    width: '85%',
+    borderRadius: radius.xs,
     minHeight: 4,
-  },
-  barValue: {
-    color: colors.mutedText,
-    fontSize: 10,
-    fontWeight: '500',
-    fontFamily: fonts.body,
   },
   
   // Line/Area Chart Styles
@@ -259,7 +301,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: 1,
-    backgroundColor: colors.cardBorder + '40',
+    backgroundColor: colors.cardBorder,
   },
   dataLine: {
     position: 'relative',
@@ -268,11 +310,11 @@ const styles = StyleSheet.create({
   },
   dataPoint: {
     position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: -4,
-    marginBottom: -4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: -3,
+    marginBottom: -3,
     borderWidth: 2,
     borderColor: colors.surface,
   },
@@ -287,16 +329,19 @@ const styles = StyleSheet.create({
   labelsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    marginTop: spacing.xs,
   },
   chartLabel: {
     color: colors.mutedText,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     fontFamily: fonts.body,
     textAlign: 'center',
     flex: 1,
   },
+  
+  // Insights
   insightsContainer: {
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
@@ -304,23 +349,42 @@ const styles = StyleSheet.create({
   },
   insightRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   insightItem: {
-    alignItems: 'center',
     flex: 1,
+    alignItems: 'center',
+  },
+  insightDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: colors.cardBorder,
+    marginHorizontal: spacing.xs,
   },
   insightLabel: {
     color: colors.mutedText,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     fontFamily: fonts.body,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.xs / 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   insightValue: {
-    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     fontFamily: fonts.heading,
+    color: colors.white,
+  },
+  trendBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
