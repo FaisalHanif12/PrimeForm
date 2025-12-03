@@ -240,10 +240,17 @@ class AITrainerService {
     try {
       // Check if API key is available
       if (!OPENROUTER_API_KEY) {
+        console.error('❌ OPENROUTER_API_KEY is missing from environment variables');
+        console.error('❌ Please check your .env file for EXPO_PUBLIC_OPENROUTER_API_KEY');
         throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
       }
       
       console.log('🤖 Sending message to AI Trainer:', message);
+      console.log('🔑 API Key Status:', {
+        present: !!OPENROUTER_API_KEY,
+        length: OPENROUTER_API_KEY.length,
+        startsWith: OPENROUTER_API_KEY.substring(0, 10) + '...'
+      });
 
       // Get user context for personalization
       const userProfile = await userProfileService.getUserProfile();
@@ -277,7 +284,15 @@ class AITrainerService {
       });
 
       if (!response.ok) {
-        throw new Error(`AI API request failed: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ OpenRouter API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          apiKeyPresent: !!OPENROUTER_API_KEY,
+          apiKeyLength: OPENROUTER_API_KEY?.length || 0
+        });
+        throw new Error(`API request failed with status: ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
@@ -304,6 +319,16 @@ class AITrainerService {
 
     } catch (error) {
       console.error('❌ Error sending message to AI trainer:', error);
+      
+      // Check if it's an API key issue
+      if (error instanceof Error && error.message.includes('401')) {
+        console.error('❌ Authentication failed - API key may be missing or invalid');
+        console.error('❌ API Key check:', {
+          keyPresent: !!OPENROUTER_API_KEY,
+          keyLength: OPENROUTER_API_KEY?.length || 0,
+          envVar: process.env.EXPO_PUBLIC_OPENROUTER_API_KEY ? 'Present' : 'Missing'
+        });
+      }
       
       // Fallback response
       const fallbackResponse = this.getFallbackResponse(message);
