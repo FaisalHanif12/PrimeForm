@@ -4,11 +4,17 @@ import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
+import Sidebar from '../../src/components/Sidebar';
+import ProfilePage from '../../src/components/ProfilePage';
+import NotificationModal from '../../src/components/NotificationModal';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useToast } from '../../src/context/ToastContext';
+import { useNotifications } from '../../src/contexts/NotificationContext';
 import { colors, spacing, fonts, typography, radius } from '../../src/theme/colors';
 import ProgressChart, { ProgressChartData } from '../../src/components/ProgressChart';
 import progressService from '../../src/services/progressService';
+import userProfileService from '../../src/services/userProfileService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -44,6 +50,8 @@ export default function ProgressDetailsScreen() {
   const router = useRouter();
   const { user } = useAuthContext();
   const { t } = useLanguage();
+  const { showToast } = useToast();
+  const { unreadCount } = useNotifications();
 
   const [mode, setMode] = useState<'weekly' | 'monthly'>('weekly');
   const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
@@ -54,6 +62,10 @@ export default function ProgressDetailsScreen() {
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [charts, setCharts] = useState<ProgressCharts | null>(null);
   const timelineScrollRef = useRef<ScrollView>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showProfilePage, setShowProfilePage] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -161,6 +173,85 @@ export default function ProgressDetailsScreen() {
     return Math.round(((workoutCompletion + mealCompletion + hydrationRatio) / 3) * 100);
   })();
 
+  const handleProfilePress = () => {
+    setSidebarVisible(true);
+  };
+
+  const handleUpdateUserInfo = async (updatedUserInfo: any) => {
+    try {
+      const response = await userProfileService.createOrUpdateProfile(updatedUserInfo);
+      if (response.success) {
+        setUserInfo(updatedUserInfo);
+      } else {
+        showToast('error', 'Failed to update profile. Please try again.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to update profile. Please check your connection and try again.');
+    }
+  };
+
+  // Load user info when profile page is opened if it's missing
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      const loadUserInfo = async () => {
+        try {
+          const cachedData = userProfileService.getCachedData();
+          if (cachedData && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+        }
+      };
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
+
+  const handleSidebarMenuPress = async (action: string) => {
+    switch (action) {
+      case 'profile':
+        setShowProfilePage(true);
+        break;
+      case 'sport-mode':
+        router.push('/(dashboard)/sport-mode');
+        break;
+      case 'streak':
+        router.push('/(dashboard)/streak');
+        break;
+      case 'ai-trainer':
+        router.push('/(dashboard)/ai-trainer');
+        break;
+      case 'language':
+        router.push('/(dashboard)/language');
+        break;
+      case 'settings':
+        router.push('/(dashboard)/settings');
+        break;
+      case 'subscription':
+        router.push('/(dashboard)/subscription');
+        break;
+      case 'contact':
+        router.push('/(dashboard)/contact');
+        break;
+      case 'logout':
+        try {
+          const { authService } = await import('../../src/services/authService');
+          await authService.logout();
+          router.replace('/auth/login');
+        } catch (error) {
+          showToast('error', 'Failed to logout. Please try again.');
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     if (tab === 'home') {
       router.push('/(dashboard)');
@@ -207,9 +298,9 @@ export default function ProgressDetailsScreen() {
       <SafeAreaView style={styles.safeArea}>
         <DashboardHeader
           userName={user?.fullName || t('common.user')}
-          onProfilePress={() => {}}
-          onNotificationPress={() => {}}
-          notificationCount={0}
+          onProfilePress={handleProfilePress}
+          onNotificationPress={() => setShowNotificationModal(true)}
+          notificationCount={unreadCount}
         />
 
         <ScrollView
@@ -455,6 +546,28 @@ export default function ProgressDetailsScreen() {
         <BottomNavigation
           activeTab=""
           onTabPress={handleTabPress}
+        />
+
+        <Sidebar
+          visible={sidebarVisible}
+          onClose={() => setSidebarVisible(false)}
+          onMenuItemPress={handleSidebarMenuPress}
+          userName={user?.fullName || t('common.user')}
+          userEmail={user?.email || 'user@example.com'}
+          userInfo={userInfo}
+          badges={userInfo?.badges || []}
+        />
+
+        <ProfilePage
+          visible={showProfilePage}
+          onClose={() => setShowProfilePage(false)}
+          userInfo={userInfo}
+          onUpdateUserInfo={handleUpdateUserInfo}
+        />
+
+        <NotificationModal
+          visible={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
         />
       </SafeAreaView>
     </DecorativeBackground>
