@@ -170,8 +170,10 @@ export default function ProgressDetailsScreen() {
       router.push('/(dashboard)/diet');
     } else if (tab === 'gym') {
       router.push('/(dashboard)/gym');
+    } else if (tab === 'progress') {
+      // Navigate back to main progress page
+      router.push('/(dashboard)/progress');
     }
-    // Already on progress page
   };
 
   const metricPercentages = stats
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: 0,
-    paddingBottom: spacing.xl * 2,
+    paddingBottom: spacing.xl * 4, // Extra padding to ensure water hydration card is fully visible
   },
   // Hero Section
   heroSection: {
