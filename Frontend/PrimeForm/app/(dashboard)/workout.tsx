@@ -44,6 +44,8 @@ export default function WorkoutScreen() {
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const [generationTimer, setGenerationTimer] = useState(0);
   const [showGenerationModal, setShowGenerationModal] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasCheckedLocalStorage, setHasCheckedLocalStorage] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -109,13 +111,68 @@ export default function WorkoutScreen() {
           setIsLoading(false);
         }
 
-        // Load workout plan from local cache only (no API call)
+        // ✅ CRITICAL: First check local storage immediately (synchronous check)
+        // This prevents showing generation screen if plan exists locally
+        setLoadError(null);
+        try {
+          const Storage = await import('../../src/utils/storage');
+          const cachedPlan = await Storage.default.getItem('cached_workout_plan');
+          if (cachedPlan) {
+            const plan = JSON.parse(cachedPlan);
+            if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+              console.log('✅ Found workout plan in local storage, using it immediately');
+              setWorkoutPlan(plan);
+              setHasCheckedLocalStorage(true);
+              // Still try to sync with database in background, but don't wait
+              aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
+                if (dbPlan && dbPlan !== plan) {
+                  setWorkoutPlan(dbPlan);
+                }
+              }).catch(() => {
+                // Ignore background sync errors
+              });
+              setIsLoadingPlan(false);
+              setInitialLoadComplete(true);
+              return;
+            }
+          }
+        } catch (localError) {
+          console.warn('Could not check local storage:', localError);
+        }
+        
+        setHasCheckedLocalStorage(true);
+        
+        // Load workout plan from database
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
         if (plan) {
           setWorkoutPlan(plan);
+        } else {
+          console.log('ℹ️ No workout plan found - user needs to generate one');
         }
       } catch (error) {
-        // Error during initialization
+        console.error('❌ Error loading workout plan:', error);
+        
+        // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
+        try {
+          const Storage = await import('../../src/utils/storage');
+          const cachedPlan = await Storage.default.getItem('cached_workout_plan');
+          if (cachedPlan) {
+            const plan = JSON.parse(cachedPlan);
+            if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+              console.log('✅ Fallback: Found workout plan in local storage after error');
+              setWorkoutPlan(plan);
+              setLoadError(null); // Clear error since we found plan locally
+              setIsLoadingPlan(false);
+              setInitialLoadComplete(true);
+              return;
+            }
+          }
+        } catch (localError) {
+          console.warn('Could not check local storage on error:', localError);
+        }
+        
+        // Only set error if we truly have no plan
+        setLoadError('Failed to load workout plan. Please check your connection.');
       } finally {
         setIsLoadingPlan(false);
         setInitialLoadComplete(true);
@@ -411,8 +468,9 @@ export default function WorkoutScreen() {
 
   // Render content based on user info status
   const renderContent = () => {
-    // Show loading only during initial load or when loading plan
-    if ((isLoading && !initialLoadComplete) || isLoadingPlan) {
+    // ✅ CRITICAL: Show loading while checking local storage or loading plan
+    // Don't show generation screen until we've confirmed no plan exists
+    if (!hasCheckedLocalStorage || isLoadingPlan || (isLoading && !initialLoadComplete)) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.primary} size="large" />
@@ -421,8 +479,9 @@ export default function WorkoutScreen() {
       );
     }
 
-    // If user has workout plan, show the workout plan display within the normal layout
-    if (workoutPlan && initialLoadComplete) {
+    // ✅ CRITICAL: If we have a workout plan, show it immediately
+    // This prevents showing generation screen when plan exists
+    if (workoutPlan && workoutPlan.weeklyPlan && Array.isArray(workoutPlan.weeklyPlan) && workoutPlan.weeklyPlan.length > 0) {
       return (
         <WorkoutPlanDisplay
           workoutPlan={workoutPlan}
@@ -436,6 +495,52 @@ export default function WorkoutScreen() {
       );
     }
 
+    // ✅ CRITICAL: Show error screen instead of generation screen if there was a load error
+    // Only show error if we've confirmed there's no plan in local storage
+    if (loadError && hasCheckedLocalStorage && !workoutPlan) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Unable to Load Workout Plan</Text>
+          <Text style={styles.errorMessage}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={async () => {
+              setIsLoadingPlan(true);
+              setLoadError(null);
+              setHasCheckedLocalStorage(false);
+              // Reload by re-running initialization
+              const Storage = await import('../../src/utils/storage');
+              const cachedPlan = await Storage.default.getItem('cached_workout_plan');
+              if (cachedPlan) {
+                const plan = JSON.parse(cachedPlan);
+                if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                  setWorkoutPlan(plan);
+                  setHasCheckedLocalStorage(true);
+                  setIsLoadingPlan(false);
+                  return;
+                }
+              }
+              try {
+                const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+                if (plan) {
+                  setWorkoutPlan(plan);
+                }
+              } catch (error) {
+                setLoadError('Failed to load workout plan. Please check your connection.');
+              } finally {
+                setIsLoadingPlan(false);
+                setHasCheckedLocalStorage(true);
+              }
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Only show generation screens if we've confirmed no plan exists
     if (userInfo) {
       // User has profile - show profile summary and confirm button
       return (
@@ -960,6 +1065,49 @@ const styles = StyleSheet.create({
   startButtonText: {
     color: colors.white,
     fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+
+  // Error Screen Styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  errorTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  errorMessage: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 24,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: fonts.heading,
   },

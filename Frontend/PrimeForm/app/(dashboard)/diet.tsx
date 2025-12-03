@@ -39,6 +39,8 @@ export default function DietScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasCheckedLocalStorage, setHasCheckedLocalStorage] = useState(false);
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -298,12 +300,66 @@ export default function DietScreen() {
 
   const loadDietPlan = async () => {
     try {
+      setLoadError(null);
+      
+      // ✅ CRITICAL: First check local storage immediately (synchronous check)
+      // This prevents showing generation screen if plan exists locally
+      try {
+        const Storage = await import('../../src/utils/storage');
+        const cachedPlan = await Storage.default.getItem('cached_diet_plan');
+        if (cachedPlan) {
+          const plan = JSON.parse(cachedPlan);
+          if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+            console.log('✅ Found diet plan in local storage, using it immediately');
+            setDietPlan(plan);
+            setHasCheckedLocalStorage(true);
+            // Still try to sync with database in background, but don't wait
+            aiDietService.loadDietPlanFromDatabase().then((dbPlan) => {
+              if (dbPlan && dbPlan !== plan) {
+                setDietPlan(dbPlan);
+              }
+            }).catch(() => {
+              // Ignore background sync errors
+            });
+            return;
+          }
+        }
+      } catch (localError) {
+        console.warn('Could not check local storage:', localError);
+      }
+      
+      setHasCheckedLocalStorage(true);
+      
+      // If no local cache, try to load from database
       const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase();
       if (dietPlanFromDB) {
         setDietPlan(dietPlanFromDB);
+      } else {
+        // No plan found - this is OK, user needs to generate one
+        console.log('ℹ️ No diet plan found - user needs to generate one');
       }
     } catch (error) {
-      // Failed to load diet plan
+      console.error('❌ Error loading diet plan:', error);
+      
+      // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
+      try {
+        const Storage = await import('../../src/utils/storage');
+        const cachedPlan = await Storage.default.getItem('cached_diet_plan');
+        if (cachedPlan) {
+          const plan = JSON.parse(cachedPlan);
+          if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+            console.log('✅ Fallback: Found diet plan in local storage after error');
+            setDietPlan(plan);
+            setLoadError(null); // Clear error since we found plan locally
+            return;
+          }
+        }
+      } catch (localError) {
+        console.warn('Could not check local storage on error:', localError);
+      }
+      
+      // Only set error if we truly have no plan
+      setLoadError('Failed to load diet plan. Please check your connection.');
     }
   };
 
@@ -321,8 +377,9 @@ export default function DietScreen() {
 
   // Render content based on user info and diet plan status
   const renderContent = () => {
-    // Show loading only during initial load or when loading plan
-    if ((isLoading && !initialLoadComplete) || isLoadingPlan) {
+    // ✅ CRITICAL: Show loading while checking local storage or loading plan
+    // Don't show generation screen until we've confirmed no plan exists
+    if (!hasCheckedLocalStorage || isLoadingPlan || (isLoading && !initialLoadComplete)) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.primary} size="large" />
@@ -331,8 +388,9 @@ export default function DietScreen() {
       );
     }
 
-    // If user has diet plan, show the diet plan display within the normal layout
-    if (dietPlan && userInfo && initialLoadComplete) {
+    // ✅ CRITICAL: If we have a diet plan (even if userInfo is null), show it
+    // This prevents showing generation screen when plan exists but userInfo hasn't loaded yet
+    if (dietPlan && dietPlan.weeklyPlan && Array.isArray(dietPlan.weeklyPlan) && dietPlan.weeklyPlan.length > 0) {
       return (
         <DietPlanDisplay
           dietPlan={dietPlan}
@@ -350,6 +408,30 @@ export default function DietScreen() {
       );
     }
 
+    // ✅ CRITICAL: Show error screen instead of generation screen if there was a load error
+    // Only show error if we've confirmed there's no plan in local storage
+    if (loadError && hasCheckedLocalStorage && !dietPlan) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Unable to Load Diet Plan</Text>
+          <Text style={styles.errorMessage}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={async () => {
+              setIsLoadingPlan(true);
+              setLoadError(null);
+              await loadDietPlan();
+              setIsLoadingPlan(false);
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Only show generation screens if we've confirmed no plan exists
     if (userInfo) {
       // User has profile but no diet plan - show profile summary and generate button
       return (
@@ -389,6 +471,7 @@ export default function DietScreen() {
     }
 
     // User has no profile - show beautiful start card
+    // ✅ CRITICAL: Only show this if we've confirmed no plan exists
     return (
       <View style={styles.startCardContainer}>
         <View style={styles.startCard}>
@@ -779,6 +862,49 @@ const styles = StyleSheet.create({
   startButtonText: {
     color: colors.white,
     fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+
+  // Error Screen Styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+    marginHorizontal: spacing.lg,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: spacing.lg,
+  },
+  errorTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  errorMessage: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 24,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: fonts.heading,
   },

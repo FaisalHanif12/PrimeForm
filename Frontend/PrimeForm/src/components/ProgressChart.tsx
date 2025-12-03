@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, fonts, radius } from '../theme/colors';
 
-interface ChartData {
+export interface ProgressChartData {
   labels: string[];
   datasets: {
     data: number[];
@@ -13,7 +13,7 @@ interface ChartData {
 
 interface ProgressChartProps {
   title: string;
-  data: ChartData;
+  data: ProgressChartData;
   type: 'line' | 'bar' | 'area';
   period: 'daily' | 'weekly' | 'monthly';
 }
@@ -40,82 +40,59 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
     const minValue = Math.min(...values, 0);
     const range = maxValue - minValue || 1;
 
+    const isBarChart = type === 'bar';
+
     return (
       <View style={styles.chartWrapper}>
         <View style={styles.chartArea}>
-          {type === 'bar' ? (
-            // Bar Chart
+          {/* Grid lines for reference */}
+          <View style={styles.gridLines}>
+            {[0, 25, 50, 75, 100].map((percent) => (
+              <View key={percent} style={[styles.gridLine, { bottom: `${percent}%` }]} />
+            ))}
+          </View>
+
+          {isBarChart ? (
             <View style={styles.barContainer}>
-              {values.map((value, index) => (
-                <View key={index} style={styles.barColumn}>
-                  <View 
-                    style={[
-                      styles.bar,
-                      { 
-                        height: `${(value / maxValue) * 100}%`,
-                        backgroundColor: chartColor
-                      }
-                    ]} 
-                  />
-                </View>
-              ))}
+              {values.map((value, index) => {
+                const heightPercent = maxValue === 0 ? 0 : (value / maxValue) * 100;
+                return (
+                  <View key={index} style={styles.barColumn}>
+                    <View
+                      style={[
+                        styles.bar,
+                        {
+                          height: `${Math.max(heightPercent, 4)}%`,
+                          backgroundColor: chartColor,
+                        }
+                      ]}
+                    />
+                  </View>
+                );
+              })}
             </View>
           ) : (
-            // Line/Area Chart
             <View style={styles.lineContainer}>
-              {/* Subtle grid lines */}
-              <View style={styles.gridLines}>
-                {[0, 25, 50, 75, 100].map((percent) => (
-                  <View key={percent} style={[styles.gridLine, { bottom: `${percent}%` }]} />
-                ))}
-              </View>
-              
-              {/* Chart line/area */}
-              <View style={styles.dataLine}>
-                {values.map((value, index) => {
-                  const heightPercent = ((value - minValue) / range) * 100;
-                  const leftPercent = values.length > 1 ? (index / (values.length - 1)) * 100 : 50;
-                  
-                  return (
-                    <View key={index}>
-                      {/* Data Point */}
-                      <View 
-                        style={[
-                          styles.dataPoint,
-                          {
-                            left: `${leftPercent}%`,
-                            bottom: `${heightPercent}%`,
-                            backgroundColor: chartColor
-                          }
-                        ]} 
-                      />
-                      
-                      {/* Area Fill for area charts */}
-                      {type === 'area' && (
-                        <View 
-                          style={[
-                            styles.areaFill,
-                            {
-                              left: `${leftPercent}%`,
-                              height: `${heightPercent}%`,
-                              backgroundColor: chartColor + '20'
-                            }
-                          ]} 
-                        />
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
+              {values.map((value, index) => {
+                const bottomPercent = ((value - minValue) / range) * 100;
+                const leftPercent =
+                  values.length > 1 ? (index / (values.length - 1)) * 100 : 50;
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.dataPoint,
+                      {
+                        left: `${leftPercent}%`,
+                        bottom: `${bottomPercent}%`,
+                        backgroundColor: chartColor,
+                      }
+                    ]}
+                  />
+                );
+              })}
             </View>
           )}
-        </View>
-
-        {/* Labels */}
-        <View style={styles.labelsContainer}>
-          {data.labels.map((label, index) => (
-            <Text key={index} style={styles.chartLabel}>{label}</Text>
-          ))}
         </View>
       </View>
     );
@@ -163,6 +140,7 @@ export default function ProgressChart({ title, data, type, period }: ProgressCha
       {/* Clean Insights */}
       {insights && (
         <View style={styles.insightsContainer}>
+          {/* Data Row - Labels and Values */}
           <View style={styles.insightRow}>
             <View style={styles.insightItem}>
               <Text style={styles.insightLabel}>Average</Text>
@@ -264,6 +242,7 @@ const styles = StyleSheet.create({
   chartArea: {
     height: 180,
     marginBottom: spacing.sm,
+    position: 'relative',
   },
   
   // Bar Chart Styles
@@ -293,20 +272,17 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   gridLines: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   gridLine: {
     position: 'absolute',
     width: '100%',
     height: 1,
     backgroundColor: colors.cardBorder,
+    opacity: 0.4,
   },
-  dataLine: {
-    position: 'relative',
-    width: '100%',
-    height: '100%',
+  lineLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   dataPoint: {
     position: 'absolute',
@@ -318,34 +294,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.surface,
   },
-  areaFill: {
-    position: 'absolute',
-    width: 2,
-    bottom: 0,
-    marginLeft: -1,
-  },
-  
-  // Labels
-  labelsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  chartLabel: {
-    color: colors.mutedText,
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-    textAlign: 'center',
-    flex: 1,
-  },
-  
   // Insights
   insightsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
-    paddingTop: spacing.md,
+    marginTop: spacing.lg,
   },
   insightRow: {
     flexDirection: 'row',
