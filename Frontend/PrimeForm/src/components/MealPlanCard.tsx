@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -59,13 +58,12 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
               {meals.map((meal, index) => {
                 const isCompleted = isMealCompleted(meal);
                 return (
-                <View key={index} style={styles.mealItem}>
+                <View key={index} style={[
+                  styles.mealItem,
+                  isCompleted && styles.mealItemCompleted
+                ]}>
                   <View style={styles.mealIcon}>
-                    {isCompleted ? (
-                      <Text style={styles.checkmark}>✓</Text>
-                    ) : (
-                      <Ionicons name="restaurant" size={16} color={colors.mutedText} />
-                    )}
+                    <Ionicons name="restaurant" size={16} color={colors.mutedText} />
                   </View>
                   
                   <View style={styles.mealContent}>
@@ -75,6 +73,12 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
                       <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>{meal.weight}</Text>
                     </View>
                   </View>
+                  
+                  {isCompleted && (
+                    <View style={styles.completedBadge}>
+                      <Text style={styles.completedIcon}>✓</Text>
+                    </View>
+                  )}
                 </View>
                 );
               })}
@@ -163,9 +167,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   mealNameCompleted: {
-    textDecorationLine: 'line-through',
     color: colors.mutedText,
-    opacity: 0.6,
+    textDecorationLine: 'line-through',
   },
   mealDetails: {
     flexDirection: 'row',
@@ -177,22 +180,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   mealCaloriesCompleted: {
-    textDecorationLine: 'line-through',
     color: colors.mutedText,
-    opacity: 0.6,
+    textDecorationLine: 'line-through',
   },
   mealWeight: {
     color: colors.mutedText,
     fontSize: typography.small,
   },
   mealWeightCompleted: {
+    color: colors.mutedText + '80',
     textDecorationLine: 'line-through',
-    opacity: 0.6,
   },
-  checkmark: {
-    color: colors.green,
-    fontSize: 18,
-    fontWeight: '700',
+  // Completion Styles
+  mealItemCompleted: {
+    opacity: 0.7,
+  },
+  completedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedIcon: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
   },
   viewAllButton: {
     flexDirection: 'row',

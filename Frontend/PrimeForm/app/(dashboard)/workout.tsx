@@ -123,14 +123,23 @@ export default function WorkoutScreen() {
               console.log('✅ Found workout plan in local storage, using it immediately');
               setWorkoutPlan(plan);
               setHasCheckedLocalStorage(true);
-              // Still try to sync with database in background, but don't wait
-              aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
-                if (dbPlan && dbPlan !== plan) {
-                  setWorkoutPlan(dbPlan);
-                }
-              }).catch(() => {
-                // Ignore background sync errors
-              });
+              // PERFORMANCE: Only sync in background if cache might be stale (older than 5 minutes)
+              // This prevents unnecessary API calls when data is fresh
+              const planTimestamp = plan.updatedAt || plan.createdAt;
+              const shouldSync = planTimestamp 
+                ? (Date.now() - new Date(planTimestamp).getTime() > 5 * 60 * 1000)
+                : true; // If no timestamp, sync once to be safe
+              
+              if (shouldSync) {
+                // Only sync if cache might be stale
+                aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
+                  if (dbPlan && dbPlan !== plan) {
+                    setWorkoutPlan(dbPlan);
+                  }
+                }).catch(() => {
+                  // Ignore background sync errors
+                });
+              }
               setIsLoadingPlan(false);
               setInitialLoadComplete(true);
               return;
