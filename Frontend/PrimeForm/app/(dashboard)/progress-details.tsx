@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
@@ -52,6 +52,7 @@ export default function ProgressDetailsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [charts, setCharts] = useState<ProgressCharts | null>(null);
+  const timelineScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -79,8 +80,13 @@ export default function ProgressDetailsScreen() {
     init();
   }, []);
 
-  // Auto-select current period when switching modes
+  // Auto-select current period when switching modes and reset scroll position
   useEffect(() => {
+    // Reset horizontal scroll position when switching modes
+    if (timelineScrollRef.current) {
+      timelineScrollRef.current.scrollTo({ x: 0, animated: false });
+    }
+    
     if (mode === 'weekly' && availableWeeks.length > 0 && !selectedWeek) {
       setSelectedWeek(availableWeeks[availableWeeks.length - 1]);
     }
@@ -96,21 +102,26 @@ export default function ProgressDetailsScreen() {
       try {
         setIsLoading(true);
         const period = mode;
+        
+        // Load stats for the selected week/month - ensures exact data
         const statsResponse = await progressService.getProgressStats(
           period,
           mode === 'weekly' ? selectedWeek || undefined : undefined,
           mode === 'monthly' ? selectedMonth || undefined : undefined,
-          false
+          false // Use cached data for performance, but ensure it's synced
         );
         if (statsResponse.success && statsResponse.data) {
           setStats(statsResponse.data as ProgressStats);
+        } else {
+          console.warn('Failed to load stats:', statsResponse.message);
         }
 
+        // Load chart data showing trend leading up to selected week/month
         const chartsResponse = await progressService.getChartData(
           period,
           mode === 'weekly' ? selectedWeek || undefined : undefined,
           mode === 'monthly' ? selectedMonth || undefined : undefined,
-          false
+          false // Use cached data for performance
         );
         if (chartsResponse.success && chartsResponse.data) {
           setCharts({
@@ -118,7 +129,12 @@ export default function ProgressDetailsScreen() {
             workouts: chartsResponse.data.workouts,
             water: chartsResponse.data.water,
           });
+        } else {
+          console.warn('Failed to load charts:', chartsResponse.message);
+          setCharts(null);
         }
+      } catch (error) {
+        console.error('Error loading progress details:', error);
       } finally {
         setIsLoading(false);
       }
@@ -159,10 +175,13 @@ export default function ProgressDetailsScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>Detailed Progress</Text>
-          <Text style={styles.subtitle}>
-            Explore your weekly and monthly performance with AI-synced analytics.
-          </Text>
+          {/* Hero Section */}
+          <View style={styles.heroSection}>
+            <Text style={styles.heroTitle}>Detailed Progress</Text>
+            <Text style={styles.heroSubtitle}>
+              Explore your weekly and monthly analytics
+            </Text>
+          </View>
 
           {/* Mode selector */}
           <View style={styles.modeSelector}>
@@ -204,10 +223,12 @@ export default function ProgressDetailsScreen() {
               </View>
             ) : (
               <ScrollView
+                ref={timelineScrollRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.timelineScrollContent}
                 style={styles.timelineScrollView}
+                key={mode} // Force re-render when mode changes to reset scroll
               >
                 {(mode === 'weekly' ? availableWeeks : availableMonths).length === 0 ? (
                   <View style={styles.timelineEmpty}>
@@ -265,13 +286,13 @@ export default function ProgressDetailsScreen() {
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Calories</Text>
                     <Text style={styles.summaryValue}>
-                      {stats.caloriesConsumed}/{Math.round(stats.targetCalories)} kcal
+                      {Math.round(stats.caloriesConsumed)}/{Math.round(stats.targetCalories)} kcal
                     </Text>
                   </View>
                   <View style={styles.summaryItem}>
                     <Text style={styles.summaryLabel}>Water</Text>
                     <Text style={styles.summaryValue}>
-                      {stats.waterIntake}/{stats.targetWater} L
+                      {stats.waterIntake.toFixed(1)}/{stats.targetWater.toFixed(1)} L
                     </Text>
                   </View>
                 </View>
@@ -350,20 +371,30 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
+    paddingTop: 0,
     paddingBottom: spacing.xl * 2,
   },
-  title: {
-    color: colors.white,
-    fontSize: 24,
-    fontWeight: '800',
-    fontFamily: fonts.heading,
-    marginBottom: spacing.sm,
-  },
-  subtitle: {
-    color: colors.mutedText,
-    fontSize: typography.body,
-    fontFamily: fonts.body,
+  // Hero Section
+  heroSection: {
+    alignItems: 'center',
     marginBottom: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  heroTitle: {
+    color: colors.white,
+    fontSize: 25,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    opacity: 0.9,
+  },
+  heroSubtitle: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '500',
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
   // Mode selector
   modeSelector: {
