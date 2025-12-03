@@ -160,6 +160,32 @@ export default function ProgressDetailsScreen() {
     return Math.round(((workoutCompletion + mealCompletion + hydrationRatio) / 3) * 100);
   })();
 
+  const metricPercentages = stats
+    ? {
+        calories:
+          stats.targetCalories > 0
+            ? Math.min(100, Math.round((stats.caloriesConsumed / stats.targetCalories) * 100))
+            : 0,
+        water:
+          stats.targetWater > 0
+            ? Math.min(100, Math.round((stats.waterIntake / stats.targetWater) * 100))
+            : 0,
+        workouts:
+          stats.totalWorkouts > 0
+            ? Math.min(100, Math.round((stats.workoutsCompleted / stats.totalWorkouts) * 100))
+            : 0,
+        meals:
+          stats.totalMeals > 0
+            ? Math.min(100, Math.round((stats.mealsCompleted / stats.totalMeals) * 100))
+            : 0,
+      }
+    : {
+        calories: 0,
+        water: 0,
+        workouts: 0,
+        meals: 0,
+      };
+
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
@@ -282,36 +308,86 @@ export default function ProgressDetailsScreen() {
               </View>
             ) : (
               <>
-                <View style={styles.summaryRow}>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Calories</Text>
-                    <Text style={styles.summaryValue}>
+                {/* Metric grid */}
+                <View style={styles.metricGrid}>
+                  {/* Calories */}
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Calories</Text>
+                    <Text style={styles.metricValue}>
                       {Math.round(stats.caloriesConsumed)}/{Math.round(stats.targetCalories)} kcal
                     </Text>
+                    <Text style={styles.metricSubLabel}>
+                      {metricPercentages.calories}% of target
+                    </Text>
+                    <View style={styles.metricBar}>
+                      <View
+                        style={[
+                          styles.metricBarFill,
+                          { width: `${metricPercentages.calories}%`, backgroundColor: colors.primary },
+                        ]}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Water</Text>
-                    <Text style={styles.summaryValue}>
+
+                  {/* Water */}
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Water</Text>
+                    <Text style={styles.metricValue}>
                       {stats.waterIntake.toFixed(1)}/{stats.targetWater.toFixed(1)} L
                     </Text>
+                    <Text style={styles.metricSubLabel}>
+                      {metricPercentages.water}% of target
+                    </Text>
+                    <View style={styles.metricBar}>
+                      <View
+                        style={[
+                          styles.metricBarFill,
+                          { width: `${metricPercentages.water}%`, backgroundColor: colors.blue },
+                        ]}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.summaryRow}>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Workouts</Text>
-                    <Text style={styles.summaryValue}>
+                  {/* Workouts */}
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Workouts</Text>
+                    <Text style={styles.metricValue}>
                       {stats.workoutsCompleted}/{stats.totalWorkouts}
                     </Text>
+                    <Text style={styles.metricSubLabel}>
+                      {metricPercentages.workouts}% complete
+                    </Text>
+                    <View style={styles.metricBar}>
+                      <View
+                        style={[
+                          styles.metricBarFill,
+                          { width: `${metricPercentages.workouts}%`, backgroundColor: colors.gold },
+                        ]}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryLabel}>Meals</Text>
-                    <Text style={styles.summaryValue}>
+
+                  {/* Meals */}
+                  <View style={styles.metricCard}>
+                    <Text style={styles.metricLabel}>Meals</Text>
+                    <Text style={styles.metricValue}>
                       {stats.mealsCompleted}/{stats.totalMeals}
                     </Text>
+                    <Text style={styles.metricSubLabel}>
+                      {metricPercentages.meals}% complete
+                    </Text>
+                    <View style={styles.metricBar}>
+                      <View
+                        style={[
+                          styles.metricBarFill,
+                          { width: `${metricPercentages.meals}%`, backgroundColor: colors.green },
+                        ]}
+                      />
+                    </View>
                   </View>
                 </View>
 
+                {/* Overall completion */}
                 <View style={styles.summaryProgressWrapper}>
                   <View style={styles.summaryProgressBar}>
                     <View
@@ -564,6 +640,52 @@ const styles = StyleSheet.create({
   summaryLoading: {
     alignItems: 'center',
     paddingVertical: spacing.md,
+  },
+
+  // Metric grid
+  metricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  metricCard: {
+    width: (screenWidth - spacing.lg * 2 - spacing.sm) / 2,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  metricLabel: {
+    color: colors.mutedText,
+    fontSize: 12,
+    fontFamily: fonts.body,
+    marginBottom: 2,
+  },
+  metricValue: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  metricSubLabel: {
+    color: colors.mutedText,
+    fontSize: 11,
+    fontFamily: fonts.body,
+    marginBottom: spacing.xs,
+  },
+  metricBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.cardBorder,
+    overflow: 'hidden',
+  },
+  metricBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 
   chartsSection: {
