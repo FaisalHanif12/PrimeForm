@@ -278,7 +278,7 @@ class AITrainerService {
             }
           ],
           temperature: 0.7,
-          max_tokens: 1000,
+          max_tokens: 1500, // Increased for more detailed responses
           stream: false,
         }),
       });
@@ -345,62 +345,159 @@ class AITrainerService {
   private buildContextualPrompt(userMessage: string, userProfile: any, workoutPlan: any, dietPlan: any): string {
     const context = [];
     
-    // Add user profile context
+    // Add comprehensive user profile context
     if (userProfile) {
-      context.push(`User Profile:
-- Goal: ${userProfile.bodyGoal}
-- Age: ${userProfile.age}
-- Weight: ${userProfile.currentWeight}kg
+      const bmi = userProfile.height && userProfile.currentWeight ? 
+        (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1) : 'N/A';
+      
+      context.push(`**USER PROFILE:**
+- Primary Goal: ${userProfile.bodyGoal}
+- Age: ${userProfile.age} years
+- Gender: ${userProfile.gender}
+- Current Weight: ${userProfile.currentWeight}kg
+- Target Weight: ${userProfile.targetWeight}kg
 - Height: ${userProfile.height}cm
-- Activity Level: Active
-- Equipment: ${userProfile.availableEquipment}
-- Medical Conditions: ${userProfile.medicalConditions || 'None'}`);
+- BMI: ${bmi}
+- Diet Preference: ${userProfile.dietPreference || 'No restrictions'}
+- Available Equipment: ${userProfile.availableEquipment}
+- Occupation: ${userProfile.occupationType || 'Not specified'}
+- Medical Conditions: ${userProfile.medicalConditions || 'None'}
+- Country: ${userProfile.country || 'International'}`);
     }
 
-    // Add workout plan context
+    // Add detailed workout plan context with progress
     if (workoutPlan) {
-      context.push(`Current Workout Plan:
-- Duration: ${workoutPlan.duration}
-- Goal: ${workoutPlan.goal}
-- Total Weeks: ${workoutPlan.totalWeeks}`);
+      const startDate = new Date(workoutPlan.startDate);
+      const today = new Date();
+      const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksCompleted = Math.floor(daysSinceStart / 7);
+      const totalWeeks = workoutPlan.totalWeeks || 12;
+      const progressPercentage = Math.min(Math.round((weeksCompleted / totalWeeks) * 100), 100);
+      const monthsIntoPlan = Math.floor(weeksCompleted / 4);
+      
+      // Get unique exercises from the plan
+      const allExercises = workoutPlan.weeklyPlan?.flatMap((day: any) => 
+        day.exercises?.map((ex: any) => ex.name) || []
+      ) || [];
+      const uniqueExercises = [...new Set(allExercises)].slice(0, 15); // Top 15 unique exercises
+      
+      const completedExercisesCount = workoutPlan.completedExercises?.length || 0;
+      const completedDaysCount = workoutPlan.completedDays?.length || 0;
+      
+      context.push(`**CURRENT WORKOUT PLAN STATUS:**
+- Plan Goal: ${workoutPlan.goal}
+- Duration: ${workoutPlan.duration} (${totalWeeks} weeks total)
+- Start Date: ${workoutPlan.startDate}
+- End Date: ${workoutPlan.endDate}
+- Progress: ${weeksCompleted} weeks completed out of ${totalWeeks} weeks (${progressPercentage}%)
+- Time in Plan: ${monthsIntoPlan > 0 ? `${monthsIntoPlan} month${monthsIntoPlan > 1 ? 's' : ''} and ` : ''}${weeksCompleted % 4} week${(weeksCompleted % 4) !== 1 ? 's' : ''}
+- Exercises Completed: ${completedExercisesCount}
+- Days Completed: ${completedDaysCount}
+- Key Exercises in Plan: ${uniqueExercises.length > 0 ? uniqueExercises.join(', ') : 'Not specified'}
+- Weekly Structure: ${workoutPlan.weeklyPlan?.map((day: any) => `${day.dayName}${day.isRestDay ? ' (Rest)' : ''}`).join(', ') || 'Not specified'}
+- Key Notes: ${workoutPlan.keyNotes?.join('; ') || 'None'}`);
     }
 
-    // Add diet plan context
+    // Add detailed diet plan context with progress
     if (dietPlan) {
-      context.push(`Current Diet Plan:
-- Goal: ${dietPlan.goal}
-- Target Calories: ${dietPlan.targetCalories}
-- Target Protein: ${dietPlan.targetProtein}g
-- Duration: ${dietPlan.duration}`);
+      const startDate = new Date(dietPlan.startDate);
+      const today = new Date();
+      const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const weeksCompleted = Math.floor(daysSinceStart / 7);
+      const totalWeeks = dietPlan.totalWeeks || 12;
+      const progressPercentage = Math.min(Math.round((weeksCompleted / totalWeeks) * 100), 100);
+      const monthsIntoPlan = Math.floor(weeksCompleted / 4);
+      
+      // Get sample meals from the plan
+      const sampleMeals = dietPlan.weeklyPlan?.slice(0, 3).flatMap((day: any) => [
+        day.meals?.breakfast?.name,
+        day.meals?.lunch?.name,
+        day.meals?.dinner?.name
+      ]).filter(Boolean).slice(0, 9) || [];
+      
+      const completedMealsCount = dietPlan.completedMeals?.length || 0;
+      const completedDaysCount = dietPlan.completedDays?.length || 0;
+      
+      context.push(`**CURRENT DIET PLAN STATUS:**
+- Plan Goal: ${dietPlan.goal}
+- Duration: ${dietPlan.duration} (${totalWeeks} weeks total)
+- Start Date: ${dietPlan.startDate}
+- End Date: ${dietPlan.endDate}
+- Progress: ${weeksCompleted} weeks completed out of ${totalWeeks} weeks (${progressPercentage}%)
+- Time in Plan: ${monthsIntoPlan > 0 ? `${monthsIntoPlan} month${monthsIntoPlan > 1 ? 's' : ''} and ` : ''}${weeksCompleted % 4} week${(weeksCompleted % 4) !== 1 ? 's' : ''}
+- Meals Completed: ${completedMealsCount}
+- Days Completed: ${completedDaysCount}
+- Target Daily Calories: ${dietPlan.targetCalories} kcal
+- Target Daily Protein: ${dietPlan.targetProtein}g
+- Target Daily Carbs: ${dietPlan.targetCarbs}g
+- Target Daily Fats: ${dietPlan.targetFats}g
+- Country Cuisine: ${dietPlan.country || 'International'}
+- Sample Meals: ${sampleMeals.length > 0 ? sampleMeals.join(', ') : 'Not specified'}
+- Key Notes: ${dietPlan.keyNotes?.join('; ') || 'None'}`);
     }
 
-    const systemPrompt = `You are an expert AI Personal Trainer and Nutritionist with advanced knowledge in:
-- Exercise science and biomechanics
-- Nutrition and meal planning
+    const systemPrompt = `You are an **ELITE AI Personal Trainer and Nutritionist** with 20+ years of combined expertise in:
+
+**EXPERTISE AREAS:**
+- Exercise science, biomechanics, and kinesiology
+- Advanced nutrition science and meal planning
 - Sports psychology and motivation
-- Injury prevention and recovery
-- Progressive training methodologies
+- Injury prevention, rehabilitation, and recovery
+- Progressive training methodologies and periodization
+- Exercise form, technique, and safety protocols
+- Nutritional biochemistry and metabolism
+- Health condition adaptations for exercise and nutrition
 
-Your role is to provide:
-✅ Personalized, science-based advice
-✅ Motivational and encouraging responses
-✅ Practical, actionable recommendations
-✅ Safety-first approach to training
-✅ Holistic fitness and wellness guidance
+**CORE CAPABILITIES:**
+✅ **Exercise Knowledge**: Deep understanding of exercise advantages, disadvantages, proper form, common mistakes, muscle activation, and injury risks
+✅ **Nutrition Knowledge**: Comprehensive knowledge of food benefits, drawbacks, nutritional profiles, meal timing, and dietary adaptations
+✅ **Health-Aware**: Always consider medical conditions when providing exercise or nutrition advice
+✅ **Plan-Aware**: Reference the user's current workout and diet plans in all responses
+✅ **Progress-Aware**: Understand where the user is in their fitness journey (weeks/months into their plan)
 
-${context.length > 0 ? `\n**User Context:**\n${context.join('\n\n')}` : ''}
+**CRITICAL INSTRUCTIONS:**
 
-**User Question:** ${userMessage}
+1. **Exercise Questions**: When asked about specific exercises:
+   - Provide detailed step-by-step form instructions
+   - Explain advantages and benefits
+   - Mention potential disadvantages or risks
+   - Suggest modifications if user has health conditions
+   - Reference exercises from their current plan if relevant
+   - Include proper breathing techniques
+   - Warn about common mistakes
 
-**Instructions:**
-- Provide a helpful, personalized response based on the user's context
-- Keep responses concise but comprehensive (under 200 words)
-- Use encouraging and motivational language
-- Include specific, actionable advice when possible
-- Prioritize safety and proper form
-- Reference the user's goals and current plans when relevant
+2. **Diet Questions**: When asked about nutrition or foods:
+   - Explain nutritional benefits and drawbacks
+   - Consider their current diet plan and goals
+   - Suggest how it fits into their target macros
+   - Mention any interactions with their health conditions
+   - Reference meals from their current plan if relevant
 
-**Response:**`;
+3. **Health Conditions**: ALWAYS prioritize safety:
+   - If user mentions health conditions, adapt ALL advice accordingly
+   - Suggest safe alternatives for exercises that may be risky
+   - Modify nutrition advice based on medical restrictions
+   - When in doubt, recommend consulting healthcare professionals
+
+4. **Current Plan Context**: 
+   - Reference their current workout plan when discussing exercises
+   - Reference their current diet plan when discussing nutrition
+   - Acknowledge their progress (weeks/months into plan)
+   - Suggest how new advice fits with their existing plan
+   - Consider their plan's duration and goals
+
+5. **Response Style**:
+   - Be encouraging and motivational
+   - Provide science-based, actionable advice
+   - Keep responses comprehensive but concise (200-300 words)
+   - Use clear, easy-to-understand language
+   - Include specific examples when helpful
+
+${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}\n` : ''}
+
+**USER'S QUESTION:** ${userMessage}
+
+**YOUR RESPONSE (consider all context above):**`;
 
     return systemPrompt;
   }
