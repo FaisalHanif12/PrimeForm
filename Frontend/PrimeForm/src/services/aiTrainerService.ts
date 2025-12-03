@@ -278,7 +278,7 @@ class AITrainerService {
             }
           ],
           temperature: 0.7,
-          max_tokens: 2000, // Increased for detailed gap analysis and comprehensive responses
+          max_tokens: 1500, // Increased for detailed gap analysis and comprehensive responses
           stream: false,
         }),
       });
@@ -670,10 +670,15 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
       });
 
       // Generate dynamic title based on conversation context
-      if (currentConversation.title === 'New Chat' || this.shouldUpdateTitle(currentConversation)) {
+      // Update title immediately after first user message, or if still "New Chat"
+      if (currentConversation.title === 'New Chat') {
+        // Get the first user message for title generation
+        const firstUserMessage = currentConversation.messages.find(msg => msg.type === 'user');
+        const messageToUse = firstUserMessage ? firstUserMessage.message : userMessage;
+        
         const newTitle = await this.generateConversationTitle(
           currentConversation, 
-          userMessage, 
+          messageToUse, 
           aiMessage, 
           category as 'workout' | 'diet' | 'motivation' | 'general'
         );
@@ -943,31 +948,48 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
   // Generate dynamic conversation title based on context
   private async generateConversationTitle(
     conversation: ChatConversation,
-    latestUserMessage: string,
+    userMessage: string,
     latestAiMessage: string,
     category: string
   ): Promise<string> {
     try {
-      // If this is the first exchange, use a smart title based on the message
+      // Get the first user message for title generation
+      const firstUserMessage = conversation.messages.find(msg => msg.type === 'user');
+      const messageToUse = firstUserMessage ? firstUserMessage.message : userMessage;
+      
+      // If this is the first exchange (1 user message + 1 AI message), use the first message
       if (conversation.messages.length <= 2) {
-        return this.generateTitleFromMessage(latestUserMessage, category);
+        return this.generateTitleFromMessage(messageToUse, category);
       }
 
       // For longer conversations, analyze the context to generate a better title
+      // But still prioritize the first message
       const allMessages = conversation.messages.map(m => m.message).join(' ');
       const title = this.generateTitleFromContext(allMessages, category);
+      
+      // If the generated title is too generic, fall back to first message
+      if (title === 'Fitness Chat' || title === 'Chat' || title === 'Workout Advice' || title === 'Diet Advice') {
+        return this.generateTitleFromMessage(messageToUse, category);
+      }
       
       return title;
     } catch (error) {
       console.error('❌ Error generating conversation title:', error);
-      // Fallback to simple title
-      return this.generateTitleFromMessage(latestUserMessage, category);
+      // Fallback to simple title from first message
+      const firstUserMessage = conversation.messages.find(msg => msg.type === 'user');
+      const messageToUse = firstUserMessage ? firstUserMessage.message : userMessage;
+      return this.generateTitleFromMessage(messageToUse, category);
     }
   }
 
   // Generate title from a single message
   private generateTitleFromMessage(message: string, category: string): string {
-    const lowerMsg = message.toLowerCase();
+    const lowerMsg = message.toLowerCase().trim();
+    
+    // Remove common greeting words and question words
+    const cleanedMsg = message
+      .replace(/^(hi|hello|hey|how|what|when|where|why|can|could|would|should|i|i'm|i am|help|need|want|looking|tell|give|show|explain|please)\s+/i, '')
+      .trim();
     
     // Extract key phrases for workout-related
     if (category === 'workout') {
@@ -975,6 +997,11 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
         return 'Workout Plan Discussion';
       }
       if (lowerMsg.includes('exercise') || lowerMsg.includes('routine')) {
+        // Try to extract the specific exercise or body part
+        const exerciseMatch = cleanedMsg.match(/\b(chest|back|legs|arms|shoulders|abs|biceps|triceps|squat|deadlift|bench|press|pull|push)\b/i);
+        if (exerciseMatch) {
+          return `${exerciseMatch[0].charAt(0).toUpperCase() + exerciseMatch[0].slice(1)} Workout`;
+        }
         return 'Exercise Guidance';
       }
       if (lowerMsg.includes('muscle') || lowerMsg.includes('strength')) {
@@ -982,6 +1009,12 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
       }
       if (lowerMsg.includes('cardio') || lowerMsg.includes('running')) {
         return 'Cardio Training';
+      }
+      // Try to create title from first meaningful words
+      const words = cleanedMsg.split(' ').filter(w => w.length > 3 && !['workout', 'training', 'exercise'].includes(w.toLowerCase()));
+      if (words.length > 0) {
+        const title = words.slice(0, 3).join(' ');
+        return title.length > 30 ? title.substring(0, 30) + '...' : title;
       }
       return 'Workout Advice';
     }
@@ -1000,6 +1033,12 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
       if (lowerMsg.includes('weight loss') || lowerMsg.includes('lose weight')) {
         return 'Weight Loss';
       }
+      // Try to create title from first meaningful words
+      const words = cleanedMsg.split(' ').filter(w => w.length > 3 && !['diet', 'nutrition', 'food', 'meal'].includes(w.toLowerCase()));
+      if (words.length > 0) {
+        const title = words.slice(0, 3).join(' ');
+        return title.length > 30 ? title.substring(0, 30) + '...' : title;
+      }
       return 'Diet Advice';
     }
     
@@ -1014,11 +1053,21 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
       return 'Motivation & Support';
     }
     
-    // For general, try to extract a meaningful phrase
-    const words = message.split(' ').filter(w => w.length > 3);
-    if (words.length > 0) {
-      const title = words.slice(0, 4).join(' ');
-      return title.length > 40 ? title.substring(0, 40) + '...' : title;
+    // For general, try to extract a meaningful phrase from the first message
+    // Remove common words and extract meaningful content
+    const meaningfulWords = cleanedMsg
+      .split(' ')
+      .filter(w => {
+        const word = w.toLowerCase();
+        return w.length > 3 && 
+               !['this', 'that', 'with', 'from', 'have', 'been', 'will', 'would', 'could', 'should', 'about', 'there', 'their', 'they'].includes(word);
+      });
+    
+    if (meaningfulWords.length > 0) {
+      const title = meaningfulWords.slice(0, 4).join(' ');
+      // Capitalize first letter
+      const capitalizedTitle = title.charAt(0).toUpperCase() + title.slice(1);
+      return capitalizedTitle.length > 40 ? capitalizedTitle.substring(0, 40) + '...' : capitalizedTitle;
     }
     
     return 'Chat';
