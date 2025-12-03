@@ -387,35 +387,35 @@ export default function DietPlanDisplay({
 
   // ✅ Load completion states from local storage only (NO API CALL)
   const loadCompletionStatesFromLocalStorage = async () => {
-    try {
-      const Storage = await import('../utils/storage');
-      const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
-      const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
-      const cachedWaterIntake = await Storage.default.getItem('water_intake');
+      try {
+        const Storage = await import('../utils/storage');
+        const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
+        const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
+        const cachedWaterIntake = await Storage.default.getItem('water_intake');
       const cachedWaterCompleted = await Storage.default.getItem('water_completed');
-      
-      if (cachedCompletedMeals) {
-        const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
-        console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
-        setCompletedMeals(localMeals);
+        
+        if (cachedCompletedMeals) {
+          const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
+          console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
+            setCompletedMeals(localMeals);
+        }
+        
+        if (cachedCompletedDays) {
+          const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
+          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
+            setCompletedDays(localDays);
+        }
+        
+        if (cachedWaterIntake) {
+          setWaterIntake(JSON.parse(cachedWaterIntake));
+        }
+        
+        if (cachedWaterCompleted) {
+          setWaterCompleted(JSON.parse(cachedWaterCompleted));
+        }
+      } catch (storageError) {
+        console.warn('Could not load from local storage:', storageError);
       }
-      
-      if (cachedCompletedDays) {
-        const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
-        console.log('📊 Loading completed days from local storage:', Array.from(localDays));
-        setCompletedDays(localDays);
-      }
-      
-      if (cachedWaterIntake) {
-        setWaterIntake(JSON.parse(cachedWaterIntake));
-      }
-      
-      if (cachedWaterCompleted) {
-        setWaterCompleted(JSON.parse(cachedWaterCompleted));
-      }
-    } catch (storageError) {
-      console.warn('Could not load from local storage:', storageError);
-    }
   };
 
   // ✅ Load completion states from dietPlan prop + local storage (NO API CALL)
@@ -731,8 +731,8 @@ export default function DietPlanDisplay({
     // When marking as completed, set water intake to 100% of target (in ml)
     // When unmarking, set to 0
     const targetAmount = Number(selectedDay.waterIntake) || 3000; // Default to 3000ml (3L) if not specified
-    const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
-    setWaterIntake(newWaterIntake);
+      const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
+      setWaterIntake(newWaterIntake);
     
     console.log('💧 Water completion toggled:', {
       date: selectedDay.date,

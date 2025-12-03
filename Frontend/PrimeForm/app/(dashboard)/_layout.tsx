@@ -32,12 +32,18 @@ export default function DashboardLayout() {
           title: 'Gym',
         }}
       />
-            <Stack.Screen
-              name="progress"
-              options={{
-                title: 'Progress',
-              }}
-            />
+      <Stack.Screen 
+        name="progress"
+        options={{
+          title: 'Progress',
+        }}
+      />
+      <Stack.Screen 
+        name="progress-details"
+        options={{
+          title: 'Progress Details',
+        }}
+      />
             <Stack.Screen
               name="streak"
               options={{

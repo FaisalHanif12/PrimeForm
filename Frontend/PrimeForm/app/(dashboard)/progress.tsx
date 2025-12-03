@@ -24,9 +24,9 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
 import ProfilePage from '../../src/components/ProfilePage';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
-import ProgressChart from '../../src/components/ProgressChart';
 import userProfileService from '../../src/services/userProfileService';
 import HealthRemarks from '../../src/components/HealthRemarks';
+import ProgressChart, { ProgressChartData } from '../../src/components/ProgressChart';
 import progressService from '../../src/services/progressService';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -40,6 +40,9 @@ interface ProgressStats {
   protein: number;
   carbs: number;
   fats: number;
+  targetProtein: number; // ✅ Added target macros
+  targetCarbs: number;
+  targetFats: number;
   workoutsCompleted: number;
   totalWorkouts: number;
   mealsCompleted: number;
@@ -50,13 +53,10 @@ interface ProgressStats {
   bodyFatProgress: number;
 }
 
-interface ChartData {
-  labels: string[];
-  datasets: {
-    data: number[];
-    color: string;
-    strokeWidth: number;
-  }[];
+interface ProgressCharts {
+  calories: ProgressChartData;
+  workouts: ProgressChartData;
+  water: ProgressChartData;
 }
 
 export default function ProgressScreen() {
@@ -72,26 +72,19 @@ export default function ProgressScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [availableWeeks, setAvailableWeeks] = useState<number[]>([]);
-  const [availableMonths, setAvailableMonths] = useState<number[]>([]);
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
-  const [chartData, setChartData] = useState<{
-    calories: ChartData;
-    macros: ChartData;
-    workouts: ChartData;
-    water: ChartData;
-  } | null>(null);
   const [healthRemarks, setHealthRemarks] = useState<string[]>([]);
+  const [chartData, setChartData] = useState<ProgressCharts | null>(null);
 
   // Track if initial load has happened
   const [hasLoadedInitially, setHasLoadedInitially] = React.useState(false);
 
-  // Load data only when period changes (not on every focus)
+  // Reload when period changes (after initial load)
   useEffect(() => {
-    loadProgressData();
-  }, [selectedPeriod, selectedWeek, selectedMonth]);
+    if (hasLoadedInitially) {
+      loadProgressData();
+    }
+  }, [selectedPeriod, hasLoadedInitially]);
 
   // OPTIMIZATION: Don't reload data on every focus - only load once initially
   useFocusEffect(
@@ -135,42 +128,42 @@ export default function ProgressScreen() {
         }
       });
     };
-  }, [selectedPeriod, selectedWeek, selectedMonth]);
+  }, []);
 
   // OPTIMIZATION: Load progress data with optional force refresh
   const loadProgressData = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
 
-      // Load available weeks and months
-      const weeks = await progressService.getAvailableWeeks();
-      const months = await progressService.getAvailableMonths();
-      setAvailableWeeks(weeks);
-      setAvailableMonths(months);
-
-      // Set default selections if not already set
-      if (selectedPeriod === 'weekly' && !selectedWeek && weeks.length > 0) {
-        setSelectedWeek(weeks[weeks.length - 1]); // Current week
-      }
-      if (selectedPeriod === 'monthly' && !selectedMonth && months.length > 0) {
-        setSelectedMonth(months[months.length - 1]); // Current month
-      }
-
       // Load progress statistics with period filters
       const statsResponse = await progressService.getProgressStats(
         selectedPeriod,
-        selectedPeriod === 'weekly' ? selectedWeek || weeks[weeks.length - 1] : undefined,
-        selectedPeriod === 'monthly' ? selectedMonth || months[months.length - 1] : undefined,
+        undefined,
+        undefined,
         forceRefresh
       );
       if (statsResponse.success && statsResponse.data) {
         setProgressStats(statsResponse.data);
       }
 
-      // Load chart data
-      const chartResponse = await progressService.getChartData(selectedPeriod, forceRefresh);
-      if (chartResponse.success && chartResponse.data) {
-        setChartData(chartResponse.data);
+      // Load detailed chart analytics (trend over time) only for weekly/monthly
+      if (selectedPeriod === 'weekly' || selectedPeriod === 'monthly') {
+        const chartsResponse = await progressService.getChartData(
+          selectedPeriod,
+          undefined,
+          undefined,
+          forceRefresh
+        );
+        if (chartsResponse.success && chartsResponse.data) {
+          setChartData({
+            calories: chartsResponse.data.calories,
+            workouts: chartsResponse.data.workouts,
+            water: chartsResponse.data.water,
+          });
+        }
+      } else {
+        // For daily view we don't show detailed analytics
+        setChartData(null);
       }
 
       // Load health remarks (no need to force refresh - static content)
@@ -278,205 +271,6 @@ export default function ProgressScreen() {
     // Already on progress page
   };
 
-  // Get month name from month number
-  const getMonthName = (monthNum: number): string => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    // Calculate actual month based on plan start
-    const now = new Date();
-    const monthIndex = (now.getMonth() - (availableMonths.length - monthNum) + 12) % 12;
-    return months[monthIndex];
-  };
-
-  // Check if week/month is current
-  const isCurrentWeek = (week: number): boolean => {
-    return week === availableWeeks[availableWeeks.length - 1];
-  };
-
-  const isCurrentMonth = (month: number): boolean => {
-    return month === availableMonths[availableMonths.length - 1];
-  };
-
-  const renderPeriodSelector = () => (
-    <Animated.View entering={FadeInUp.delay(200)} style={styles.periodSelectorContainer}>
-      {/* Main Period Selector */}
-      <View style={styles.periodSelector}>
-        {(['daily', 'weekly', 'monthly'] as const).map((period) => (
-          <TouchableOpacity
-            key={period}
-            style={[
-              styles.periodButton,
-              selectedPeriod === period && styles.periodButtonActive
-            ]}
-            onPress={() => {
-              setSelectedPeriod(period);
-              // Reset sub-selections when changing period
-              if (period !== 'weekly') setSelectedWeek(null);
-              if (period !== 'monthly') setSelectedMonth(null);
-            }}
-          >
-            <Text style={[
-              styles.periodButtonText,
-              selectedPeriod === period && styles.periodButtonTextActive
-            ]}>
-              {period.charAt(0).toUpperCase() + period.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Premium Week Timeline Selector */}
-      {selectedPeriod === 'weekly' && availableWeeks.length > 1 && (
-        <View style={styles.timelineContainer}>
-          <View style={styles.timelineHeader}>
-            <View style={styles.timelineHeaderLeft}>
-              <Text style={styles.timelineIcon}>📅</Text>
-              <Text style={styles.timelineTitle}>Select Week</Text>
-            </View>
-            <View style={styles.timelineBadge}>
-              <Text style={styles.timelineBadgeText}>
-                {availableWeeks.length} weeks
-              </Text>
-            </View>
-          </View>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.timelineScroll}
-            contentContainerStyle={styles.timelineScrollContent}
-          >
-            {availableWeeks.map((week, index) => {
-              const isCurrent = isCurrentWeek(week);
-              const isSelected = selectedWeek === week;
-              const isPast = week < availableWeeks[availableWeeks.length - 1];
-              
-              return (
-                <TouchableOpacity
-                  key={week}
-                  style={[
-                    styles.timelineItem,
-                    isPast && styles.timelineItemPast,
-                    isCurrent && styles.timelineItemCurrent,
-                    isSelected && styles.timelineItemSelected,
-                  ]}
-                  onPress={() => setSelectedWeek(week)}
-                  activeOpacity={0.7}
-                >
-                  {/* Week card */}
-                  <View style={[
-                    styles.timelineCard,
-                    isPast && styles.timelineCardPast,
-                    isCurrent && styles.timelineCardCurrent,
-                    isSelected && styles.timelineCardSelected,
-                  ]}>
-                    {isCurrent && (
-                      <View style={styles.currentBadge}>
-                        <Text style={styles.currentBadgeText}>NOW</Text>
-                      </View>
-                    )}
-                    <Text style={[
-                      styles.timelineWeekNum,
-                      isPast && styles.timelineWeekNumPast,
-                      isCurrent && styles.timelineWeekNumCurrent,
-                      isSelected && styles.timelineWeekNumSelected,
-                    ]}>
-                      W{week}
-                    </Text>
-                    {isPast && !isCurrent && (
-                      <View style={styles.completedIndicator}>
-                        <Text style={styles.completedIndicatorText}>✓</Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Premium Month Timeline Selector */}
-      {selectedPeriod === 'monthly' && availableMonths.length > 1 && (
-        <View style={styles.timelineContainer}>
-          <View style={styles.timelineHeader}>
-            <View style={styles.timelineHeaderLeft}>
-              <Text style={styles.timelineIcon}>📆</Text>
-              <Text style={styles.timelineTitle}>Select Month</Text>
-            </View>
-            <View style={styles.timelineBadge}>
-              <Text style={styles.timelineBadgeText}>
-                {availableMonths.length} months
-              </Text>
-            </View>
-          </View>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.timelineScroll}
-            contentContainerStyle={styles.timelineScrollContent}
-          >
-            {availableMonths.map((month, index) => {
-              const isCurrent = isCurrentMonth(month);
-              const isSelected = selectedMonth === month;
-              const isPast = month < availableMonths[availableMonths.length - 1];
-              
-              return (
-                <TouchableOpacity
-                  key={month}
-                  style={[
-                    styles.timelineItem,
-                    isPast && styles.timelineItemPast,
-                    isCurrent && styles.timelineItemCurrent,
-                    isSelected && styles.timelineItemSelected,
-                  ]}
-                  onPress={() => setSelectedMonth(month)}
-                  activeOpacity={0.7}
-                >
-                  {/* Month card */}
-                  <View style={[
-                    styles.timelineCard,
-                    styles.timelineCardMonth,
-                    isPast && styles.timelineCardPast,
-                    isCurrent && styles.timelineCardCurrent,
-                    isSelected && styles.timelineCardSelected,
-                  ]}>
-                    {isCurrent && (
-                      <View style={styles.currentBadge}>
-                        <Text style={styles.currentBadgeText}>NOW</Text>
-                      </View>
-                    )}
-                    <Text style={[
-                      styles.timelineMonthName,
-                      isPast && styles.timelineMonthNamePast,
-                      isCurrent && styles.timelineMonthNameCurrent,
-                      isSelected && styles.timelineMonthNameSelected,
-                    ]}>
-                      {getMonthName(month)}
-                    </Text>
-                    <Text style={[
-                      styles.timelineMonthNum,
-                      isPast && styles.timelineMonthNumPast,
-                      isCurrent && styles.timelineMonthNumCurrent,
-                      isSelected && styles.timelineMonthNumSelected,
-                    ]}>
-                      Month {month}
-                    </Text>
-                    {isPast && !isCurrent && (
-                      <View style={styles.completedIndicator}>
-                        <Text style={styles.completedIndicatorText}>✓</Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
-    </Animated.View>
-  );
-
   const renderOverviewCards = () => {
     if (!progressStats) return null;
 
@@ -581,21 +375,23 @@ export default function ProgressScreen() {
                   // Simple consumed/target card
                   <>
                     <Text style={styles.progressText}>
-                      {card.consumed}/{card.target} {card.unit}
+                      {/* ✅ FIXED: Handle NaN values gracefully */}
+                      {isNaN(card.consumed!) ? 0 : card.consumed}/{isNaN(card.target!) ? 3 : card.target} {card.unit}
                     </Text>
                     <View style={styles.progressBar}>
                       <View
                         style={[
                           styles.progressFill,
                           {
-                            width: `${Math.min((card.consumed! / card.target!) * 100, 100)}%`,
+                            width: `${Math.min(((!isNaN(card.consumed!) && !isNaN(card.target!) && card.target! > 0) ? (card.consumed! / card.target!) * 100 : 0), 100)}%`,
                             backgroundColor: card.color
                           }
                         ]}
                       />
                     </View>
                     <Text style={styles.percentageText}>
-                      {Math.round(Math.min((card.consumed! / card.target!) * 100, 100))}% of Goal
+                      {/* ✅ FIXED: Handle NaN values gracefully */}
+                      {Math.round(Math.min(((!isNaN(card.consumed!) && !isNaN(card.target!) && card.target! > 0) ? (card.consumed! / card.target!) * 100 : 0), 100))}% of Goal
                     </Text>
                   </>
                 )}
@@ -610,11 +406,36 @@ export default function ProgressScreen() {
   const renderMacronutrients = () => {
     if (!progressStats) return null;
 
-    const totalMacros = progressStats.protein + progressStats.carbs + progressStats.fats;
+    // ✅ FIXED: Calculate percentage based on target macros, not consumed macros
+    // This shows progress toward target, not distribution of consumed macros
     const macros = [
-      { name: 'Protein', value: progressStats.protein, color: colors.primary, percentage: (progressStats.protein / totalMacros) * 100 },
-      { name: 'Carbs', value: progressStats.carbs, color: colors.gold, percentage: (progressStats.carbs / totalMacros) * 100 },
-      { name: 'Fats', value: progressStats.fats, color: colors.green, percentage: (progressStats.fats / totalMacros) * 100 }
+      { 
+        name: 'Protein', 
+        value: progressStats.protein, 
+        target: progressStats.targetProtein || 0,
+        color: colors.primary, 
+        percentage: (progressStats.targetProtein > 0 && !isNaN(progressStats.targetProtein)) 
+          ? Math.min((progressStats.protein / progressStats.targetProtein) * 100, 100) 
+          : 0
+      },
+      { 
+        name: 'Carbs', 
+        value: progressStats.carbs, 
+        target: progressStats.targetCarbs || 0,
+        color: colors.gold, 
+        percentage: (progressStats.targetCarbs > 0 && !isNaN(progressStats.targetCarbs)) 
+          ? Math.min((progressStats.carbs / progressStats.targetCarbs) * 100, 100) 
+          : 0
+      },
+      { 
+        name: 'Fats', 
+        value: progressStats.fats, 
+        target: progressStats.targetFats || 0,
+        color: colors.green, 
+        percentage: (progressStats.targetFats > 0 && !isNaN(progressStats.targetFats)) 
+          ? Math.min((progressStats.fats / progressStats.targetFats) * 100, 100) 
+          : 0
+      }
     ];
 
     return (
@@ -628,14 +449,20 @@ export default function ProgressScreen() {
                   <View style={[styles.macroColor, { backgroundColor: macro.color }]} />
                   <Text style={styles.macroName}>{macro.name}</Text>
                 </View>
-                <Text style={styles.macroValue}>{macro.value}g</Text>
-                <Text style={styles.macroPercentage}>{macro.percentage.toFixed(1)}%</Text>
+                <Text style={styles.macroValue}>
+                  {/* ✅ FIXED: Show consumed/target format, handle NaN */}
+                  {isNaN(macro.value) ? 0 : macro.value}g / {isNaN(macro.target) ? 0 : macro.target}g
+                </Text>
+                <Text style={styles.macroPercentage}>
+                  {/* ✅ FIXED: Show percentage of target, handle NaN */}
+                  {isNaN(macro.percentage) ? 0 : macro.percentage.toFixed(1)}% of Target
+                </Text>
                 <View style={styles.macroBar}>
                   <View
                     style={[
                       styles.macroBarFill,
                       {
-                        width: `${macro.percentage}%`,
+                        width: `${Math.min(isNaN(macro.percentage) ? 0 : macro.percentage, 100)}%`,
                         backgroundColor: macro.color
                       }
                     ]}
@@ -645,6 +472,37 @@ export default function ProgressScreen() {
             ))}
           </View>
         </View>
+      </Animated.View>
+    );
+  };
+
+  const renderAnalyticsCharts = () => {
+    if (!chartData) return null;
+
+    return (
+      <Animated.View entering={FadeInUp.delay(650)} style={styles.chartsSection}>
+        <Text style={styles.sectionTitle}>Detailed Analytics</Text>
+
+        <ProgressChart
+          title="Calories Trend"
+          data={chartData.calories}
+          type="line"
+          period={selectedPeriod}
+        />
+
+        <ProgressChart
+          title="Workout Performance"
+          data={chartData.workouts}
+          type="bar"
+          period={selectedPeriod}
+        />
+
+        <ProgressChart
+          title="Water Hydration"
+          data={chartData.water}
+          type="bar"
+          period={selectedPeriod}
+        />
       </Animated.View>
     );
   };
@@ -672,37 +530,6 @@ export default function ProgressScreen() {
             </View>
           </View>
         </View>
-      </Animated.View>
-    );
-  };
-
-  const renderCharts = () => {
-    if (!chartData) return null;
-
-    return (
-      <Animated.View entering={FadeInUp.delay(800)} style={styles.chartsSection}>
-        <Text style={styles.sectionTitle}>Detailed Analytics</Text>
-
-        <ProgressChart
-          title="Calories Trend"
-          data={chartData.calories}
-          type="line"
-          period={selectedPeriod}
-        />
-
-        <ProgressChart
-          title="Workout Performance"
-          data={chartData.workouts}
-          type="bar"
-          period={selectedPeriod}
-        />
-
-        <ProgressChart
-          title="Hydration Tracking"
-          data={chartData.water}
-          type="area"
-          period={selectedPeriod}
-        />
       </Animated.View>
     );
   };
@@ -751,8 +578,31 @@ export default function ProgressScreen() {
             <Text style={styles.heroSubtitle}>Track your fitness journey</Text>
           </Animated.View>
 
-          {/* Period Selector */}
-          {renderPeriodSelector()}
+          {/* Period Selector (Daily / Weekly / Monthly) */}
+          <Animated.View entering={FadeInUp.delay(150)} style={styles.periodSelectorContainer}>
+            <View style={styles.periodSelector}>
+              {(['daily', 'weekly', 'monthly'] as const).map((period) => (
+                <TouchableOpacity
+                  key={period}
+                  style={[
+                    styles.periodButton,
+                    selectedPeriod === period && styles.periodButtonActive,
+                  ]}
+                  onPress={() => setSelectedPeriod(period)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.periodButtonText,
+                      selectedPeriod === period && styles.periodButtonTextActive,
+                    ]}
+                  >
+                    {period.charAt(0).toUpperCase() + period.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
 
           {/* Overview Cards */}
           {renderOverviewCards()}
@@ -760,8 +610,8 @@ export default function ProgressScreen() {
           {/* Macronutrients */}
           {renderMacronutrients()}
 
-          {/* Charts */}
-          {renderCharts()}
+          {/* Detailed Analytics under Macronutrients (only for weekly/monthly) */}
+          {selectedPeriod !== 'daily' && renderAnalyticsCharts()}
 
           {/* Health Remarks */}
           <HealthRemarks
@@ -770,8 +620,17 @@ export default function ProgressScreen() {
             period={selectedPeriod}
           />
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
+          {/* More Details button */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={styles.moreDetailsButton}
+              activeOpacity={0.9}
+              onPress={() => router.push('/(dashboard)/progress-details')}
+            >
+              <Text style={styles.moreDetailsIcon}>📊</Text>
+              <Text style={styles.moreDetailsText}>More Detailed Analytics</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         <BottomNavigation
@@ -815,6 +674,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: 0,
+    paddingBottom: spacing.xl * 4, // Extra space so footer button stays above bottom navbar
   },
   loadingContainer: {
     flex: 1,
@@ -852,7 +712,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Period Selector
+  // Period Selector (Daily / Weekly / Monthly)
   periodSelectorContainer: {
     marginBottom: spacing.xl,
   },
@@ -861,7 +721,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.xs,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
@@ -886,216 +746,6 @@ const styles = StyleSheet.create({
   },
   periodButtonTextActive: {
     color: colors.white,
-  },
-
-  // Premium Timeline Selector
-  timelineContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: spacing.lg,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.cardBorder + '40',
-    elevation: 6,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  timelineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  timelineHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  timelineIcon: {
-    fontSize: 20,
-  },
-  timelineTitle: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
-  timelineBadge: {
-    backgroundColor: colors.primary + '20',
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
-  },
-  timelineBadgeText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-  },
-  timelineScroll: {
-    marginHorizontal: -spacing.sm,
-  },
-  timelineScrollContent: {
-    paddingHorizontal: spacing.sm,
-    gap: spacing.xs,
-  },
-  timelineItem: {
-    position: 'relative',
-    marginRight: spacing.sm,
-  },
-  timelineItemPast: {},
-  timelineItemCurrent: {},
-  timelineItemSelected: {},
-  timelineConnector: {
-    position: 'absolute',
-    left: -spacing.sm - 2,
-    top: '50%',
-    width: spacing.sm + 4,
-    height: 3,
-    backgroundColor: colors.cardBorder + '50',
-    borderRadius: 2,
-  },
-  timelineConnectorPast: {
-    backgroundColor: colors.primary + '40',
-  },
-  timelineCard: {
-    width: 72,
-    height: 90,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.cardBorder + '60',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  timelineCardMonth: {
-    width: 72,
-    height: 90,
-  },
-  timelineCardPast: {
-    backgroundColor: colors.primary + '12',
-    borderColor: colors.primary + '35',
-  },
-  timelineCardCurrent: {
-    backgroundColor: colors.surface,
-    borderColor: colors.primary,
-    borderWidth: 2,
-    elevation: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  timelineCardSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    elevation: 6,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  currentBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  currentBadgeText: {
-    color: colors.white,
-    fontSize: 8,
-    fontWeight: '800',
-    fontFamily: fonts.heading,
-    letterSpacing: 0.5,
-  },
-  timelineWeekNum: {
-    color: colors.white,
-    fontSize: 22,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginBottom: 2,
-  },
-  timelineWeekNumPast: {
-    color: colors.white,
-  },
-  timelineWeekNumCurrent: {
-    color: colors.primary,
-  },
-  timelineWeekNumSelected: {
-    color: colors.white,
-  },
-  timelineWeekLabel: {
-    color: colors.mutedText,
-    fontSize: 10,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-  },
-  timelineWeekLabelPast: {
-    color: colors.mutedText,
-  },
-  timelineWeekLabelCurrent: {
-    color: colors.primary + '90',
-  },
-  timelineWeekLabelSelected: {
-    color: colors.white + 'CC',
-  },
-  timelineMonthName: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '900',
-    fontFamily: fonts.heading,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  timelineMonthNamePast: {
-    color: colors.white,
-  },
-  timelineMonthNameCurrent: {
-    color: colors.primary,
-  },
-  timelineMonthNameSelected: {
-    color: colors.white,
-  },
-  timelineMonthNum: {
-    color: colors.mutedText,
-    fontSize: 10,
-    fontWeight: '500',
-    fontFamily: fonts.body,
-  },
-  timelineMonthNumPast: {
-    color: colors.mutedText,
-  },
-  timelineMonthNumCurrent: {
-    color: colors.primary + '90',
-  },
-  timelineMonthNumSelected: {
-    color: colors.white + 'CC',
-  },
-  completedIndicator: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  completedIndicatorText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '900',
   },
 
   // Overview Section
@@ -1298,8 +948,30 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
 
-  // Bottom Spacing
-  bottomSpacing: {
-    height: 100,
+  // Footer
+  footer: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl * 1.5,
+  },
+  moreDetailsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  moreDetailsIcon: {
+    fontSize: 20,
+    marginRight: spacing.sm,
+  },
+  moreDetailsText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
   },
 });
