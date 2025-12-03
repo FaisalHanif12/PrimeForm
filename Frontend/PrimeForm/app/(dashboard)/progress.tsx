@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -78,66 +78,26 @@ export default function ProgressScreen() {
 
   // Track if initial load has happened
   const [hasLoadedInitially, setHasLoadedInitially] = React.useState(false);
-
-  // Reload when period changes (after initial load)
+  
+  // Use ref to always access latest selectedPeriod in event listeners
+  const selectedPeriodRef = useRef(selectedPeriod);
+  
+  // Keep ref updated when selectedPeriod changes
   useEffect(() => {
-    if (hasLoadedInitially) {
-      loadProgressData();
-    }
-  }, [selectedPeriod, hasLoadedInitially]);
-
-  // OPTIMIZATION: Don't reload data on every focus - only load once initially
-  useFocusEffect(
-    useCallback(() => {
-      if (!hasLoadedInitially) {
-        loadProgressData();
-        setHasLoadedInitially(true);
-      }
-    }, [hasLoadedInitially])
-  );
-
-  // Listen for progress updates from workout and diet screens - only refresh on actions
-  useEffect(() => {
-    const listeners = [
-      DeviceEventEmitter.addListener('exerciseCompleted', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-      DeviceEventEmitter.addListener('mealCompleted', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-      DeviceEventEmitter.addListener('dayCompleted', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-      DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-      DeviceEventEmitter.addListener('dietProgressUpdated', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-      DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
-        loadProgressData(true); // Force refresh after action
-      }),
-    ];
-
-    return () => {
-      listeners.forEach(listener => {
-        try {
-          listener.remove();
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      });
-    };
-  }, []);
+    selectedPeriodRef.current = selectedPeriod;
+  }, [selectedPeriod]);
 
   // OPTIMIZATION: Load progress data with optional force refresh
-  const loadProgressData = async (forceRefresh = false) => {
+  const loadProgressData = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
+      
+      // Use ref to get latest selectedPeriod (for event listeners)
+      const currentPeriod = selectedPeriodRef.current;
 
       // Load progress statistics with period filters
       const statsResponse = await progressService.getProgressStats(
-        selectedPeriod,
+        currentPeriod,
         undefined,
         undefined,
         forceRefresh
@@ -147,9 +107,9 @@ export default function ProgressScreen() {
       }
 
       // Load detailed chart analytics (trend over time) only for weekly/monthly
-      if (selectedPeriod === 'weekly' || selectedPeriod === 'monthly') {
+      if (currentPeriod === 'weekly' || currentPeriod === 'monthly') {
         const chartsResponse = await progressService.getChartData(
-          selectedPeriod,
+          currentPeriod,
           undefined,
           undefined,
           forceRefresh
@@ -177,7 +137,64 @@ export default function ProgressScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
+
+  // Reload when period changes (after initial load)
+  useEffect(() => {
+    if (hasLoadedInitially) {
+      loadProgressData();
+    }
+  }, [selectedPeriod, hasLoadedInitially, loadProgressData]);
+
+  // OPTIMIZATION: Don't reload data on every focus - only load once initially
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasLoadedInitially) {
+        loadProgressData();
+        setHasLoadedInitially(true);
+      }
+    }, [hasLoadedInitially, loadProgressData])
+  );
+
+  // Listen for progress updates from workout and diet screens - only refresh on actions
+  useEffect(() => {
+    const listeners = [
+      DeviceEventEmitter.addListener('exerciseCompleted', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+      DeviceEventEmitter.addListener('mealCompleted', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+      DeviceEventEmitter.addListener('dayCompleted', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+      DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+      DeviceEventEmitter.addListener('dietProgressUpdated', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+      DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
+        progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
+        loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+      }),
+    ];
+
+    return () => {
+      listeners.forEach(listener => {
+        try {
+          listener.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      });
+    };
+  }, [loadProgressData]); // ✅ Fixed: Now includes loadProgressData so it uses latest selectedPeriod via ref
 
   const handleProfilePress = () => {
     setSidebarVisible(true);

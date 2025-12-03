@@ -1,4 +1,5 @@
 import { api } from '../config/api';
+import Storage from '../utils/storage';
 
 export interface UserInfo {
   country: string;
@@ -48,17 +49,65 @@ class UserProfileService {
   private isLoading = false;
   private pendingCall: Promise<any> | null = null;
   private hasInitialized = false;
+  private storageKey = 'cached_user_profile';
+
+  // Initialize: Load from AsyncStorage on service creation
+  private async initializeCache() {
+    if (this.hasInitialized) return;
+    
+    try {
+      const stored = await Storage.getItem(this.storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Check if cache is still valid
+        if (Date.now() - parsed.timestamp < this.cacheTimeout) {
+          this.cache = parsed;
+        }
+      }
+      this.hasInitialized = true;
+    } catch (error) {
+      // Ignore storage errors on initialization
+      this.hasInitialized = true;
+    }
+  }
 
   // Clear cache when user changes (called from auth service)
-  clearCache() {
+  async clearCache() {
     this.cache = null;
+    try {
+      await Storage.removeItem(this.storageKey);
+    } catch (error) {
+      // Ignore storage errors
+    }
   }
 
   // Get user profile with caching and debouncing
   async getUserProfile(forceRefresh = false): Promise<{ success: boolean; data: UserProfile | null; message: string }> {
-    // If not forcing refresh and we have cached data, return it
-    if (!forceRefresh && this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-      return this.cache.data;
+    // Initialize cache from AsyncStorage if not already done
+    await this.initializeCache();
+
+    // PERFORMANCE: Check AsyncStorage first (instant, no API call)
+    if (!forceRefresh) {
+      // Check in-memory cache first (fastest)
+      if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+        return this.cache.data;
+      }
+
+      // Check AsyncStorage (instant, no network)
+      try {
+        const stored = await Storage.getItem(this.storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // Check if cache is still valid
+          if (Date.now() - parsed.timestamp < this.cacheTimeout) {
+            // Restore to memory cache
+            this.cache = parsed;
+            return parsed.data;
+          }
+        }
+      } catch (error) {
+        // If AsyncStorage read fails, continue to API call
+      }
     }
 
     // If already loading, return the pending call
@@ -69,14 +118,20 @@ class UserProfileService {
     // Set loading state
     this.isLoading = true;
     
-    // Create the API call
+    // Create the API call (only if cache is empty or stale)
     this.pendingCall = this._getUserProfile();
     
     try {
       const result = await this.pendingCall;
-      // Cache the successful result
-      this.cache = { data: result, timestamp: Date.now() };
-      this.hasInitialized = true;
+      // Cache the successful result in both memory and AsyncStorage
+      const cacheEntry = { data: result, timestamp: Date.now() };
+      this.cache = cacheEntry;
+      
+      // Persist to AsyncStorage (non-blocking)
+      Storage.setItem(this.storageKey, JSON.stringify(cacheEntry)).catch(() => {
+        // Ignore storage errors
+      });
+      
       return result;
     } finally {
       this.isLoading = false;
@@ -85,14 +140,36 @@ class UserProfileService {
   }
 
   // Check if we have cached data without making API call
-  hasCachedData(): boolean {
-    return this.cache !== null && Date.now() - this.cache.timestamp < this.cacheTimeout;
+  async hasCachedData(): Promise<boolean> {
+    await this.initializeCache();
+    
+    // Check memory cache
+    if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      return true;
+    }
+    
+    // Check AsyncStorage
+    try {
+      const stored = await Storage.getItem(this.storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Date.now() - parsed.timestamp < this.cacheTimeout) {
+          // Restore to memory
+          this.cache = parsed;
+          return true;
+        }
+      }
+    } catch (error) {
+      // Ignore storage errors
+    }
+    
+    return false;
   }
 
-  // Get cached data without API call
+  // Get cached data without API call (synchronous check of memory only)
   getCachedData(): { success: boolean; data: UserProfile | null; message: string } | null {
-    if (this.hasCachedData()) {
-      return this.cache!.data;
+    if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      return this.cache.data;
     }
     return null;
   }
@@ -174,8 +251,11 @@ class UserProfileService {
       const response = await api.post('/user-profile', processedUserInfo);
       
       if (response && response.success) {
-        // Clear cache when profile is updated
-        this.clearCache();
+        // Clear cache when profile is updated and cache new data
+        await this.clearCache();
+        const cacheEntry = { data: response, timestamp: Date.now() };
+        this.cache = cacheEntry;
+        Storage.setItem(this.storageKey, JSON.stringify(cacheEntry)).catch(() => {});
         return response;
       } else {
         return {

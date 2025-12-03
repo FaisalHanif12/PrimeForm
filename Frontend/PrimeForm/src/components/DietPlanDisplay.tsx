@@ -86,17 +86,6 @@ export default function DietPlanDisplay({
       }
     }
     
-    console.log('📅 DietPlanDisplay Week Calculation:', {
-      today: today.toDateString(),
-      startDate: startDate.toDateString(),
-      daysDiff,
-      startDayOfWeek,
-      daysInFirstWeek: 7 - startDayOfWeek,
-      calculatedWeek,
-      completedDaysCount: completedDays.size,
-      planGenerationDay: startDate.toLocaleDateString('en-US', { weekday: 'long' })
-    });
-    
     return Math.max(1, Math.min(calculatedWeek, getTotalWeeks()));
   };
 
@@ -116,7 +105,6 @@ export default function DietPlanDisplay({
     const currentWeek = getCurrentWeek();
     
     if (totalWeeks <= 0) {
-      console.log('📊 Diet Progress: No total weeks, returning 0%');
       return 0;
     }
     
@@ -126,16 +114,6 @@ export default function DietPlanDisplay({
     const completedWeeks = Math.max(0, currentWeek - 1);
     const actualProgress = (completedWeeks / totalWeeks) * 100;
     const roundedProgress = Math.round(Math.max(0, Math.min(100, actualProgress)));
-
-    console.log('📊 Diet Progress Calculation (Weeks Completed):', {
-      totalWeeks,
-      currentWeek,
-      completedWeeks,
-      actualProgress: actualProgress.toFixed(2),
-      roundedProgress,
-      progressArcDegrees: `${(roundedProgress / 100) * 360}deg`,
-      formula: `${completedWeeks} / ${totalWeeks} * 100 = ${actualProgress.toFixed(2)}%`
-    });
 
     return roundedProgress;
   };
@@ -151,18 +129,6 @@ export default function DietPlanDisplay({
       const dayDate = new Date(day.date);
       dayDate.setHours(0, 0, 0, 0);
       return dayDate.getTime() === today.getTime();
-    });
-    
-    console.log('📅 DietPlanDisplay Today Debug:', {
-      today: today.toDateString(),
-      todaysDay: todaysDay ? {
-        dayName: todaysDay.dayName,
-        date: todaysDay.date,
-        day: todaysDay.day
-      } : 'Not found',
-      currentWeekDaysCount: currentWeekDays.length,
-      firstDayInWeek: currentWeekDays[0]?.dayName,
-      lastDayInWeek: currentWeekDays[currentWeekDays.length - 1]?.dayName
     });
     
     return todaysDay || null;
@@ -257,14 +223,6 @@ export default function DietPlanDisplay({
       }
     }
     
-    console.log('📅 Diet Calendar Week Days:', {
-      currentWeek,
-      weekDaysCount: weekDays.length,
-      firstDay: weekDays[0]?.dayName,
-      lastDay: weekDays[weekDays.length - 1]?.dayName,
-      completedDaysCount: completedDays.size
-    });
-    
     return weekDays;
   };
 
@@ -280,17 +238,14 @@ export default function DietPlanDisplay({
       const todaysDay = getTodaysDayData();
       
       if (todaysDay) {
-        console.log('📅 DietPlanDisplay Setting Today:', {
-          dayName: todaysDay.dayName,
-          date: todaysDay.date,
-          mealCount: todaysDay.meals ? Object.keys(todaysDay.meals).length : 0
-        });
         setSelectedDay(todaysDay);
       } else {
         // Fallback to first day of current week if today's data not found
         const currentWeekDays = getCurrentWeekDays();
         if (currentWeekDays.length > 0) {
-          console.warn('Today\'s day data not found, using first day of week as fallback');
+          if (__DEV__) {
+            console.warn('Today\'s day data not found, using first day of week as fallback');
+          }
           setSelectedDay(currentWeekDays[0]);
         }
       }
@@ -310,7 +265,6 @@ export default function DietPlanDisplay({
       // Only reload if it's been more than 2 seconds since last focus
       // This prevents unnecessary reloads on quick navigation
       if (isInitialized && now - lastFocusTime.current > 2000) {
-        console.log('🔄 DietPlanDisplay: Reloading completion states from local storage after focus');
         // ✅ Load from local storage only (NO API CALL)
         loadCompletionStatesFromLocalStorage();
         lastFocusTime.current = now;
@@ -321,7 +275,6 @@ export default function DietPlanDisplay({
   // Listen for meal completion events and progress updates
   useEffect(() => {
     const mealCompletedListener = (event: any) => {
-      console.log('🍽️ Meal completed event received:', event);
       // ✅ Update state directly from event data (NO API CALL)
       if (event.mealId) {
         setCompletedMeals(prev => new Set([...prev, event.mealId]));
@@ -329,7 +282,6 @@ export default function DietPlanDisplay({
     };
 
     const dayCompletedListener = (event: any) => {
-      console.log('📅 Day completed event received:', event);
       // ✅ Update state directly from event data (NO API CALL)
       if (event.dayNumber && event.weekNumber) {
         const dayId = `${event.dayNumber}-${event.weekNumber}`;
@@ -342,14 +294,12 @@ export default function DietPlanDisplay({
     };
 
     const dietProgressUpdatedListener = async () => {
-      console.log('🔔 Received dietProgressUpdated event - refreshing completion state');
       // ✅ Just recalculate progress from current state (NO API CALL)
       const newProgress = getProgressPercentage();
       setProgressPercentage(newProgress);
     };
 
     const waterIntakeUpdatedListener = async () => {
-      console.log('💧 Received waterIntakeUpdated event - refreshing completion state');
       // ✅ Load from local storage only (NO API CALL)
       try {
         const Storage = await import('../utils/storage');
@@ -362,7 +312,9 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (error) {
-        console.warn('Could not load water data from local storage:', error);
+        if (__DEV__) {
+          console.warn('Could not load water data from local storage:', error);
+        }
       }
     };
 
@@ -396,14 +348,12 @@ export default function DietPlanDisplay({
         
         if (cachedCompletedMeals) {
           const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
-          console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
-            setCompletedMeals(localMeals);
+          setCompletedMeals(localMeals);
         }
         
         if (cachedCompletedDays) {
           const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
-          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
-            setCompletedDays(localDays);
+          setCompletedDays(localDays);
         }
         
         if (cachedWaterIntake) {
@@ -414,7 +364,9 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
+        if (__DEV__) {
+          console.warn('Could not load from local storage:', storageError);
+        }
       }
   };
 
@@ -427,7 +379,6 @@ export default function DietPlanDisplay({
         const mealIds = dietPlan.completedMeals.map((meal: any) => 
           typeof meal === 'string' ? meal : (meal.mealId || meal)
         ).filter(Boolean);
-        console.log('📊 Loading completed meals from prop:', mealIds);
         if (mealIds.length > 0) {
           setCompletedMeals(new Set(mealIds));
         }
@@ -441,7 +392,6 @@ export default function DietPlanDisplay({
           }
           return `${day.day}-${day.week}`;
         }).filter(Boolean);
-        console.log('📊 Loading completed days from prop:', dayIds);
         if (dayIds.length > 0) {
           setCompletedDays(new Set(dayIds));
         }
@@ -457,7 +407,6 @@ export default function DietPlanDisplay({
         
         if (cachedCompletedMeals) {
           const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
-          console.log('📊 Loading completed meals from local storage:', Array.from(localMeals));
           
           // Merge with prop data
           if (dietPlan.completedMeals && Array.isArray(dietPlan.completedMeals)) {
@@ -468,7 +417,6 @@ export default function DietPlanDisplay({
             );
             const mergedMeals = new Set<string>([...localMeals, ...propMeals]);
             setCompletedMeals(mergedMeals);
-            console.log('📊 Merged completed meals:', Array.from(mergedMeals));
           } else {
             setCompletedMeals(localMeals);
           }
@@ -476,7 +424,6 @@ export default function DietPlanDisplay({
         
         if (cachedCompletedDays) {
           const localDays = new Set<string>(JSON.parse(cachedCompletedDays));
-          console.log('📊 Loading completed days from local storage:', Array.from(localDays));
           
           // Merge with prop data
           if (dietPlan.completedDays && Array.isArray(dietPlan.completedDays)) {
@@ -490,7 +437,6 @@ export default function DietPlanDisplay({
             );
             const mergedDays = new Set<string>([...localDays, ...propDays]);
             setCompletedDays(mergedDays);
-            console.log('📊 Merged completed days:', Array.from(mergedDays));
           } else {
             setCompletedDays(localDays);
           }
@@ -504,10 +450,14 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (storageError) {
-        console.warn('Could not load from local storage:', storageError);
+        if (__DEV__) {
+          console.warn('Could not load from local storage:', storageError);
+        }
       }
     } catch (error) {
-      console.warn('Could not load completion states from prop:', error);
+      if (__DEV__) {
+        console.warn('Could not load completion states from prop:', error);
+      }
       // Fallback to local storage only
       await loadCompletionStatesFromLocalStorage();
     }
@@ -565,14 +515,6 @@ export default function DietPlanDisplay({
     const completedMealsCount = dayMeals.filter(mealId => completedMeals.has(mealId)).length;
     const percentage = Math.round((completedMealsCount / dayMeals.length) * 100);
     
-    console.log('📊 Day meal completion calculation:', {
-      dayDate: day.date,
-      totalMeals: dayMeals.length,
-      completedMeals: completedMealsCount,
-      percentage: percentage,
-      isCurrentDay: isCurrentDay(day)
-    });
-    
     // Always show actual percentage achieved
     return percentage;
   };
@@ -595,13 +537,17 @@ export default function DietPlanDisplay({
 
   const handleMealComplete = async (meal: DietMeal, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
     if (!selectedDay || !selectedDay.date) {
-      console.warn('Cannot complete meal: selectedDay or selectedDay.date is null');
+      if (__DEV__) {
+        console.warn('Cannot complete meal: selectedDay or selectedDay.date is null');
+      }
       return;
     }
     
     // Only allow completion on current day
     if (!isCurrentDay(selectedDay)) {
-      console.warn('Cannot complete meal: only current day meals can be completed');
+      if (__DEV__) {
+        console.warn('Cannot complete meal: only current day meals can be completed');
+      }
       return;
     }
     
@@ -661,10 +607,6 @@ export default function DietPlanDisplay({
           selectedDay.day, 
           week
         );
-        
-        if (daySuccess) {
-          console.log(`🎉 Diet Day ${selectedDay.day} completed! ${completionPercentage.toFixed(1)}% of meals finished.`);
-        }
       }
       
       // Sync with progress service
@@ -696,10 +638,10 @@ export default function DietPlanDisplay({
           total + 3 + (day.meals?.snacks?.length || 0), 0) || 0,
         progressPercentage: getProgressPercentage()
       });
-      
-      console.log('🔄 Diet progress synced and broadcasted to dashboard');
     } catch (error) {
-      console.warn('Failed to sync diet progress:', error);
+      if (__DEV__) {
+        console.warn('Failed to sync diet progress:', error);
+      }
     }
   };
 
@@ -734,13 +676,6 @@ export default function DietPlanDisplay({
       const newWaterIntake = { ...waterIntake, [selectedDay.date]: isCompleted ? 0 : targetAmount };
       setWaterIntake(newWaterIntake);
     
-    console.log('💧 Water completion toggled:', {
-      date: selectedDay.date,
-      isCompleted: !isCompleted,
-      targetAmount,
-      waterIntake: newWaterIntake[selectedDay.date]
-    });
-    
     try {
       const Storage = await import('../utils/storage');
       await Storage.default.setItem('water_completed', JSON.stringify(newWaterCompleted));
@@ -756,7 +691,9 @@ export default function DietPlanDisplay({
       // Sync with progress service
       await syncProgressData();
     } catch (error) {
-      console.error('Error toggling water completion:', error);
+      if (__DEV__) {
+        console.error('Error toggling water completion:', error);
+      }
       
       // Revert UI changes if backend failed
       setWaterCompleted(waterCompleted);

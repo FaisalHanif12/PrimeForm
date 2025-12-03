@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
@@ -58,40 +58,46 @@ export default function ProgressDetailsScreen() {
   const [availableMonths, setAvailableMonths] = useState<number[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // PERFORMANCE: Start with false - defer loading
+  const [isLoadingCharts, setIsLoadingCharts] = useState(false); // PERFORMANCE: Separate loading state for charts
   const [stats, setStats] = useState<ProgressStats | null>(null);
   const [charts, setCharts] = useState<ProgressCharts | null>(null);
+  const [chartsLoaded, setChartsLoaded] = useState(false); // PERFORMANCE: Track if charts have been loaded
   const timelineScrollRef = useRef<ScrollView>(null);
+  const chartsSectionRef = useRef<View>(null); // PERFORMANCE: Ref for charts section
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
 
+  // PERFORMANCE: Load available weeks/months only (uses cached data, no API calls)
   useEffect(() => {
     const init = async () => {
       try {
-        setIsLoading(true);
+        // PERFORMANCE: These functions now use cached results - no API calls if cache exists
         const [weeks, months] = await Promise.all([
-          progressService.getAvailableWeeks(),
-          progressService.getAvailableMonths(),
+          progressService.getAvailableWeeks(false), // Use cache
+          progressService.getAvailableMonths(false), // Use cache
         ]);
         setAvailableWeeks(weeks);
         setAvailableMonths(months);
-        if (weeks.length > 0) setSelectedWeek(weeks[weeks.length - 1]);
-        if (months.length > 0) setSelectedMonth(months[months.length - 1]);
+        // Auto-select current period only if available
+        if (weeks.length > 0 && mode === 'weekly') {
+          setSelectedWeek(weeks[weeks.length - 1]);
+        }
+        if (months.length > 0 && mode === 'monthly') {
+          setSelectedMonth(months[months.length - 1]);
+        }
       } catch (error) {
-        console.error('Error loading available periods:', error);
         // Set defaults if loading fails
         setAvailableWeeks([1]);
         setAvailableMonths([1]);
-        setSelectedWeek(1);
-        setSelectedMonth(1);
-      } finally {
-        setIsLoading(false);
+        if (mode === 'weekly') setSelectedWeek(1);
+        if (mode === 'monthly') setSelectedMonth(1);
       }
     };
     init();
-  }, []);
+  }, []); // Only run once on mount
 
   // Auto-select current period when switching modes and reset scroll position
   useEffect(() => {
@@ -108,53 +114,71 @@ export default function ProgressDetailsScreen() {
     }
   }, [mode, availableWeeks, availableMonths]);
 
+  // PERFORMANCE: Load stats only when period is selected (deferred loading)
   useEffect(() => {
-    const loadDetails = async () => {
+    const loadStats = async () => {
       if (mode === 'weekly' && !selectedWeek) return;
       if (mode === 'monthly' && !selectedMonth) return;
+      
       try {
         setIsLoading(true);
         const period = mode;
         
-        // Load stats for the selected week/month - ensures exact data
+        // PERFORMANCE: Load stats (uses cached data if available)
         const statsResponse = await progressService.getProgressStats(
-          period,
-          mode === 'weekly' ? selectedWeek || undefined : undefined,
-          mode === 'monthly' ? selectedMonth || undefined : undefined,
-          false // Use cached data for performance, but ensure it's synced
-        );
-        if (statsResponse.success && statsResponse.data) {
-          setStats(statsResponse.data as ProgressStats);
-        } else {
-          console.warn('Failed to load stats:', statsResponse.message);
-        }
-
-        // Load chart data showing trend leading up to selected week/month
-        const chartsResponse = await progressService.getChartData(
           period,
           mode === 'weekly' ? selectedWeek || undefined : undefined,
           mode === 'monthly' ? selectedMonth || undefined : undefined,
           false // Use cached data for performance
         );
-        if (chartsResponse.success && chartsResponse.data) {
-          setCharts({
-            calories: chartsResponse.data.calories,
-            workouts: chartsResponse.data.workouts,
-            water: chartsResponse.data.water,
-          });
-        } else {
-          console.warn('Failed to load charts:', chartsResponse.message);
-          setCharts(null);
+        if (statsResponse.success && statsResponse.data) {
+          setStats(statsResponse.data as ProgressStats);
         }
       } catch (error) {
-        console.error('Error loading progress details:', error);
+        // Error loading stats
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadDetails();
+    loadStats();
+    // PERFORMANCE: Reset charts loaded flag when period changes
+    setChartsLoaded(false);
+    setCharts(null);
   }, [mode, selectedWeek, selectedMonth]);
+
+  // PERFORMANCE: Lazy load charts - only load when user scrolls near charts section or explicitly requests
+  const loadCharts = useCallback(async () => {
+    if (chartsLoaded) return; // Already loaded
+    
+    if (mode === 'weekly' && !selectedWeek) return;
+    if (mode === 'monthly' && !selectedMonth) return;
+    
+    try {
+      setIsLoadingCharts(true);
+      const period = mode;
+      
+      // PERFORMANCE: Load charts (uses cached data if available)
+      const chartsResponse = await progressService.getChartData(
+        period,
+        mode === 'weekly' ? selectedWeek || undefined : undefined,
+        mode === 'monthly' ? selectedMonth || undefined : undefined,
+        false // Use cached data for performance
+      );
+      if (chartsResponse.success && chartsResponse.data) {
+        setCharts({
+          calories: chartsResponse.data.calories,
+          workouts: chartsResponse.data.workouts,
+          water: chartsResponse.data.water,
+        });
+        setChartsLoaded(true);
+      }
+    } catch (error) {
+      // Error loading charts
+    } finally {
+      setIsLoadingCharts(false);
+    }
+  }, [mode, selectedWeek, selectedMonth, chartsLoaded]);
 
   const currentPeriodLabel =
     mode === 'weekly'
@@ -518,29 +542,51 @@ export default function ProgressDetailsScreen() {
             )}
           </View>
 
-          {/* Charts */}
-          {charts && (
-            <View style={styles.chartsSection}>
-              <ProgressChart
-                title="Calories Trend"
-                data={charts.calories}
-                type="line"
-                period={mode}
-              />
-              <ProgressChart
-                title="Workout Performance"
-                data={charts.workouts}
-                type="bar"
-                period={mode}
-              />
-              <ProgressChart
-                title="Water Hydration"
-                data={charts.water}
-                type="bar"
-                period={mode}
-              />
-            </View>
-          )}
+          {/* Charts Section - PERFORMANCE: Lazy loaded */}
+          <View
+            ref={chartsSectionRef}
+            style={styles.chartsSection}
+            onLayout={() => {
+              // PERFORMANCE: Load charts when section comes into view
+              if (!chartsLoaded && (selectedWeek || selectedMonth)) {
+                loadCharts();
+              }
+            }}
+          >
+            {isLoadingCharts ? (
+              <View style={styles.chartsLoading}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={styles.chartsLoadingText}>Loading charts...</Text>
+              </View>
+            ) : charts ? (
+              <>
+                <ProgressChart
+                  title="Calories Trend"
+                  data={charts.calories}
+                  type="line"
+                  period={mode}
+                />
+                <ProgressChart
+                  title="Workout Performance"
+                  data={charts.workouts}
+                  type="bar"
+                  period={mode}
+                />
+                <ProgressChart
+                  title="Water Hydration"
+                  data={charts.water}
+                  type="bar"
+                  period={mode}
+                />
+              </>
+            ) : (
+              <View style={styles.chartsPlaceholder}>
+                <Text style={styles.chartsPlaceholderText}>
+                  Charts will load when you select a period
+                </Text>
+              </View>
+            )}
+          </View>
         </ScrollView>
 
         <BottomNavigation
@@ -835,6 +881,31 @@ const styles = StyleSheet.create({
   chartsSection: {
     marginBottom: spacing.xl,
     gap: spacing.lg,
+    minHeight: 200,
+  },
+  chartsLoading: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  chartsLoadingText: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    marginTop: spacing.md,
+    fontFamily: fonts.body,
+  },
+  chartsPlaceholder: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 200,
+  },
+  chartsPlaceholderText: {
+    color: colors.mutedText,
+    fontSize: typography.body,
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
 });
 

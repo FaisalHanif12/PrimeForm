@@ -44,12 +44,34 @@ interface ProgressServiceResponse<T> {
 
 class ProgressService {
   private lastCleanupDate: string | null = null;
+  
+  // PERFORMANCE: Cache for calculated stats and charts
+  private statsCache: Map<string, { data: ProgressStats; timestamp: number }> = new Map();
+  private chartsCache: Map<string, { data: any; timestamp: number }> = new Map();
+  private availableWeeksCache: number[] | null = null;
+  private availableMonthsCache: number[] | null = null;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache for stats/charts
+  private lastCompletionUpdate: number = 0; // Track when completion data was last updated
 
   // Initialize and perform cleanup if needed
   async initialize(): Promise<void> {
     await exerciseCompletionService.initialize();
     await mealCompletionService.initialize();
     await this.performPeriodicCleanup();
+  }
+  
+  // Clear caches when completion data changes (public method for external use)
+  invalidateCaches(): void {
+    this.statsCache.clear();
+    this.chartsCache.clear();
+    this.availableWeeksCache = null;
+    this.availableMonthsCache = null;
+    this.lastCompletionUpdate = Date.now();
+  }
+  
+  // Generate cache key for stats/charts
+  private getCacheKey(period: string, week?: number, month?: number): string {
+    return `${period}-${week || 0}-${month || 0}`;
   }
 
   // Perform periodic cleanup of old data
@@ -73,11 +95,31 @@ class ProgressService {
   // Get comprehensive progress statistics
   async getProgressStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number, forceRefresh = false): Promise<ProgressServiceResponse<ProgressStats>> {
     try {
+      // PERFORMANCE: Check cache first (unless forcing refresh)
+      const cacheKey = this.getCacheKey(period, selectedWeek, selectedMonth);
+      if (!forceRefresh) {
+        const cached = this.statsCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+          return {
+            success: true,
+            message: 'Progress stats from cache',
+            data: cached.data
+          };
+        }
+      }
+
       // Always initialize services first
       await this.initialize();
 
       // Calculate from local data directly - this ensures accuracy
       const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth, forceRefresh);
+      
+      // PERFORMANCE: Cache the result
+      this.statsCache.set(cacheKey, {
+        data: localStats,
+        timestamp: Date.now()
+      });
+      
       return {
         success: true,
         message: 'Progress stats calculated from real-time data',
@@ -784,6 +826,19 @@ class ProgressService {
     water: ChartData;
   }>> {
     try {
+      // PERFORMANCE: Check cache first (unless forcing refresh)
+      const cacheKey = this.getCacheKey(period, selectedWeek, selectedMonth);
+      if (!forceRefresh) {
+        const cached = this.chartsCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+          return {
+            success: true,
+            message: 'Chart data from cache',
+            data: cached.data
+          };
+        }
+      }
+      
       // OPTIMIZATION: Load real data for charts using cached data unless forcing refresh
       const workoutPlan = forceRefresh
         ? await aiWorkoutService.refreshWorkoutPlanFromDatabase()
@@ -867,6 +922,12 @@ class ProgressService {
           }]
         }
       };
+
+      // PERFORMANCE: Cache the result
+      this.chartsCache.set(cacheKey, {
+        data: chartData,
+        timestamp: Date.now()
+      });
 
       return {
         success: true,
@@ -1473,15 +1534,22 @@ class ProgressService {
   }
 
   // Get available weeks for filtering - uses cached data
-  async getAvailableWeeks(): Promise<number[]> {
+  async getAvailableWeeks(forceRefresh = false): Promise<number[]> {
     try {
+      // PERFORMANCE: Return cached result if available
+      if (!forceRefresh && this.availableWeeksCache !== null) {
+        return this.availableWeeksCache;
+      }
+      
       // OPTIMIZATION: Uses cached data by default - no unnecessary API calls
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
       
       const plan = workoutPlan || dietPlan;
       if (!plan || !plan.startDate) {
-        return [1];
+        const defaultWeeks = [1];
+        this.availableWeeksCache = defaultWeeks;
+        return defaultWeeks;
       }
 
       const totalWeeks = plan.totalWeeks || 12;
@@ -1492,22 +1560,34 @@ class ProgressService {
       for (let i = 1; i <= Math.min(currentWeek, totalWeeks); i++) {
         weeks.push(i);
       }
+      
+      // PERFORMANCE: Cache the result
+      this.availableWeeksCache = weeks;
       return weeks;
     } catch (error) {
-      return [1];
+      const defaultWeeks = [1];
+      this.availableWeeksCache = defaultWeeks;
+      return defaultWeeks;
     }
   }
 
   // Get available months for filtering - uses cached data
-  async getAvailableMonths(): Promise<number[]> {
+  async getAvailableMonths(forceRefresh = false): Promise<number[]> {
     try {
+      // PERFORMANCE: Return cached result if available
+      if (!forceRefresh && this.availableMonthsCache !== null) {
+        return this.availableMonthsCache;
+      }
+      
       // OPTIMIZATION: Uses cached data by default - no unnecessary API calls
       const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
       
       const plan = workoutPlan || dietPlan;
       if (!plan || !plan.startDate) {
-        return [1];
+        const defaultMonths = [1];
+        this.availableMonthsCache = defaultMonths;
+        return defaultMonths;
       }
 
       const totalWeeks = plan.totalWeeks || 12;
@@ -1519,9 +1599,14 @@ class ProgressService {
       for (let i = 1; i <= Math.min(currentMonth, totalMonths); i++) {
         months.push(i);
       }
+      
+      // PERFORMANCE: Cache the result
+      this.availableMonthsCache = months;
       return months;
     } catch (error) {
-      return [1];
+      const defaultMonths = [1];
+      this.availableMonthsCache = defaultMonths;
+      return defaultMonths;
     }
   }
 

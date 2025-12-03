@@ -272,47 +272,62 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
   const calculateHealthScore = (): number => {
     if (!progressStats) return 0;
 
-    // Workout completion score (30% weight)
+    // Workout completion score (30% weight) - capped at 100
     const workoutScore = progressStats.totalWorkouts > 0 
-      ? (progressStats.workoutsCompleted / progressStats.totalWorkouts) * 100 
+      ? Math.min((progressStats.workoutsCompleted / progressStats.totalWorkouts) * 100, 100)
       : 0;
 
-    // Meal completion score (25% weight)
+    // Meal completion score (25% weight) - capped at 100
     const mealScore = progressStats.totalMeals > 0 
-      ? (progressStats.mealsCompleted / progressStats.totalMeals) * 100 
+      ? Math.min((progressStats.mealsCompleted / progressStats.totalMeals) * 100, 100)
       : 0;
 
-    // Hydration score (20% weight)
+    // Hydration score (20% weight) - capped at 100
     const hydrationRatio = progressStats.targetWater > 0 
-      ? Math.min(progressStats.waterIntake / progressStats.targetWater, 1.2) 
+      ? Math.min(progressStats.waterIntake / progressStats.targetWater, 1.0) 
       : 0;
-    const hydrationScore = hydrationRatio * (100 / 1.2); // Max out at 100 even if exceeding target
+    const hydrationScore = Math.min(hydrationRatio * 100, 100); // Max out at 100
 
-    // Calorie balance score (25% weight) - closer to target = higher score
+    // Calorie balance score (25% weight) - more accurate calculation
     let calorieScore = 0;
     if (progressStats.targetCalories > 0) {
       const calorieRatio = progressStats.caloriesConsumed / progressStats.targetCalories;
-      // Perfect score at 100% of target, decreases as you deviate
-      if (calorieRatio >= 0.85 && calorieRatio <= 1.15) {
-        calorieScore = 100; // Within healthy range
-      } else if (calorieRatio >= 0.7 && calorieRatio <= 1.3) {
-        calorieScore = 75; // Slightly off target
-      } else if (calorieRatio >= 0.5 && calorieRatio <= 1.5) {
-        calorieScore = 50; // Moderately off target
+      // More accurate scoring: perfect at 100%, with smooth falloff
+      if (calorieRatio >= 0.90 && calorieRatio <= 1.10) {
+        calorieScore = 100; // Within 10% of target = perfect
+      } else if (calorieRatio >= 0.85 && calorieRatio <= 1.15) {
+        calorieScore = 95; // Within 15% of target = excellent
+      } else if (calorieRatio >= 0.75 && calorieRatio <= 1.25) {
+        calorieScore = 85; // Within 25% of target = very good
+      } else if (calorieRatio >= 0.65 && calorieRatio <= 1.35) {
+        calorieScore = 70; // Within 35% of target = good
+      } else if (calorieRatio >= 0.50 && calorieRatio <= 1.50) {
+        calorieScore = 50; // Within 50% of target = moderate
       } else {
-        calorieScore = 25; // Significantly off target
+        calorieScore = Math.max(25, 100 - Math.abs(calorieRatio - 1) * 100); // Gradual falloff
       }
+    } else {
+      // If no target calories, give full score (can't penalize for missing data)
+      calorieScore = 100;
     }
 
     // Weighted average
-    const totalScore = (
+    let totalScore = (
       (workoutScore * 0.30) +
       (mealScore * 0.25) +
       (hydrationScore * 0.20) +
       (calorieScore * 0.25)
     );
 
-    return Math.round(totalScore);
+    // ✅ PERFECT SCORE LOGIC: If all three main metrics (workouts, meals, hydration) are 100%,
+    // then the overall score should be 100, regardless of calories
+    // This ensures that when everything is complete, the score reflects that
+    if (workoutScore === 100 && mealScore === 100 && hydrationScore === 100) {
+      totalScore = 100;
+    }
+
+    // Cap at 100
+    return Math.min(Math.round(totalScore), 100);
   };
 
   const healthScore = calculateHealthScore();
