@@ -114,6 +114,33 @@ export default function AITrainerScreen() {
     }
   };
 
+  const handleNewChat = async () => {
+    try {
+      setIsLoading(true);
+      // Create a new conversation
+      const newConversationId = await aiTrainerService.createNewConversation();
+      
+      // Reset chat messages with welcome message
+      const welcomeMessage: ChatMessage = {
+        id: 'welcome',
+        type: 'ai',
+        message: `Hello ${user?.fullName || 'there'}! I'm your AI Trainer. I'm here to help you optimize your workouts, nutrition, and overall fitness journey. What would you like to know?`,
+        timestamp: new Date(),
+        category: 'general'
+      };
+      
+      setChatMessages([welcomeMessage]);
+      setCurrentMessage('');
+      scrollToBottom();
+      showToast('success', 'New chat started');
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      showToast('error', 'Failed to create new chat.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
@@ -397,6 +424,11 @@ export default function AITrainerScreen() {
           visible={historyModalVisible}
           onClose={() => setHistoryModalVisible(false)}
           onSelectConversation={handleSelectConversation}
+          onNewChat={handleNewChat}
+          onDelete={async () => {
+            // Reload chat history when current conversation is deleted
+            await loadChatHistory();
+          }}
         />
       </SafeAreaView>
     </DecorativeBackground>

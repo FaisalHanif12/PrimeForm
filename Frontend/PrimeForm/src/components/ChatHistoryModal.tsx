@@ -25,13 +25,15 @@ interface ChatHistoryModalProps {
   onClose: () => void;
   onSelectConversation: (conversationId: string) => void;
   onNewChat?: () => void;
+  onDelete?: () => void;
 }
 
 const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({ 
   visible, 
   onClose,
   onSelectConversation,
-  onNewChat
+  onNewChat,
+  onDelete
 }) => {
   const { t } = useLanguage();
   const { showToast } = useToast();
@@ -87,9 +89,14 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
     if (!conversationToDelete) return;
     
     try {
-      await aiTrainerService.deleteConversation(conversationToDelete.id);
+      const result = await aiTrainerService.deleteConversation(conversationToDelete.id);
       showToast('success', 'Chat deleted successfully');
       await loadConversations();
+      
+      // Notify parent if current conversation was deleted
+      if (result.wasCurrent && onDelete) {
+        onDelete();
+      }
     } catch (error) {
       console.error('Error deleting conversation:', error);
       showToast('error', 'Failed to delete chat');

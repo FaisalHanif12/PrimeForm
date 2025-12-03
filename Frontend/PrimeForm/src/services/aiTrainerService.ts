@@ -183,17 +183,30 @@ class AITrainerService {
   }
 
   // Delete conversation
-  async deleteConversation(conversationId: string): Promise<void> {
+  async deleteConversation(conversationId: string): Promise<{ wasCurrent: boolean; switchedToNew: boolean }> {
     try {
       const conversations = await this.getAllConversations();
       const filtered = conversations.filter(conv => conv.id !== conversationId);
       await Storage.setItem('ai_trainer_conversations', JSON.stringify(filtered));
       
-      // If deleted conversation was current, clear current conversation ID
+      // If deleted conversation was current, switch to another conversation or create new one
       const currentId = await Storage.getItem('ai_trainer_current_conversation_id');
-      if (currentId === conversationId) {
-        await Storage.removeItem('ai_trainer_current_conversation_id');
+      const wasCurrent = currentId === conversationId;
+      let switchedToNew = false;
+      
+      if (wasCurrent) {
+        // Try to load the first available conversation
+        if (filtered.length > 0) {
+          const nextConversation = filtered[0];
+          await this.loadConversation(nextConversation.id);
+        } else {
+          // No conversations left, create a new one
+          await this.createNewConversation();
+          switchedToNew = true;
+        }
       }
+      
+      return { wasCurrent, switchedToNew };
     } catch (error) {
       console.error('❌ Error deleting conversation:', error);
       throw error;
