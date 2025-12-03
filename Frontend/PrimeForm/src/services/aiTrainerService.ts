@@ -4,7 +4,7 @@ import aiWorkoutService from './aiWorkoutService';
 import aiDietService from './aiDietService';
 import userProfileService from './userProfileService';
 
-const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://primeform.app';
 const SITE_NAME = process.env.EXPO_PUBLIC_SITE_NAME || 'PrimeForm';
