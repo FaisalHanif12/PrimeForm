@@ -13,6 +13,7 @@ import {
   Platform,
   Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,7 @@ export default function AITrainerScreen() {
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
@@ -261,11 +263,7 @@ export default function AITrainerScreen() {
           notificationCount={0}
         />
 
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-        >
+        <View style={styles.container}>
           <View style={styles.headerContainer}>
             <View style={styles.headerTitleRow}>
               <View style={styles.headerTextContainer}>
@@ -285,7 +283,10 @@ export default function AITrainerScreen() {
           <ScrollView
             ref={scrollViewRef}
             style={styles.messagesContainer}
-            contentContainerStyle={styles.messagesContent}
+            contentContainerStyle={[
+              styles.messagesContent,
+              { paddingBottom: 100 } // Space for input
+            ]}
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
           >
@@ -336,27 +337,33 @@ export default function AITrainerScreen() {
             )}
           </ScrollView>
 
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.messageInput}
-                placeholder="Ask anything..."
-                placeholderTextColor={colors.mutedText}
-                value={currentMessage}
-                onChangeText={setCurrentMessage}
-                multiline
-                maxLength={500}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, !currentMessage.trim() && styles.sendButtonDisabled]}
-                onPress={handleSendMessage}
-                disabled={!currentMessage.trim() || isTyping}
-              >
-                <Ionicons name="send" size={20} color={colors.white} />
-              </TouchableOpacity>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+            style={styles.keyboardAvoidingView}
+          >
+            <View style={[styles.inputWrapper, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.messageInput}
+                  placeholder="Ask about your workout and diet..."
+                  placeholderTextColor={colors.mutedText}
+                  value={currentMessage}
+                  onChangeText={setCurrentMessage}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, !currentMessage.trim() && styles.sendButtonDisabled]}
+                  onPress={handleSendMessage}
+                  disabled={!currentMessage.trim() || isTyping}
+                >
+                  <Ionicons name="send" size={20} color={colors.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        </View>
 
         <Sidebar
           visible={sidebarVisible}
@@ -542,13 +549,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
+  keyboardAvoidingView: {
+    width: '100%',
+  },
   inputWrapper: {
     padding: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
-    marginBottom: spacing.md,
   },
   inputContainer: {
     flexDirection: 'row',
