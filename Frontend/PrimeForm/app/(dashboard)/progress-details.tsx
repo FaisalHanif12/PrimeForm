@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Act
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
+import BottomNavigation from '../../src/components/BottomNavigation';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { colors, spacing, fonts, typography, radius } from '../../src/theme/colors';
@@ -159,6 +160,19 @@ export default function ProgressDetailsScreen() {
     const hydrationRatio = stats.targetWater > 0 ? stats.waterIntake / stats.targetWater : 0;
     return Math.round(((workoutCompletion + mealCompletion + hydrationRatio) / 3) * 100);
   })();
+
+  const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
+    if (tab === 'home') {
+      router.push('/(dashboard)');
+    } else if (tab === 'workout') {
+      router.push('/(dashboard)/workout');
+    } else if (tab === 'diet') {
+      router.push('/(dashboard)/diet');
+    } else if (tab === 'gym') {
+      router.push('/(dashboard)/gym');
+    }
+    // Already on progress page
+  };
 
   const metricPercentages = stats
     ? {
@@ -434,11 +448,12 @@ export default function ProgressDetailsScreen() {
               />
             </View>
           )}
-
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
         </ScrollView>
+
+        <BottomNavigation
+          activeTab="progress"
+          onTabPress={handleTabPress}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -705,19 +720,6 @@ const styles = StyleSheet.create({
   chartsSection: {
     marginBottom: spacing.xl,
     gap: spacing.lg,
-  },
-  backButton: {
-    alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primary,
-  },
-  backButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: fonts.heading,
   },
 });
 
