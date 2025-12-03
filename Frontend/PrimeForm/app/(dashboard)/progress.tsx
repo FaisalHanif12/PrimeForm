@@ -276,7 +276,7 @@ export default function ProgressScreen() {
 
     const cards = [
       {
-        title: 'Calories Balance',
+        title: 'Calories',
         consumed: progressStats.caloriesConsumed,
         burned: progressStats.caloriesBurned,
         target: progressStats.targetCalories,
@@ -376,7 +376,7 @@ export default function ProgressScreen() {
                   <>
                     <Text style={styles.progressText}>
                       {/* ✅ FIXED: Handle NaN values gracefully */}
-                      {isNaN(card.consumed!) ? 0 : card.consumed}/{isNaN(card.target!) ? 3 : card.target} {card.unit}
+                      {isNaN(card.consumed!) ? 0 : card.consumed}/{isNaN(card.target!) ? 0 : card.target} {card.unit}
                     </Text>
                     <View style={styles.progressBar}>
                       <View
