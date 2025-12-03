@@ -278,7 +278,7 @@ class AITrainerService {
             }
           ],
           temperature: 0.7,
-          max_tokens: 1500, // Increased for more detailed responses
+          max_tokens: 2000, // Increased for detailed gap analysis and comprehensive responses
           stream: false,
         }),
       });
@@ -365,7 +365,7 @@ class AITrainerService {
 - Country: ${userProfile.country || 'International'}`);
     }
 
-    // Add detailed workout plan context with progress
+    // Add detailed workout plan context with progress and gap analysis
     if (workoutPlan) {
       const startDate = new Date(workoutPlan.startDate);
       const today = new Date();
@@ -381,8 +381,33 @@ class AITrainerService {
       ) || [];
       const uniqueExercises = [...new Set(allExercises)].slice(0, 15); // Top 15 unique exercises
       
+      // Calculate total expected exercises and days
+      const totalExpectedExercises = allExercises.length * totalWeeks; // Approximate
+      const totalExpectedDays = totalWeeks * 6; // 6 workout days per week (excluding rest day)
+      
       const completedExercisesCount = workoutPlan.completedExercises?.length || 0;
       const completedDaysCount = workoutPlan.completedDays?.length || 0;
+      
+      // Calculate completion rates
+      const exerciseCompletionRate = totalExpectedExercises > 0 ? 
+        Math.round((completedExercisesCount / totalExpectedExercises) * 100) : 0;
+      const dayCompletionRate = totalExpectedDays > 0 ? 
+        Math.round((completedDaysCount / totalExpectedDays) * 100) : 0;
+      
+      // Identify gaps
+      const expectedExercisesThisWeek = weeksCompleted > 0 ? allExercises.length : 0;
+      const expectedDaysThisWeek = weeksCompleted > 0 ? 6 : 0;
+      
+      // Get exercise details for analysis
+      const exerciseDetails = workoutPlan.weeklyPlan?.flatMap((day: any) => 
+        day.exercises?.map((ex: any) => ({
+          name: ex.name,
+          sets: ex.sets,
+          reps: ex.reps,
+          targetMuscles: ex.targetMuscles?.join(', ') || 'Not specified',
+          rest: ex.rest
+        })) || []
+      ) || [];
       
       context.push(`**CURRENT WORKOUT PLAN STATUS:**
 - Plan Goal: ${workoutPlan.goal}
@@ -391,14 +416,17 @@ class AITrainerService {
 - End Date: ${workoutPlan.endDate}
 - Progress: ${weeksCompleted} weeks completed out of ${totalWeeks} weeks (${progressPercentage}%)
 - Time in Plan: ${monthsIntoPlan > 0 ? `${monthsIntoPlan} month${monthsIntoPlan > 1 ? 's' : ''} and ` : ''}${weeksCompleted % 4} week${(weeksCompleted % 4) !== 1 ? 's' : ''}
-- Exercises Completed: ${completedExercisesCount}
-- Days Completed: ${completedDaysCount}
+- Exercises Completed: ${completedExercisesCount} (Completion Rate: ${exerciseCompletionRate}%)
+- Days Completed: ${completedDaysCount} (Completion Rate: ${dayCompletionRate}%)
+- Expected Exercises This Week: ~${expectedExercisesThisWeek}
+- Expected Days This Week: ${expectedDaysThisWeek}
 - Key Exercises in Plan: ${uniqueExercises.length > 0 ? uniqueExercises.join(', ') : 'Not specified'}
 - Weekly Structure: ${workoutPlan.weeklyPlan?.map((day: any) => `${day.dayName}${day.isRestDay ? ' (Rest)' : ''}`).join(', ') || 'Not specified'}
+- Exercise Details: ${exerciseDetails.slice(0, 10).map((ex: any) => `${ex.name} (${ex.sets}×${ex.reps}, ${ex.targetMuscles})`).join('; ') || 'Not specified'}
 - Key Notes: ${workoutPlan.keyNotes?.join('; ') || 'None'}`);
     }
 
-    // Add detailed diet plan context with progress
+    // Add detailed diet plan context with progress and gap analysis
     if (dietPlan) {
       const startDate = new Date(dietPlan.startDate);
       const today = new Date();
@@ -408,15 +436,40 @@ class AITrainerService {
       const progressPercentage = Math.min(Math.round((weeksCompleted / totalWeeks) * 100), 100);
       const monthsIntoPlan = Math.floor(weeksCompleted / 4);
       
-      // Get sample meals from the plan
-      const sampleMeals = dietPlan.weeklyPlan?.slice(0, 3).flatMap((day: any) => [
-        day.meals?.breakfast?.name,
-        day.meals?.lunch?.name,
-        day.meals?.dinner?.name
-      ]).filter(Boolean).slice(0, 9) || [];
+      // Get all meals from the plan for analysis
+      const allMeals = dietPlan.weeklyPlan?.flatMap((day: any) => [
+        { type: 'breakfast', meal: day.meals?.breakfast },
+        { type: 'lunch', meal: day.meals?.lunch },
+        { type: 'dinner', meal: day.meals?.dinner },
+        ...(day.meals?.snacks || []).map((snack: any) => ({ type: 'snack', meal: snack }))
+      ]).filter((item: any) => item.meal) || [];
+      
+      // Get sample meals for display
+      const sampleMeals = allMeals.slice(0, 12).map((item: any) => item.meal.name).filter(Boolean);
+      
+      // Calculate total expected meals
+      const mealsPerDay = 4; // breakfast, lunch, dinner, snacks
+      const totalExpectedMeals = totalWeeks * 7 * mealsPerDay;
+      const totalExpectedDays = totalWeeks * 7;
       
       const completedMealsCount = dietPlan.completedMeals?.length || 0;
       const completedDaysCount = dietPlan.completedDays?.length || 0;
+      
+      // Calculate completion rates
+      const mealCompletionRate = totalExpectedMeals > 0 ? 
+        Math.round((completedMealsCount / totalExpectedMeals) * 100) : 0;
+      const dayCompletionRate = totalExpectedDays > 0 ? 
+        Math.round((completedDaysCount / totalExpectedDays) * 100) : 0;
+      
+      // Get meal details for analysis
+      const mealDetails = allMeals.slice(0, 15).map((item: any) => ({
+        type: item.type,
+        name: item.meal.name,
+        calories: item.meal.calories,
+        protein: item.meal.protein,
+        carbs: item.meal.carbs,
+        fats: item.meal.fats
+      }));
       
       context.push(`**CURRENT DIET PLAN STATUS:**
 - Plan Goal: ${dietPlan.goal}
@@ -425,14 +478,17 @@ class AITrainerService {
 - End Date: ${dietPlan.endDate}
 - Progress: ${weeksCompleted} weeks completed out of ${totalWeeks} weeks (${progressPercentage}%)
 - Time in Plan: ${monthsIntoPlan > 0 ? `${monthsIntoPlan} month${monthsIntoPlan > 1 ? 's' : ''} and ` : ''}${weeksCompleted % 4} week${(weeksCompleted % 4) !== 1 ? 's' : ''}
-- Meals Completed: ${completedMealsCount}
-- Days Completed: ${completedDaysCount}
+- Meals Completed: ${completedMealsCount} (Completion Rate: ${mealCompletionRate}%)
+- Days Completed: ${completedDaysCount} (Completion Rate: ${dayCompletionRate}%)
+- Expected Meals Per Day: 4 (breakfast, lunch, dinner, snacks)
+- Expected Days Per Week: 7
 - Target Daily Calories: ${dietPlan.targetCalories} kcal
 - Target Daily Protein: ${dietPlan.targetProtein}g
 - Target Daily Carbs: ${dietPlan.targetCarbs}g
 - Target Daily Fats: ${dietPlan.targetFats}g
 - Country Cuisine: ${dietPlan.country || 'International'}
 - Sample Meals: ${sampleMeals.length > 0 ? sampleMeals.join(', ') : 'Not specified'}
+- Meal Details: ${mealDetails.slice(0, 10).map((m: any) => `${m.name} (${m.calories}kcal, P:${m.protein}g)`).join('; ') || 'Not specified'}
 - Key Notes: ${dietPlan.keyNotes?.join('; ') || 'None'}`);
     }
 
@@ -454,6 +510,8 @@ class AITrainerService {
 ✅ **Health-Aware**: Always consider medical conditions when providing exercise or nutrition advice
 ✅ **Plan-Aware**: Reference the user's current workout and diet plans in all responses
 ✅ **Progress-Aware**: Understand where the user is in their fitness journey (weeks/months into their plan)
+✅ **Gap Analysis**: Analyze completion data to identify areas where user is lacking in their workout or diet plan
+✅ **Comprehensive Plan Knowledge**: Deep understanding of the user's entire workout and diet plan structure
 
 **CRITICAL INSTRUCTIONS:**
 
@@ -486,10 +544,39 @@ class AITrainerService {
    - Suggest how new advice fits with their existing plan
    - Consider their plan's duration and goals
 
-5. **Response Style**:
+5. **Plan Gap Analysis**: When user asks "where am I lacking" or "what am I missing":
+   - Analyze their completion rates (exercises, days, meals)
+   - Compare completed vs expected based on their plan progress
+   - Identify specific areas: missed exercises, skipped days, incomplete meals
+   - Point out muscle groups or meal types that are being neglected
+   - Suggest actionable steps to improve consistency
+   - Reference specific exercises or meals from their plan that need attention
+   - Consider their progress timeline and adjust expectations accordingly
+
+6. **Comprehensive Plan Questions**: When asked about their current plan:
+   - Answer ANY question about their workout plan (exercises, schedule, structure, goals)
+   - Answer ANY question about their diet plan (meals, macros, timing, goals)
+   - Provide detailed explanations about plan components
+   - Explain the rationale behind plan design
+   - Suggest modifications if needed
+   - Reference specific days, exercises, or meals from their plan
+
+7. **Off-Topic Questions**: If user asks questions NOT related to:
+   - Fitness, exercise, workout, gym, sports
+   - Diet, nutrition, food, meals, eating
+   - Health, wellness, body, weight
+   - Progress, goals, motivation
+   - Their current workout or diet plan
+   
+   Then politely redirect:
+   - "I'm your AI fitness trainer focused on helping you with your workouts, diet, and fitness goals. Let's stick to topics related to your fitness journey, current workout plan, or diet plan. How can I help you with your training or nutrition?"
+   - Be friendly but firm about staying on topic
+   - Always offer to help with fitness-related questions instead
+
+8. **Response Style**:
    - Be encouraging and motivational
    - Provide science-based, actionable advice
-   - Keep responses comprehensive but concise (200-300 words)
+   - Keep responses comprehensive but concise (200-300 words, up to 400 for gap analysis)
    - Use clear, easy-to-understand language
    - Include specific examples when helpful
 
