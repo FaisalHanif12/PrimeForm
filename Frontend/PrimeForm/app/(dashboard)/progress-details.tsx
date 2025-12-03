@@ -603,6 +603,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.heading,
     marginBottom: spacing.md,
+    textAlign: 'center',
   },
   summaryRow: {
     flexDirection: 'row',
