@@ -4,15 +4,25 @@ import aiWorkoutService from './aiWorkoutService';
 import aiDietService from './aiDietService';
 import userProfileService from './userProfileService';
 
-const OPENROUTER_API_KEY = 'sk-or-v1-7b5b4e2a3f8d9c1e6a7b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4';
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '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';
+const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
+const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://primeform.app';
+const SITE_NAME = process.env.EXPO_PUBLIC_SITE_NAME || 'PrimeForm';
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   type: 'user' | 'ai';
   message: string;
   timestamp: Date;
   category?: 'workout' | 'diet' | 'motivation' | 'general';
+}
+
+export interface ChatConversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface TrainerInsight {
@@ -48,7 +58,7 @@ interface AITrainerServiceResponse<T> {
 
 class AITrainerService {
 
-  // Get chat history
+  // Get current chat history (for active conversation)
   async getChatHistory(): Promise<AITrainerServiceResponse<ChatMessage[]>> {
     try {
       // Try to get from backend first
@@ -61,7 +71,25 @@ class AITrainerService {
         console.warn('⚠️ Backend not available, loading from local storage');
       }
 
-      // Load from local storage as fallback
+      // Load current conversation from local storage
+      const currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
+      
+      if (currentConversationId) {
+        const conversations = await this.getAllConversations();
+        const currentConversation = conversations.find(conv => conv.id === currentConversationId);
+        if (currentConversation) {
+          return {
+            success: true,
+            message: 'Chat history loaded from local storage',
+            data: currentConversation.messages.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }))
+          };
+        }
+      }
+
+      // Fallback to old format for backward compatibility
       const chatHistory = await Storage.getItem('ai_trainer_chat') || '[]';
       const messages = JSON.parse(chatHistory).map((msg: any) => ({
         ...msg,
@@ -84,12 +112,137 @@ class AITrainerService {
     }
   }
 
+  // Get all conversations
+  async getAllConversations(): Promise<ChatConversation[]> {
+    try {
+      const conversationsJson = await Storage.getItem('ai_trainer_conversations') || '[]';
+      const conversations = JSON.parse(conversationsJson).map((conv: any) => ({
+        ...conv,
+        messages: conv.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })),
+        createdAt: new Date(conv.createdAt),
+        updatedAt: new Date(conv.updatedAt)
+      }));
+      return conversations.sort((a: ChatConversation, b: ChatConversation) => 
+        b.updatedAt.getTime() - a.updatedAt.getTime()
+      );
+    } catch (error) {
+      console.error('❌ Error getting conversations:', error);
+      return [];
+    }
+  }
+
+  // Get conversation by ID
+  async getConversationById(conversationId: string): Promise<ChatConversation | null> {
+    try {
+      const conversations = await this.getAllConversations();
+      return conversations.find(conv => conv.id === conversationId) || null;
+    } catch (error) {
+      console.error('❌ Error getting conversation:', error);
+      return null;
+    }
+  }
+
+  // Create new conversation
+  async createNewConversation(): Promise<string> {
+    try {
+      const conversationId = `conv_${Date.now()}`;
+      const now = new Date();
+      const newConversation: ChatConversation = {
+        id: conversationId,
+        title: 'New Chat',
+        messages: [],
+        createdAt: now,
+        updatedAt: now
+      };
+
+      const conversations = await this.getAllConversations();
+      conversations.unshift(newConversation);
+      
+      // Serialize dates for storage
+      const serializedConversations = conversations.map(conv => ({
+        ...conv,
+        messages: conv.messages.map(msg => ({
+          ...msg,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+        })),
+        createdAt: conv.createdAt instanceof Date ? conv.createdAt.toISOString() : conv.createdAt,
+        updatedAt: conv.updatedAt instanceof Date ? conv.updatedAt.toISOString() : conv.updatedAt
+      }));
+      
+      await Storage.setItem('ai_trainer_conversations', JSON.stringify(serializedConversations));
+      await Storage.setItem('ai_trainer_current_conversation_id', conversationId);
+      
+      return conversationId;
+    } catch (error) {
+      console.error('❌ Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  // Delete conversation
+  async deleteConversation(conversationId: string): Promise<void> {
+    try {
+      const conversations = await this.getAllConversations();
+      const filtered = conversations.filter(conv => conv.id !== conversationId);
+      await Storage.setItem('ai_trainer_conversations', JSON.stringify(filtered));
+      
+      // If deleted conversation was current, clear current conversation ID
+      const currentId = await Storage.getItem('ai_trainer_current_conversation_id');
+      if (currentId === conversationId) {
+        await Storage.removeItem('ai_trainer_current_conversation_id');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting conversation:', error);
+      throw error;
+    }
+  }
+
+  // Load conversation (set as current)
+  async loadConversation(conversationId: string): Promise<AITrainerServiceResponse<ChatMessage[]>> {
+    try {
+      const conversation = await this.getConversationById(conversationId);
+      if (!conversation) {
+        return {
+          success: false,
+          message: 'Conversation not found',
+          data: []
+        };
+      }
+
+      await Storage.setItem('ai_trainer_current_conversation_id', conversationId);
+      
+      return {
+        success: true,
+        message: 'Conversation loaded',
+        data: conversation.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      };
+    } catch (error) {
+      console.error('❌ Error loading conversation:', error);
+      return {
+        success: false,
+        message: 'Failed to load conversation',
+        data: []
+      };
+    }
+  }
+
   // Send message to AI trainer
   async sendMessage(message: string): Promise<AITrainerServiceResponse<{
     message: string;
     category: 'workout' | 'diet' | 'motivation' | 'general';
   }>> {
     try {
+      // Check if API key is available
+      if (!OPENROUTER_API_KEY) {
+        throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
+      }
+      
       console.log('🤖 Sending message to AI Trainer:', message);
 
       // Get user context for personalization
@@ -106,8 +259,8 @@ class AITrainerService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': 'https://primeform.app',
-          'X-Title': 'PrimeForm AI Trainer',
+          'HTTP-Referer': SITE_URL,
+          'X-Title': SITE_NAME,
         },
         body: JSON.stringify({
           model: 'google/gemini-2.0-flash-001',
@@ -250,34 +403,109 @@ ${context.length > 0 ? `\n**User Context:**\n${context.join('\n\n')}` : ''}
   }
 
   // Save chat message to local storage
-  private async saveChatMessage(userMessage: string, aiMessage: string, category: string): Promise<void> {
+  private async saveChatMessage(userMessage: string, aiMessage: string, category: 'workout' | 'diet' | 'motivation' | 'general'): Promise<void> {
     try {
-      const chatHistory = await Storage.getItem('ai_trainer_chat') || '[]';
-      const messages = JSON.parse(chatHistory);
+      let currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
       
+      // Create new conversation if none exists
+      if (!currentConversationId) {
+        currentConversationId = await this.createNewConversation();
+      }
+
+      const conversations = await this.getAllConversations();
+      const currentConversation = conversations.find(conv => conv.id === currentConversationId);
+      
+      if (!currentConversation) {
+        // Fallback to old format
+        const chatHistory = await Storage.getItem('ai_trainer_chat') || '[]';
+        const messages = JSON.parse(chatHistory);
+        const timestamp = new Date();
+        
+        messages.push({
+          id: `user_${Date.now()}`,
+          type: 'user',
+          message: userMessage,
+          timestamp: timestamp.toISOString()
+        });
+        
+        messages.push({
+          id: `ai_${Date.now() + 1}`,
+          type: 'ai',
+          message: aiMessage,
+          timestamp: timestamp.toISOString(),
+          category
+        });
+        
+        const recentMessages = messages.slice(-50);
+        await Storage.setItem('ai_trainer_chat', JSON.stringify(recentMessages));
+        return;
+      }
+
       const timestamp = new Date();
       
       // Add user message
-      messages.push({
+      currentConversation.messages.push({
         id: `user_${Date.now()}`,
         type: 'user',
         message: userMessage,
-        timestamp: timestamp.toISOString()
+        timestamp: timestamp
       });
       
       // Add AI message
-      messages.push({
+      currentConversation.messages.push({
         id: `ai_${Date.now() + 1}`,
         type: 'ai',
         message: aiMessage,
-        timestamp: timestamp.toISOString(),
-        category
+        timestamp: timestamp,
+        category: category as 'workout' | 'diet' | 'motivation' | 'general'
+      });
+
+      // Generate dynamic title based on conversation context
+      if (currentConversation.title === 'New Chat' || this.shouldUpdateTitle(currentConversation)) {
+        const newTitle = await this.generateConversationTitle(
+          currentConversation, 
+          userMessage, 
+          aiMessage, 
+          category as 'workout' | 'diet' | 'motivation' | 'general'
+        );
+        if (newTitle) {
+          currentConversation.title = newTitle;
+        }
+      }
+
+      // Update timestamp
+      currentConversation.updatedAt = timestamp;
+
+      // Keep only last 100 messages per conversation to avoid storage bloat
+      if (currentConversation.messages.length > 100) {
+        currentConversation.messages = currentConversation.messages.slice(-100);
+      }
+
+      // Update conversations array and serialize dates for storage
+      const updatedConversations = conversations.map(conv => {
+        if (conv.id === currentConversationId) {
+          return {
+            ...currentConversation,
+            messages: currentConversation.messages.map(msg => ({
+              ...msg,
+              timestamp: msg.timestamp.toISOString()
+            })),
+            createdAt: currentConversation.createdAt.toISOString(),
+            updatedAt: currentConversation.updatedAt.toISOString()
+          };
+        }
+        return {
+          ...conv,
+          messages: conv.messages.map((msg: any) => ({
+            ...msg,
+            timestamp: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : msg.timestamp
+          })),
+          createdAt: conv.createdAt instanceof Date ? conv.createdAt.toISOString() : conv.createdAt,
+          updatedAt: conv.updatedAt instanceof Date ? conv.updatedAt.toISOString() : conv.updatedAt
+        };
       });
       
-      // Keep only last 50 messages to avoid storage bloat
-      const recentMessages = messages.slice(-50);
-      
-      await Storage.setItem('ai_trainer_chat', JSON.stringify(recentMessages));
+      await Storage.setItem('ai_trainer_conversations', JSON.stringify(updatedConversations));
       
     } catch (error) {
       console.error('❌ Error saving chat message:', error);
@@ -503,10 +731,155 @@ ${context.length > 0 ? `\n**User Context:**\n${context.join('\n\n')}` : ''}
     return recommendations;
   }
 
+  // Generate dynamic conversation title based on context
+  private async generateConversationTitle(
+    conversation: ChatConversation,
+    latestUserMessage: string,
+    latestAiMessage: string,
+    category: string
+  ): Promise<string> {
+    try {
+      // If this is the first exchange, use a smart title based on the message
+      if (conversation.messages.length <= 2) {
+        return this.generateTitleFromMessage(latestUserMessage, category);
+      }
+
+      // For longer conversations, analyze the context to generate a better title
+      const allMessages = conversation.messages.map(m => m.message).join(' ');
+      const title = this.generateTitleFromContext(allMessages, category);
+      
+      return title;
+    } catch (error) {
+      console.error('❌ Error generating conversation title:', error);
+      // Fallback to simple title
+      return this.generateTitleFromMessage(latestUserMessage, category);
+    }
+  }
+
+  // Generate title from a single message
+  private generateTitleFromMessage(message: string, category: string): string {
+    const lowerMsg = message.toLowerCase();
+    
+    // Extract key phrases for workout-related
+    if (category === 'workout') {
+      if (lowerMsg.includes('workout plan') || lowerMsg.includes('training plan')) {
+        return 'Workout Plan Discussion';
+      }
+      if (lowerMsg.includes('exercise') || lowerMsg.includes('routine')) {
+        return 'Exercise Guidance';
+      }
+      if (lowerMsg.includes('muscle') || lowerMsg.includes('strength')) {
+        return 'Strength Training';
+      }
+      if (lowerMsg.includes('cardio') || lowerMsg.includes('running')) {
+        return 'Cardio Training';
+      }
+      return 'Workout Advice';
+    }
+    
+    // Extract key phrases for diet-related
+    if (category === 'diet') {
+      if (lowerMsg.includes('diet plan') || lowerMsg.includes('meal plan')) {
+        return 'Diet Plan Discussion';
+      }
+      if (lowerMsg.includes('nutrition') || lowerMsg.includes('calories')) {
+        return 'Nutrition Guidance';
+      }
+      if (lowerMsg.includes('protein') || lowerMsg.includes('macros')) {
+        return 'Macronutrients';
+      }
+      if (lowerMsg.includes('weight loss') || lowerMsg.includes('lose weight')) {
+        return 'Weight Loss';
+      }
+      return 'Diet Advice';
+    }
+    
+    // Extract key phrases for motivation
+    if (category === 'motivation') {
+      if (lowerMsg.includes('goal') || lowerMsg.includes('target')) {
+        return 'Goal Setting';
+      }
+      if (lowerMsg.includes('progress') || lowerMsg.includes('results')) {
+        return 'Progress Discussion';
+      }
+      return 'Motivation & Support';
+    }
+    
+    // For general, try to extract a meaningful phrase
+    const words = message.split(' ').filter(w => w.length > 3);
+    if (words.length > 0) {
+      const title = words.slice(0, 4).join(' ');
+      return title.length > 40 ? title.substring(0, 40) + '...' : title;
+    }
+    
+    return 'Chat';
+  }
+
+  // Generate title from conversation context
+  private generateTitleFromContext(allMessages: string, category: string): string {
+    const lowerMessages = allMessages.toLowerCase();
+    
+    // Analyze the conversation to find the main topic
+    const topics: { [key: string]: number } = {
+      'workout': (lowerMessages.match(/\b(workout|exercise|training|gym|lift|cardio|strength|muscle|sets|reps)\b/g) || []).length,
+      'diet': (lowerMessages.match(/\b(diet|nutrition|food|meal|calories|protein|carbs|fat|eating)\b/g) || []).length,
+      'motivation': (lowerMessages.match(/\b(motivation|encourage|goal|progress|mindset|confidence)\b/g) || []).length,
+    };
+    
+    // Find the dominant topic
+    const dominantTopic = Object.entries(topics).reduce((a, b) => topics[a[0]] > topics[b[0]] ? a : b)[0];
+    
+    // Generate category-specific titles
+    if (dominantTopic === 'workout' || category === 'workout') {
+      if (lowerMessages.includes('plan') || lowerMessages.includes('routine')) {
+        return 'Workout Plan Discussion';
+      }
+      if (lowerMessages.includes('muscle') || lowerMessages.includes('strength')) {
+        return 'Strength Training Chat';
+      }
+      return 'Workout Guidance';
+    }
+    
+    if (dominantTopic === 'diet' || category === 'diet') {
+      if (lowerMessages.includes('plan') || lowerMessages.includes('meal')) {
+        return 'Diet Plan Discussion';
+      }
+      if (lowerMessages.includes('nutrition') || lowerMessages.includes('calories')) {
+        return 'Nutrition Chat';
+      }
+      return 'Diet Advice';
+    }
+    
+    if (dominantTopic === 'motivation' || category === 'motivation') {
+      return 'Motivation & Support';
+    }
+    
+    // Extract first meaningful phrase from conversation
+    const sentences = allMessages.split(/[.!?]/).filter(s => s.trim().length > 10);
+    if (sentences.length > 0) {
+      const firstSentence = sentences[0].trim();
+      const words = firstSentence.split(' ').filter(w => w.length > 3).slice(0, 5);
+      if (words.length > 0) {
+        const title = words.join(' ');
+        return title.length > 40 ? title.substring(0, 40) + '...' : title;
+      }
+    }
+    
+    return 'Fitness Chat';
+  }
+
+  // Determine if title should be updated
+  private shouldUpdateTitle(conversation: ChatConversation): boolean {
+    // Update title if it's still generic and we have enough context (3+ messages)
+    return conversation.title === 'New Chat' && conversation.messages.length >= 3;
+  }
+
   // Clear chat history
   async clearChatHistory(): Promise<void> {
     try {
       await Storage.removeItem('ai_trainer_chat');
+      await Storage.removeItem('ai_trainer_conversations');
+      await Storage.removeItem('ai_trainer_current_conversation_id');
       console.log('🗑️ AI trainer chat history cleared');
     } catch (error) {
       console.error('❌ Error clearing chat history:', error);

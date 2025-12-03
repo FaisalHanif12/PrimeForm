@@ -21,11 +21,13 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
+import Storage from '../../src/utils/storage';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import Sidebar from '../../src/components/Sidebar';
 import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
+import ChatHistoryModal from '../../src/components/ChatHistoryModal';
 import aiTrainerService from '../../src/services/aiTrainerService';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -53,6 +55,7 @@ export default function AITrainerScreen() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
 
   useEffect(() => {
     loadChatHistory();
@@ -71,11 +74,10 @@ export default function AITrainerScreen() {
       }
 
       const chatResponse = await aiTrainerService.getChatHistory();
-      if (chatResponse.success && chatResponse.data) {
+      if (chatResponse.success && chatResponse.data && chatResponse.data.length > 0) {
         setChatMessages(chatResponse.data);
-      }
-
-      if (chatMessages.length === 0) {
+      } else {
+        // If no conversation exists, create a new one with welcome message
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
           type: 'ai',
@@ -93,8 +95,31 @@ export default function AITrainerScreen() {
     }
   };
 
+  const handleSelectConversation = async (conversationId: string) => {
+    try {
+      setIsLoading(true);
+      const response = await aiTrainerService.loadConversation(conversationId);
+      if (response.success && response.data) {
+        setChatMessages(response.data);
+        scrollToBottom();
+      } else {
+        showToast('error', 'Failed to load conversation.');
+      }
+    } catch (error) {
+      showToast('error', 'Failed to load conversation.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
+
+    // Ensure we have a current conversation
+    const currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
+    if (!currentConversationId) {
+      await aiTrainerService.createNewConversation();
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -104,12 +129,13 @@ export default function AITrainerScreen() {
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const messageToSend = currentMessage.trim();
     setCurrentMessage('');
     setIsTyping(true);
     Keyboard.dismiss();
 
     try {
-      const response = await aiTrainerService.sendMessage(currentMessage.trim());
+      const response = await aiTrainerService.sendMessage(messageToSend);
 
       if (response.success && response.data) {
         const aiMessage: ChatMessage = {
@@ -121,6 +147,7 @@ export default function AITrainerScreen() {
         };
 
         setChatMessages(prev => [...prev, aiMessage]);
+        scrollToBottom();
       }
     } catch (error) {
       showToast('error', 'Failed to send message. Please try again.');
@@ -240,8 +267,19 @@ export default function AITrainerScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
         >
           <View style={styles.headerContainer}>
-            <Text style={styles.headerTitle}>AI Trainer</Text>
-            <Text style={styles.headerSubtitle}>Your Personal Fitness Coach</Text>
+            <View style={styles.headerTitleRow}>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>AI Trainer</Text>
+                <Text style={styles.headerSubtitle}>Your Personal Fitness Coach</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.historyButton}
+                onPress={() => setHistoryModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={24} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView
@@ -346,6 +384,13 @@ export default function AITrainerScreen() {
           userInfo={userInfo}
           onUpdateUserInfo={handleUpdateUserInfo}
         />
+
+        {/* Chat History Modal */}
+        <ChatHistoryModal
+          visible={historyModalVisible}
+          onClose={() => setHistoryModalVisible(false)}
+          onSelectConversation={handleSelectConversation}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );
@@ -369,11 +414,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   headerContainer: {
-    alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
     marginBottom: spacing.sm,
+    position: 'relative',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  headerTextContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
     color: colors.white,
@@ -388,6 +443,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: fonts.body,
     marginTop: 2,
+  },
+  historyButton: {
+    position: 'absolute',
+    // Calculate exact center alignment with notification icon:
+    // Notification center = spacing.lg (20) + spacing.sm (10) + iconContainer/2 (22) = 52px from right
+    // History icon center should be at same position: 52px from right
+    // Icon is 24px, so center is 12px from icon edge
+    // Button has spacing.sm (10px) padding, so: right = 52 - 12 - 10 = 30px
+    right: 30,
+    padding: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   messagesContainer: {
     flex: 1,
