@@ -453,7 +453,7 @@ export default function ProgressDetailsScreen() {
         </ScrollView>
 
         <BottomNavigation
-          activeTab="progress"
+          activeTab=""
           onTabPress={handleTabPress}
         />
       </SafeAreaView>
