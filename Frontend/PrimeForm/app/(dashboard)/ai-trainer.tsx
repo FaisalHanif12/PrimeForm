@@ -544,9 +544,11 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     padding: spacing.md,
+    paddingBottom: spacing.lg,
     backgroundColor: 'rgba(0,0,0,0.3)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
+    marginBottom: spacing.md,
   },
   inputContainer: {
     flexDirection: 'row',
