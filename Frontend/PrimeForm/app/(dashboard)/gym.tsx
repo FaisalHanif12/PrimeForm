@@ -77,6 +77,12 @@ const workoutCategories = [
   },
 ];
 
+const totalExercises = workoutCategories.reduce(
+  (sum, category) => sum + (category.exerciseCount || 0),
+  0,
+);
+const totalCategories = workoutCategories.length;
+
 export default function GymScreen() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -218,12 +224,12 @@ export default function GymScreen() {
               <Text style={styles.heroSubtitle}>Choose your perfect workout experience</Text>
               <View style={styles.heroStats}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>89</Text>
+                  <Text style={styles.statNumber}>{totalExercises}</Text>
                   <Text style={styles.statLabel}>Exercises</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>6</Text>
+                  <Text style={styles.statNumber}>{totalCategories}</Text>
                   <Text style={styles.statLabel}>Categories</Text>
                 </View>
                 <View style={styles.statDivider} />
@@ -274,7 +280,7 @@ export default function GymScreen() {
                         <View style={styles.categoryTextContainer}>
                           <Text style={styles.categoryName}>{category.name}</Text>
                           <Text style={styles.categoryDescription}>{category.description}</Text>
-                          <Text style={[styles.exerciseCount, { color: colors.primary }]}>
+                          <Text style={styles.exerciseCount}>
                             {category.exerciseCount} exercises
                           </Text>
                         </View>
@@ -471,7 +477,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     fontFamily: fonts.body,
-    color: colors.primary,
+    color: colors.white,
+    opacity: 0.8,
   },
   categoryArrowCircle: {
     width: 40,
