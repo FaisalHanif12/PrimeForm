@@ -87,7 +87,6 @@ export default function GymScreen() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [selectedGender, setSelectedGender] = useState<'men' | 'women'>('men');
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
@@ -184,12 +183,11 @@ export default function GymScreen() {
   };
 
   const handleCategoryPress = (categoryId: string) => {
-    // Navigate to exercise listing page with enhanced parameters
+    // Navigate to exercise listing page with enhanced parameters (gender removed)
     router.push({
       pathname: '/gym-exercises',
       params: {
         category: categoryId,
-        gender: selectedGender,
         categoryName: workoutCategories.find(cat => cat.id === categoryId)?.name || categoryId,
       },
     });
@@ -237,47 +235,6 @@ export default function GymScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {/* Gender Selector */}
-          <Animated.View entering={FadeInLeft.delay(100)} style={styles.genderSection}>
-            <Text style={styles.sectionTitle}>Choose Your Profile</Text>
-            <View style={styles.genderSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  selectedGender === 'men' && styles.genderButtonActive
-                ]}
-                onPress={() => setSelectedGender('men')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.genderEmoji}>👨</Text>
-                <Text style={[
-                  styles.genderButtonText,
-                  selectedGender === 'men' && styles.genderButtonTextActive
-                ]}>
-                  Men
-                </Text>
-                <Text style={styles.genderDescription}>Strength focused</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  selectedGender === 'women' && styles.genderButtonActive
-                ]}
-                onPress={() => setSelectedGender('women')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.genderEmoji}>👩</Text>
-                <Text style={[
-                  styles.genderButtonText,
-                  selectedGender === 'women' && styles.genderButtonTextActive
-                ]}>
-                  Women
-                </Text>
-                <Text style={styles.genderDescription}>Toned & strong</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
           {/* Categories Section */}
           <Animated.View entering={SlideInUp.delay(200)} style={styles.categoriesSection}>
             <Text style={styles.sectionTitle}>Workout Categories</Text>
@@ -309,7 +266,7 @@ export default function GymScreen() {
                           <Ionicons
                             name={category.iconName as any}
                             size={28}
-                            color={colors.primary}
+                            color={colors.white}
                           />
                         </View>
 
@@ -453,48 +410,6 @@ const styles = StyleSheet.create({
   },
 
   // Gender Section
-  genderSection: {
-    marginBottom: spacing.xl,
-  },
-  genderSelector: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  genderButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.cardBorder,
-  },
-  genderButtonActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
-  },
-  genderEmoji: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
-  },
-  genderButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginBottom: 4,
-  },
-  genderButtonTextActive: {
-    color: colors.primary,
-  },
-  genderDescription: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontFamily: fonts.body,
-  },
-
-
   // Categories Section
   categoriesSection: {
     marginBottom: spacing.xl,
