@@ -19,12 +19,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Enhanced workout categories with correct exercise counts and elegant design
+// Enhanced workout categories with correct exercise counts and sport-style design
 const workoutCategories = [
   {
     id: 'chest',
     name: 'Chest',
-    emoji: '💪',
+    iconName: 'fitness-outline',
     description: 'Build powerful pecs',
     exerciseCount: 8,
     gradientColors: ['#667eea', '#764ba2'],
@@ -33,7 +33,7 @@ const workoutCategories = [
   {
     id: 'back',
     name: 'Back',
-    emoji: '🏋️',
+    iconName: 'body-outline',
     description: 'Strengthen your spine',
     exerciseCount: 6,
     gradientColors: ['#f093fb', '#f5576c'],
@@ -42,7 +42,7 @@ const workoutCategories = [
   {
     id: 'arms',
     name: 'Arms',
-    emoji: '💪',
+    iconName: 'barbell-outline',
     description: 'Sculpt strong arms',
     exerciseCount: 5,
     gradientColors: ['#4facfe', '#00f2fe'],
@@ -51,7 +51,7 @@ const workoutCategories = [
   {
     id: 'legs',
     name: 'Legs',
-    emoji: '🦵',
+    iconName: 'walk-outline',
     description: 'Power up your legs',
     exerciseCount: 6,
     gradientColors: ['#43e97b', '#38f9d7'],
@@ -60,7 +60,7 @@ const workoutCategories = [
   {
     id: 'abs',
     name: 'Abs',
-    emoji: '🔥',
+    iconName: 'accessibility-outline',
     description: 'Core strength & definition',
     exerciseCount: 7,
     gradientColors: ['#fa709a', '#fee140'],
@@ -69,7 +69,7 @@ const workoutCategories = [
   {
     id: 'full_body',
     name: 'Full Body',
-    emoji: '🚀',
+    iconName: 'accessibility',
     description: 'Complete workout',
     exerciseCount: 8,
     gradientColors: ['#a8edea', '#fed6e3'],
@@ -306,7 +306,11 @@ export default function GymScreen() {
                       <View style={styles.categoryLeft}>
                         {/* Icon */}
                         <View style={[styles.categoryIconContainer, { backgroundColor: colors.primary + '25' }]}>
-                          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                          <Ionicons
+                            name={category.iconName as any}
+                            size={28}
+                            color={colors.primary}
+                          />
                         </View>
 
                         {/* Text content */}
