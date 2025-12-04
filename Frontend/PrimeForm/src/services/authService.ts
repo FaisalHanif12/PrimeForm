@@ -66,7 +66,17 @@ class AuthService {
         config.body = JSON.stringify(body);
       }
 
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+      const controller = new AbortController();
+      const timeoutMs = 10000; // 10s timeout so UI doesn't hang on bad network
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...config,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -77,7 +87,17 @@ class AuthService {
 
       return data;
     } catch (error) {
+      // Normalize network / timeout errors to a friendly message
+      if ((error as any)?.name === 'AbortError') {
+        throw new Error('Request timed out. Please check your internet connection and try again.');
+      }
+
       if (error instanceof Error) {
+        // React Native fetch usually throws TypeError('Network request failed') on connectivity issues
+        if (error.message === 'Network request failed') {
+          throw new Error('Unable to reach the server. Please check your internet connection and try again.');
+        }
+
         throw error;
       }
       throw new Error('Network error occurred');

@@ -10,30 +10,22 @@ const getApiConfig = (): ApiConfig => {
   const isDevelopment = __DEV__;
 
   if (isDevelopment) {
-    // Try your network IP first, then fall back to localhost
-    const possibleUrls = [
-      'http://192.168.48.129:5001/api', // Primary: your CURRENT network IP
-      'http://192.168.135.70:5001/api', // Previous network IP
-      'http://192.168.111.70:5001/api', // Previous network IP
-      'http://192.168.0.112:5001/api',  // Fallback: previous network IP
-      'http://192.168.49.223:5001/api', // Fallback: another network IP
-      'http://192.168.48.66:5001/api',  // Fallback: your previous network IP
-      'http://192.168.75.66:5001/api',  // Fallback: your previous mobile data IP
-      'http://192.168.100.33:5001/api', // Fallback: your previous network IP
-      'http://192.168.0.117:5001/api',  // Fallback: your old network IP
-      'http://localhost:5001/api',      // Fallback: localhost
-      'http://127.0.0.1:5001/api',     // Alternative: loopback
-    ];
+    /**
+     * IMPORTANT:
+     * Use the SAME IP that Metro is using (shown in the Expo terminal as
+     * "exp://192.168.xxx.xxx:8081"). This is the IP your phone can reach.
+     *
+     * Right now Metro is running on: http://192.168.152.70:8081
+     * So we use that base IP with the backend port 5001.
+     */
+    const baseURL = 'http://192.168.152.70:5001/api';
 
-    // Use the first URL (current network IP) as primary
-    const baseURL = possibleUrls[0];
-
-    console.log('🔍 Primary API URL:', baseURL);
-    console.log('🔄 Fallback URLs:', possibleUrls.slice(1));
+    console.log('🔍 API URL (development):', baseURL);
 
     return {
       baseURL,
-      timeout: 30000, // Increased timeout for heavy operations like workout plan generation
+      // Keep this reasonable so network issues fail fast instead of hanging the UI
+      timeout: 10000, // 10 seconds
     };
   }
 
