@@ -144,6 +144,32 @@ export default function AITrainerScreen() {
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
+    // Daily usage limit: max 3 messages per user per day
+    try {
+      const today = new Date();
+      const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      // Use email as stable identifier for per-user limit; fall back to generic key if not available
+      const userId = user?.email || 'guest';
+      const usageKey = `ai_trainer_usage_${userId}_${dateKey}`;
+
+      const rawUsage = await Storage.getItem(usageKey);
+      const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
+
+      if (currentCount >= 3) {
+        showToast(
+          'warning',
+          'You have reached today\'s limit of 3 messages to the AI Trainer. Please come back tomorrow.'
+        );
+        return;
+      }
+
+      // Increment and persist usage before sending to avoid race conditions
+      await Storage.setItem(usageKey, String(currentCount + 1));
+    } catch (error) {
+      console.error('Error checking AI Trainer daily limit:', error);
+      // If something goes wrong with the limit check, still allow the message
+    }
+
     // Ensure we have a current conversation
     const currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
     if (!currentConversationId) {

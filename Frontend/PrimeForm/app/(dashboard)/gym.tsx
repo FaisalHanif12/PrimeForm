@@ -14,18 +14,17 @@ import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
 import NotificationModal from '../../src/components/NotificationModal';
 import { useNotifications } from '../../src/contexts/NotificationContext';
-// Using Expo Vector Icons instead
-// import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Enhanced workout categories with correct exercise counts and elegant design
+// Enhanced workout categories with correct exercise counts and sport-style design
 const workoutCategories = [
   {
     id: 'chest',
     name: 'Chest',
-    emoji: '💪',
+    iconName: 'fitness-outline',
     description: 'Build powerful pecs',
     exerciseCount: 8,
     gradientColors: ['#667eea', '#764ba2'],
@@ -34,7 +33,7 @@ const workoutCategories = [
   {
     id: 'back',
     name: 'Back',
-    emoji: '🏋️',
+    iconName: 'body-outline',
     description: 'Strengthen your spine',
     exerciseCount: 6,
     gradientColors: ['#f093fb', '#f5576c'],
@@ -43,7 +42,7 @@ const workoutCategories = [
   {
     id: 'arms',
     name: 'Arms',
-    emoji: '💪',
+    iconName: 'barbell-outline',
     description: 'Sculpt strong arms',
     exerciseCount: 5,
     gradientColors: ['#4facfe', '#00f2fe'],
@@ -52,7 +51,7 @@ const workoutCategories = [
   {
     id: 'legs',
     name: 'Legs',
-    emoji: '🦵',
+    iconName: 'walk-outline',
     description: 'Power up your legs',
     exerciseCount: 6,
     gradientColors: ['#43e97b', '#38f9d7'],
@@ -61,7 +60,7 @@ const workoutCategories = [
   {
     id: 'abs',
     name: 'Abs',
-    emoji: '🔥',
+    iconName: 'accessibility-outline',
     description: 'Core strength & definition',
     exerciseCount: 7,
     gradientColors: ['#fa709a', '#fee140'],
@@ -70,13 +69,19 @@ const workoutCategories = [
   {
     id: 'full_body',
     name: 'Full Body',
-    emoji: '🚀',
+    iconName: 'accessibility',
     description: 'Complete workout',
     exerciseCount: 8,
     gradientColors: ['#a8edea', '#fed6e3'],
     iconBg: '#a8edea'
   },
 ];
+
+const totalExercises = workoutCategories.reduce(
+  (sum, category) => sum + (category.exerciseCount || 0),
+  0,
+);
+const totalCategories = workoutCategories.length;
 
 export default function GymScreen() {
   const router = useRouter();
@@ -88,7 +93,6 @@ export default function GymScreen() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [selectedGender, setSelectedGender] = useState<'men' | 'women'>('men');
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
@@ -185,12 +189,11 @@ export default function GymScreen() {
   };
 
   const handleCategoryPress = (categoryId: string) => {
-    // Navigate to exercise listing page with enhanced parameters
+    // Navigate to exercise listing page with enhanced parameters (gender removed)
     router.push({
       pathname: '/gym-exercises',
       params: {
         category: categoryId,
-        gender: selectedGender,
         categoryName: workoutCategories.find(cat => cat.id === categoryId)?.name || categoryId,
       },
     });
@@ -221,12 +224,12 @@ export default function GymScreen() {
               <Text style={styles.heroSubtitle}>Choose your perfect workout experience</Text>
               <View style={styles.heroStats}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>89</Text>
+                  <Text style={styles.statNumber}>{totalExercises}</Text>
                   <Text style={styles.statLabel}>Exercises</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>6</Text>
+                  <Text style={styles.statNumber}>{totalCategories}</Text>
                   <Text style={styles.statLabel}>Categories</Text>
                 </View>
                 <View style={styles.statDivider} />
@@ -236,47 +239,6 @@ export default function GymScreen() {
                 </View>
               </View>
             </LinearGradient>
-          </Animated.View>
-
-          {/* Gender Selector */}
-          <Animated.View entering={FadeInLeft.delay(100)} style={styles.genderSection}>
-            <Text style={styles.sectionTitle}>Choose Your Profile</Text>
-            <View style={styles.genderSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  selectedGender === 'men' && styles.genderButtonActive
-                ]}
-                onPress={() => setSelectedGender('men')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.genderEmoji}>👨</Text>
-                <Text style={[
-                  styles.genderButtonText,
-                  selectedGender === 'men' && styles.genderButtonTextActive
-                ]}>
-                  Men
-                </Text>
-                <Text style={styles.genderDescription}>Strength focused</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  selectedGender === 'women' && styles.genderButtonActive
-                ]}
-                onPress={() => setSelectedGender('women')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.genderEmoji}>👩</Text>
-                <Text style={[
-                  styles.genderButtonText,
-                  selectedGender === 'women' && styles.genderButtonTextActive
-                ]}>
-                  Women
-                </Text>
-                <Text style={styles.genderDescription}>Toned & strong</Text>
-              </TouchableOpacity>
-            </View>
           </Animated.View>
 
           {/* Categories Section */}
@@ -292,32 +254,51 @@ export default function GymScreen() {
                   <TouchableOpacity
                     style={styles.categoryCard}
                     onPress={() => handleCategoryPress(category.id)}
-                    activeOpacity={0.9}
+                    activeOpacity={0.85}
                   >
-                    <View style={styles.categoryCardContent}>
-                      <View style={[styles.categoryIconContainer, { backgroundColor: category.iconBg + '20' }]}>
-                        <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-                      </View>
+                    {/** Use subtle gradient like sport-mode cards */}
+                    {/** Base color from iconBg for consistent theming */}
+                    {/** Example: ['#00C97C20', '#00C97C05'] */}
+                    <LinearGradient
+                      // Use unified green theme for all cards
+                      colors={[colors.primary + '20', colors.primary + '05'] as [string, string]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.categoryGradient}
+                    >
+                      <View style={styles.categoryLeft}>
+                        {/* Icon */}
+                        <View style={[styles.categoryIconContainer, { backgroundColor: colors.primary + '25' }]}>
+                          <Ionicons
+                            name={category.iconName as any}
+                            size={28}
+                            color={colors.white}
+                          />
+                        </View>
 
-                      <View style={styles.categoryTextContainer}>
-                        <Text style={styles.categoryName}>{category.name}</Text>
-                        <Text style={styles.categoryDescription}>{category.description}</Text>
-                        <View style={styles.categoryFooter}>
-                          <Text style={styles.exerciseCount}>{category.exerciseCount} exercises</Text>
+                        {/* Text content */}
+                        <View style={styles.categoryTextContainer}>
+                          <Text style={styles.categoryName}>{category.name}</Text>
+                          <Text style={styles.categoryDescription}>{category.description}</Text>
+                          <Text style={styles.exerciseCount}>
+                            {category.exerciseCount} exercises
+                          </Text>
                         </View>
                       </View>
 
-                      <View style={styles.categoryArrowContainer}>
-                        <LinearGradient
-                          colors={category.gradientColors as [string, string]}
-                          style={styles.categoryArrowGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <Text style={styles.arrowText}>→</Text>
-                        </LinearGradient>
+                      {/* Arrow on the right */}
+                      <View style={[styles.categoryArrowCircle, { backgroundColor: colors.primary + '20' }]}>
+                        <Ionicons name="chevron-forward" size={22} color={colors.white} />
                       </View>
-                    </View>
+
+                      {/* Bottom accent bar */}
+                      <View
+                        style={[
+                          styles.categoryBottomBorder,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
+                    </LinearGradient>
                   </TouchableOpacity>
                 </Animated.View>
               ))}
@@ -435,48 +416,6 @@ const styles = StyleSheet.create({
   },
 
   // Gender Section
-  genderSection: {
-    marginBottom: spacing.xl,
-  },
-  genderSelector: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  genderButton: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.cardBorder,
-  },
-  genderButtonActive: {
-    backgroundColor: colors.primary + '20',
-    borderColor: colors.primary,
-  },
-  genderEmoji: {
-    fontSize: 32,
-    marginBottom: spacing.sm,
-  },
-  genderButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-    marginBottom: 4,
-  },
-  genderButtonTextActive: {
-    color: colors.primary,
-  },
-  genderDescription: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontFamily: fonts.body,
-  },
-
-
   // Categories Section
   categoriesSection: {
     marginBottom: spacing.xl,
@@ -489,31 +428,33 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   categoryCard: {
-    backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
   },
-  categoryCardContent: {
+  categoryGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    minHeight: 100,
+    position: 'relative',
+  },
+  categoryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
   },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
   },
   categoryEmoji: {
-    fontSize: 28,
+    fontSize: 32,
   },
   categoryTextContainer: {
     flex: 1,
@@ -529,33 +470,29 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     fontSize: 14,
     fontFamily: fonts.body,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     lineHeight: 18,
   },
-  categoryFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   exerciseCount: {
-    color: colors.primary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: fonts.body,
+    color: colors.white,
+    opacity: 0.8,
   },
-  categoryArrowContainer: {
-    marginLeft: spacing.sm,
-  },
-  categoryArrowGradient: {
+  categoryArrowCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
+  categoryBottomBorder: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
   },
 
   bottomSpacing: {
