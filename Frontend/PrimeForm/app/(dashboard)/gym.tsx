@@ -14,8 +14,7 @@ import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
 import NotificationModal from '../../src/components/NotificationModal';
 import { useNotifications } from '../../src/contexts/NotificationContext';
-// Using Expo Vector Icons instead
-// import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -292,32 +291,47 @@ export default function GymScreen() {
                   <TouchableOpacity
                     style={styles.categoryCard}
                     onPress={() => handleCategoryPress(category.id)}
-                    activeOpacity={0.9}
+                    activeOpacity={0.85}
                   >
-                    <View style={styles.categoryCardContent}>
-                      <View style={[styles.categoryIconContainer, { backgroundColor: category.iconBg + '20' }]}>
-                        <Text style={styles.categoryEmoji}>{category.emoji}</Text>
-                      </View>
+                    {/** Use subtle gradient like sport-mode cards */}
+                    {/** Base color from iconBg for consistent theming */}
+                    {/** Example: ['#00C97C20', '#00C97C05'] */}
+                    <LinearGradient
+                      // Use unified green theme for all cards
+                      colors={[colors.primary + '20', colors.primary + '05'] as [string, string]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.categoryGradient}
+                    >
+                      <View style={styles.categoryLeft}>
+                        {/* Icon */}
+                        <View style={[styles.categoryIconContainer, { backgroundColor: colors.primary + '25' }]}>
+                          <Text style={styles.categoryEmoji}>{category.emoji}</Text>
+                        </View>
 
-                      <View style={styles.categoryTextContainer}>
-                        <Text style={styles.categoryName}>{category.name}</Text>
-                        <Text style={styles.categoryDescription}>{category.description}</Text>
-                        <View style={styles.categoryFooter}>
-                          <Text style={styles.exerciseCount}>{category.exerciseCount} exercises</Text>
+                        {/* Text content */}
+                        <View style={styles.categoryTextContainer}>
+                          <Text style={styles.categoryName}>{category.name}</Text>
+                          <Text style={styles.categoryDescription}>{category.description}</Text>
+                          <Text style={[styles.exerciseCount, { color: colors.primary }]}>
+                            {category.exerciseCount} exercises
+                          </Text>
                         </View>
                       </View>
 
-                      <View style={styles.categoryArrowContainer}>
-                        <LinearGradient
-                          colors={category.gradientColors as [string, string]}
-                          style={styles.categoryArrowGradient}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <Text style={styles.arrowText}>→</Text>
-                        </LinearGradient>
+                      {/* Arrow on the right */}
+                      <View style={[styles.categoryArrowCircle, { backgroundColor: colors.primary + '20' }]}>
+                        <Ionicons name="chevron-forward" size={22} color={colors.white} />
                       </View>
-                    </View>
+
+                      {/* Bottom accent bar */}
+                      <View
+                        style={[
+                          styles.categoryBottomBorder,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      />
+                    </LinearGradient>
                   </TouchableOpacity>
                 </Animated.View>
               ))}
@@ -489,31 +503,33 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   categoryCard: {
-    backgroundColor: colors.surface,
     borderRadius: 20,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
   },
-  categoryCardContent: {
+  categoryGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    minHeight: 100,
+    position: 'relative',
+  },
+  categoryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
   },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
   },
   categoryEmoji: {
-    fontSize: 28,
+    fontSize: 32,
   },
   categoryTextContainer: {
     flex: 1,
@@ -529,33 +545,28 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     fontSize: 14,
     fontFamily: fonts.body,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     lineHeight: 18,
   },
-  categoryFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   exerciseCount: {
-    color: colors.primary,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     fontFamily: fonts.body,
+    color: colors.primary,
   },
-  categoryArrowContainer: {
-    marginLeft: spacing.sm,
-  },
-  categoryArrowGradient: {
+  categoryArrowCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: '700',
+  categoryBottomBorder: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
   },
 
   bottomSpacing: {
