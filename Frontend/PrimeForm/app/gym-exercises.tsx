@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
@@ -6,8 +6,7 @@ import {
   StyleSheet, 
   ScrollView, 
   SafeAreaView, 
-  Dimensions,
-  TextInput 
+  Dimensions
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
@@ -616,28 +615,12 @@ export default function GymExercisesScreen() {
   const { user } = useAuthContext();
   const { showToast } = useToast();
   
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState<'all' | 'home' | 'gym' | 'both'>('all');
-
   const category = params.category as string;
   const gender = params.gender as string;
   const filter = params.filter as string;
   const categoryName = params.categoryName as string;
 
   const exercises = exerciseDatabase[category as keyof typeof exerciseDatabase] || [];
-
-  // Filter exercises based on search and filters
-  const filteredExercises = useMemo(() => {
-    return exercises.filter(exercise => {
-      const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           exercise.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesLocation = selectedLocation === 'all' || 
-                             exercise.location === selectedLocation || 
-                             exercise.location === 'both';
-      
-      return matchesSearch && matchesLocation;
-    });
-  }, [exercises, searchQuery, selectedLocation]);
 
   const handleBack = () => {
     router.back();
@@ -657,6 +640,7 @@ export default function GymExercisesScreen() {
   };
 
   const renderExerciseCard = (exercise: any, index: number) => {
+    const isLast = index === exercises.length - 1;
     return (
       <Animated.View
         key={exercise.id}
@@ -664,49 +648,76 @@ export default function GymExercisesScreen() {
         style={styles.exerciseWrapper}
       >
         <TouchableOpacity
-          style={styles.exerciseCard}
+          style={[styles.exerciseCard, isLast && styles.exerciseCardLast]}
           onPress={() => handleExercisePress(exercise)}
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
+            colors={isLast 
+              ? [colors.primary + '15', colors.primary + '08', 'transparent']
+              : ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.03)']
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.exerciseGradient}
           >
             <View style={styles.exerciseHeader}>
-              <View style={styles.exerciseIconContainer}>
+              <View style={[styles.exerciseIconContainer, isLast && styles.exerciseIconContainerLast]}>
                 <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
               </View>
               <View style={styles.exerciseInfo}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={[styles.exerciseName, isLast && styles.exerciseNameLast]}>{exercise.name}</Text>
                 <Text style={styles.exerciseDescription}>{exercise.description}</Text>
               </View>
-              <View style={styles.difficultyBadge}>
+              <View style={[styles.difficultyBadge, isLast && styles.difficultyBadgeLast]}>
+                <View style={styles.difficultyDot} />
                 <Text style={styles.difficultyEmoji}>{difficultyEmojis[exercise.difficulty as keyof typeof difficultyEmojis]}</Text>
               </View>
             </View>
             
             <View style={styles.exerciseStats}>
               <View style={styles.statItem}>
-                <Ionicons name="time-outline" size={16} color={colors.mutedText} />
+                <View style={styles.statIconContainer}>
+                  <Ionicons name="time-outline" size={16} color={colors.primary} />
+                </View>
                 <Text style={styles.statText}>{exercise.duration}</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name="flame" size={16} color={colors.mutedText} />
+                <View style={styles.statIconContainer}>
+                  <Ionicons name="flame" size={16} color={colors.primary} />
+                </View>
                 <Text style={styles.statText}>{exercise.calories} cal</Text>
               </View>
               <View style={styles.statItem}>
-                <Ionicons name={exercise.location === 'home' ? 'home' : exercise.location === 'gym' ? 'barbell' : 'location'} size={16} color={colors.mutedText} />
+                <View style={styles.statIconContainer}>
+                  <Ionicons 
+                    name={exercise.location === 'home' ? 'home' : exercise.location === 'gym' ? 'barbell' : 'location'} 
+                    size={16} 
+                    color={colors.primary} 
+                  />
+                </View>
                 <Text style={styles.statText}>{exercise.location === 'both' ? 'Home/Gym' : exercise.location}</Text>
               </View>
             </View>
 
             <View style={styles.muscleTagsContainer}>
               {exercise.primaryMuscles.slice(0, 3).map((muscle: string, idx: number) => (
-                <View key={idx} style={styles.muscleTag}>
-                  <Text style={styles.muscleTagText}>{muscle}</Text>
+                <View key={idx} style={[styles.muscleTag, isLast && styles.muscleTagLast]}>
+                  <Text style={[styles.muscleTagText, isLast && styles.muscleTagTextLast]}>{muscle}</Text>
                 </View>
               ))}
             </View>
+
+            {isLast && (
+              <View style={styles.lastCardAccent}>
+                <LinearGradient
+                  colors={[colors.primary + '40', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.accentGradient}
+                />
+              </View>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -723,53 +734,8 @@ export default function GymExercisesScreen() {
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle}>{categoryName} Exercises</Text>
-            <Text style={styles.headerSubtitle}>{filteredExercises.length} exercises available</Text>
+            <Text style={styles.headerSubtitle}>{exercises.length} exercises available</Text>
           </View>
-        </Animated.View>
-
-        {/* Search Bar */}
-        <Animated.View entering={FadeInLeft.delay(100)} style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color={colors.mutedText} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search exercises..."
-              placeholderTextColor={colors.mutedText}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-        </Animated.View>
-
-        {/* Filters */}
-        <Animated.View entering={FadeInRight.delay(200)} style={styles.filtersContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.filterRow}>
-              {/* Location Filter */}
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Location:</Text>
-                <View style={styles.filterButtons}>
-                  {['all', 'home', 'gym', 'both'].map((location) => (
-                    <TouchableOpacity
-                      key={location}
-                      style={[
-                        styles.filterButton,
-                        selectedLocation === location && styles.filterButtonActive
-                      ]}
-                      onPress={() => setSelectedLocation(location as any)}
-                    >
-                      <Text style={[
-                        styles.filterButtonText,
-                        selectedLocation === location && styles.filterButtonTextActive
-                      ]}>
-                        {location === 'all' ? 'All' : location === 'both' ? 'Both' : location.charAt(0).toUpperCase() + location.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-          </ScrollView>
         </Animated.View>
 
         {/* Exercise List */}
@@ -778,13 +744,13 @@ export default function GymExercisesScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {filteredExercises.length > 0 ? (
-            filteredExercises.map((exercise, index) => renderExerciseCard(exercise, index))
+          {exercises.length > 0 ? (
+            exercises.map((exercise, index) => renderExerciseCard(exercise, index))
           ) : (
             <Animated.View entering={FadeInUp.delay(300)} style={styles.emptyState}>
               <Text style={styles.emptyStateEmoji}>🔍</Text>
               <Text style={styles.emptyStateTitle}>No exercises found</Text>
-              <Text style={styles.emptyStateText}>Try adjusting your search or filters</Text>
+              <Text style={styles.emptyStateText}>No exercises available for this category</Text>
             </Animated.View>
           )}
 
@@ -803,99 +769,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   headerContent: {
     flex: 1,
   },
   headerTitle: {
     color: colors.white,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     fontFamily: fonts.heading,
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
     color: colors.mutedText,
     fontSize: 14,
     fontFamily: fonts.body,
-    marginTop: 2,
-  },
-  searchContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.white,
-    fontSize: 16,
-    fontFamily: fonts.body,
-    marginLeft: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  filtersContainer: {
-    paddingVertical: spacing.md,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    gap: spacing.xl,
-  },
-  filterGroup: {
-    alignItems: 'flex-start',
-  },
-  filterLabel: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-    marginBottom: spacing.sm,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  filterButton: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterButtonText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-  },
-  filterButtonTextActive: {
-    color: colors.white,
-    fontWeight: '700',
+    marginTop: 4,
+    opacity: 0.8,
   },
   container: {
     flex: 1,
@@ -907,19 +812,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   exerciseCard: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    elevation: 4,
+    elevation: 2,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+  },
+  exerciseCardLast: {
+    elevation: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '30',
   },
   exerciseGradient: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    position: 'relative',
   },
   exerciseHeader: {
     flexDirection: 'row',
@@ -927,72 +840,146 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   exerciseIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primary + '20',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary + '15',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  exerciseIconContainerLast: {
+    backgroundColor: colors.primary + '25',
+    borderColor: colors.primary + '40',
+    borderWidth: 1.5,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   exerciseEmoji: {
-    fontSize: 24,
+    fontSize: 28,
   },
   exerciseInfo: {
     flex: 1,
   },
   exerciseName: {
     color: colors.white,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.3,
+  },
+  exerciseNameLast: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.white,
   },
   exerciseDescription: {
     color: colors.mutedText,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fonts.body,
     lineHeight: 20,
+    opacity: 0.9,
   },
   difficultyBadge: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    position: 'relative',
+  },
+  difficultyBadgeLast: {
+    backgroundColor: colors.primary + '15',
+    borderColor: colors.primary + '30',
+  },
+  difficultyDot: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    opacity: 0.6,
   },
   difficultyEmoji: {
-    fontSize: 20,
+    fontSize: 18,
   },
   exerciseStats: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder + '50',
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  statIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '10',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
   statText: {
     color: colors.mutedText,
     fontSize: 12,
     fontFamily: fonts.body,
-    marginLeft: 4,
+    fontWeight: '500',
   },
   muscleTagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   muscleTag: {
-    backgroundColor: colors.primary + '20',
-    borderRadius: radius.sm,
+    backgroundColor: colors.primary + '15',
+    borderRadius: radius.md,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  muscleTagLast: {
+    backgroundColor: colors.primary + '25',
+    borderColor: colors.primary + '40',
   },
   muscleTagText: {
     color: colors.primary,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  muscleTagTextLast: {
+    color: colors.primary,
+    fontWeight: '700',
+  },
+  lastCardAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    overflow: 'hidden',
+  },
+  accentGradient: {
+    flex: 1,
   },
   emptyState: {
     alignItems: 'center',

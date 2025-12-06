@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { Video, ResizeMode } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -10,6 +12,101 @@ import { useLanguage } from '../../src/context/LanguageContext';
 const { width: screenWidth } = Dimensions.get('window');
 
 type DifficultyLevel = 'beginner' | 'medium' | 'advanced';
+
+// Helper function to get Icons8 icon URL
+const getIconUrl = (iconId: string, size: number = 64): string => {
+  // Icons8 uses different URL formats based on icon ID format
+  // For numeric IDs, use the standard format
+  // For alphanumeric IDs (like from newer platforms), use a different format
+  if (/^\d+$/.test(iconId)) {
+    return `https://img.icons8.com/ios/${size}/${iconId}.png`;
+  }
+  // For newer icon formats, try the icon name format
+  return `https://img.icons8.com/ios-filled/${size}/${iconId}.png`;
+};
+
+// Map exercise types to Icons8 icon IDs
+const getExerciseIconId = (exerciseId: string, level: DifficultyLevel): string => {
+  const iconMap: Record<string, Record<DifficultyLevel, string>> = {
+    pushups: {
+      beginner: '25247', // Push icon
+      medium: '55884',
+      advanced: '71222',
+    },
+    squats: {
+      beginner: '3728', // Exercise icon
+      medium: '70867',
+      advanced: '9769',
+    },
+    pullups: {
+      beginner: 'bjD9GUOFPcKw', // Pull up bar
+      medium: 'c2E2guqKEP3Q',
+      advanced: 'fDk83CIGXN0s',
+    },
+    bicepCurls: {
+      beginner: '9782', // Curls with dumbbells
+      medium: '7657',
+      advanced: '70866',
+    },
+    shoulderPress: {
+      beginner: '9782',
+      medium: '7657',
+      advanced: '70866',
+    },
+    planks: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+    cycling: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+    deadlifts: {
+      beginner: '9782',
+      medium: '7657',
+      advanced: '70866',
+    },
+    benchpress: {
+      beginner: '9782',
+      medium: '7657',
+      advanced: '70866',
+    },
+    lunges: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+    mountain_climbers: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+    tricep_dips: {
+      beginner: '25247',
+      medium: '55884',
+      advanced: '71222',
+    },
+    burpees: {
+      beginner: '7661', // Workout icon
+      medium: '71097',
+      advanced: '9848',
+    },
+    yoga: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+    pilates: {
+      beginner: '3728',
+      medium: '70867',
+      advanced: '9769',
+    },
+  };
+  
+  return iconMap[exerciseId]?.[level] || '3728';
+};
 
 interface ExerciseLevel {
   level: DifficultyLevel;
@@ -715,8 +812,10 @@ export default function ExerciseDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('beginner');
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [iconLoadErrors, setIconLoadErrors] = useState<Record<string, boolean>>({});
 
   const exerciseId = params.exerciseId as string;
   const exerciseName = params.exerciseName as string;
@@ -734,6 +833,39 @@ export default function ExerciseDetailScreen() {
 
   const renderDifficultyButton = (level: ExerciseLevel) => {
     const isSelected = selectedLevel === level.level;
+    const iconId = getExerciseIconId(exerciseId, level.level);
+    const iconUrl = getIconUrl(iconId, 48);
+    
+    // Gradient colors based on difficulty level
+    const getGradientColors = (): [string, string] => {
+      if (isSelected) {
+        switch (level.level) {
+          case 'beginner':
+            return [colors.primary, colors.primaryDark];
+          case 'medium':
+            return ['#FFB800', '#FF9500'];
+          case 'advanced':
+            return ['#FF3B30', '#FF2D55'];
+          default:
+            return [colors.primary, colors.primaryDark];
+        }
+      }
+      return ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)'];
+    };
+
+    const getDifficultyColor = () => {
+      switch (level.level) {
+        case 'beginner':
+          return colors.primary;
+        case 'medium':
+          return '#FFB800';
+        case 'advanced':
+          return '#FF3B30';
+        default:
+          return colors.primary;
+      }
+    };
+
     return (
       <TouchableOpacity
         key={level.level}
@@ -742,21 +874,68 @@ export default function ExerciseDetailScreen() {
           isSelected && styles.difficultyButtonActive
         ]}
         onPress={() => setSelectedLevel(level.level)}
-        activeOpacity={0.8}
+        activeOpacity={0.9}
       >
-        <Text style={styles.difficultyEmoji}>{level.emoji}</Text>
-        <Text style={[
-          styles.difficultyText,
-          isSelected && styles.difficultyTextActive
-        ]}>
-          {level.title}
-        </Text>
-        <Text style={[
-          styles.difficultySubtext,
-          isSelected && styles.difficultySubtextActive
-        ]}>
-          {t(`exercise.detail.${level.level}`)}
-        </Text>
+        <LinearGradient
+          colors={getGradientColors()}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.difficultyGradient}
+        >
+          {/* Icon Container */}
+          <View style={[
+            styles.difficultyIconContainer,
+            isSelected && { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+          ]}>
+            {!iconLoadErrors[`${exerciseId}-${level.level}`] ? (
+              <Image
+                source={{ uri: iconUrl }}
+                style={styles.difficultyIcon}
+                resizeMode="contain"
+                onError={() => {
+                  setIconLoadErrors(prev => ({ ...prev, [`${exerciseId}-${level.level}`]: true }));
+                }}
+              />
+            ) : (
+              <Text style={styles.iconFallbackEmoji}>{level.emoji}</Text>
+            )}
+          </View>
+
+          {/* Content */}
+          <View style={styles.difficultyContent}>
+            <Text style={[
+              styles.difficultyText,
+              isSelected && styles.difficultyTextActive
+            ]}>
+              {level.title}
+            </Text>
+            <Text style={[
+              styles.difficultySubtext,
+              isSelected && styles.difficultySubtextActive
+            ]}>
+              {t(`exercise.detail.${level.level}`)}
+            </Text>
+          </View>
+
+          {/* Difficulty Badge */}
+          <View style={[
+            styles.difficultyBadge,
+            { backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : getDifficultyColor() + '30' }
+          ]}>
+            <View style={[
+              styles.difficultyDot,
+              { backgroundColor: getDifficultyColor() }
+            ]} />
+            <Text style={styles.difficultyEmoji}>{level.emoji}</Text>
+          </View>
+
+          {/* Selection Indicator */}
+          {isSelected && (
+            <View style={styles.selectedIndicator}>
+              <Text style={styles.selectedCheckmark}>✓</Text>
+            </View>
+          )}
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
@@ -765,7 +944,7 @@ export default function ExerciseDetailScreen() {
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
-        <Animated.View entering={FadeInDown} style={styles.header}>
+        <Animated.View entering={FadeInDown} style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity style={styles.backButtonRight} onPress={handleBack}>
             <View style={styles.backButtonIconContainer}>
               <Text style={styles.backArrow}>←</Text>
@@ -900,12 +1079,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     justifyContent: 'flex-start',
+    position: 'relative',
   },
   backButtonRight: {
     position: 'absolute',
-    top: 55,
+    top: spacing.md,
     right: spacing.lg,
     width: 40,
     height: 40,
@@ -913,6 +1093,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     overflow: 'hidden',
     zIndex: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   backButtonIconContainer: {
     display: 'flex',
@@ -1039,41 +1221,121 @@ const styles = StyleSheet.create({
   },
   difficultyButton: {
     flex: 1,
-    backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
+    overflow: 'hidden',
+    borderWidth: 1.5,
     borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
   },
   difficultyButtonActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    borderColor: colors.primary,
+    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    transform: [{ scale: 1.02 }],
   },
-  difficultyEmoji: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
+  difficultyGradient: {
+    padding: spacing.lg,
+    minHeight: 160,
+    justifyContent: 'space-between',
+    position: 'relative',
+  },
+  difficultyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    alignSelf: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  difficultyIcon: {
+    width: 40,
+    height: 40,
+    tintColor: colors.white,
+  },
+  iconFallbackEmoji: {
+    fontSize: 32,
+    textAlign: 'center',
+  },
+  difficultyContent: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
   },
   difficultyText: {
     color: colors.white,
     fontSize: typography.small,
-    fontWeight: '600',
-    fontFamily: fonts.body,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   difficultyTextActive: {
     color: colors.white,
+    fontSize: typography.body,
+    fontWeight: '800',
   },
   difficultySubtext: {
     color: colors.mutedText,
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '600',
     fontFamily: fonts.body,
     textAlign: 'center',
+    opacity: 0.8,
   },
   difficultySubtextActive: {
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontWeight: '700',
+  },
+  difficultyBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    gap: 4,
+  },
+  difficultyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  difficultyEmoji: {
+    fontSize: 12,
+  },
+  selectedIndicator: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  selectedCheckmark: {
     color: colors.white,
+    fontSize: 14,
+    fontWeight: '900',
   },
   detailsSection: {
     backgroundColor: colors.surface,
