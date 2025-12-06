@@ -200,13 +200,26 @@ export default function WorkoutPlanDisplay({
       }
     } else {
       // Subsequent weeks: use Monday-Sunday pattern
-      const currentMonday = new Date(today);
-      currentMonday.setDate(today.getDate() - today.getDay() + 1); // Go to Monday of current week
-      currentMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+      // IMPORTANT: Show previous week until Monday starts (Sunday should show previous week)
+      const todayDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      // If today is Sunday (0), show the previous week (Monday to Sunday of last week)
+      // Otherwise, show the current week (Monday to Sunday)
+      let weekStartMonday: Date;
+      if (todayDayOfWeek === 0) {
+        // It's Sunday - show previous week (go back 6 days to get to Monday of previous week)
+        weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - 6); // Go to Monday of previous week
+      } else {
+        // It's Monday-Saturday - show current week
+        weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - todayDayOfWeek + 1); // Go to Monday of current week
+      }
+      weekStartMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
       
       for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(currentMonday);
-        dayDate.setDate(currentMonday.getDate() + i);
+        const dayDate = new Date(weekStartMonday);
+        dayDate.setDate(weekStartMonday.getDate() + i);
         dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
         
         // Format date in local timezone to avoid UTC offset issues
@@ -837,27 +850,35 @@ export default function WorkoutPlanDisplay({
         )}
 
         {selectedDay?.isRestDay && (
-          <View style={styles.restDayContainer}>
-            <Text style={styles.restDayIcon}>🏃‍♂️</Text>
-            <Text style={styles.restDayTitle}>Active Recovery Day</Text>
-            <Text style={styles.restDayText}>
-              Keep moving with light activities! Try a gentle jog, yoga session, or stretching routine to help your muscles recover while staying active.
-            </Text>
-            <View style={styles.recoveryActivities}>
-              <View style={styles.activityItem}>
-                <Text style={styles.activityIcon}>🧘‍♂️</Text>
-                <Text style={styles.activityText}>Yoga (15-20 min)</Text>
-              </View>
-              <View style={styles.activityItem}>
-                <Text style={styles.activityIcon}>🚶‍♂️</Text>
-                <Text style={styles.activityText}>Light Walk (20-30 min)</Text>
-              </View>
-              <View style={styles.activityItem}>
-                <Text style={styles.activityIcon}>🏃‍♂️</Text>
-                <Text style={styles.activityText}>Easy Jog (15-25 min)</Text>
+          <ScrollView 
+            style={styles.restDayScrollContainer}
+            contentContainerStyle={styles.restDayScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.restDayContainer}>
+              <Text style={styles.restDayIcon}>🏃‍♂️</Text>
+              <Text style={styles.restDayTitle}>
+                {selectedDay && isCurrentDay(selectedDay) ? 'Today is the Rest Day' : 'Active Recovery Day'}
+              </Text>
+              <Text style={styles.restDayText}>
+                Keep moving with light activities! Try a gentle jog, yoga session, or stretching routine to help your muscles recover while staying active.
+              </Text>
+              <View style={styles.recoveryActivities}>
+                <View style={styles.activityItem}>
+                  <Text style={styles.activityIcon}>🧘‍♂️</Text>
+                  <Text style={styles.activityText}>Yoga (15-20 min)</Text>
+                </View>
+                <View style={styles.activityItem}>
+                  <Text style={styles.activityIcon}>🚶‍♂️</Text>
+                  <Text style={styles.activityText}>Light Walk (20-30 min)</Text>
+                </View>
+                <View style={styles.activityItem}>
+                  <Text style={styles.activityIcon}>🏃‍♂️</Text>
+                  <Text style={styles.activityText}>Easy Jog (15-25 min)</Text>
+                </View>
               </View>
             </View>
-          </View>
+          </ScrollView>
         )}
 
         {!selectedDay && (
@@ -1659,6 +1680,12 @@ const styles = StyleSheet.create({
   },
 
   // Rest Day Styles
+  restDayScrollContainer: {
+    flex: 1,
+  },
+  restDayScrollContent: {
+    paddingBottom: spacing.xl,
+  },
   restDayContainer: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -1666,7 +1693,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    marginHorizontal: spacing.lg, // Add horizontal margin for consistency
+    marginHorizontal: spacing.lg,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },

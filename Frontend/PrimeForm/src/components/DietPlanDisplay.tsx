@@ -195,13 +195,26 @@ export default function DietPlanDisplay({
       }
     } else {
       // Subsequent weeks: use Monday-Sunday pattern
-      const currentMonday = new Date(today);
-      currentMonday.setDate(today.getDate() - today.getDay() + 1); // Go to Monday of current week
-      currentMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+      // IMPORTANT: Show previous week until Monday starts (Sunday should show previous week)
+      const todayDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      // If today is Sunday (0), show the previous week (go back 6 days to get to Monday of previous week)
+      // Otherwise, show the current week (Monday to Sunday)
+      let weekStartMonday: Date;
+      if (todayDayOfWeek === 0) {
+        // It's Sunday - show previous week (go back 6 days to get to Monday of previous week)
+        weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - 6); // Go to Monday of previous week
+      } else {
+        // It's Monday-Saturday - show current week
+        weekStartMonday = new Date(today);
+        weekStartMonday.setDate(today.getDate() - todayDayOfWeek + 1); // Go to Monday of current week
+      }
+      weekStartMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
       
       for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(currentMonday);
-        dayDate.setDate(currentMonday.getDate() + i);
+        const dayDate = new Date(weekStartMonday);
+        dayDate.setDate(weekStartMonday.getDate() + i);
         dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
         
         // Format date in local timezone to avoid UTC offset issues

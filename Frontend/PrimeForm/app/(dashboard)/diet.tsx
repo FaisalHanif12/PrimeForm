@@ -499,6 +499,14 @@ export default function DietScreen() {
     );
   };
 
+  const hasValidDietPlan =
+    !!(
+      dietPlan &&
+      dietPlan.weeklyPlan &&
+      Array.isArray(dietPlan.weeklyPlan) &&
+      dietPlan.weeklyPlan.length > 0
+    );
+
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
@@ -512,13 +520,15 @@ export default function DietScreen() {
 
           <ScrollView
             style={styles.container}
-            contentContainerStyle={dietPlan && userInfo && initialLoadComplete ? styles.contentNoPadding : styles.content}
+            contentContainerStyle={
+              hasValidDietPlan && initialLoadComplete ? styles.contentNoPadding : styles.content
+            }
             showsVerticalScrollIndicator={false}
           >
             {renderContent()}
 
             {/* Bottom Spacing - only show when not displaying diet plan */}
-            {!(dietPlan && userInfo && initialLoadComplete) && (
+            {!(hasValidDietPlan && initialLoadComplete) && (
               <View style={styles.bottomSpacing} />
             )}
           </ScrollView>

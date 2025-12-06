@@ -4,7 +4,7 @@ export const colors = {
   // New color theme - Dark navy with green accents
   background: '#0A0F1A', // Very dark navy/black
   surface: '#131922', // Dark gray-blue for card backgrounds
-  text: '#FFFFFF', // White text for headings
+  text: '#FFFFFF', // White text for heading
   mutedText: '#9DA8B6', // Gray text for labels and secondary text
   white: '#FFFFFF',
   // Primary Accent Green - Replacing gold colors
