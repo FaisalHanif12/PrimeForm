@@ -8,7 +8,8 @@ import {
   TextInput,
   Alert,
   Dimensions,
-  Modal
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -122,6 +123,9 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   };
   const [isEditing, setIsEditing] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [hasCheckedExisting, setHasCheckedExisting] = useState(false);
   const [editedUserInfo, setEditedUserInfo] = useState<UserInfo>({
     country: '',
     age: '',
@@ -141,23 +145,75 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     if (userInfo) {
       // Convert UserProfile format to UserInfo format for editing
       const convertedUserInfo: UserInfo = {
-        country: userInfo.country || '',
-        age: userInfo.age ? String(userInfo.age) : '',
-        gender: userInfo.gender || '',
-        height: userInfo.height || '',
-        currentWeight: userInfo.currentWeight || '',
-        targetWeight: userInfo.targetWeight || '',
-        bodyGoal: userInfo.bodyGoal || '',
-        medicalConditions: userInfo.medicalConditions || '',
-        occupationType: userInfo.occupationType || '',
-        availableEquipment: userInfo.availableEquipment || '',
-        dietPreference: userInfo.dietPreference || '',
+        country: (userInfo as any).country || '',
+        age: (userInfo as any).age ? String((userInfo as any).age) : '',
+        gender: (userInfo as any).gender || '',
+        height: (userInfo as any).height || '',
+        currentWeight: (userInfo as any).currentWeight || '',
+        targetWeight: (userInfo as any).targetWeight || '',
+        bodyGoal: (userInfo as any).bodyGoal || '',
+        medicalConditions: (userInfo as any).medicalConditions || '',
+        occupationType: (userInfo as any).occupationType || '',
+        availableEquipment: (userInfo as any).availableEquipment || '',
+        dietPreference: (userInfo as any).dietPreference || '',
       };
       setEditedUserInfo(convertedUserInfo);
+      setLoadError(null);
+      setHasCheckedExisting(true);
     }
     // Note: No API call here - profile data is passed from parent component
     // API is only called when user saves/updates their profile
   }, [userInfo]);
+
+  // Ensure we never wrongly show "Create Profile" for users who already have a profile.
+  // If no userInfo was passed but the modal is visible, we proactively check the backend once.
+  useEffect(() => {
+    let isCancelled = false;
+
+    const ensureProfileLoaded = async () => {
+      if (!visible || userInfo || hasCheckedExisting || isInitialLoading) {
+        return;
+      }
+
+      setIsInitialLoading(true);
+      setLoadError(null);
+
+      try {
+        const response = await userProfileService.getUserProfile();
+
+        if (isCancelled) return;
+
+        if (response.success) {
+          if (response.data) {
+            // We have an existing profile – let parent know so it can cache it.
+            if (onUpdateUserInfo) {
+              onUpdateUserInfo(response.data as any);
+            }
+            setHasCheckedExisting(true);
+          } else {
+            // Confirmed: no profile exists for this user.
+            setHasCheckedExisting(true);
+          }
+        } else {
+          setLoadError(response.message || 'Unable to fetch your profile. Please try again later.');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setLoadError('Unable to fetch your profile. Please check your connection and try again.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsInitialLoading(false);
+        }
+      }
+    };
+
+    ensureProfileLoaded();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [visible, userInfo, hasCheckedExisting, isInitialLoading, onUpdateUserInfo]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -285,7 +341,39 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   );
 
   const renderProfileContent = () => {
-    if (!userInfo) {
+    if (isInitialLoading) {
+      return (
+        <View style={styles.noProfileSection}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.noProfileText}>Loading your profile...</Text>
+        </View>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <View style={styles.noProfileSection}>
+          <View style={styles.noProfileIcon}>
+            <Text style={styles.noProfileEmoji}>⚠️</Text>
+          </View>
+          <Text style={styles.noProfileTitle}>Unable to load your profile</Text>
+          <Text style={styles.noProfileText}>{loadError}</Text>
+          <TouchableOpacity
+            style={styles.createProfileButton}
+            onPress={() => {
+              // Allow retry – next effect run will call ensureProfileLoaded again
+              setHasCheckedExisting(false);
+              setLoadError(null);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createProfileButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!userInfo && hasCheckedExisting) {
       // No profile exists yet - show basic user info
       return (
         <View style={styles.noProfileSection}>

@@ -8,7 +8,7 @@ import { useLanguage } from '../../src/context/LanguageContext';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
-import ProfilePage from '../../src/components/ProfilePage';
+import ProfilePage from  '../../src/components/ProfilePage';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
@@ -256,19 +256,17 @@ export default function GymScreen() {
                     onPress={() => handleCategoryPress(category.id)}
                     activeOpacity={0.85}
                   >
-                    {/** Use subtle gradient like sport-mode cards */}
-                    {/** Base color from iconBg for consistent theming */}
-                    {/** Example: ['#00C97C20', '#00C97C05'] */}
+                    {/** Use normal app color for card background */}
                     <LinearGradient
-                      // Use unified green theme for all cards
-                      colors={[colors.primary + '20', colors.primary + '05'] as [string, string]}
+                      // Use normal app surface colors instead of green
+                      colors={[colors.surface, colors.cardBackground] as [string, string]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.categoryGradient}
                     >
                       <View style={styles.categoryLeft}>
                         {/* Icon */}
-                        <View style={[styles.categoryIconContainer, { backgroundColor: colors.primary + '25' }]}>
+                        <View style={[styles.categoryIconContainer, { backgroundColor: colors.cardBackground }]}>
                           <Ionicons
                             name={category.iconName as any}
                             size={28}
@@ -287,11 +285,11 @@ export default function GymScreen() {
                       </View>
 
                       {/* Arrow on the right */}
-                      <View style={[styles.categoryArrowCircle, { backgroundColor: colors.primary + '20' }]}>
+                      <View style={[styles.categoryArrowCircle, { backgroundColor: colors.cardBackground }]}>
                         <Ionicons name="chevron-forward" size={22} color={colors.white} />
                       </View>
 
-                      {/* Bottom accent bar */}
+                      {/* Bottom accent bar - Keep green */}
                       <View
                         style={[
                           styles.categoryBottomBorder,
