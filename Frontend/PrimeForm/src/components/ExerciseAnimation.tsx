@@ -64,7 +64,7 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
         />
       </View>
     );
-  }
+}
 
   // For non-push-up exercises, show a simple animated emoji
   return (

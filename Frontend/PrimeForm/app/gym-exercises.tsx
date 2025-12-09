@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -6,10 +6,12 @@ import {
   StyleSheet, 
   ScrollView, 
   SafeAreaView, 
-  Dimensions
+  Dimensions,
+  Platform,
+  Image
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeInDown, FadeIn, SlideInRight, SlideInLeft, ZoomIn } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../src/theme/colors';
 import { useAuthContext } from '../src/context/AuthContext';
 import { useLanguage } from '../src/context/LanguageContext';
@@ -17,8 +19,64 @@ import DecorativeBackground from '../src/components/DecorativeBackground';
 import { useToast } from '../src/context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Icons8 Exercise Icon Mapping
+const exerciseIcons: Record<string, string> = {
+  // Chest exercises
+  pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  bench_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/bench-press.png',
+  chest_flyes: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
+  incline_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  dips: 'https://img.icons8.com/ios-filled/100/FFFFFF/parallel-tasks.png',
+  diamond_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  wall_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  decline_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  
+  // Back exercises
+  pullups: 'https://img.icons8.com/ios-filled/100/FFFFFF/pull-up.png',
+  rows: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  superman: 'https://img.icons8.com/ios-filled/100/FFFFFF/superman.png',
+  lat_pulldowns: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  reverse_flyes: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
+  face_pulls: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  
+  // Arms exercises
+  bicep_curls: 'https://img.icons8.com/ios-filled/100/FFFFFF/curls-with-dumbbells.png',
+  tricep_dips: 'https://img.icons8.com/ios-filled/100/FFFFFF/parallel-tasks.png',
+  hammer_curls: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
+  overhead_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  arm_circles: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  
+  // Legs exercises
+  squats: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
+  lunges: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
+  calf_raises: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
+  wall_sit: 'https://img.icons8.com/ios-filled/100/FFFFFF/chair.png',
+  jump_squats: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
+  step_ups: 'https://img.icons8.com/ios-filled/100/FFFFFF/stairs.png',
+  
+  // Abs exercises
+  planks: 'https://img.icons8.com/ios-filled/100/FFFFFF/plank.png',
+  crunches: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  mountain_climbers: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  bicycle_crunches: 'https://img.icons8.com/ios-filled/100/FFFFFF/cycling.png',
+  leg_raises: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
+  russian_twists: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  dead_bug: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  
+  // Full body exercises
+  burpees: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  jumping_jacks: 'https://img.icons8.com/ios-filled/100/FFFFFF/jumping-rope.png',
+  deadlifts: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  thrusters: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  bear_crawl: 'https://img.icons8.com/ios-filled/100/FFFFFF/bear.png',
+  turkish_getup: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  high_knees: 'https://img.icons8.com/ios-filled/100/FFFFFF/running.png',
+  squat_to_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
+};
 
 // Enhanced exercise database with comprehensive data
 const exerciseDatabase = {
@@ -597,15 +655,9 @@ const exerciseDatabase = {
 };
 
 const difficultyColors = {
-  beginner: '#4CAF50',
-  intermediate: '#FF9800',
-  advanced: '#F44336'
-};
-
-const difficultyEmojis = {
-  beginner: '🟢',
-  intermediate: '🟡',
-  advanced: '🔴'
+  beginner: '#00C97C',
+  intermediate: '#FFB800',
+  advanced: '#FF3B30'
 };
 
 export default function GymExercisesScreen() {
@@ -614,13 +666,22 @@ export default function GymExercisesScreen() {
   const { t } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
   
   const category = params.category as string;
   const gender = params.gender as string;
   const filter = params.filter as string;
   const categoryName = params.categoryName as string;
 
-  const exercises = exerciseDatabase[category as keyof typeof exerciseDatabase] || [];
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+
+  const allExercises = exerciseDatabase[category as keyof typeof exerciseDatabase] || [];
+  
+  // Filter exercises based on selection
+  const exercises = allExercises.filter(exercise => {
+    const difficultyMatch = selectedDifficulty === 'all' || exercise.difficulty === selectedDifficulty;
+    return difficultyMatch;
+  });
 
   const handleBack = () => {
     router.back();
@@ -628,96 +689,125 @@ export default function GymExercisesScreen() {
 
   const handleExercisePress = (exercise: any) => {
     router.push({
-      pathname: '/exercise-workout',
+      pathname: '/(dashboard)/exercise-detail',
       params: {
         exerciseId: exercise.id,
         exerciseName: exercise.name,
-        exerciseData: JSON.stringify(exercise),
+        exerciseEmoji: exercise.emoji,
         category,
-        gender,
+        targetMuscles: JSON.stringify(exercise.primaryMuscles),
       },
     });
   };
 
+  // Calculate stats
+  const totalCalories = exercises.reduce((sum, ex) => sum + ex.calories, 0);
+  const avgDuration = Math.round(exercises.reduce((sum, ex) => {
+    const duration = parseInt(ex.duration.split('-')[0]);
+    return sum + duration;
+  }, 0) / (exercises.length || 1));
+
+  const difficultyFilters = [
+    { id: 'all', label: 'All', icon: 'apps-outline' },
+    { id: 'beginner', label: 'Beginner', icon: 'leaf-outline', color: '#00C97C' },
+    { id: 'intermediate', label: 'Medium', icon: 'flash-outline', color: '#FFB800' },
+    { id: 'advanced', label: 'Advanced', icon: 'flame-outline', color: '#FF3B30' },
+  ];
+
   const renderExerciseCard = (exercise: any, index: number) => {
-    const isLast = index === exercises.length - 1;
+    // Get difficulty color and icon
+    const difficultyColor = difficultyColors[exercise.difficulty as keyof typeof difficultyColors];
+    const iconUrl = exerciseIcons[exercise.id] || exerciseIcons.pushups;
+    
     return (
       <Animated.View
         key={exercise.id}
-        entering={FadeInUp.delay(index * 100)}
+        entering={SlideInRight.delay(100 + index * 50).springify()}
         style={styles.exerciseWrapper}
       >
         <TouchableOpacity
-          style={[styles.exerciseCard, isLast && styles.exerciseCardLast]}
+          style={styles.exerciseCard}
           onPress={() => handleExercisePress(exercise)}
-          activeOpacity={0.8}
+          activeOpacity={0.9}
         >
           <LinearGradient
-            colors={isLast 
-              ? [colors.primary + '15', colors.primary + '08', 'transparent']
-              : ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.03)']
-            }
+            colors={['rgba(26, 28, 36, 0.95)', 'rgba(18, 20, 26, 0.98)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.exerciseGradient}
+            style={styles.exerciseCardGradient}
           >
-            <View style={styles.exerciseHeader}>
-              <View style={[styles.exerciseIconContainer, isLast && styles.exerciseIconContainerLast]}>
-                <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
-              </View>
-              <View style={styles.exerciseInfo}>
-                <Text style={[styles.exerciseName, isLast && styles.exerciseNameLast]}>{exercise.name}</Text>
-                <Text style={styles.exerciseDescription}>{exercise.description}</Text>
-              </View>
-              <View style={[styles.difficultyBadge, isLast && styles.difficultyBadgeLast]}>
-                <View style={styles.difficultyDot} />
-                <Text style={styles.difficultyEmoji}>{difficultyEmojis[exercise.difficulty as keyof typeof difficultyEmojis]}</Text>
-              </View>
-            </View>
+            {/* Accent Border - Always Green */}
+            <View style={[styles.accentBorder, { backgroundColor: colors.primary }]} />
             
-            <View style={styles.exerciseStats}>
-              <View style={styles.statItem}>
-                <View style={styles.statIconContainer}>
-                  <Ionicons name="time-outline" size={16} color={colors.primary} />
-                </View>
-                <Text style={styles.statText}>{exercise.duration}</Text>
-              </View>
-              <View style={styles.statItem}>
-                <View style={styles.statIconContainer}>
-                  <Ionicons name="flame" size={16} color={colors.primary} />
-                </View>
-                <Text style={styles.statText}>{exercise.calories} cal</Text>
-              </View>
-              <View style={styles.statItem}>
-                <View style={styles.statIconContainer}>
-                  <Ionicons 
-                    name={exercise.location === 'home' ? 'home' : exercise.location === 'gym' ? 'barbell' : 'location'} 
-                    size={16} 
-                    color={colors.primary} 
-                  />
-                </View>
-                <Text style={styles.statText}>{exercise.location === 'both' ? 'Home/Gym' : exercise.location}</Text>
-              </View>
-            </View>
-
-            <View style={styles.muscleTagsContainer}>
-              {exercise.primaryMuscles.slice(0, 3).map((muscle: string, idx: number) => (
-                <View key={idx} style={[styles.muscleTag, isLast && styles.muscleTagLast]}>
-                  <Text style={[styles.muscleTagText, isLast && styles.muscleTagTextLast]}>{muscle}</Text>
-                </View>
-              ))}
-            </View>
-
-            {isLast && (
-              <View style={styles.lastCardAccent}>
+            {/* Card Content */}
+            <View style={styles.cardContent}>
+              {/* Left Side - Icon */}
+              <View style={styles.cardLeft}>
                 <LinearGradient
-                  colors={[colors.primary + '40', 'transparent']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.accentGradient}
-                />
+                  colors={[colors.primary + '25', colors.primary + '10']}
+                  style={styles.exerciseIconContainer}
+                >
+                  <Image 
+                    source={{ uri: iconUrl }}
+                    style={styles.exerciseIcon}
+                    resizeMode="contain"
+                  />
+                  {/* Difficulty Dot Indicator */}
+                  <View style={[styles.miniDifficultyDot, { backgroundColor: difficultyColor }]} />
+                </LinearGradient>
               </View>
-            )}
+
+              {/* Middle - Info */}
+              <View style={styles.cardMiddle}>
+                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exerciseDescription} numberOfLines={2}>
+                  {exercise.description}
+                </Text>
+                
+                {/* Inline Stats */}
+                <View style={styles.inlineStats}>
+                  <View style={styles.inlineStat}>
+                    <Ionicons name="time-outline" size={14} color={colors.primary} />
+                    <Text style={styles.inlineStatText}>{exercise.duration}</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.inlineStat}>
+                    <Ionicons name="flame-outline" size={14} color={colors.gold} />
+                    <Text style={styles.inlineStatText}>{exercise.calories}</Text>
+                  </View>
+                  <View style={styles.statDivider} />
+                  <View style={styles.inlineStat}>
+                    <Ionicons 
+                      name={exercise.location === 'home' ? 'home-outline' : exercise.location === 'gym' ? 'barbell-outline' : 'location-outline'} 
+                      size={14} 
+                      color={colors.mutedText} 
+                    />
+                  </View>
+                </View>
+
+                {/* Muscle Tags */}
+                <View style={styles.muscleTagsRow}>
+                  {exercise.primaryMuscles.slice(0, 2).map((muscle: string, idx: number) => (
+                    <View key={idx} style={styles.muscleTagMini}>
+                      <View style={[styles.muscleDot, { backgroundColor: colors.primary }]} />
+                      <Text style={styles.muscleTagMiniText}>{muscle}</Text>
+                    </View>
+                  ))}
+                  {exercise.primaryMuscles.length > 2 && (
+                    <View style={styles.moreTag}>
+                      <Text style={styles.moreTagText}>+{exercise.primaryMuscles.length - 2}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Right Side - Arrow */}
+              <View style={styles.cardRight}>
+                <View style={[styles.arrowCircle, { backgroundColor: colors.primary + '20' }]}>
+                  <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+                </View>
+              </View>
+            </View>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -727,15 +817,111 @@ export default function GymExercisesScreen() {
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
-        <Animated.View entering={FadeInDown} style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>{categoryName} Exercises</Text>
-            <Text style={styles.headerSubtitle}>{exercises.length} exercises available</Text>
-          </View>
+        {/* Premium Header with Gradient */}
+        <Animated.View entering={FadeInDown.springify()} style={styles.headerContainer}>
+          <LinearGradient
+            colors={['rgba(0, 201, 124, 0.15)', 'rgba(0, 0, 0, 0)']}
+            style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
+          >
+            {/* Back Button */}
+            <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.8}>
+              <Ionicons name="arrow-back" size={24} color={colors.white} />
+            </TouchableOpacity>
+
+            {/* Header Content */}
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>{categoryName} Exercises</Text>
+              <View style={styles.headerBadge}>
+                <Ionicons name="fitness-outline" size={14} color={colors.primary} />
+                <Text style={styles.headerBadgeText}>{allExercises.length} Total</Text>
+              </View>
+            </View>
+
+            {/* Filter Button */}
+            <TouchableOpacity style={styles.filterButton} activeOpacity={0.8}>
+              <Ionicons name="options-outline" size={22} color={colors.white} />
+              {selectedDifficulty !== 'all' && (
+                <View style={styles.filterDot} />
+              )}
+            </TouchableOpacity>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Stats Summary Card */}
+        <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsCard}>
+          <LinearGradient
+            colors={['rgba(26, 28, 36, 0.95)', 'rgba(18, 20, 26, 0.98)']}
+            style={styles.statsCardGradient}
+          >
+            <View style={styles.statBox}>
+              <View style={styles.statIconBox}>
+                <Ionicons name="flash" size={20} color={colors.primary} />
+              </View>
+              <Text style={styles.statValue}>{exercises.length}</Text>
+              <Text style={styles.statLabel}>Exercises</Text>
+            </View>
+            <View style={styles.statsCardDivider} />
+            <View style={styles.statBox}>
+              <View style={styles.statIconBox}>
+                <Ionicons name="flame" size={20} color={colors.gold} />
+              </View>
+              <Text style={styles.statValue}>{totalCalories}</Text>
+              <Text style={styles.statLabel}>Total Cal</Text>
+            </View>
+            <View style={styles.statsCardDivider} />
+            <View style={styles.statBox}>
+              <View style={styles.statIconBox}>
+                <Ionicons name="time" size={20} color="#FF3B30" />
+              </View>
+              <Text style={styles.statValue}>{avgDuration}m</Text>
+              <Text style={styles.statLabel}>Avg Time</Text>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Filter Chips - Difficulty Only */}
+        <Animated.View entering={SlideInLeft.delay(200).springify()} style={styles.filtersSection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterChipsContainer}
+          >
+            {difficultyFilters.map((filter, index) => (
+              <Animated.View
+                key={filter.id}
+                entering={SlideInLeft.delay(250 + index * 50).springify()}
+              >
+                <TouchableOpacity
+                  style={[
+                    styles.filterChip,
+                    selectedDifficulty === filter.id && styles.filterChipActive
+                  ]}
+                  onPress={() => setSelectedDifficulty(filter.id)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={selectedDifficulty === filter.id && filter.color
+                      ? [filter.color + '40', filter.color + '20']
+                      : ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']
+                    }
+                    style={styles.filterChipGradient}
+                  >
+                    <Ionicons 
+                      name={filter.icon as any} 
+                      size={18} 
+                      color={selectedDifficulty === filter.id && filter.color ? filter.color : colors.mutedText} 
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      selectedDifficulty === filter.id && filter.color && { color: filter.color }
+                    ]}>
+                      {filter.label}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </ScrollView>
         </Animated.View>
 
         {/* Exercise List */}
@@ -747,10 +933,22 @@ export default function GymExercisesScreen() {
           {exercises.length > 0 ? (
             exercises.map((exercise, index) => renderExerciseCard(exercise, index))
           ) : (
-            <Animated.View entering={FadeInUp.delay(300)} style={styles.emptyState}>
-              <Text style={styles.emptyStateEmoji}>🔍</Text>
+            <Animated.View entering={ZoomIn.delay(300).springify()} style={styles.emptyState}>
+              <View style={styles.emptyStateIcon}>
+                <Ionicons name="search-outline" size={48} color={colors.mutedText} />
+              </View>
               <Text style={styles.emptyStateTitle}>No exercises found</Text>
-              <Text style={styles.emptyStateText}>No exercises available for this category</Text>
+              <Text style={styles.emptyStateText}>
+                Try adjusting your filters to see more exercises
+              </Text>
+              <TouchableOpacity 
+                style={styles.resetButton}
+                onPress={() => {
+                  setSelectedDifficulty('all');
+                }}
+              >
+                <Text style={styles.resetButtonText}>Reset Filters</Text>
+              </TouchableOpacity>
             </Animated.View>
           )}
 
@@ -765,43 +963,180 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  
+  // Header Styles
+  headerContainer: {
+    position: 'relative',
+    zIndex: 10,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    paddingBottom: spacing.lg,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
+    backgroundColor: 'rgba(26, 28, 36, 0.8)',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
   },
   headerContent: {
     flex: 1,
+    marginLeft: spacing.md,
   },
   headerTitle: {
     color: colors.white,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '800',
     fontFamily: fonts.heading,
+    letterSpacing: -0.5,
+    marginBottom: spacing.xs,
+  },
+  headerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 201, 124, 0.15)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 201, 124, 0.3)',
+  },
+  headerBadgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fonts.body,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(26, 28, 36, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+  },
+  filterDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+
+  // Stats Summary Card
+  statsCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  statsCardGradient: {
+    flexDirection: 'row',
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  statValue: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  statLabel: {
+    color: colors.mutedText,
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  headerSubtitle: {
-    color: colors.mutedText,
-    fontSize: 14,
-    fontFamily: fonts.body,
-    marginTop: 4,
-    opacity: 0.8,
+  statsCardDivider: {
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginHorizontal: spacing.sm,
   },
+
+  // Filter Chips
+  filtersSection: {
+    marginBottom: spacing.md,
+  },
+  filterChipsContainer: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  filterChip: {
+    borderRadius: radius.pill,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  filterChipActive: {
+    borderColor: 'rgba(0, 201, 124, 0.4)',
+  },
+  filterChipGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  filterChipText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  // Exercise Cards
   container: {
     flex: 1,
   },
@@ -812,183 +1147,175 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   exerciseCard: {
-    borderRadius: radius.xl,
+    borderRadius: 20,
     overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
   },
-  exerciseCardLast: {
-    elevation: 6,
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.primary + '30',
-  },
-  exerciseGradient: {
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
+  exerciseCardGradient: {
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     position: 'relative',
   },
-  exerciseHeader: {
+  accentBorder: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  cardContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    padding: spacing.md,
+    paddingLeft: spacing.lg,
+    gap: spacing.md,
+  },
+  cardLeft: {
+    position: 'relative',
   },
   exerciseIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary + '15',
-    alignItems: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     justifyContent: 'center',
-    marginRight: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  exerciseIconContainerLast: {
-    backgroundColor: colors.primary + '25',
-    borderColor: colors.primary + '40',
-    borderWidth: 1.5,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+  exerciseIcon: {
+    width: 40,
+    height: 40,
+    tintColor: colors.white,
   },
-  exerciseEmoji: {
-    fontSize: 28,
+  miniDifficultyDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 3,
+    borderColor: colors.background,
   },
-  exerciseInfo: {
+  cardMiddle: {
     flex: 1,
+    gap: 6,
   },
   exerciseName: {
     color: colors.white,
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: 6,
-    letterSpacing: 0.3,
-  },
-  exerciseNameLast: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: colors.white,
+    letterSpacing: -0.3,
   },
   exerciseDescription: {
     color: colors.mutedText,
-    fontSize: 13,
-    fontFamily: fonts.body,
-    lineHeight: 20,
-    opacity: 0.9,
-  },
-  difficultyBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    position: 'relative',
-  },
-  difficultyBadgeLast: {
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary + '30',
-  },
-  difficultyDot: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-    opacity: 0.6,
-  },
-  difficultyEmoji: {
-    fontSize: 18,
-  },
-  exerciseStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.cardBorder + '50',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  statIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary + '10',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 6,
-  },
-  statText: {
-    color: colors.mutedText,
     fontSize: 12,
     fontFamily: fonts.body,
-    fontWeight: '500',
+    lineHeight: 18,
   },
-  muscleTagsContainer: {
+  inlineStats: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: 2,
   },
-  muscleTag: {
-    backgroundColor: colors.primary + '15',
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
+  inlineStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  muscleTagLast: {
-    backgroundColor: colors.primary + '25',
-    borderColor: colors.primary + '40',
-  },
-  muscleTagText: {
-    color: colors.primary,
+  inlineStatText: {
+    color: colors.mutedText,
     fontSize: 11,
     fontWeight: '600',
     fontFamily: fonts.body,
   },
-  muscleTagTextLast: {
-    color: colors.primary,
+  statDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  muscleTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  muscleTagMini: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  muscleDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  muscleTagMiniText: {
+    color: colors.mutedText,
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  moreTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  moreTagText: {
+    color: colors.mutedText,
+    fontSize: 10,
     fontWeight: '700',
+    fontFamily: fonts.body,
   },
-  lastCardAccent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    overflow: 'hidden',
+  cardRight: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  accentGradient: {
-    flex: 1,
+  arrowCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
+  // Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xl * 2,
+    paddingVertical: spacing.xl * 3,
+    paddingHorizontal: spacing.xl,
   },
-  emptyStateEmoji: {
-    fontSize: 64,
+  emptyStateIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   emptyStateTitle: {
     color: colors.white,
@@ -999,11 +1326,36 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     color: colors.mutedText,
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.body,
     textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.lg,
+  },
+  resetButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  resetButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
   bottomSpacing: {
-    height: 50,
+    height: 80,
   },
 });
