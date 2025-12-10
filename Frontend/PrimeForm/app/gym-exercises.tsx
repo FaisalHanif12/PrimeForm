@@ -673,15 +673,10 @@ export default function GymExercisesScreen() {
   const filter = params.filter as string;
   const categoryName = params.categoryName as string;
 
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
-
   const allExercises = exerciseDatabase[category as keyof typeof exerciseDatabase] || [];
   
-  // Filter exercises based on selection
-  const exercises = allExercises.filter(exercise => {
-    const difficultyMatch = selectedDifficulty === 'all' || exercise.difficulty === selectedDifficulty;
-    return difficultyMatch;
-  });
+  // Show all exercises without filtering
+  const exercises = allExercises;
 
   const handleBack = () => {
     router.back();
@@ -706,13 +701,6 @@ export default function GymExercisesScreen() {
     const duration = parseInt(ex.duration.split('-')[0]);
     return sum + duration;
   }, 0) / (exercises.length || 1));
-
-  const difficultyFilters = [
-    { id: 'all', label: 'All', icon: 'apps-outline' },
-    { id: 'beginner', label: 'Beginner', icon: 'leaf-outline', color: '#00C97C' },
-    { id: 'intermediate', label: 'Medium', icon: 'flash-outline', color: '#FFB800' },
-    { id: 'advanced', label: 'Advanced', icon: 'flame-outline', color: '#FF3B30' },
-  ];
 
   const renderExerciseCard = (exercise: any, index: number) => {
     // Get difficulty color and icon
@@ -839,13 +827,8 @@ export default function GymExercisesScreen() {
               </View>
             </View>
 
-            {/* Filter Button */}
-            <TouchableOpacity style={styles.filterButton} activeOpacity={0.8}>
-              <Ionicons name="options-outline" size={22} color={colors.white} />
-              {selectedDifficulty !== 'all' && (
-                <View style={styles.filterDot} />
-              )}
-            </TouchableOpacity>
+            {/* Filter Button - Removed */}
+            <View style={{ width: 44 }} />
           </LinearGradient>
         </Animated.View>
 
@@ -884,51 +867,7 @@ export default function GymExercisesScreen() {
           </LinearGradient>
         </Animated.View>
 
-        {/* Filter Chips - Difficulty Only */}
-        <Animated.View entering={SlideInLeft.delay(200).springify()} style={styles.filtersSection}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterChipsContainer}
-          >
-            {difficultyFilters.map((filter, index) => (
-              <Animated.View
-                key={filter.id}
-                entering={SlideInLeft.delay(250 + index * 50).springify()}
-              >
-                <TouchableOpacity
-                  style={[
-                    styles.filterChip,
-                    selectedDifficulty === filter.id && styles.filterChipActive
-                  ]}
-                  onPress={() => setSelectedDifficulty(filter.id)}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    // Use uniform chip background to match card surface
-                    colors={[colors.surface, colors.surface] as [string, string]}
-                    style={[
-                      styles.filterChipGradient,
-                      selectedDifficulty === filter.id && { borderColor: filter.color || colors.primary }
-                    ]}
-                  >
-                    <Ionicons 
-                      name={filter.icon as any} 
-                      size={18} 
-                      color={selectedDifficulty === filter.id && filter.color ? filter.color : colors.mutedText} 
-                    />
-                    <Text style={[
-                      styles.filterChipText,
-                      selectedDifficulty === filter.id && filter.color && { color: filter.color }
-                    ]}>
-                      {filter.label}
-                    </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </ScrollView>
-        </Animated.View>
+        {/* Filter Chips - Removed */}
 
         {/* Exercise List */}
         <ScrollView
@@ -950,10 +889,10 @@ export default function GymExercisesScreen() {
               <TouchableOpacity 
                 style={styles.resetButton}
                 onPress={() => {
-                  setSelectedDifficulty('all');
+                  // No filters to reset
                 }}
               >
-                <Text style={styles.resetButtonText}>Reset Filters</Text>
+                <Text style={styles.resetButtonText}>Go Back</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
