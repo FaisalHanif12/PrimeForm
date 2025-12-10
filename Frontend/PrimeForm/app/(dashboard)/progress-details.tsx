@@ -69,6 +69,7 @@ export default function ProgressDetailsScreen() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // PERFORMANCE: Load available weeks/months only (uses cached data, no API calls)
   useEffect(() => {
@@ -114,26 +115,53 @@ export default function ProgressDetailsScreen() {
     }
   }, [mode, availableWeeks, availableMonths]);
 
-  // Ensure profile data is loaded when opening ProfilePage from this screen
+  // Preload profile data once (prefer cache, fallback to API) to avoid spinner in ProfilePage
   useEffect(() => {
-    const loadProfileIfNeeded = async () => {
-      if (!showProfilePage || userInfo) return;
+    if (profileLoaded || userInfo) return;
+
+    const loadProfile = async () => {
       try {
         const cached = userProfileService.getCachedData();
         if (cached?.data) {
           setUserInfo(cached.data);
+          setProfileLoaded(true);
           return;
         }
         const resp = await userProfileService.getUserProfile();
         if (resp.success && resp.data) {
           setUserInfo(resp.data);
+          setProfileLoaded(true);
+        }
+      } catch (error) {
+        // swallow; ProfilePage handles empty state
+      }
+    };
+
+    loadProfile();
+  }, [profileLoaded, userInfo]);
+
+  // Ensure profile data is loaded when opening ProfilePage from this screen (fallback)
+  useEffect(() => {
+    const loadProfileIfNeeded = async () => {
+      if (!showProfilePage || userInfo || profileLoaded) return;
+      try {
+        const cached = userProfileService.getCachedData();
+        if (cached?.data) {
+          setUserInfo(cached.data);
+          setProfileLoaded(true);
+          return;
+        }
+        const resp = await userProfileService.getUserProfile();
+        if (resp.success && resp.data) {
+          setUserInfo(resp.data);
+          setProfileLoaded(true);
         }
       } catch (error) {
         // If loading fails, we leave userInfo null; ProfilePage will show an error state
       }
     };
     loadProfileIfNeeded();
-  }, [showProfilePage, userInfo]);
+  }, [showProfilePage, userInfo, profileLoaded]);
 
   // PERFORMANCE: Load stats only when period is selected (deferred loading)
   useEffect(() => {
@@ -234,28 +262,6 @@ export default function ProgressDetailsScreen() {
       showToast('error', 'Failed to update profile. Please check your connection and try again.');
     }
   };
-
-  // Load user info when profile page is opened if it's missing
-  useEffect(() => {
-    if (showProfilePage && !userInfo) {
-      const loadUserInfo = async () => {
-        try {
-          const cachedData = userProfileService.getCachedData();
-          if (cachedData && cachedData.data) {
-            setUserInfo(cachedData.data);
-          } else {
-            const response = await userProfileService.getUserProfile();
-            if (response.success && response.data) {
-              setUserInfo(response.data);
-            }
-          }
-        } catch (error) {
-          // Failed to load user info
-        }
-      };
-      loadUserInfo();
-    }
-  }, [showProfilePage]);
 
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {
