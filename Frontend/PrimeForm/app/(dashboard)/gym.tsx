@@ -26,7 +26,7 @@ const workoutCategories = [
     name: 'Chest',
     iconName: 'fitness-outline',
     description: 'Build powerful pecs',
-    exerciseCount: 8,
+    exerciseCount: 6,
     gradientColors: ['#667eea', '#764ba2'],
     iconBg: '#667eea'
   },
@@ -35,7 +35,7 @@ const workoutCategories = [
     name: 'Back',
     iconName: 'body-outline',
     description: 'Strengthen your spine',
-    exerciseCount: 6,
+    exerciseCount: 4,
     gradientColors: ['#f093fb', '#f5576c'],
     iconBg: '#f093fb'
   },
@@ -53,7 +53,7 @@ const workoutCategories = [
     name: 'Legs',
     iconName: 'walk-outline',
     description: 'Power up your legs',
-    exerciseCount: 6,
+    exerciseCount: 8,
     gradientColors: ['#43e97b', '#38f9d7'],
     iconBg: '#43e97b'
   },
@@ -62,7 +62,7 @@ const workoutCategories = [
     name: 'Abs',
     iconName: 'accessibility-outline',
     description: 'Core strength & definition',
-    exerciseCount: 7,
+    exerciseCount: 9,
     gradientColors: ['#fa709a', '#fee140'],
     iconBg: '#fa709a'
   },
@@ -71,7 +71,7 @@ const workoutCategories = [
     name: 'Full Body',
     iconName: 'accessibility',
     description: 'Complete workout',
-    exerciseCount: 8,
+    exerciseCount: 6,
     gradientColors: ['#a8edea', '#fed6e3'],
     iconBg: '#a8edea'
   },
