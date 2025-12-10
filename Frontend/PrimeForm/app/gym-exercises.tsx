@@ -941,6 +941,7 @@ const styles = StyleSheet.create({
   headerContent: {
     flex: 1,
     marginLeft: spacing.md,
+    justifyContent: 'center',
   },
   headerTitle: {
     color: colors.white,
@@ -948,7 +949,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: fonts.heading,
     letterSpacing: -0.5,
-    marginBottom: spacing.xs,
   },
   headerBadge: {
     flexDirection: 'row',
