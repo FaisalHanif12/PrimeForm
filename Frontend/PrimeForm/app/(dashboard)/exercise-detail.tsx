@@ -36,15 +36,15 @@ const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
       {
         level: 'medium',
         title: 'Medium',
-        sets: 3,
-        repsPerSet: '8-12',
+        sets: 4,
+        repsPerSet: '10-15',
         description: 'Ideal for intermediate level with moderate challenge'
       },
       {
         level: 'hard',
         title: 'Hard',
-        sets: 5,
-        repsPerSet: '12-15',
+        sets: 6,
+        repsPerSet: '15-20',
         description: 'Advanced level for experienced athletes'
       }
     ],
@@ -59,15 +59,15 @@ const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
       {
         level: 'medium',
         title: 'Medium',
-        sets: 3,
-        repsPerSet: '12-15',
+        sets: 4,
+        repsPerSet: '15-20',
         description: 'Ideal for intermediate level with moderate challenge'
       },
       {
         level: 'hard',
         title: 'Hard',
-        sets: 5,
-        repsPerSet: '15-20',
+        sets: 6,
+        repsPerSet: '20-25',
         description: 'Advanced level for experienced athletes'
       }
     ],
@@ -115,9 +115,9 @@ export default function ExerciseDetailScreen() {
         level: selectedLevel,
       }
     });
-  };
+    };
 
-  const getDifficultyColor = () => {
+    const getDifficultyColor = () => {
     switch (selectedLevel) {
       case 'easy': return colors.primary;
       case 'medium': return colors.gold;
@@ -171,6 +171,17 @@ export default function ExerciseDetailScreen() {
                   isVisible={true}
                   style={styles.exerciseAnimationContainer}
                 />
+                
+                {/* Fullscreen Button */}
+                <TouchableOpacity 
+                  style={styles.fullscreenIconButton}
+                  onPress={() => setShowFullscreenVideo(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.fullscreenIconBox}>
+                    <Ionicons name="expand-outline" size={22} color={colors.white} />
+                  </View>
+                </TouchableOpacity>
                 
                 {/* Exercise Info Overlay */}
                 <View style={styles.exerciseInfoOverlay}>
@@ -231,9 +242,9 @@ export default function ExerciseDetailScreen() {
                   const levelColor = level.level === 'easy' ? colors.primary : level.level === 'medium' ? colors.gold : '#FF3B30';
                   
                   return (
-                    <TouchableOpacity
+                <TouchableOpacity 
                       key={level.level}
-                      activeOpacity={0.8}
+                  activeOpacity={0.8}
                       onPress={() => {
                         setSelectedLevel(level.level);
                         setShowLevelPicker(false);
@@ -252,7 +263,7 @@ export default function ExerciseDetailScreen() {
                           <Text style={[styles.optionTitle, isSelected && { color: colors.white }]}>
                             {level.title}
                           </Text>
-                        </View>
+            </View>
                         {isSelected && (
                           <Ionicons name="checkmark-circle" size={24} color={levelColor} />
                         )}
@@ -260,7 +271,7 @@ export default function ExerciseDetailScreen() {
                     </TouchableOpacity>
                   );
                 })}
-              </Animated.View>
+          </Animated.View>
             )}
 
             {/* Workout Details Card */}
@@ -273,27 +284,27 @@ export default function ExerciseDetailScreen() {
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.primary + '20' }]}>
                       <Ionicons name="repeat" size={28} color={colors.primary} />
-                    </View>
+            </View>
                     <Text style={styles.detailValue}>{currentLevel.sets}</Text>
                     <Text style={styles.detailLabel}>Sets</Text>
-                  </View>
-
+            </View>
+            
                   <View style={styles.detailDivider} />
 
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.gold + '20' }]}>
                       <Ionicons name="fitness" size={28} color={colors.gold} />
-                    </View>
+              </View>
                     <Text style={styles.detailValue}>{currentLevel.repsPerSet}</Text>
                     <Text style={styles.detailLabel}>Reps per Set</Text>
-                  </View>
-                </View>
+              </View>
+              </View>
               </LinearGradient>
-            </Animated.View>
+          </Animated.View>
           </Animated.View>
         </ScrollView>
 
-        {/* Start Workout Button */}
+          {/* Start Workout Button */}
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -310,8 +321,8 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
 
         {/* Fullscreen Video Modal */}
         <Modal
@@ -407,12 +418,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   animationSection: {
-    height: 400,
+    height: 280,
     backgroundColor: colors.background,
     position: 'relative',
   },
   exerciseAnimationContainer: {
     flex: 1,
+  },
+  fullscreenIconButton: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 10,
+  },
+  fullscreenIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(18, 20, 26, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   exerciseInfoOverlay: {
     position: 'absolute',
