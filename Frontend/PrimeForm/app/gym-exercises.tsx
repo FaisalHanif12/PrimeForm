@@ -821,10 +821,6 @@ export default function GymExercisesScreen() {
             {/* Header Content */}
             <View style={styles.headerContent}>
               <Text style={styles.headerTitle}>{categoryName} Exercises</Text>
-              <View style={styles.headerBadge}>
-                <Ionicons name="fitness-outline" size={14} color={colors.primary} />
-                <Text style={styles.headerBadgeText}>{allExercises.length} Total</Text>
-              </View>
             </View>
 
             {/* Filter Button - Removed */}
