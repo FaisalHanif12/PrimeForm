@@ -95,7 +95,7 @@ export default function ExerciseDetailScreen() {
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   const [currentSet, setCurrentSet] = useState(1);
   const [isBreakTime, setIsBreakTime] = useState(false);
-  const [breakTimeRemaining, setBreakTimeRemaining] = useState(30); // 30 seconds break
+  const [breakTimeRemaining, setBreakTimeRemaining] = useState(120); // 2 minutes break
 
   const exerciseId = params.exerciseId as string || 'pushups';
   const exerciseName = params.exerciseName as string || 'Push-ups';
@@ -120,7 +120,7 @@ export default function ExerciseDetailScreen() {
     if (currentSet < currentLevel.sets) {
       // Start break time
       setIsBreakTime(true);
-      setBreakTimeRemaining(30);
+      setBreakTimeRemaining(120);
       
       // Start countdown
       const interval = setInterval(() => {
@@ -130,8 +130,8 @@ export default function ExerciseDetailScreen() {
             // Move to next set
             setCurrentSet((prevSet) => prevSet + 1);
             setIsBreakTime(false);
-            setBreakTimeRemaining(30);
-            return 30;
+            setBreakTimeRemaining(120);
+            return 120;
           }
           return prev - 1;
         });
@@ -147,14 +147,14 @@ export default function ExerciseDetailScreen() {
   const handleSkipBreak = () => {
     setCurrentSet((prevSet) => prevSet + 1);
     setIsBreakTime(false);
-    setBreakTimeRemaining(30);
+    setBreakTimeRemaining(120);
   };
 
   const handleStopWorkout = () => {
     setIsWorkoutStarted(false);
     setCurrentSet(1);
     setIsBreakTime(false);
-    setBreakTimeRemaining(30);
+    setBreakTimeRemaining(120);
   };
 
     const getDifficultyColor = () => {
@@ -214,7 +214,7 @@ export default function ExerciseDetailScreen() {
                 >
                   <View style={styles.fullscreenIconBox}>
                     <Ionicons name="expand-outline" size={22} color={colors.white} />
-                  </View>
+                </View>
                 </TouchableOpacity>
                 
                 {/* Exercise Icon & Title - Centered */}
@@ -274,41 +274,6 @@ export default function ExerciseDetailScreen() {
                 </LinearGradient>
               </View>
 
-              {/* Action Button */}
-              {isBreakTime ? (
-                <View style={styles.breakActions}>
-                  <TouchableOpacity
-                    style={styles.skipBreakButton}
-                    onPress={handleSkipBreak}
-                    activeOpacity={0.8}
-                  >
-                    <LinearGradient
-                      colors={[colors.gold, colors.gold + 'CC'] as [string, string]}
-                      style={styles.skipBreakGradient}
-                    >
-                      <Ionicons name="play-skip-forward" size={22} color={colors.white} />
-                      <Text style={styles.skipBreakText}>Skip Break</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.completeSetButton}
-                  onPress={handleCompleteSet}
-                  activeOpacity={0.9}
-                >
-                  <LinearGradient
-                    colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
-                    style={styles.completeSetGradient}
-                  >
-                    <Ionicons name="checkmark-circle" size={28} color={colors.white} />
-                    <Text style={styles.completeSetText}>
-                      {currentSet === currentLevel.sets ? 'Finish Workout' : 'Complete Set'}
-                    </Text>
-                    <Ionicons name="arrow-forward" size={24} color={colors.white} />
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
             </Animated.View>
           ) : (
             /* Difficulty Selector - Show when workout not started */
@@ -416,32 +381,71 @@ export default function ExerciseDetailScreen() {
             </View>
               </View>
               </LinearGradient>
-            </Animated.View>
+          </Animated.View>
           </Animated.View>
           )}
         </ScrollView>
 
-        {/* Start Workout Button - Always Green - Only show when workout not started */}
-        {!isWorkoutStarted && (
-          <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={handleStartWorkout}
-            style={styles.startButton}
-          >
-            <LinearGradient
-              colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.startButtonGradient}
+        {/* Fixed Bottom Button - Changes based on workout state */}
+        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
+          {!isWorkoutStarted ? (
+            // Start Workout Button
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleStartWorkout}
+              style={styles.startButton}
             >
-              <Ionicons name="play-circle" size={28} color={colors.white} />
-              <Text style={styles.startButtonText}>Start Workout</Text>
-              <Ionicons name="arrow-forward" size={24} color={colors.white} />
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.startButtonGradient}
+              >
+                <Ionicons name="play-circle" size={28} color={colors.white} />
+                <Text style={styles.startButtonText}>Start Workout</Text>
+                <Ionicons name="arrow-forward" size={24} color={colors.white} />
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : isBreakTime ? (
+            // Skip Break Button during break time
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleSkipBreak}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.gold, colors.gold + 'CC'] as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.startButtonGradient}
+              >
+                <Ionicons name="play-skip-forward" size={28} color={colors.white} />
+                <Text style={styles.startButtonText}>Skip Break</Text>
+                <Ionicons name="arrow-forward" size={24} color={colors.white} />
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            // Complete Set Button during workout
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleCompleteSet}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.startButtonGradient}
+              >
+                <Ionicons name="checkmark-circle" size={28} color={colors.white} />
+                <Text style={styles.startButtonText}>
+                  {currentSet === currentLevel.sets ? 'Finish Workout' : 'Complete Set'}
+                </Text>
+                <Ionicons name="arrow-forward" size={24} color={colors.white} />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </Animated.View>
-        )}
 
         {/* Fullscreen Video Modal */}
         <Modal
@@ -814,43 +818,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mutedText,
     fontFamily: fonts.body,
-  },
-  breakActions: {
-    gap: spacing.md,
-  },
-  skipBreakButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  skipBreakGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  skipBreakText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-    fontFamily: fonts.heading,
-  },
-  completeSetButton: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  completeSetGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
-  },
-  completeSetText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
-    fontFamily: fonts.heading,
   },
 
   // Start Button
