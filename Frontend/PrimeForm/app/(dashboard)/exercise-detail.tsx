@@ -201,19 +201,19 @@ export default function ExerciseDetailScreen() {
             </View>
             </View>
 
-            {/* Dropdown Selector */}
+            {/* Dropdown Selector - Always Green */}
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => setShowLevelPicker(!showLevelPicker)}
-              style={[styles.dropdownButton, { borderColor: getDifficultyColor() }]}
+              style={styles.dropdownButton}
             >
               <LinearGradient
-                colors={[getDifficultyColor() + '25', getDifficultyColor() + '15'] as [string, string]}
+                colors={[colors.primary + '25', colors.primary + '15'] as [string, string]}
                 style={styles.dropdownGradient}
               >
                 <View style={styles.dropdownLeft}>
-                  <View style={[styles.levelIconBox, { backgroundColor: getDifficultyColor() + '35' }]}>
-                    <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={getDifficultyColor()} />
+                  <View style={[styles.levelIconBox, { backgroundColor: colors.primary + '35' }]}>
+                    <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={colors.primary} />
             </View>
                   <View style={styles.dropdownInfo}>
                     <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
