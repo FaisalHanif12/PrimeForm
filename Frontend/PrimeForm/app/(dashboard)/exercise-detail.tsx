@@ -467,7 +467,11 @@ export default function ExerciseDetailScreen() {
                 <View style={{ width: 44 }} />
             </View>
 
-              <ScrollView style={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.fullscreenContent} 
+                contentContainerStyle={styles.fullscreenContentContainer}
+                showsVerticalScrollIndicator={false}
+              >
                 {/* Large Exercise Animation */}
                 <View style={styles.fullscreenAnimationCard}>
                   <LinearGradient
@@ -642,7 +646,7 @@ export default function ExerciseDetailScreen() {
                   </View>
                 )}
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 150 }} />
               </ScrollView>
             </SafeAreaView>
           </DecorativeBackground>
@@ -1034,6 +1038,7 @@ const styles = StyleSheet.create({
   },
   fullscreenModal: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   fullscreenHeader: {
     flexDirection: 'row',
@@ -1060,6 +1065,11 @@ const styles = StyleSheet.create({
   },
   fullscreenContent: {
     flex: 1,
+    backgroundColor: colors.background,
+  },
+  fullscreenContentContainer: {
+    paddingBottom: 150,
+    backgroundColor: colors.background,
   },
   fullscreenAnimationCard: {
     marginHorizontal: spacing.lg,
