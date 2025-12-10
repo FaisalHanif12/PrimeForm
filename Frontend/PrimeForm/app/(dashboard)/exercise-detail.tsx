@@ -123,7 +123,7 @@ export default function ExerciseDetailScreen() {
   const handleStartWorkout = () => {
     // Navigate to workout player
     router.push({
-      pathname: '/(dashboard)/workout-player',
+      pathname: '/workout-player',
       params: {
         exerciseId,
         exerciseName,
@@ -132,7 +132,7 @@ export default function ExerciseDetailScreen() {
     });
   };
 
-  const getDifficultyColor = () => {
+    const getDifficultyColor = () => {
     switch (selectedLevel) {
       case 'beginner': return colors.primary;
       case 'medium': return colors.gold;
@@ -154,25 +154,25 @@ export default function ExerciseDetailScreen() {
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => setSelectedLevel(level.level)}
-          style={[
+        style={[
             styles.levelButton,
             isSelected && { borderColor: levelColor, borderWidth: 2 }
-          ]}
-        >
-          <LinearGradient
+        ]}
+      >
+        <LinearGradient
             colors={isSelected ? [levelColor + '30', levelColor + '15'] : [colors.surface, colors.surface]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
             style={styles.levelButtonGradient}
           >
             <View style={styles.levelButtonContent}>
               <View style={styles.levelHeaderRow}>
                 <View style={[styles.levelDotLarge, { backgroundColor: levelColor }]} />
                 <Text style={[styles.levelTitle, isSelected && { color: colors.white }]}>
-                  {level.title}
-                </Text>
-              </View>
-              
+              {level.title}
+            </Text>
+          </View>
+
               <Text style={styles.levelDescription} numberOfLines={2}>
                 {level.description}
               </Text>
@@ -191,15 +191,15 @@ export default function ExerciseDetailScreen() {
                   <Text style={styles.levelStatText}>{level.reps}</Text>
                 </View>
               </View>
-            </View>
+          </View>
 
-            {isSelected && (
+          {isSelected && (
               <View style={styles.selectedCheckmark}>
                 <Ionicons name="checkmark-circle" size={24} color={levelColor} />
-              </View>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            </View>
+          )}
+        </LinearGradient>
+      </TouchableOpacity>
       </Animated.View>
     );
   };
@@ -227,48 +227,19 @@ export default function ExerciseDetailScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Card with Animation */}
+          {/* Hero Card with Animation - Full Screen */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroCard}>
             <LinearGradient
               colors={[colors.surface, colors.surface]}
               style={styles.heroCardGradient}
             >
-              {/* Exercise Animation Section */}
+              {/* Exercise Animation Section - Full Card */}
               <View style={styles.animationSection}>
                 <ExerciseAnimation
                   exerciseType={exerciseId}
                   isVisible={true}
                   style={styles.exerciseAnimationContainer}
                 />
-              </View>
-
-              {/* Exercise Info Overlay */}
-              <View style={styles.exerciseInfoOverlay}>
-                <View style={styles.exerciseTitleRow}>
-                  <Text style={styles.exerciseTitle}>{exerciseName}</Text>
-                  <TouchableOpacity 
-                    style={styles.fullscreenButton}
-                    onPress={() => setShowFullscreenVideo(true)}
-                  >
-                    <Ionicons name="expand-outline" size={20} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Stats Pills */}
-                <View style={styles.statsRow}>
-                  <View style={[styles.statPill, { borderColor: colors.primary }]}>
-                    <Ionicons name="time-outline" size={16} color={colors.primary} />
-                    <Text style={styles.statPillText}>{currentLevel.duration}</Text>
-                  </View>
-                  <View style={[styles.statPill, { borderColor: colors.gold }]}>
-                    <Ionicons name="repeat-outline" size={16} color={colors.gold} />
-                    <Text style={styles.statPillText}>{currentLevel.sets} sets</Text>
-                  </View>
-                  <View style={[styles.statPill, { borderColor: '#FF3B30' }]}>
-                    <Ionicons name="fitness-outline" size={16} color="#FF3B30" />
-                    <Text style={styles.statPillText}>{currentLevel.reps}</Text>
-                  </View>
-                </View>
               </View>
             </LinearGradient>
           </Animated.View>
@@ -279,17 +250,17 @@ export default function ExerciseDetailScreen() {
               <View style={styles.sectionTitleRow}>
                 <Ionicons name="speedometer-outline" size={22} color={colors.primary} />
                 <Text style={styles.sectionTitle}>Choose Your Level</Text>
-              </View>
+            </View>
               <View style={styles.levelIndicatorsRow}>
                 <View style={[styles.levelDotSmall, { backgroundColor: colors.primary }]} />
                 <View style={[styles.levelDotSmall, { backgroundColor: colors.gold }]} />
                 <View style={[styles.levelDotSmall, { backgroundColor: '#FF3B30' }]} />
               </View>
-            </View>
+              </View>
 
             <View style={styles.levelsContainer}>
               {exerciseLevels.map((level, index) => renderDifficultyButton(level, index))}
-            </View>
+              </View>
           </Animated.View>
 
           {/* Description Section */}
@@ -298,7 +269,7 @@ export default function ExerciseDetailScreen() {
               <View style={styles.descriptionHeader}>
                 <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
                 <Text style={styles.descriptionTitle}>About This Exercise</Text>
-              </View>
+                </View>
               <Text style={styles.descriptionText}>{currentLevel.description}</Text>
             </View>
           </Animated.View>
@@ -321,8 +292,8 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
 
         {/* Fullscreen Video Modal */}
         <Modal
@@ -387,11 +358,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerCategory: {
-    color: colors.primary,
-    fontSize: 14,
+    color: colors.white,
+    fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   favoriteButton: {
     width: 44,
@@ -418,7 +389,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   animationSection: {
-    height: 280,
+    height: 400,
     backgroundColor: colors.background,
   },
   exerciseAnimationContainer: {
