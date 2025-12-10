@@ -137,10 +137,8 @@ export default function ExerciseDetailScreen() {
         });
       }, 1000);
     } else {
-      // Workout complete
-      setIsWorkoutStarted(false);
-      setCurrentSet(1);
-      setIsBreakTime(false);
+      // Workout complete - navigate back to exercises list
+      router.back();
     }
   };
 
@@ -155,7 +153,7 @@ export default function ExerciseDetailScreen() {
     setCurrentSet(1);
     setIsBreakTime(false);
     setBreakTimeRemaining(120);
-  };
+    };
 
     const getDifficultyColor = () => {
     switch (selectedLevel) {
@@ -237,7 +235,7 @@ export default function ExerciseDetailScreen() {
                 <View style={styles.workoutHeaderLeft}>
                   <Ionicons name="fitness" size={24} color={colors.primary} />
                   <Text style={styles.workoutHeaderTitle}>Workout in Progress</Text>
-                </View>
+            </View>
                 <TouchableOpacity onPress={handleStopWorkout} style={styles.stopButton}>
                   <Ionicons name="stop-circle-outline" size={24} color="#FF3B30" />
                 </TouchableOpacity>
@@ -272,8 +270,8 @@ export default function ExerciseDetailScreen() {
                     {currentSet} / {currentLevel.sets} sets completed
                   </Text>
                 </LinearGradient>
-              </View>
-
+            </View>
+            
             </Animated.View>
           ) : (
             /* Difficulty Selector - Show when workout not started */
@@ -301,12 +299,12 @@ export default function ExerciseDetailScreen() {
                 <View style={styles.dropdownLeft}>
                   <View style={[styles.levelIconBox, { backgroundColor: colors.primary + '35' }]}>
                     <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={colors.primary} />
-            </View>
+              </View>
                   <View style={styles.dropdownInfo}>
                     <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
                     <Text style={styles.dropdownSubtext}>{currentLevel.description}</Text>
-                  </View>
-                </View>
+              </View>
+              </View>
                 <Ionicons 
                   name={showLevelPicker ? "chevron-up" : "chevron-down"} 
                   size={24} 
@@ -344,7 +342,7 @@ export default function ExerciseDetailScreen() {
                           <Text style={[styles.optionTitle, isSelected && { color: colors.white }]}>
                             {level.title}
                           </Text>
-              </View>
+            </View>
                         {isSelected && (
                           <Ionicons name="checkmark-circle" size={24} color={levelColor} />
                         )}
@@ -365,7 +363,7 @@ export default function ExerciseDetailScreen() {
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.primary + '20' }]}>
                       <Ionicons name="repeat" size={28} color={colors.primary} />
-              </View>
+                </View>
                     <Text style={styles.detailValue}>{currentLevel.sets}</Text>
                     <Text style={styles.detailLabel}>Sets</Text>
             </View>
@@ -445,31 +443,208 @@ export default function ExerciseDetailScreen() {
               </LinearGradient>
             </TouchableOpacity>
           )}
-        </Animated.View>
+          </Animated.View>
 
-        {/* Fullscreen Video Modal */}
+        {/* Fullscreen Exercise Demonstration Modal */}
         <Modal
           visible={showFullscreenVideo}
           transparent={false}
           animationType="slide"
           onRequestClose={() => setShowFullscreenVideo(false)}
         >
-          <View style={styles.fullscreenModal}>
-            <TouchableOpacity 
-              style={styles.closeFullscreenButton}
-              onPress={() => setShowFullscreenVideo(false)}
-            >
-              <Ionicons name="close" size={32} color={colors.white} />
-            </TouchableOpacity>
-            <Video
-              source={{ uri: videoUrl }}
-              style={styles.fullscreenVideo}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              isLooping
-              shouldPlay
-            />
-          </View>
+          <DecorativeBackground>
+            <SafeAreaView style={styles.fullscreenModal}>
+              {/* Header */}
+              <View style={[styles.fullscreenHeader, { paddingTop: insets.top + spacing.sm }]}>
+                <TouchableOpacity 
+                  style={styles.closeFullscreenButton}
+                  onPress={() => setShowFullscreenVideo(false)}
+                >
+                  <Ionicons name="close" size={28} color={colors.white} />
+                </TouchableOpacity>
+                <Text style={styles.fullscreenTitle}>{exerciseName}</Text>
+                <View style={{ width: 44 }} />
+              </View>
+
+              <ScrollView style={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
+                {/* Large Exercise Animation */}
+                <View style={styles.fullscreenAnimationCard}>
+                  <LinearGradient
+                    colors={[colors.surface, colors.surface]}
+                    style={styles.fullscreenAnimationGradient}
+                  >
+                    <View style={styles.fullscreenAnimationSection}>
+                      <View style={styles.fullscreenIconRow}>
+                        <Text style={styles.fullscreenEmoji}>{exerciseEmoji}</Text>
+                      </View>
+                      <Text style={styles.fullscreenExerciseName}>{exerciseName}</Text>
+                      <Text style={styles.fullscreenExerciseSubtitle}>
+                        {isWorkoutStarted ? 'Workout in progress' : 'Learn proper form'}
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                </View>
+
+                {/* Instructions Section */}
+                <View style={styles.instructionsSection}>
+                  <View style={styles.instructionHeader}>
+                    <Ionicons name="school-outline" size={24} color={colors.primary} />
+                    <Text style={styles.instructionTitle}>How to Perform</Text>
+                  </View>
+
+                  <View style={styles.instructionsList}>
+                    {currentLevel.level === 'easy' && (
+                      <>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>1</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Start in a comfortable position with proper form
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>2</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Focus on controlled movements, not speed
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>3</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Breathe steadily throughout the exercise
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>4</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Maintain proper posture and alignment
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                    {currentLevel.level === 'medium' && (
+                      <>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>1</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Begin with proper warm-up and positioning
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>2</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Execute each rep with full range of motion
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>3</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Keep core engaged throughout the movement
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>4</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Control the tempo: 2 seconds down, 1 second up
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                    {currentLevel.level === 'hard' && (
+                      <>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>1</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Ensure complete warm-up and muscle activation
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>2</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Focus on perfect form over quantity
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>3</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Maintain maximum tension throughout the set
+                          </Text>
+                        </View>
+                        <View style={styles.instructionItem}>
+                          <View style={styles.instructionNumber}>
+                            <Text style={styles.instructionNumberText}>4</Text>
+                          </View>
+                          <Text style={styles.instructionText}>
+                            Use progressive overload techniques safely
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </View>
+
+                {/* Workout Tracking in Fullscreen - Only show if workout started */}
+                {isWorkoutStarted && (
+                  <View style={styles.fullscreenTracking}>
+                    <View style={styles.trackingHeader}>
+                      <Ionicons name="fitness" size={24} color={colors.primary} />
+                      <Text style={styles.trackingTitle}>Current Progress</Text>
+                    </View>
+
+                    <View style={styles.trackingCard}>
+                      <LinearGradient
+                        colors={[colors.primary + '20', colors.primary + '10'] as [string, string]}
+                        style={styles.trackingGradient}
+                      >
+                        <Text style={styles.trackingLabel}>
+                          {isBreakTime ? 'Break Time' : `Set ${currentSet} of ${currentLevel.sets}`}
+                        </Text>
+                        <Text style={styles.trackingValue}>
+                          {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} reps`}
+                        </Text>
+
+                        {/* Progress Bar */}
+                        <View style={styles.trackingProgressBar}>
+                          <View 
+                            style={[
+                              styles.trackingProgressFill, 
+                              { width: `${(currentSet / currentLevel.sets) * 100}%` }
+                            ]} 
+                          />
+                        </View>
+                        <Text style={styles.trackingProgressText}>
+                          {currentSet} / {currentLevel.sets} sets completed
+                        </Text>
+                      </LinearGradient>
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ height: 100 }} />
+              </ScrollView>
+            </SafeAreaView>
+          </DecorativeBackground>
         </Modal>
       </SafeAreaView>
     </DecorativeBackground>
@@ -853,24 +1028,181 @@ const styles = StyleSheet.create({
   // Fullscreen Modal
   fullscreenModal: {
     flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
+  },
+  fullscreenHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   closeFullscreenButton: {
-    position: 'absolute',
-    top: 50,
-    right: spacing.lg,
-    zIndex: 10,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
-  fullscreenVideo: {
-    width: screenWidth,
-    height: screenHeight,
+  fullscreenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  fullscreenContent: {
+    flex: 1,
+  },
+  fullscreenAnimationCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  fullscreenAnimationGradient: {
+    overflow: 'hidden',
+  },
+  fullscreenAnimationSection: {
+    height: 450,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  fullscreenIconRow: {
+    marginBottom: spacing.md,
+  },
+  fullscreenEmoji: {
+    fontSize: 80,
+  },
+  fullscreenExerciseName: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colors.white,
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  fullscreenExerciseSubtitle: {
+    fontSize: 16,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+  },
+
+  // Instructions Section
+  instructionsSection: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  instructionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  instructionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  instructionsList: {
+    gap: spacing.md,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  instructionNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructionNumberText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.white,
+    fontFamily: fonts.body,
+    lineHeight: 22,
+  },
+
+  // Fullscreen Tracking
+  fullscreenTracking: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  trackingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  trackingTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  trackingCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  trackingGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  trackingLabel: {
+    fontSize: 14,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
+  },
+  trackingValue: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: colors.white,
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+  },
+  trackingProgressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: colors.cardBorder,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  trackingProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  trackingProgressText: {
+    fontSize: 14,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
   },
 });
