@@ -166,12 +166,6 @@ export default function ExerciseDetailScreen() {
             >
               {/* Exercise Animation Section */}
               <View style={styles.animationSection}>
-                <ExerciseAnimation
-                  exerciseType={exerciseId}
-                  isVisible={true}
-                  style={styles.exerciseAnimationContainer}
-                />
-                
                 {/* Fullscreen Button */}
                 <TouchableOpacity 
                   style={styles.fullscreenIconButton}
@@ -183,11 +177,11 @@ export default function ExerciseDetailScreen() {
                   </View>
                 </TouchableOpacity>
                 
-                {/* Exercise Info Overlay */}
-                <View style={styles.exerciseInfoOverlay}>
+                {/* Exercise Icon & Title - Centered */}
+                <View style={styles.exerciseContentCenter}>
                   <View style={styles.exerciseIconRow}>
                     <Text style={styles.exerciseEmoji}>{exerciseEmoji}</Text>
-                  </View>
+            </View>
                   <Text style={styles.exerciseTitle}>{exerciseName}</Text>
                   <Text style={styles.exerciseSubtitle}>Exercise in progress</Text>
                 </View>
@@ -204,23 +198,23 @@ export default function ExerciseDetailScreen() {
                 <View style={[styles.levelDot, { backgroundColor: colors.primary }]} />
                 <View style={[styles.levelDot, { backgroundColor: colors.gold }]} />
                 <View style={[styles.levelDot, { backgroundColor: '#FF3B30' }]} />
-              </View>
+            </View>
             </View>
 
             {/* Dropdown Selector */}
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => setShowLevelPicker(!showLevelPicker)}
-              style={styles.dropdownButton}
+              style={[styles.dropdownButton, { borderColor: getDifficultyColor() }]}
             >
               <LinearGradient
-                colors={[getDifficultyColor() + '20', getDifficultyColor() + '10']}
+                colors={[getDifficultyColor() + '25', getDifficultyColor() + '15'] as [string, string]}
                 style={styles.dropdownGradient}
               >
                 <View style={styles.dropdownLeft}>
-                  <View style={[styles.levelIconBox, { backgroundColor: getDifficultyColor() + '30' }]}>
+                  <View style={[styles.levelIconBox, { backgroundColor: getDifficultyColor() + '35' }]}>
                     <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={getDifficultyColor()} />
-                  </View>
+            </View>
                   <View style={styles.dropdownInfo}>
                     <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
                     <Text style={styles.dropdownSubtext}>{currentLevel.description}</Text>
@@ -242,9 +236,9 @@ export default function ExerciseDetailScreen() {
                   const levelColor = level.level === 'easy' ? colors.primary : level.level === 'medium' ? colors.gold : '#FF3B30';
                   
                   return (
-                <TouchableOpacity 
+                    <TouchableOpacity
                       key={level.level}
-                  activeOpacity={0.8}
+                      activeOpacity={0.8}
                       onPress={() => {
                         setSelectedLevel(level.level);
                         setShowLevelPicker(false);
@@ -255,7 +249,7 @@ export default function ExerciseDetailScreen() {
                       ]}
                     >
                       <LinearGradient
-                        colors={isSelected ? [levelColor + '20', levelColor + '10'] : [colors.background, colors.background]}
+                        colors={isSelected ? [levelColor + '25', levelColor + '15'] as [string, string] : [colors.background, colors.background] as [string, string]}
                         style={styles.dropdownOptionGradient}
                       >
                         <View style={styles.optionLeft}>
@@ -263,7 +257,7 @@ export default function ExerciseDetailScreen() {
                           <Text style={[styles.optionTitle, isSelected && { color: colors.white }]}>
                             {level.title}
                           </Text>
-            </View>
+              </View>
                         {isSelected && (
                           <Ionicons name="checkmark-circle" size={24} color={levelColor} />
                         )}
@@ -284,20 +278,20 @@ export default function ExerciseDetailScreen() {
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.primary + '20' }]}>
                       <Ionicons name="repeat" size={28} color={colors.primary} />
-            </View>
+              </View>
                     <Text style={styles.detailValue}>{currentLevel.sets}</Text>
                     <Text style={styles.detailLabel}>Sets</Text>
             </View>
-            
+
                   <View style={styles.detailDivider} />
 
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.gold + '20' }]}>
                       <Ionicons name="fitness" size={28} color={colors.gold} />
-              </View>
+                </View>
                     <Text style={styles.detailValue}>{currentLevel.repsPerSet}</Text>
                     <Text style={styles.detailLabel}>Reps per Set</Text>
-              </View>
+            </View>
               </View>
               </LinearGradient>
           </Animated.View>
@@ -312,7 +306,7 @@ export default function ExerciseDetailScreen() {
             style={styles.startButton}
           >
             <LinearGradient
-              colors={[getDifficultyColor(), getDifficultyColor() + 'CC']}
+              colors={[getDifficultyColor(), getDifficultyColor() + 'CC'] as [string, string]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.startButtonGradient}
@@ -418,12 +412,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   animationSection: {
-    height: 280,
+    height: 340,
     backgroundColor: colors.background,
     position: 'relative',
-  },
-  exerciseAnimationContainer: {
-    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fullscreenIconButton: {
     position: 'absolute',
@@ -441,14 +434,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  exerciseInfoOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: spacing.lg,
-    backgroundColor: 'rgba(18, 20, 26, 0.95)',
+  exerciseContentCenter: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   exerciseIconRow: {
     marginBottom: spacing.sm,
