@@ -156,15 +156,23 @@ export default function LanguagePreferencesPage() {
     }
   };
 
-  // OPTIMIZATION: Use cached data - no API call on page visit
-  const loadUserInfo = () => {
+  // Load user info - fetch from API if cache is empty
+  const loadUserInfo = async () => {
     try {
+      // First try cache
       const cachedData = userProfileService.getCachedData();
       if (cachedData && cachedData.data) {
         setUserInfo(cachedData.data);
+        return;
+      }
+
+      // If no cache, fetch from API
+      const response = await userProfileService.getUserProfile();
+      if (response.success && response.data) {
+        setUserInfo(response.data);
       }
     } catch (error) {
-      // Failed to load user info from cache
+      // Failed to load user info
     }
   };
 
