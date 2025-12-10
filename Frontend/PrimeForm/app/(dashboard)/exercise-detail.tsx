@@ -92,6 +92,10 @@ export default function ExerciseDetailScreen() {
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('medium');
   const [showLevelPicker, setShowLevelPicker] = useState(false);
   const [showFullscreenVideo, setShowFullscreenVideo] = useState(false);
+  const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
+  const [currentSet, setCurrentSet] = useState(1);
+  const [isBreakTime, setIsBreakTime] = useState(false);
+  const [breakTimeRemaining, setBreakTimeRemaining] = useState(30); // 30 seconds break
 
   const exerciseId = params.exerciseId as string || 'pushups';
   const exerciseName = params.exerciseName as string || 'Push-ups';
@@ -107,15 +111,51 @@ export default function ExerciseDetailScreen() {
   };
 
   const handleStartWorkout = () => {
-    router.push({
-      pathname: '/workout-player',
-      params: {
-        exerciseId,
-        exerciseName,
-        level: selectedLevel,
-      }
-    });
-    };
+    setIsWorkoutStarted(true);
+    setCurrentSet(1);
+    setIsBreakTime(false);
+  };
+
+  const handleCompleteSet = () => {
+    if (currentSet < currentLevel.sets) {
+      // Start break time
+      setIsBreakTime(true);
+      setBreakTimeRemaining(30);
+      
+      // Start countdown
+      const interval = setInterval(() => {
+        setBreakTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            // Move to next set
+            setCurrentSet((prevSet) => prevSet + 1);
+            setIsBreakTime(false);
+            setBreakTimeRemaining(30);
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      // Workout complete
+      setIsWorkoutStarted(false);
+      setCurrentSet(1);
+      setIsBreakTime(false);
+    }
+  };
+
+  const handleSkipBreak = () => {
+    setCurrentSet((prevSet) => prevSet + 1);
+    setIsBreakTime(false);
+    setBreakTimeRemaining(30);
+  };
+
+  const handleStopWorkout = () => {
+    setIsWorkoutStarted(false);
+    setCurrentSet(1);
+    setIsBreakTime(false);
+    setBreakTimeRemaining(30);
+  };
 
     const getDifficultyColor = () => {
     switch (selectedLevel) {
@@ -189,8 +229,90 @@ export default function ExerciseDetailScreen() {
             </LinearGradient>
           </Animated.View>
 
-          {/* Difficulty Selector */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.selectorSection}>
+          {/* Workout Tracker - Show when workout started */}
+          {isWorkoutStarted ? (
+            <Animated.View entering={FadeInUp.springify()} style={styles.workoutTrackerSection}>
+              {/* Workout Progress Header */}
+              <View style={styles.workoutHeader}>
+                <View style={styles.workoutHeaderLeft}>
+                  <Ionicons name="fitness" size={24} color={colors.primary} />
+                  <Text style={styles.workoutHeaderTitle}>Workout in Progress</Text>
+                </View>
+                <TouchableOpacity onPress={handleStopWorkout} style={styles.stopButton}>
+                  <Ionicons name="stop-circle-outline" size={24} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Set Progress Card */}
+              <View style={styles.setProgressCard}>
+                <LinearGradient
+                  colors={[colors.primary + '20', colors.primary + '10'] as [string, string]}
+                  style={styles.setProgressGradient}
+                >
+                  <Text style={styles.setProgressLabel}>
+                    {isBreakTime ? 'Break Time' : `Set ${currentSet} of ${currentLevel.sets}`}
+                  </Text>
+                  <Text style={styles.setProgressValue}>
+                    {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} reps`}
+                  </Text>
+                  <Text style={styles.setProgressSubtext}>
+                    {isBreakTime ? 'Rest and recover' : 'Complete this set'}
+                  </Text>
+
+                  {/* Progress Bar */}
+                  <View style={styles.progressBarContainer}>
+                    <View 
+                      style={[
+                        styles.progressBarFill, 
+                        { width: `${(currentSet / currentLevel.sets) * 100}%` }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {currentSet} / {currentLevel.sets} sets completed
+                  </Text>
+                </LinearGradient>
+              </View>
+
+              {/* Action Button */}
+              {isBreakTime ? (
+                <View style={styles.breakActions}>
+                  <TouchableOpacity
+                    style={styles.skipBreakButton}
+                    onPress={handleSkipBreak}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={[colors.gold, colors.gold + 'CC'] as [string, string]}
+                      style={styles.skipBreakGradient}
+                    >
+                      <Ionicons name="play-skip-forward" size={22} color={colors.white} />
+                      <Text style={styles.skipBreakText}>Skip Break</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.completeSetButton}
+                  onPress={handleCompleteSet}
+                  activeOpacity={0.9}
+                >
+                  <LinearGradient
+                    colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
+                    style={styles.completeSetGradient}
+                  >
+                    <Ionicons name="checkmark-circle" size={28} color={colors.white} />
+                    <Text style={styles.completeSetText}>
+                      {currentSet === currentLevel.sets ? 'Finish Workout' : 'Complete Set'}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={24} color={colors.white} />
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            </Animated.View>
+          ) : (
+            /* Difficulty Selector - Show when workout not started */
+            <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.selectorSection}>
             <View style={styles.selectorHeader}>
               <Ionicons name="speedometer-outline" size={22} color={colors.primary} />
               <Text style={styles.selectorTitle}>Choose Your Level</Text>
@@ -294,12 +416,14 @@ export default function ExerciseDetailScreen() {
             </View>
               </View>
               </LinearGradient>
+            </Animated.View>
           </Animated.View>
-          </Animated.View>
+          )}
         </ScrollView>
 
-        {/* Start Workout Button - Always Green */}
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
+        {/* Start Workout Button - Always Green - Only show when workout not started */}
+        {!isWorkoutStarted && (
+          <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleStartWorkout}
@@ -315,8 +439,9 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
+        )}
 
         {/* Fullscreen Video Modal */}
         <Modal
@@ -606,6 +731,126 @@ const styles = StyleSheet.create({
     width: 1,
     height: 60,
     backgroundColor: colors.cardBorder,
+  },
+
+  // Workout Tracker Styles
+  workoutTrackerSection: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  workoutHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  workoutHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  workoutHeaderTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  stopButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  setProgressCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.lg,
+  },
+  setProgressGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  setProgressLabel: {
+    fontSize: 14,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
+  },
+  setProgressValue: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: colors.white,
+    fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
+  },
+  setProgressSubtext: {
+    fontSize: 16,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+    marginBottom: spacing.lg,
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 8,
+    backgroundColor: colors.cardBorder,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 13,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+  },
+  breakActions: {
+    gap: spacing.md,
+  },
+  skipBreakButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  skipBreakGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  skipBreakText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+  completeSetButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  completeSetGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  completeSetText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
   },
 
   // Start Button
