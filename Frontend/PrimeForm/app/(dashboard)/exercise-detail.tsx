@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Modal } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInUp, FadeInDown, FadeIn, SlideInRight } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeInDown, FadeIn, SlideInDown } from 'react-native-reanimated';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,76 +13,62 @@ import ExerciseAnimation from '../../src/components/ExerciseAnimation';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-type DifficultyLevel = 'beginner' | 'medium' | 'advanced';
+type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 interface ExerciseLevel {
   level: DifficultyLevel;
   title: string;
-  duration: string;
-  reps: string;
-  sets: string;
+  sets: number;
+  repsPerSet: string;
   description: string;
-  emoji: string;
 }
 
 const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
   const baseExercises: Record<string, ExerciseLevel[]> = {
     pushups: [
       {
-        level: 'beginner',
-        title: 'Knee Push-ups',
-        duration: '10-15 minutes',
-        reps: '5-8',
-        sets: '2-3',
-        description: 'Start with knee push-ups to build basic strength. Keep your body straight from knees to head.',
-        emoji: '🟢'
+        level: 'easy',
+        title: 'Easy',
+        sets: 2,
+        repsPerSet: '5-8',
+        description: 'Perfect for beginners starting their fitness journey'
       },
       {
         level: 'medium',
-        title: 'Standard Push-ups',
-        duration: '15-20 minutes',
-        reps: '8-12',
-        sets: '3-4',
-        description: 'Classic push-ups with proper form. Maintain straight line from head to heels.',
-        emoji: '🟡'
+        title: 'Medium',
+        sets: 3,
+        repsPerSet: '8-12',
+        description: 'Ideal for intermediate level with moderate challenge'
       },
       {
-        level: 'advanced',
-        title: 'Diamond Push-ups',
-        duration: '20-25 minutes',
-        reps: '10-15',
-        sets: '4-5',
-        description: 'Advanced variation targeting triceps. Form diamond shape with hands under chest.',
-        emoji: '🔴'
+        level: 'hard',
+        title: 'Hard',
+        sets: 5,
+        repsPerSet: '12-15',
+        description: 'Advanced level for experienced athletes'
       }
     ],
     squats: [
       {
-        level: 'beginner',
-        title: 'Bodyweight Squats',
-        duration: '10-15 minutes',
-        reps: '8-12',
-        sets: '2-3',
-        description: 'Basic squat movement focusing on proper form and depth.',
-        emoji: '🟢'
+        level: 'easy',
+        title: 'Easy',
+        sets: 2,
+        repsPerSet: '8-12',
+        description: 'Perfect for beginners starting their fitness journey'
       },
       {
         level: 'medium',
-        title: 'Jump Squats',
-        duration: '15-20 minutes',
-        reps: '10-15',
-        sets: '3-4',
-        description: 'Add explosive jump to increase intensity and power.',
-        emoji: '🟡'
+        title: 'Medium',
+        sets: 3,
+        repsPerSet: '12-15',
+        description: 'Ideal for intermediate level with moderate challenge'
       },
       {
-        level: 'advanced',
-        title: 'Pistol Squats',
-        duration: '20-25 minutes',
-        reps: '5-8 each leg',
-        sets: '4-5',
-        description: 'Single-leg squat requiring balance, strength, and flexibility.',
-        emoji: '🔴'
+        level: 'hard',
+        title: 'Hard',
+        sets: 5,
+        repsPerSet: '15-20',
+        description: 'Advanced level for experienced athletes'
       }
     ],
   };
@@ -104,7 +90,7 @@ export default function ExerciseDetailScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('medium');
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [showLevelPicker, setShowLevelPicker] = useState(false);
   const [showFullscreenVideo, setShowFullscreenVideo] = useState(false);
 
   const exerciseId = params.exerciseId as string || 'pushups';
@@ -121,7 +107,6 @@ export default function ExerciseDetailScreen() {
   };
 
   const handleStartWorkout = () => {
-    // Navigate to workout player
     router.push({
       pathname: '/workout-player',
       params: {
@@ -132,82 +117,28 @@ export default function ExerciseDetailScreen() {
     });
   };
 
-    const getDifficultyColor = () => {
+  const getDifficultyColor = () => {
     switch (selectedLevel) {
-      case 'beginner': return colors.primary;
+      case 'easy': return colors.primary;
       case 'medium': return colors.gold;
-      case 'advanced': return '#FF3B30';
+      case 'hard': return '#FF3B30';
       default: return colors.primary;
     }
   };
 
-  const renderDifficultyButton = (level: ExerciseLevel, index: number) => {
-    const isSelected = selectedLevel === level.level;
-    const levelColor = level.level === 'beginner' ? colors.primary : level.level === 'medium' ? colors.gold : '#FF3B30';
-
-    return (
-      <Animated.View 
-        key={level.level}
-        entering={SlideInRight.delay(100 * index).springify()}
-        style={styles.levelButtonWrapper}
-      >
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setSelectedLevel(level.level)}
-        style={[
-            styles.levelButton,
-            isSelected && { borderColor: levelColor, borderWidth: 2 }
-        ]}
-      >
-        <LinearGradient
-            colors={isSelected ? [levelColor + '30', levelColor + '15'] : [colors.surface, colors.surface]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-            style={styles.levelButtonGradient}
-          >
-            <View style={styles.levelButtonContent}>
-              <View style={styles.levelHeaderRow}>
-                <View style={[styles.levelDotLarge, { backgroundColor: levelColor }]} />
-                <Text style={[styles.levelTitle, isSelected && { color: colors.white }]}>
-              {level.title}
-            </Text>
-          </View>
-
-              <Text style={styles.levelDescription} numberOfLines={2}>
-                {level.description}
-              </Text>
-
-              <View style={styles.levelStatsRow}>
-                <View style={styles.levelStat}>
-                  <Ionicons name="time-outline" size={14} color={levelColor} />
-                  <Text style={styles.levelStatText}>{level.duration}</Text>
-                </View>
-                <View style={styles.levelStat}>
-                  <Ionicons name="repeat-outline" size={14} color={levelColor} />
-                  <Text style={styles.levelStatText}>{level.sets} sets</Text>
-                </View>
-                <View style={styles.levelStat}>
-                  <Ionicons name="fitness-outline" size={14} color={levelColor} />
-                  <Text style={styles.levelStatText}>{level.reps}</Text>
-                </View>
-              </View>
-          </View>
-
-          {isSelected && (
-              <View style={styles.selectedCheckmark}>
-                <Ionicons name="checkmark-circle" size={24} color={levelColor} />
-            </View>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
-      </Animated.View>
-    );
+  const getLevelIcon = (level: DifficultyLevel) => {
+    switch (level) {
+      case 'easy': return 'leaf-outline';
+      case 'medium': return 'flash-outline';
+      case 'hard': return 'flame-outline';
+      default: return 'fitness-outline';
+    }
   };
 
   return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
-        {/* Compact Header */}
+        {/* Header */}
         <Animated.View entering={FadeInDown.springify()} style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.8}>
             <Ionicons name="arrow-back" size={24} color={colors.white} />
@@ -227,55 +158,142 @@ export default function ExerciseDetailScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Card with Animation - Full Screen */}
+          {/* Hero Card with Animation & Exercise Info */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroCard}>
             <LinearGradient
               colors={[colors.surface, colors.surface]}
               style={styles.heroCardGradient}
             >
-              {/* Exercise Animation Section - Full Card */}
+              {/* Exercise Animation Section */}
               <View style={styles.animationSection}>
                 <ExerciseAnimation
                   exerciseType={exerciseId}
                   isVisible={true}
                   style={styles.exerciseAnimationContainer}
                 />
+                
+                {/* Exercise Info Overlay */}
+                <View style={styles.exerciseInfoOverlay}>
+                  <View style={styles.exerciseIconRow}>
+                    <Text style={styles.exerciseEmoji}>{exerciseEmoji}</Text>
+                  </View>
+                  <Text style={styles.exerciseTitle}>{exerciseName}</Text>
+                  <Text style={styles.exerciseSubtitle}>Exercise in progress</Text>
+                </View>
               </View>
             </LinearGradient>
           </Animated.View>
 
-          {/* Difficulty Levels Section */}
-          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Ionicons name="speedometer-outline" size={22} color={colors.primary} />
-                <Text style={styles.sectionTitle}>Choose Your Level</Text>
+          {/* Difficulty Selector */}
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.selectorSection}>
+            <View style={styles.selectorHeader}>
+              <Ionicons name="speedometer-outline" size={22} color={colors.primary} />
+              <Text style={styles.selectorTitle}>Choose Your Level</Text>
+              <View style={styles.levelIndicators}>
+                <View style={[styles.levelDot, { backgroundColor: colors.primary }]} />
+                <View style={[styles.levelDot, { backgroundColor: colors.gold }]} />
+                <View style={[styles.levelDot, { backgroundColor: '#FF3B30' }]} />
+              </View>
             </View>
-              <View style={styles.levelIndicatorsRow}>
-                <View style={[styles.levelDotSmall, { backgroundColor: colors.primary }]} />
-                <View style={[styles.levelDotSmall, { backgroundColor: colors.gold }]} />
-                <View style={[styles.levelDotSmall, { backgroundColor: '#FF3B30' }]} />
-              </View>
-              </View>
 
-            <View style={styles.levelsContainer}>
-              {exerciseLevels.map((level, index) => renderDifficultyButton(level, index))}
-              </View>
-          </Animated.View>
-
-          {/* Description Section */}
-          <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.section}>
-            <View style={styles.descriptionCard}>
-              <View style={styles.descriptionHeader}>
-                <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
-                <Text style={styles.descriptionTitle}>About This Exercise</Text>
+            {/* Dropdown Selector */}
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => setShowLevelPicker(!showLevelPicker)}
+              style={styles.dropdownButton}
+            >
+              <LinearGradient
+                colors={[getDifficultyColor() + '20', getDifficultyColor() + '10']}
+                style={styles.dropdownGradient}
+              >
+                <View style={styles.dropdownLeft}>
+                  <View style={[styles.levelIconBox, { backgroundColor: getDifficultyColor() + '30' }]}>
+                    <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={getDifficultyColor()} />
+                  </View>
+                  <View style={styles.dropdownInfo}>
+                    <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
+                    <Text style={styles.dropdownSubtext}>{currentLevel.description}</Text>
+                  </View>
                 </View>
-              <Text style={styles.descriptionText}>{currentLevel.description}</Text>
-            </View>
+                <Ionicons 
+                  name={showLevelPicker ? "chevron-up" : "chevron-down"} 
+                  size={24} 
+                  color={colors.mutedText} 
+                />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Dropdown Options */}
+            {showLevelPicker && (
+              <Animated.View entering={SlideInDown.springify()} style={styles.dropdownOptions}>
+                {exerciseLevels.map((level) => {
+                  const isSelected = selectedLevel === level.level;
+                  const levelColor = level.level === 'easy' ? colors.primary : level.level === 'medium' ? colors.gold : '#FF3B30';
+                  
+                  return (
+                    <TouchableOpacity
+                      key={level.level}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedLevel(level.level);
+                        setShowLevelPicker(false);
+                      }}
+                      style={[
+                        styles.dropdownOption,
+                        isSelected && { borderColor: levelColor, borderWidth: 2 }
+                      ]}
+                    >
+                      <LinearGradient
+                        colors={isSelected ? [levelColor + '20', levelColor + '10'] : [colors.background, colors.background]}
+                        style={styles.dropdownOptionGradient}
+                      >
+                        <View style={styles.optionLeft}>
+                          <View style={[styles.optionDot, { backgroundColor: levelColor }]} />
+                          <Text style={[styles.optionTitle, isSelected && { color: colors.white }]}>
+                            {level.title}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <Ionicons name="checkmark-circle" size={24} color={levelColor} />
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  );
+                })}
+              </Animated.View>
+            )}
+
+            {/* Workout Details Card */}
+            <Animated.View entering={FadeInUp.delay(300).springify()} style={styles.detailsCard}>
+              <LinearGradient
+                colors={[colors.surface, colors.surface]}
+                style={styles.detailsGradient}
+              >
+                <View style={styles.detailRow}>
+                  <View style={styles.detailItem}>
+                    <View style={[styles.detailIconBox, { backgroundColor: colors.primary + '20' }]}>
+                      <Ionicons name="repeat" size={28} color={colors.primary} />
+                    </View>
+                    <Text style={styles.detailValue}>{currentLevel.sets}</Text>
+                    <Text style={styles.detailLabel}>Sets</Text>
+                  </View>
+
+                  <View style={styles.detailDivider} />
+
+                  <View style={styles.detailItem}>
+                    <View style={[styles.detailIconBox, { backgroundColor: colors.gold + '20' }]}>
+                      <Ionicons name="fitness" size={28} color={colors.gold} />
+                    </View>
+                    <Text style={styles.detailValue}>{currentLevel.repsPerSet}</Text>
+                    <Text style={styles.detailLabel}>Reps per Set</Text>
+                  </View>
+                </View>
+              </LinearGradient>
+            </Animated.View>
           </Animated.View>
         </ScrollView>
 
-        {/* Start Workout Button - Fixed at Bottom */}
+        {/* Start Workout Button */}
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -292,8 +310,8 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Fullscreen Video Modal */}
         <Modal
@@ -332,10 +350,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingBottom: 100, // Space for fixed button
+    paddingBottom: 100,
   },
   
-  // Header Styles
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,179 +409,188 @@ const styles = StyleSheet.create({
   animationSection: {
     height: 400,
     backgroundColor: colors.background,
+    position: 'relative',
   },
   exerciseAnimationContainer: {
     flex: 1,
   },
   exerciseInfoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: spacing.lg,
-    backgroundColor: colors.surface,
-  },
-  exerciseTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: 'rgba(18, 20, 26, 0.95)',
     alignItems: 'center',
-    marginBottom: spacing.md,
+  },
+  exerciseIconRow: {
+    marginBottom: spacing.sm,
+  },
+  exerciseEmoji: {
+    fontSize: 48,
   },
   exerciseTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.heading,
+    marginBottom: spacing.xs,
   },
-  fullscreenButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  statPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    backgroundColor: colors.background,
-  },
-  statPillText: {
-    color: colors.white,
-    fontSize: 13,
-    fontWeight: '600',
+  exerciseSubtitle: {
+    fontSize: 14,
+    color: colors.mutedText,
     fontFamily: fonts.body,
   },
 
-  // Section Styles
-  section: {
+  // Selector Section
+  selectorSection: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitleRow: {
+  selectorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  sectionTitle: {
+  selectorTitle: {
+    flex: 1,
     fontSize: 20,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.heading,
   },
-  levelIndicatorsRow: {
+  levelIndicators: {
     flexDirection: 'row',
     gap: 6,
   },
-  levelDotSmall: {
+  levelDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
 
-  // Difficulty Levels
-  levelsContainer: {
+  // Dropdown Selector
+  dropdownButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
+  },
+  dropdownGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+  },
+  dropdownLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
+    flex: 1,
   },
-  levelButtonWrapper: {
-    width: '100%',
+  levelIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  levelButton: {
+  dropdownInfo: {
+    flex: 1,
+  },
+  dropdownLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  dropdownSubtext: {
+    fontSize: 12,
+    color: colors.mutedText,
+    fontFamily: fonts.body,
+  },
+
+  // Dropdown Options
+  dropdownOptions: {
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  dropdownOption: {
     borderRadius: radius.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  levelButtonGradient: {
-    padding: spacing.lg,
-    position: 'relative',
+  dropdownOptionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
   },
-  levelButtonContent: {
-    gap: spacing.sm,
-  },
-  levelHeaderRow: {
+  optionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
   },
-  levelDotLarge: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  optionDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
-  levelTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.white,
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.mutedText,
     fontFamily: fonts.heading,
   },
-  levelDescription: {
-    fontSize: 14,
-    color: colors.mutedText,
-    fontFamily: fonts.body,
-    lineHeight: 20,
-  },
-  levelStatsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-  },
-  levelStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  levelStatText: {
-    fontSize: 13,
-    color: colors.white,
-    fontWeight: '600',
-    fontFamily: fonts.body,
-  },
-  selectedCheckmark: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-  },
 
-  // Description Card
-  descriptionCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
+  // Details Card
+  detailsCard: {
     borderRadius: radius.lg,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
-  descriptionHeader: {
+  detailsGradient: {
+    padding: spacing.lg,
+  },
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
   },
-  descriptionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  detailItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  detailIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  detailValue: {
+    fontSize: 24,
+    fontWeight: '800',
     color: colors.white,
     fontFamily: fonts.heading,
+    marginBottom: 4,
   },
-  descriptionText: {
-    fontSize: 15,
+  detailLabel: {
+    fontSize: 13,
     color: colors.mutedText,
     fontFamily: fonts.body,
-    lineHeight: 22,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailDivider: {
+    width: 1,
+    height: 60,
+    backgroundColor: colors.cardBorder,
   },
 
   // Start Button
