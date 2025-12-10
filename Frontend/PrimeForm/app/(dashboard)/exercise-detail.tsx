@@ -30,29 +30,6 @@ const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
         level: 'easy',
         title: 'Easy',
         sets: 2,
-        repsPerSet: '5-8',
-        description: 'Perfect for beginners starting their fitness journey'
-      },
-      {
-        level: 'medium',
-        title: 'Medium',
-        sets: 4,
-        repsPerSet: '10-15',
-        description: 'Ideal for intermediate level with moderate challenge'
-      },
-      {
-        level: 'hard',
-        title: 'Hard',
-        sets: 6,
-        repsPerSet: '15-20',
-        description: 'Advanced level for experienced athletes'
-      }
-    ],
-    squats: [
-      {
-        level: 'easy',
-        title: 'Easy',
-        sets: 2,
         repsPerSet: '8-12',
         description: 'Perfect for beginners starting their fitness journey'
       },
@@ -67,7 +44,30 @@ const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
         level: 'hard',
         title: 'Hard',
         sets: 6,
+        repsPerSet: '20-30',
+        description: 'Advanced level for experienced athletes'
+      }
+    ],
+    squats: [
+      {
+        level: 'easy',
+        title: 'Easy',
+        sets: 2,
+        repsPerSet: '12-15',
+        description: 'Perfect for beginners starting their fitness journey'
+      },
+      {
+        level: 'medium',
+        title: 'Medium',
+        sets: 4,
         repsPerSet: '20-25',
+        description: 'Ideal for intermediate level with moderate challenge'
+      },
+      {
+        level: 'hard',
+        title: 'Hard',
+        sets: 6,
+        repsPerSet: '30-40',
         description: 'Advanced level for experienced athletes'
       }
     ],
@@ -315,8 +315,8 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
 
         {/* Fullscreen Video Modal */}
         <Modal
