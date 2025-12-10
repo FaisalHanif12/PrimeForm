@@ -393,20 +393,22 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       );
     }
 
-    // Profile exists - show full profile
+    // Profile exists - show full profile (safe guard for missing props)
+    const safeUserInfo = userInfo || {} as any;
+
     return (
       <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
         {/* Personal Information */}
         {renderInfoSection('Personal Information', (
           <>
-            {renderPickerRow('Country', userInfo.country, 'country', countries)}
-            {renderInfoRow('Age', userInfo.age, 'age')}
-            {renderPickerRow('Gender', userInfo.gender, 'gender', genderOptions)}
-            {renderInfoRow('Height', userInfo.height, 'height')}
-            {renderInfoRow('Current Weight', userInfo.currentWeight, 'currentWeight')}
+            {renderPickerRow('Country', safeUserInfo.country || '', 'country', countries)}
+            {renderInfoRow('Age', safeUserInfo.age || '', 'age')}
+            {renderPickerRow('Gender', safeUserInfo.gender || '', 'gender', genderOptions)}
+            {renderInfoRow('Height', safeUserInfo.height || '', 'height')}
+            {renderInfoRow('Current Weight', safeUserInfo.currentWeight || '', 'currentWeight')}
             {/* Show target weight field if body goal requires it */}
-            {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
-              renderInfoRow('Target Weight', userInfo.targetWeight || '', 'targetWeight')
+            {(safeUserInfo.bodyGoal === 'Lose Fat' || safeUserInfo.bodyGoal === 'Gain Muscle') && (
+              renderInfoRow('Target Weight', safeUserInfo.targetWeight || '', 'targetWeight')
             )}
           </>
         ))}
@@ -414,17 +416,17 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         {/* Goals & Preferences */}
         {renderInfoSection('Goals & Preferences', (
           <>
-            {renderPickerRow('Body Goal', userInfo.bodyGoal, 'bodyGoal', bodyGoals)}
-            {renderPickerRow('Diet Preference', userInfo.dietPreference, 'dietPreference', dietPreferences)}
+            {renderPickerRow('Body Goal', safeUserInfo.bodyGoal || '', 'bodyGoal', bodyGoals)}
+            {renderPickerRow('Diet Preference', safeUserInfo.dietPreference || '', 'dietPreference', dietPreferences)}
           </>
         ))}
 
         {/* Lifestyle & Health */}
         {renderInfoSection('Lifestyle & Health', (
           <>
-            {renderPickerRow('Occupation', userInfo.occupationType, 'occupationType', occupationTypes)}
-            {renderPickerRow('Available Equipment', userInfo.availableEquipment, 'availableEquipment', equipmentOptions)}
-            {renderInfoRow('Medical Conditions', userInfo.medicalConditions, 'medicalConditions')}
+            {renderPickerRow('Occupation', safeUserInfo.occupationType || '', 'occupationType', occupationTypes)}
+            {renderPickerRow('Available Equipment', safeUserInfo.availableEquipment || '', 'availableEquipment', equipmentOptions)}
+            {renderInfoRow('Medical Conditions', safeUserInfo.medicalConditions || '', 'medicalConditions')}
           </>
         ))}
       </ScrollView>

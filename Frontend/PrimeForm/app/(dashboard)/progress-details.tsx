@@ -114,6 +114,27 @@ export default function ProgressDetailsScreen() {
     }
   }, [mode, availableWeeks, availableMonths]);
 
+  // Ensure profile data is loaded when opening ProfilePage from this screen
+  useEffect(() => {
+    const loadProfileIfNeeded = async () => {
+      if (!showProfilePage || userInfo) return;
+      try {
+        const cached = userProfileService.getCachedData();
+        if (cached?.data) {
+          setUserInfo(cached.data);
+          return;
+        }
+        const resp = await userProfileService.getUserProfile();
+        if (resp.success && resp.data) {
+          setUserInfo(resp.data);
+        }
+      } catch (error) {
+        // If loading fails, we leave userInfo null; ProfilePage will show an error state
+      }
+    };
+    loadProfileIfNeeded();
+  }, [showProfilePage, userInfo]);
+
   // PERFORMANCE: Load stats only when period is selected (deferred loading)
   useEffect(() => {
     const loadStats = async () => {
