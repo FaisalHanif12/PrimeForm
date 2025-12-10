@@ -1009,7 +1009,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.xl + spacing.sm,
+    paddingBottom: spacing.lg,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
