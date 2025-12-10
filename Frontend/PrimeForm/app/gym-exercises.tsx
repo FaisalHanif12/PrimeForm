@@ -731,7 +731,9 @@ export default function GymExercisesScreen() {
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={['rgba(26, 28, 36, 0.95)', 'rgba(18, 20, 26, 0.98)']}
+            // Match card styling used in dashboard/gym cards for consistency
+            // Use a single solid color for uniform card background
+            colors={[colors.surface, colors.surface] as [string, string]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.exerciseCardGradient}
@@ -850,7 +852,10 @@ export default function GymExercisesScreen() {
         {/* Stats Summary Card */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statsCard}>
           <LinearGradient
-            colors={['rgba(26, 28, 36, 0.95)', 'rgba(18, 20, 26, 0.98)']}
+            // Uniform card background to match exercise cards
+            colors={[colors.surface, colors.surface] as [string, string]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.statsCardGradient}
           >
             <View style={styles.statBox}>
@@ -900,11 +905,12 @@ export default function GymExercisesScreen() {
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={selectedDifficulty === filter.id && filter.color
-                      ? [filter.color + '40', filter.color + '20']
-                      : ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']
-                    }
-                    style={styles.filterChipGradient}
+                    // Use uniform chip background to match card surface
+                    colors={[colors.surface, colors.surface] as [string, string]}
+                    style={[
+                      styles.filterChipGradient,
+                      selectedDifficulty === filter.id && { borderColor: filter.color || colors.primary }
+                    ]}
                   >
                     <Ionicons 
                       name={filter.icon as any} 
@@ -980,11 +986,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(26, 28, 36, 0.8)',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.cardBorder,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -1031,11 +1037,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(26, 28, 36, 0.8)',
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.cardBorder,
     position: 'relative',
   },
   filterDot: {
@@ -1118,10 +1124,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.cardBorder,
   },
   filterChipActive: {
-    borderColor: 'rgba(0, 201, 124, 0.4)',
+    borderColor: colors.primary,
   },
   filterChipGradient: {
     flexDirection: 'row',
@@ -1163,7 +1169,7 @@ const styles = StyleSheet.create({
   },
   exerciseCardGradient: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.cardBorder,
     position: 'relative',
   },
   accentBorder: {
