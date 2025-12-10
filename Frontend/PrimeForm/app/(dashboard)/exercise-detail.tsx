@@ -215,8 +215,15 @@ export default function ExerciseDetailScreen() {
           </View>
                 </TouchableOpacity>
                 
-                {/* Exercise Icon & Title - Centered */}
-                <View style={styles.exerciseContentCenter}>
+                {/* Lottie Animation */}
+                <ExerciseAnimation 
+                  exerciseType={exerciseId}
+                  isVisible={true}
+                  style={styles.exerciseAnimationView}
+                />
+                
+                {/* Exercise Info Overlay */}
+                <View style={styles.exerciseInfoOverlay}>
                   <View style={styles.exerciseIconRow}>
                     <Text style={styles.exerciseEmoji}>{exerciseEmoji}</Text>
             </View>
@@ -479,13 +486,23 @@ export default function ExerciseDetailScreen() {
                     style={styles.fullscreenAnimationGradient}
                   >
                     <View style={styles.fullscreenAnimationSection}>
-                      <View style={styles.fullscreenIconRow}>
-                        <Text style={styles.fullscreenEmoji}>{exerciseEmoji}</Text>
+                      {/* Lottie Animation */}
+                      <ExerciseAnimation 
+                        exerciseType={exerciseId}
+                        isVisible={true}
+                        style={styles.fullscreenExerciseAnimationView}
+                      />
+                      
+                      {/* Exercise Info Overlay */}
+                      <View style={styles.fullscreenExerciseOverlay}>
+                        <View style={styles.fullscreenIconRow}>
+                          <Text style={styles.fullscreenEmoji}>{exerciseEmoji}</Text>
+                        </View>
+                        <Text style={styles.fullscreenExerciseName}>{exerciseName}</Text>
+                        <Text style={styles.fullscreenExerciseSubtitle}>
+                          {isWorkoutStarted ? 'Workout in progress' : 'Learn proper form'}
+                        </Text>
                       </View>
-                      <Text style={styles.fullscreenExerciseName}>{exerciseName}</Text>
-                      <Text style={styles.fullscreenExerciseSubtitle}>
-                        {isWorkoutStarted ? 'Workout in progress' : 'Learn proper form'}
-                      </Text>
                     </View>
                   </LinearGradient>
             </View>
@@ -725,8 +742,22 @@ const styles = StyleSheet.create({
     height: 340,
     backgroundColor: colors.background,
     position: 'relative',
-    justifyContent: 'center',
+  },
+  exerciseAnimationView: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  exerciseInfoOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingVertical: spacing.md,
   },
   fullscreenIconButton: {
     position: 'absolute',
@@ -743,10 +774,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  exerciseContentCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   exerciseIconRow: {
     marginBottom: spacing.sm,
@@ -1086,9 +1113,24 @@ const styles = StyleSheet.create({
   fullscreenAnimationSection: {
     height: 450,
     backgroundColor: colors.background,
-    justifyContent: 'center',
+    position: 'relative',
+  },
+  fullscreenExerciseAnimationView: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  fullscreenExerciseOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    padding: spacing.xl,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
   fullscreenIconRow: {
     marginBottom: spacing.md,
