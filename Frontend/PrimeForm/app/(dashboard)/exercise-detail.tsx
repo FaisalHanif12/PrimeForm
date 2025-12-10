@@ -170,10 +170,10 @@ export default function ExerciseDetailScreen() {
       case 'medium': return 'flash-outline';
       case 'hard': return 'flame-outline';
       default: return 'fitness-outline';
-    }
-  };
+      }
+    };
 
-  return (
+    return (
     <DecorativeBackground>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
@@ -198,7 +198,7 @@ export default function ExerciseDetailScreen() {
         >
           {/* Hero Card with Animation & Exercise Info */}
           <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.heroCard}>
-            <LinearGradient
+        <LinearGradient
               colors={[colors.surface, colors.surface]}
               style={styles.heroCardGradient}
             >
@@ -212,7 +212,7 @@ export default function ExerciseDetailScreen() {
                 >
                   <View style={styles.fullscreenIconBox}>
                     <Ionicons name="expand-outline" size={22} color={colors.white} />
-                </View>
+          </View>
                 </TouchableOpacity>
                 
                 {/* Exercise Icon & Title - Centered */}
@@ -249,10 +249,10 @@ export default function ExerciseDetailScreen() {
                 >
                   <Text style={styles.setProgressLabel}>
                     {isBreakTime ? 'Break Time' : `Set ${currentSet} of ${currentLevel.sets}`}
-                  </Text>
+            </Text>
                   <Text style={styles.setProgressValue}>
                     {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} reps`}
-                  </Text>
+            </Text>
                   <Text style={styles.setProgressSubtext}>
                     {isBreakTime ? 'Rest and recover' : 'Complete this set'}
                   </Text>
@@ -270,8 +270,8 @@ export default function ExerciseDetailScreen() {
                     {currentSet} / {currentLevel.sets} sets completed
                   </Text>
                 </LinearGradient>
-            </View>
-            
+          </View>
+
             </Animated.View>
           ) : (
             /* Difficulty Selector - Show when workout not started */
@@ -284,7 +284,7 @@ export default function ExerciseDetailScreen() {
                 <View style={[styles.levelDot, { backgroundColor: colors.gold }]} />
                 <View style={[styles.levelDot, { backgroundColor: '#FF3B30' }]} />
             </View>
-            </View>
+          </View>
 
             {/* Dropdown Selector - Always Green */}
             <TouchableOpacity
@@ -299,7 +299,7 @@ export default function ExerciseDetailScreen() {
                 <View style={styles.dropdownLeft}>
                   <View style={[styles.levelIconBox, { backgroundColor: colors.primary + '35' }]}>
                     <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={colors.primary} />
-              </View>
+            </View>
                   <View style={styles.dropdownInfo}>
                     <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
                     <Text style={styles.dropdownSubtext}>{currentLevel.description}</Text>
@@ -310,8 +310,8 @@ export default function ExerciseDetailScreen() {
                   size={24} 
                   color={colors.mutedText} 
                 />
-              </LinearGradient>
-            </TouchableOpacity>
+        </LinearGradient>
+      </TouchableOpacity>
 
             {/* Dropdown Options */}
             {showLevelPicker && (
@@ -319,8 +319,8 @@ export default function ExerciseDetailScreen() {
                 {exerciseLevels.map((level) => {
                   const isSelected = selectedLevel === level.level;
                   const levelColor = level.level === 'easy' ? colors.primary : level.level === 'medium' ? colors.gold : '#FF3B30';
-                  
-                  return (
+
+  return (
                     <TouchableOpacity
                       key={level.level}
                       activeOpacity={0.8}
@@ -347,10 +347,10 @@ export default function ExerciseDetailScreen() {
                           <Ionicons name="checkmark-circle" size={24} color={levelColor} />
                         )}
                       </LinearGradient>
-                    </TouchableOpacity>
+          </TouchableOpacity>
                   );
                 })}
-          </Animated.View>
+        </Animated.View>
             )}
 
             {/* Workout Details Card */}
@@ -363,10 +363,10 @@ export default function ExerciseDetailScreen() {
                   <View style={styles.detailItem}>
                     <View style={[styles.detailIconBox, { backgroundColor: colors.primary + '20' }]}>
                       <Ionicons name="repeat" size={28} color={colors.primary} />
-                </View>
+          </View>
                     <Text style={styles.detailValue}>{currentLevel.sets}</Text>
                     <Text style={styles.detailLabel}>Sets</Text>
-            </View>
+          </View>
 
                   <View style={styles.detailDivider} />
 
@@ -388,7 +388,7 @@ export default function ExerciseDetailScreen() {
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
           {!isWorkoutStarted ? (
             // Start Workout Button
-            <TouchableOpacity
+                <TouchableOpacity 
               activeOpacity={0.9}
               onPress={handleStartWorkout}
               style={styles.startButton}
@@ -409,8 +409,8 @@ export default function ExerciseDetailScreen() {
             <TouchableOpacity
               style={styles.startButton}
               onPress={handleSkipBreak}
-              activeOpacity={0.8}
-            >
+                  activeOpacity={0.8}
+                >
               <LinearGradient
                 colors={[colors.gold, colors.gold + 'CC'] as [string, string]}
                 start={{ x: 0, y: 0 }}
@@ -441,8 +441,8 @@ export default function ExerciseDetailScreen() {
                 </Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>
-            </TouchableOpacity>
-          )}
+                </TouchableOpacity>
+              )}
           </Animated.View>
 
         {/* Fullscreen Exercise Demonstration Modal */}
@@ -452,8 +452,9 @@ export default function ExerciseDetailScreen() {
           animationType="slide"
           onRequestClose={() => setShowFullscreenVideo(false)}
         >
-          <DecorativeBackground>
-            <SafeAreaView style={styles.fullscreenModal}>
+          <View style={styles.fullscreenModalWrapper}>
+            <DecorativeBackground>
+              <SafeAreaView style={styles.fullscreenModal}>
               {/* Header */}
               <View style={[styles.fullscreenHeader, { paddingTop: insets.top + spacing.sm }]}>
                 <TouchableOpacity 
@@ -464,7 +465,7 @@ export default function ExerciseDetailScreen() {
                 </TouchableOpacity>
                 <Text style={styles.fullscreenTitle}>{exerciseName}</Text>
                 <View style={{ width: 44 }} />
-              </View>
+            </View>
 
               <ScrollView style={styles.fullscreenContent} showsVerticalScrollIndicator={false}>
                 {/* Large Exercise Animation */}
@@ -483,8 +484,8 @@ export default function ExerciseDetailScreen() {
                       </Text>
                     </View>
                   </LinearGradient>
-                </View>
-
+            </View>
+            
                 {/* Instructions Section */}
                 <View style={styles.instructionsSection}>
                   <View style={styles.instructionHeader}>
@@ -498,27 +499,27 @@ export default function ExerciseDetailScreen() {
                         <View style={styles.instructionItem}>
                           <View style={styles.instructionNumber}>
                             <Text style={styles.instructionNumberText}>1</Text>
-                          </View>
+              </View>
                           <Text style={styles.instructionText}>
                             Start in a comfortable position with proper form
                           </Text>
-                        </View>
+              </View>
                         <View style={styles.instructionItem}>
                           <View style={styles.instructionNumber}>
                             <Text style={styles.instructionNumberText}>2</Text>
-                          </View>
+              </View>
                           <Text style={styles.instructionText}>
                             Focus on controlled movements, not speed
                           </Text>
-                        </View>
+            </View>
                         <View style={styles.instructionItem}>
                           <View style={styles.instructionNumber}>
                             <Text style={styles.instructionNumberText}>3</Text>
-                          </View>
+                </View>
                           <Text style={styles.instructionText}>
                             Breathe steadily throughout the exercise
                           </Text>
-                        </View>
+            </View>
                         <View style={styles.instructionItem}>
                           <View style={styles.instructionNumber}>
                             <Text style={styles.instructionNumberText}>4</Text>
@@ -645,6 +646,7 @@ export default function ExerciseDetailScreen() {
               </ScrollView>
             </SafeAreaView>
           </DecorativeBackground>
+          </View>
         </Modal>
       </SafeAreaView>
     </DecorativeBackground>
@@ -1026,6 +1028,10 @@ const styles = StyleSheet.create({
   },
 
   // Fullscreen Modal
+  fullscreenModalWrapper: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   fullscreenModal: {
     flex: 1,
   },
