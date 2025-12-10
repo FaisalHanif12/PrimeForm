@@ -647,7 +647,7 @@ export default function ExerciseDetailScreen() {
                 )}
 
                 <View style={{ height: 150 }} />
-              </ScrollView>
+        </ScrollView>
             </SafeAreaView>
           </DecorativeBackground>
           </View>
@@ -1008,7 +1008,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl + spacing.sm,
     backgroundColor: colors.background,
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
