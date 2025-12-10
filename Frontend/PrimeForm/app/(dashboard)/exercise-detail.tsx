@@ -298,7 +298,7 @@ export default function ExerciseDetailScreen() {
           </Animated.View>
         </ScrollView>
 
-          {/* Start Workout Button */}
+        {/* Start Workout Button - Always Green */}
         <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.startButtonContainer}>
           <TouchableOpacity
             activeOpacity={0.9}
@@ -306,7 +306,7 @@ export default function ExerciseDetailScreen() {
             style={styles.startButton}
           >
             <LinearGradient
-              colors={[getDifficultyColor(), getDifficultyColor() + 'CC'] as [string, string]}
+              colors={[colors.primary, colors.primary + 'CC'] as [string, string]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.startButtonGradient}
@@ -315,8 +315,8 @@ export default function ExerciseDetailScreen() {
               <Text style={styles.startButtonText}>Start Workout</Text>
               <Ionicons name="arrow-forward" size={24} color={colors.white} />
             </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Fullscreen Video Modal */}
         <Modal
