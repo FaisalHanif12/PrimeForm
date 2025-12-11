@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
