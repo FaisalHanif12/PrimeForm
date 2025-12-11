@@ -24,91 +24,43 @@ export default function ExercisePlayerPage() {
   const category = getSportCategory(categoryId);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [currentSet, setCurrentSet] = useState(1);
-  const [currentRep, setCurrentRep] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(exercise?.duration || 0);
-
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (isPlaying && !isPaused) {
-      timerRef.current = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            handleSetComplete();
-            return exercise?.duration || 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isPlaying, isPaused]);
+  const [currentSet, setCurrentSet] = useState(0);
+  const [completedSets, setCompletedSets] = useState<number[]>([]);
 
   const handleBack = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-    }
     router.back();
   };
 
   const handleStart = () => {
     setIsPlaying(true);
-    setIsPaused(false);
-    setCurrentRep(0);
-    setCurrentSet(1);
-    setTimeRemaining(exercise?.duration || 0);
+    setCurrentSet(0);
+    setCompletedSets([]);
   };
 
-  const handlePause = () => {
-    setIsPaused(!isPaused);
+  const handleSetComplete = (setNumber: number) => {
+    if (!exercise) return;
+    
+    if (!completedSets.includes(setNumber)) {
+      const newCompletedSets = [...completedSets, setNumber];
+      setCompletedSets(newCompletedSets);
+      setCurrentSet(setNumber);
+      
+      // Check if all sets are complete
+      if (newCompletedSets.length === exercise.sets) {
+        // Exercise complete!
+        setTimeout(() => {
+          setIsPlaying(false);
+          setCurrentSet(0);
+          setCompletedSets([]);
+        }, 1000);
+      }
+    }
   };
 
   const handleReset = () => {
     setIsPlaying(false);
-    setIsPaused(false);
-    setCurrentRep(0);
-    setCurrentSet(1);
-    setTimeRemaining(exercise?.duration || 0);
-  };
-
-  const handleRepComplete = () => {
-    if (!exercise) return;
-    if (currentRep < exercise.reps) {
-      setCurrentRep(currentRep + 1);
-    }
-  };
-
-  const handleSetComplete = () => {
-    if (!exercise) return;
-
-    if (currentSet < exercise.sets) {
-      setCurrentSet(currentSet + 1);
-      setCurrentRep(0);
-      setIsPaused(true);
-      setTimeout(() => {
-        setIsPaused(false);
-      }, 30000);
-    } else {
-      setIsPlaying(false);
-      setIsPaused(false);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    setCurrentSet(0);
+    setCompletedSets([]);
   };
 
   const getDifficultyColor = (difficulty: string) => {
@@ -131,8 +83,6 @@ export default function ExercisePlayerPage() {
       </View>
     );
   }
-
-  const progress = exercise ? ((exercise.duration - timeRemaining) / exercise.duration) * 100 : 0;
 
   return (
     <View style={styles.container}>
@@ -164,7 +114,6 @@ export default function ExercisePlayerPage() {
       >
         {/* Exercise Animation Card */}
         <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.animationSection}>
-          {/* White Card Container with Border Radius */}
           <View style={styles.animationCard}>
             <ExerciseAnimation
               exerciseType={exercise.id}
@@ -173,80 +122,72 @@ export default function ExercisePlayerPage() {
             />
           </View>
 
-          {/* Status Badge */}
-          {isPlaying && (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
-              <View style={[styles.statusDot, { backgroundColor: isPaused ? '#FF9800' : colors.primary }]} />
-              <Text style={styles.statusText}>{isPaused ? 'PAUSED' : 'IN PROGRESS'}</Text>
-            </Animated.View>
-          )}
-
           {/* Sport Badge */}
           <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
             <Text style={styles.sportIcon}>{category.icon}</Text>
           </View>
         </Animated.View>
 
-        {/* Stats Section */}
-        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.statsSection}>
-          {/* Time & Progress */}
-          <View style={styles.timeCard}>
-            <View style={styles.timeHeader}>
-              <View style={styles.timeInfo}>
-                <Ionicons name="time-outline" size={20} color={colors.mutedText} />
-                <Text style={styles.timeLabel}>Time Remaining</Text>
-              </View>
-              <Text style={styles.timeValue}>{formatTime(timeRemaining)}</Text>
+        {/* Exercise Info Card */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.infoSection}>
+          <View style={styles.infoCard}>
+            <View style={styles.infoItem}>
+              <Ionicons name="repeat-outline" size={20} color={colors.mutedText} />
+              <Text style={styles.infoLabel}>Reps per set</Text>
+              <Text style={styles.infoValue}>{exercise.reps}</Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: category.color }]} />
-            </View>
-          </View>
-
-          {/* Reps & Sets Row */}
-          <View style={styles.statsRow}>
-            {/* Reps */}
-            <View style={[styles.miniStatCard, { flex: 1 }]}>
-              <View style={styles.miniStatHeader}>
-                <Ionicons name="repeat-outline" size={18} color={colors.mutedText} />
-                <Text style={styles.miniStatLabel}>Reps</Text>
-              </View>
-              <Text style={styles.miniStatValue}>{currentRep}/{exercise.reps}</Text>
-              {isPlaying && !isPaused && (
-                <TouchableOpacity
-                  style={[styles.miniCompleteButton, { backgroundColor: category.color }]}
-                  onPress={handleRepComplete}
-                >
-                  <Ionicons name="add" size={16} color={colors.white} />
-                  <Text style={styles.miniCompleteText}>Complete</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Sets */}
-            <View style={[styles.miniStatCard, { flex: 1 }]}>
-              <View style={styles.miniStatHeader}>
-                <Ionicons name="layers-outline" size={18} color={colors.mutedText} />
-                <Text style={styles.miniStatLabel}>Sets</Text>
-              </View>
-              <Text style={styles.miniStatValue}>{currentSet}/{exercise.sets}</Text>
-              <View style={styles.setsIndicator}>
-                {Array.from({ length: exercise.sets }).map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.setDot,
-                      { backgroundColor: index < currentSet ? category.color : colors.cardBorder }
-                    ]}
-                  />
-                ))}
-              </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoItem}>
+              <Ionicons name="layers-outline" size={20} color={colors.mutedText} />
+              <Text style={styles.infoLabel}>Total sets</Text>
+              <Text style={styles.infoValue}>{exercise.sets}</Text>
             </View>
           </View>
         </Animated.View>
 
+        {/* Sets Tracking Section */}
+        {isPlaying && (
+          <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.setsSection}>
+            <Text style={styles.setsTitle}>Complete Your Sets</Text>
+            <Text style={styles.setsSubtitle}>Tap each set when you finish {exercise.reps} reps</Text>
+            
+            <View style={styles.setsGrid}>
+              {Array.from({ length: exercise.sets }).map((_, index) => {
+                const setNumber = index + 1;
+                const isCompleted = completedSets.includes(setNumber);
+                
+                return (
+                  <TouchableOpacity
+                    key={setNumber}
+                    style={[
+                      styles.setCard,
+                      isCompleted && { backgroundColor: category.color, borderColor: category.color }
+                    ]}
+                    onPress={() => handleSetComplete(setNumber)}
+                    disabled={isCompleted}
+                  >
+                    {isCompleted ? (
+                      <Ionicons name="checkmark-circle" size={32} color={colors.white} />
+                    ) : (
+                      <View style={[styles.setNumberCircle, { borderColor: category.color }]}>
+                        <Text style={[styles.setNumber, { color: category.color }]}>{setNumber}</Text>
+                      </View>
+                    )}
+                    <Text style={[styles.setLabel, isCompleted && { color: colors.white }]}>
+                      {isCompleted ? 'Completed' : `Set ${setNumber}`}
+                    </Text>
+                    <Text style={[styles.setReps, isCompleted && { color: colors.white + 'CC' }]}>
+                      {exercise.reps} reps
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Animated.View>
+        )}
+
         {/* Control Buttons */}
-        <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.controlSection}>
+        <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.controlSection}>
           {!isPlaying ? (
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: category.color }]}
@@ -256,21 +197,13 @@ export default function ExercisePlayerPage() {
               <Text style={styles.primaryButtonText}>Start Exercise</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.controlRow}>
-              <TouchableOpacity
-                style={[styles.secondaryButton, { backgroundColor: isPaused ? colors.primary : '#FF9800' }]}
-                onPress={handlePause}
-              >
-                <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.white} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.secondaryButton, { backgroundColor: '#FF6B6B' }]}
-                onPress={handleReset}
-              >
-                <Ionicons name="refresh" size={24} color={colors.white} />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.resetButton]}
+              onPress={handleReset}
+            >
+              <Ionicons name="refresh" size={24} color={colors.white} />
+              <Text style={styles.resetButtonText}>Reset</Text>
+            </TouchableOpacity>
           )}
         </Animated.View>
       </ScrollView>
@@ -357,35 +290,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 16,
   },
-  statusBadge: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.lg,
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.white,
-    fontFamily: fonts.bold,
-    letterSpacing: 0.5,
-  },
   sportBadge: {
     position: 'absolute',
     bottom: spacing.md,
@@ -404,108 +308,98 @@ const styles = StyleSheet.create({
   sportIcon: {
     fontSize: 26,
   },
-  statsSection: {
+  infoSection: {
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    marginBottom: spacing.xl,
   },
-  timeCard: {
+  infoCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: 16,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    marginBottom: spacing.md,
-  },
-  timeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.md,
   },
-  timeInfo: {
-    flexDirection: 'row',
+  infoItem: {
+    flex: 1,
     alignItems: 'center',
     gap: spacing.xs,
   },
-  timeLabel: {
-    fontSize: 13,
-    color: colors.mutedText,
-    fontFamily: fonts.regular,
-  },
-  timeValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.white,
-    fontFamily: fonts.bold,
-  },
-  progressBar: {
-    width: '100%',
-    height: 6,
-    backgroundColor: colors.background,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  miniStatCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  miniStatHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.sm,
-  },
-  miniStatLabel: {
+  infoLabel: {
     fontSize: 12,
     color: colors.mutedText,
     fontFamily: fonts.regular,
   },
-  miniStatValue: {
+  infoValue: {
     fontSize: 24,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
-    marginBottom: spacing.sm,
   },
-  miniCompleteButton: {
+  infoDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.cardBorder,
+  },
+  setsSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  setsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.bold,
+    marginBottom: spacing.xs,
+  },
+  setsSubtitle: {
+    fontSize: 13,
+    color: colors.mutedText,
+    fontFamily: fonts.regular,
+    marginBottom: spacing.lg,
+  },
+  setsGrid: {
+    gap: spacing.md,
+  },
+  setCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
+    gap: spacing.md,
   },
-  miniCompleteText: {
-    fontSize: 11,
+  setNumberCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
+  },
+  setLabel: {
+    flex: 1,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
   },
-  setsIndicator: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  setDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  setReps: {
+    fontSize: 13,
+    color: colors.mutedText,
+    fontFamily: fonts.regular,
   },
   controlSection: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    gap: spacing.md,
   },
   primaryButton: {
     flexDirection: 'row',
@@ -527,21 +421,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     letterSpacing: 0.5,
   },
-  controlRow: {
+  resetButton: {
     flexDirection: 'row',
-    gap: spacing.md,
-  },
-  secondaryButton: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.lg,
     borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.bold,
   },
   errorText: {
     fontSize: 16,
