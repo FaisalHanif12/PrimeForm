@@ -59,7 +59,7 @@ const exerciseAnimations: Record<string, any> = {
   // Full body exercises
   burpees: require('../../assets/Drafts/Burpee and Jump Exercise.json'),
   jumping_jacks: require('../../assets/Drafts/Jumping Jack.json'),
-  butterfly: require('../../assets/Drafts/Butterfly Exercise.json'),
+  butterfly: require('../../assets/Drafts/Shoulder Stretch.json'), // Using Shoulder Stretch as butterfly has rendering issues
   running: require('../../assets/Drafts/Running Boy.json'),
   punches: require('../../assets/Drafts/Punches.json'),
   squat_kick: require('../../assets/Drafts/Squat Kick.json'),
@@ -96,7 +96,6 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           style={styles.animation}
           colorFilters={[]}
           renderMode="AUTOMATIC"
-          resizeMode="contain"
         />
       </View>
     );
@@ -113,7 +112,6 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
         onAnimationFinish={onAnimationComplete}
         colorFilters={[]}
         renderMode="AUTOMATIC"
-        resizeMode="contain"
       />
     </View>
   );
@@ -125,11 +123,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    overflow: 'hidden',
   },
   animation: {
-    width: '150%',
-    height: '150%',
+    width: '100%',
+    height: '100%',
     backgroundColor: 'transparent',
   },
 });
