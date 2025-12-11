@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, Pressable, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, ZoomIn, SlideInRight, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../../src/theme/colors';
@@ -83,6 +83,8 @@ export default function PersonalizedWorkoutScreen() {
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   const [todayCompleted, setTodayCompleted] = useState(false);
   const [isReorderMode, setIsReorderMode] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     loadWorkout();
@@ -214,37 +216,40 @@ export default function PersonalizedWorkoutScreen() {
   };
 
   const handleDeleteExercise = (index: number) => {
-    Alert.alert(
-      'Remove Exercise',
-      `Are you sure you want to remove "${exercises[index].name}" from your workout?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const newExercises = exercises.filter((_, i) => i !== index);
-              
-              if (newExercises.length === 0) {
-                // If no exercises left, delete the entire workout
-                await AsyncStorage.removeItem('personalizedWorkout');
-                await AsyncStorage.removeItem('lastWorkoutCompletion');
-                showToast('success', 'Workout deleted');
-                router.back();
-              } else {
-                // Update with remaining exercises
-                setExercises(newExercises);
-                await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(newExercises));
-                showToast('success', 'Exercise removed');
-              }
-            } catch (error) {
-              showToast('error', 'Failed to remove exercise');
-            }
-          },
-        },
-      ]
-    );
+    setExerciseToDelete(index);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteExercise = async () => {
+    if (exerciseToDelete === null) return;
+    
+    try {
+      const newExercises = exercises.filter((_, i) => i !== exerciseToDelete);
+      
+      if (newExercises.length === 0) {
+        // If no exercises left, delete the entire workout
+        await AsyncStorage.removeItem('personalizedWorkout');
+        await AsyncStorage.removeItem('lastWorkoutCompletion');
+        showToast('success', 'Workout deleted');
+        setShowDeleteModal(false);
+        router.back();
+      } else {
+        // Update with remaining exercises
+        setExercises(newExercises);
+        await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(newExercises));
+        showToast('success', 'Exercise removed');
+        setShowDeleteModal(false);
+        setExerciseToDelete(null);
+      }
+    } catch (error) {
+      showToast('error', 'Failed to remove exercise');
+      setShowDeleteModal(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setExerciseToDelete(null);
   };
 
   const currentExercise = exercises[currentExerciseIndex];
@@ -538,6 +543,62 @@ export default function PersonalizedWorkoutScreen() {
           )}
         </Animated.View>
       </SafeAreaView>
+
+      {/* Custom Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View entering={ZoomIn.springify()} style={styles.modalContainer}>
+            <LinearGradient
+              colors={[colors.surface, colors.cardBackground] as [string, string]}
+              style={styles.modalGradient}
+            >
+              {/* Icon */}
+              <View style={styles.modalIcon}>
+                <Ionicons name="warning" size={48} color="#FF3B30" />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.modalTitle}>Remove Exercise</Text>
+
+              {/* Message */}
+              <Text style={styles.modalMessage}>
+                {exerciseToDelete !== null && 
+                  `Are you sure you want to remove "${exercises[exerciseToDelete]?.name}" from your workout?`
+                }
+              </Text>
+
+              {/* Buttons */}
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelButton}
+                  onPress={cancelDelete}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.modalDeleteButton}
+                  onPress={confirmDeleteExercise}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#FF3B30', '#FF3B30DD'] as [string, string]}
+                    style={styles.modalDeleteGradient}
+                  >
+                    <Text style={styles.modalDeleteText}>Remove</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </Animated.View>
+        </View>
+      </Modal>
     </DecorativeBackground>
   );
 }
@@ -900,6 +961,85 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.white,
+    fontFamily: fonts.heading,
+  },
+
+  // Custom Delete Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  modalGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  modalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FF3B3020',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.cardBackground,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+  },
+  modalDeleteButton: {
+    flex: 1,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  modalDeleteGradient: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  modalDeleteText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
     fontFamily: fonts.heading,
   },
 });
