@@ -247,12 +247,9 @@ export default function PersonalizedWorkoutScreen() {
                       colors={[colors.surface, colors.cardBackground] as [string, string]}
                       style={styles.exerciseItemGradient}
                     >
-                      <View style={styles.exerciseNumber}>
-                        <Text style={styles.exerciseNumberText}>{index + 1}</Text>
-                      </View>
                       <View style={styles.exerciseItemIconContainer}>
                         <Ionicons 
-                          name={exerciseIcons[exercise.id] as any || 'fitness'} 
+                          name={exerciseIcons[exercise.id] as any || 'fitness-outline'} 
                           size={28} 
                           color={colors.primary} 
                         />
@@ -515,24 +512,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.md,
   },
-  exerciseNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  exerciseNumberText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '700',
-    fontFamily: fonts.heading,
-  },
   exerciseItemIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
