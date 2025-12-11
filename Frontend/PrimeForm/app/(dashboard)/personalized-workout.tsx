@@ -439,13 +439,6 @@ export default function PersonalizedWorkoutScreen() {
 
                     {/* Exercise Info */}
                     <View style={styles.currentExerciseInfo}>
-                      <View style={styles.currentExerciseIconContainer}>
-                        <Ionicons 
-                          name={exerciseIcons[currentExercise.id] as any || 'fitness'} 
-                          size={56} 
-                          color={colors.primary} 
-                        />
-                      </View>
                       <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
                       <View style={styles.currentExerciseTag}>
                         <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
@@ -867,15 +860,6 @@ const styles = StyleSheet.create({
   },
   currentExerciseInfo: {
     alignItems: 'center',
-  },
-  currentExerciseIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primary + '20',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
   },
   currentExerciseName: {
     color: colors.white,
