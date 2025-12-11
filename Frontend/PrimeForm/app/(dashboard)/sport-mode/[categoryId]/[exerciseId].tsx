@@ -7,6 +7,7 @@ import {
   Dimensions,
   StatusBar,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,10 +50,22 @@ export default function ExercisePlayerPage() {
       if (newCompletedSets.length === exercise.sets) {
         // Exercise complete!
         setTimeout(() => {
-          setIsPlaying(false);
-          setCurrentSet(0);
-          setCompletedSets([]);
-        }, 1000);
+          Alert.alert(
+            '🎉 Exercise Complete!',
+            `Amazing work! You've completed all ${exercise.sets} sets of ${exercise.name}.\n\n${exercise.reps} reps × ${exercise.sets} sets = ${exercise.reps * exercise.sets} total reps!`,
+            [
+              {
+                text: 'Done',
+                style: 'default',
+                onPress: () => {
+                  // Navigate back to exercises list
+                  router.back();
+                }
+              }
+            ],
+            { cancelable: false }
+          );
+        }, 500);
       }
     }
   };
