@@ -215,22 +215,13 @@ export default function ExerciseDetailScreen() {
           </View>
                 </TouchableOpacity>
                 
-                {/* Lottie Animation */}
+                {/* Lottie Animation - Full Card Fit */}
                 <ExerciseAnimation 
                   exerciseType={exerciseId}
                   isVisible={true}
                   style={styles.exerciseAnimationView}
                 />
-                
-                {/* Exercise Info Overlay */}
-                <View style={styles.exerciseInfoOverlay}>
-                  <View style={styles.exerciseIconRow}>
-                    <Text style={styles.exerciseEmoji}>{exerciseEmoji}</Text>
-            </View>
-                  <Text style={styles.exerciseTitle}>{exerciseName}</Text>
-                  <Text style={styles.exerciseSubtitle}>Exercise in progress</Text>
-                </View>
-              </View>
+          </View>
             </LinearGradient>
           </Animated.View>
 
@@ -486,23 +477,12 @@ export default function ExerciseDetailScreen() {
                     style={styles.fullscreenAnimationGradient}
                   >
                     <View style={styles.fullscreenAnimationSection}>
-                      {/* Lottie Animation */}
+                      {/* Lottie Animation - Full Card Fit */}
                       <ExerciseAnimation 
                         exerciseType={exerciseId}
                         isVisible={true}
                         style={styles.fullscreenExerciseAnimationView}
                       />
-                      
-                      {/* Exercise Info Overlay */}
-                      <View style={styles.fullscreenExerciseOverlay}>
-                        <View style={styles.fullscreenIconRow}>
-                          <Text style={styles.fullscreenEmoji}>{exerciseEmoji}</Text>
-                        </View>
-                        <Text style={styles.fullscreenExerciseName}>{exerciseName}</Text>
-                        <Text style={styles.fullscreenExerciseSubtitle}>
-                          {isWorkoutStarted ? 'Workout in progress' : 'Learn proper form'}
-                        </Text>
-                      </View>
                     </View>
                   </LinearGradient>
             </View>
@@ -740,15 +720,14 @@ const styles = StyleSheet.create({
   },
   animationSection: {
     height: 340,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   exerciseAnimationView: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
   },
   exerciseInfoOverlay: {
     position: 'absolute',
@@ -1112,15 +1091,14 @@ const styles = StyleSheet.create({
   },
   fullscreenAnimationSection: {
     height: 450,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fullscreenExerciseAnimationView: {
     width: '100%',
     height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
   },
   fullscreenExerciseOverlay: {
     position: 'absolute',
