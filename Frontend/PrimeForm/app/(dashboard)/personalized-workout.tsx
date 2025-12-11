@@ -112,11 +112,16 @@ export default function PersonalizedWorkoutScreen() {
     try {
       const lastCompletionDate = await AsyncStorage.getItem('lastWorkoutCompletion');
       const today = new Date().toDateString();
+      
+      // Explicitly set the state based on whether dates match
       if (lastCompletionDate === today) {
         setTodayCompleted(true);
+      } else {
+        setTodayCompleted(false);
       }
     } catch (error) {
       console.error('Error checking today completion:', error);
+      setTodayCompleted(false);
     }
   };
 
