@@ -165,7 +165,9 @@ export default function PersonalizedWorkoutScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Remove both the workout and the completion date
               await AsyncStorage.removeItem('personalizedWorkout');
+              await AsyncStorage.removeItem('lastWorkoutCompletion');
               showToast('success', 'Workout deleted');
               router.back();
             } catch (error) {
