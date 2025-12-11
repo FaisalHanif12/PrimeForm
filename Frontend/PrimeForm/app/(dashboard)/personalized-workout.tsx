@@ -21,6 +21,58 @@ interface Exercise {
   difficulty: string;
 }
 
+// Icons8 professional icons for exercises
+const exerciseIcons: Record<string, string> = {
+  // Chest
+  'military_pushups': 'fitness',
+  'staggered_pushups': 'fitness',
+  'wide_arm_pushup': 'fitness',
+  'decline_pushups': 'fitness',
+  'incline_pushups': 'fitness',
+  'diamond_pushups': 'fitness',
+  
+  // Back
+  'pullups': 'body',
+  'deadlifts': 'barbell',
+  'superman': 'airplane',
+  'rows': 'barbell',
+  
+  // Arms
+  'bicep_curls': 'barbell',
+  'tricep_dips': 'remove',
+  'hammer_curls': 'barbell',
+  'overhead_press': 'barbell',
+  'shoulder_press': 'barbell',
+  
+  // Legs
+  'squats': 'walk',
+  'lunges': 'walk',
+  'jump_squats': 'fitness',
+  'squat_kicks': 'footsteps',
+  'squat_reach': 'hand-right',
+  'split_jump': 'rocket',
+  'leg_press': 'walk',
+  'single_leg_rotation': 'sync-circle',
+  
+  // Abs
+  'planks': 'fitness',
+  't_plank': 'fitness',
+  'crunches': 'fitness',
+  'sit_ups': 'fitness',
+  'flutter_kicks': 'footsteps',
+  'reverse_crunches': 'fitness',
+  'deadbug': 'bug',
+  'seated_abs_circles': 'sync',
+  'frog_press': 'fitness',
+  
+  // Full Body
+  'burpees': 'flame',
+  'jumping_jacks': 'star',
+  'running': 'walk',
+  'punches': 'hand-left',
+  'squat_kick': 'footsteps',
+};
+
 export default function PersonalizedWorkoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -198,7 +250,13 @@ export default function PersonalizedWorkoutScreen() {
                       <View style={styles.exerciseNumber}>
                         <Text style={styles.exerciseNumberText}>{index + 1}</Text>
                       </View>
-                      <Text style={styles.exerciseItemEmoji}>{exercise.emoji}</Text>
+                      <View style={styles.exerciseItemIconContainer}>
+                        <Ionicons 
+                          name={exerciseIcons[exercise.id] as any || 'fitness'} 
+                          size={28} 
+                          color={colors.primary} 
+                        />
+                      </View>
                       <View style={styles.exerciseItemInfo}>
                         <Text style={styles.exerciseItemName}>{exercise.name}</Text>
                         <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
@@ -243,7 +301,13 @@ export default function PersonalizedWorkoutScreen() {
 
                     {/* Exercise Info */}
                     <View style={styles.currentExerciseInfo}>
-                      <Text style={styles.currentExerciseEmoji}>{currentExercise.emoji}</Text>
+                      <View style={styles.currentExerciseIconContainer}>
+                        <Ionicons 
+                          name={exerciseIcons[currentExercise.id] as any || 'fitness'} 
+                          size={56} 
+                          color={colors.primary} 
+                        />
+                      </View>
                       <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
                       <View style={styles.currentExerciseTag}>
                         <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
@@ -465,8 +529,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: fonts.heading,
   },
-  exerciseItemEmoji: {
-    fontSize: 32,
+  exerciseItemIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   exerciseItemInfo: {
     flex: 1,
@@ -543,9 +612,14 @@ const styles = StyleSheet.create({
   currentExerciseInfo: {
     alignItems: 'center',
   },
-  currentExerciseEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
+  currentExerciseIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
   },
   currentExerciseName: {
     color: colors.white,

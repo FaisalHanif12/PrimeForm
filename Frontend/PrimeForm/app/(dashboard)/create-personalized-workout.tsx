@@ -12,6 +12,58 @@ import { useToast } from '../../src/context/ToastContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+// Icons8 professional icons for exercises
+const exerciseIcons: Record<string, string> = {
+  // Chest
+  'military_pushups': 'fitness',
+  'staggered_pushups': 'fitness',
+  'wide_arm_pushup': 'fitness',
+  'decline_pushups': 'fitness',
+  'incline_pushups': 'fitness',
+  'diamond_pushups': 'fitness',
+  
+  // Back
+  'pullups': 'body',
+  'deadlifts': 'barbell',
+  'superman': 'airplane',
+  'rows': 'barbell',
+  
+  // Arms
+  'bicep_curls': 'barbell',
+  'tricep_dips': 'remove',
+  'hammer_curls': 'barbell',
+  'overhead_press': 'barbell',
+  'shoulder_press': 'barbell',
+  
+  // Legs
+  'squats': 'walk',
+  'lunges': 'walk',
+  'jump_squats': 'fitness',
+  'squat_kicks': 'footsteps',
+  'squat_reach': 'hand-right',
+  'split_jump': 'rocket',
+  'leg_press': 'walk',
+  'single_leg_rotation': 'sync-circle',
+  
+  // Abs
+  'planks': 'fitness',
+  't_plank': 'fitness',
+  'crunches': 'fitness',
+  'sit_ups': 'fitness',
+  'flutter_kicks': 'footsteps',
+  'reverse_crunches': 'fitness',
+  'deadbug': 'bug',
+  'seated_abs_circles': 'sync',
+  'frog_press': 'fitness',
+  
+  // Full Body
+  'burpees': 'flame',
+  'jumping_jacks': 'star',
+  'running': 'walk',
+  'punches': 'hand-left',
+  'squat_kick': 'footsteps',
+};
+
 // All available exercises from all categories
 const ALL_EXERCISES = [
   // Chest
@@ -100,7 +152,8 @@ export default function CreatePersonalizedWorkoutScreen() {
     try {
       await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(selectedExercises));
       showToast('success', `Your personalized workout with ${selectedExercises.length} exercises is ready!`);
-      router.back();
+      // Navigate to the personalized workout screen instead of going back
+      router.replace('/(dashboard)/personalized-workout');
     } catch (error) {
       showToast('error', 'Failed to save workout. Please try again.');
     }
@@ -203,8 +256,14 @@ export default function CreatePersonalizedWorkoutScreen() {
                         </View>
                       )}
 
-                      {/* Exercise Emoji */}
-                      <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
+                      {/* Exercise Icon */}
+                      <View style={styles.exerciseIconContainer}>
+                        <Ionicons 
+                          name={exerciseIcons[exercise.id] as any || 'fitness'} 
+                          size={40} 
+                          color={colors.primary} 
+                        />
+                      </View>
                       
                       {/* Exercise Name */}
                       <Text style={styles.exerciseName} numberOfLines={2}>
@@ -386,8 +445,13 @@ const styles = StyleSheet.create({
     right: spacing.sm,
     zIndex: 10,
   },
-  exerciseEmoji: {
-    fontSize: 48,
+  exerciseIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   exerciseName: {

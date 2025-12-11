@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: 100,
+    bottom: 120,
     zIndex: 10,
   },
   ctaButton: {
