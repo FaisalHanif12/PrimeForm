@@ -1,0 +1,637 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import Animated, { FadeInUp, FadeInDown, ZoomIn, SlideInRight, FadeIn } from 'react-native-reanimated';
+import { colors, spacing, fonts, radius } from '../../src/theme/colors';
+import DecorativeBackground from '../../src/components/DecorativeBackground';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from '../../src/context/ToastContext';
+import ExerciseAnimation from '../../src/components/ExerciseAnimation';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+interface Exercise {
+  id: string;
+  name: string;
+  category: string;
+  emoji: string;
+  difficulty: string;
+}
+
+export default function PersonalizedWorkoutScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [completedExercises, setCompletedExercises] = useState<number[]>([]);
+  const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
+  const [todayCompleted, setTodayCompleted] = useState(false);
+
+  useEffect(() => {
+    loadWorkout();
+    checkTodayCompletion();
+  }, []);
+
+  const loadWorkout = async () => {
+    try {
+      const savedWorkout = await AsyncStorage.getItem('personalizedWorkout');
+      if (savedWorkout) {
+        setExercises(JSON.parse(savedWorkout));
+      } else {
+        router.back();
+      }
+    } catch (error) {
+      showToast('error', 'Failed to load workout');
+    }
+  };
+
+  const checkTodayCompletion = async () => {
+    try {
+      const lastCompletionDate = await AsyncStorage.getItem('lastWorkoutCompletion');
+      const today = new Date().toDateString();
+      if (lastCompletionDate === today) {
+        setTodayCompleted(true);
+      }
+    } catch (error) {
+      console.error('Error checking today completion:', error);
+    }
+  };
+
+  const handleStartWorkout = () => {
+    if (todayCompleted) {
+      showToast('info', "You've already completed today's workout! Come back tomorrow.");
+      return;
+    }
+    setIsWorkoutStarted(true);
+    setCurrentExerciseIndex(0);
+    setCompletedExercises([]);
+  };
+
+  const handleCompleteExercise = () => {
+    const newCompleted = [...completedExercises, currentExerciseIndex];
+    setCompletedExercises(newCompleted);
+
+    if (currentExerciseIndex < exercises.length - 1) {
+      // Move to next exercise
+      setTimeout(() => {
+        setCurrentExerciseIndex(currentExerciseIndex + 1);
+      }, 500);
+    } else {
+      // All exercises completed
+      handleWorkoutComplete();
+    }
+  };
+
+  const handleWorkoutComplete = async () => {
+    try {
+      const today = new Date().toDateString();
+      await AsyncStorage.setItem('lastWorkoutCompletion', today);
+      setTodayCompleted(true);
+      setIsWorkoutStarted(false);
+      showToast('success', '🎉 Congratulations! You completed your daily workout!');
+      
+      setTimeout(() => {
+        router.back();
+      }, 2000);
+    } catch (error) {
+      showToast('error', 'Failed to save completion');
+    }
+  };
+
+  const handleDeleteWorkout = () => {
+    Alert.alert(
+      'Delete Workout',
+      'Are you sure you want to delete your personalized workout? You will need to create a new one.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('personalizedWorkout');
+              showToast('success', 'Workout deleted');
+              router.back();
+            } catch (error) {
+              showToast('error', 'Failed to delete workout');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const currentExercise = exercises[currentExerciseIndex];
+  const progress = exercises.length > 0 ? ((completedExercises.length / exercises.length) * 100) : 0;
+
+  return (
+    <DecorativeBackground>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <Animated.View 
+          entering={FadeInDown.springify()} 
+          style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
+        >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+            <Ionicons name="arrow-back" size={24} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>My Daily Workout</Text>
+            <Text style={styles.headerSubtitle}>{exercises.length} exercises</Text>
+          </View>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWorkout} activeOpacity={0.8}>
+            <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+          </TouchableOpacity>
+        </Animated.View>
+
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {!isWorkoutStarted ? (
+            /* Overview Mode */
+            <>
+              {/* Status Card */}
+              <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.statusCard}>
+                <LinearGradient
+                  colors={
+                    todayCompleted 
+                      ? [colors.primary + '30', colors.primary + '20'] as [string, string]
+                      : ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)'] as [string, string]
+                  }
+                  style={styles.statusGradient}
+                >
+                  <Ionicons 
+                    name={todayCompleted ? "checkmark-circle" : "calendar"} 
+                    size={48} 
+                    color={todayCompleted ? colors.primary : colors.white} 
+                  />
+                  <Text style={styles.statusTitle}>
+                    {todayCompleted ? "Today's Workout Complete!" : "Ready to Start?"}
+                  </Text>
+                  <Text style={styles.statusSubtitle}>
+                    {todayCompleted 
+                      ? "Great job! Come back tomorrow for your next workout." 
+                      : "Complete all exercises to finish your daily goal."}
+                  </Text>
+                </LinearGradient>
+              </Animated.View>
+
+              {/* Exercises List */}
+              <View style={styles.exercisesList}>
+                <Text style={styles.sectionTitle}>Your Exercises</Text>
+                {exercises.map((exercise, index) => (
+                  <Animated.View
+                    key={exercise.id}
+                    entering={FadeInUp.delay(200 + index * 50).springify()}
+                    style={styles.exerciseItem}
+                  >
+                    <LinearGradient
+                      colors={[colors.surface, colors.cardBackground] as [string, string]}
+                      style={styles.exerciseItemGradient}
+                    >
+                      <View style={styles.exerciseNumber}>
+                        <Text style={styles.exerciseNumberText}>{index + 1}</Text>
+                      </View>
+                      <Text style={styles.exerciseItemEmoji}>{exercise.emoji}</Text>
+                      <View style={styles.exerciseItemInfo}>
+                        <Text style={styles.exerciseItemName}>{exercise.name}</Text>
+                        <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                    </LinearGradient>
+                  </Animated.View>
+                ))}
+              </View>
+            </>
+          ) : (
+            /* Workout Mode */
+            <>
+              {/* Progress Bar */}
+              <Animated.View entering={FadeInUp.springify()} style={styles.progressSection}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressText}>
+                    Exercise {currentExerciseIndex + 1} of {exercises.length}
+                  </Text>
+                  <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
+                </View>
+                <View style={styles.progressBarContainer}>
+                  <View style={[styles.progressBar, { width: `${progress}%` }]} />
+                </View>
+              </Animated.View>
+
+              {/* Current Exercise Card */}
+              {currentExercise && (
+                <Animated.View entering={ZoomIn.springify()} style={styles.currentExerciseCard}>
+                  <LinearGradient
+                    colors={[colors.surface, colors.surface]}
+                    style={styles.currentExerciseGradient}
+                  >
+                    {/* Exercise Animation */}
+                    <View style={styles.exerciseAnimationContainer}>
+                      <ExerciseAnimation 
+                        exerciseType={currentExercise.id}
+                        isVisible={true}
+                        style={styles.exerciseAnimation}
+                      />
+                    </View>
+
+                    {/* Exercise Info */}
+                    <View style={styles.currentExerciseInfo}>
+                      <Text style={styles.currentExerciseEmoji}>{currentExercise.emoji}</Text>
+                      <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
+                      <View style={styles.currentExerciseTag}>
+                        <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </Animated.View>
+              )}
+
+              {/* Completed Exercises Tracker */}
+              <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.completedSection}>
+                <Text style={styles.completedTitle}>Completed Exercises</Text>
+                <View style={styles.completedGrid}>
+                  {exercises.map((exercise, index) => {
+                    const isCompleted = completedExercises.includes(index);
+                    const isCurrent = index === currentExerciseIndex;
+                    
+                    return (
+                      <View
+                        key={exercise.id}
+                        style={[
+                          styles.completedDot,
+                          isCompleted && styles.completedDotActive,
+                          isCurrent && styles.completedDotCurrent,
+                        ]}
+                      >
+                        {isCompleted && (
+                          <Ionicons name="checkmark" size={16} color={colors.white} />
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </Animated.View>
+            </>
+          )}
+
+          <View style={{ height: 120 }} />
+        </ScrollView>
+
+        {/* Action Button */}
+        <Animated.View 
+          entering={FadeInUp.delay(400).springify()} 
+          style={styles.actionButtonContainer}
+        >
+          {!isWorkoutStarted ? (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleStartWorkout}
+              style={styles.actionButton}
+              disabled={todayCompleted}
+            >
+              <LinearGradient
+                colors={
+                  todayCompleted 
+                    ? [colors.cardBorder, colors.surface] as [string, string]
+                    : [colors.primary, colors.primary + 'DD'] as [string, string]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.actionButtonGradient}
+              >
+                <Ionicons 
+                  name={todayCompleted ? "checkmark-circle" : "play-circle"} 
+                  size={28} 
+                  color={colors.white} 
+                />
+                <Text style={styles.actionButtonText}>
+                  {todayCompleted ? "Completed Today" : "Start Workout"}
+                </Text>
+                {!todayCompleted && <Ionicons name="arrow-forward" size={24} color={colors.white} />}
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleCompleteExercise}
+              style={styles.actionButton}
+            >
+              <LinearGradient
+                colors={[colors.primary, colors.primary + 'DD'] as [string, string]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.actionButtonGradient}
+              >
+                <Ionicons name="checkmark-circle" size={28} color={colors.white} />
+                <Text style={styles.actionButtonText}>
+                  {currentExerciseIndex === exercises.length - 1 
+                    ? "Finish Workout" 
+                    : "Complete Exercise"}
+                </Text>
+                <Ionicons name="arrow-forward" size={24} color={colors.white} />
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+      </SafeAreaView>
+    </DecorativeBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: colors.white,
+    fontSize: 20,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  headerSubtitle: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontFamily: fonts.body,
+    marginTop: 2,
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+
+  // Status Card
+  statusCard: {
+    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  statusGradient: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  statusTitle: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  statusSubtitle: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+
+  // Exercises List
+  exercisesList: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+  },
+  exerciseItem: {
+    marginBottom: spacing.sm,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  exerciseItemGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  exerciseNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exerciseNumberText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  exerciseItemEmoji: {
+    fontSize: 32,
+  },
+  exerciseItemInfo: {
+    flex: 1,
+  },
+  exerciseItemName: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: 2,
+  },
+  exerciseItemCategory: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontFamily: fonts.body,
+  },
+
+  // Progress Section
+  progressSection: {
+    marginBottom: spacing.lg,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  progressText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+  },
+  progressPercentage: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: colors.cardBorder,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 4,
+  },
+
+  // Current Exercise Card
+  currentExerciseCard: {
+    marginBottom: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  currentExerciseGradient: {
+    padding: spacing.lg,
+  },
+  exerciseAnimationContainer: {
+    height: 300,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+  },
+  exerciseAnimation: {
+    width: '100%',
+    height: '100%',
+  },
+  currentExerciseInfo: {
+    alignItems: 'center',
+  },
+  currentExerciseEmoji: {
+    fontSize: 48,
+    marginBottom: spacing.sm,
+  },
+  currentExerciseName: {
+    color: colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  currentExerciseTag: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cardBackground,
+  },
+  currentExerciseTagText: {
+    color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+
+  // Completed Section
+  completedSection: {
+    marginBottom: spacing.lg,
+  },
+  completedTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+  },
+  completedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  completedDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedDotActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  completedDotCurrent: {
+    borderColor: colors.primary,
+    borderWidth: 3,
+  },
+
+  // Action Button
+  actionButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.cardBorder,
+  },
+  actionButton: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  actionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  actionButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.heading,
+  },
+});
+

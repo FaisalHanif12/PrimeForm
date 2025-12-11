@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp, SlideInRight, ZoomIn } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -16,6 +16,7 @@ import NotificationModal from '../../src/components/NotificationModal';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -93,6 +94,7 @@ export default function GymScreen() {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [hasPersonalizedWorkout, setHasPersonalizedWorkout] = useState(false);
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
@@ -173,6 +175,30 @@ export default function GymScreen() {
       loadUserInfo();
     }
   }, [showProfilePage]);
+
+  // Check if user has personalized workout
+  useEffect(() => {
+    checkPersonalizedWorkout();
+  }, []);
+
+  const checkPersonalizedWorkout = async () => {
+    try {
+      const savedExercises = await AsyncStorage.getItem('personalizedWorkout');
+      setHasPersonalizedWorkout(!!savedExercises);
+    } catch (error) {
+      console.error('Error checking personalized workout:', error);
+    }
+  };
+
+  const handlePersonalizedWorkoutPress = () => {
+    if (hasPersonalizedWorkout) {
+      // Navigate to personalized workout screen
+      router.push('/(dashboard)/personalized-workout');
+    } else {
+      // Navigate to exercise selection screen
+      router.push('/(dashboard)/create-personalized-workout');
+    }
+  };
 
   const handleTabPress = (tab: 'home' | 'diet' | 'gym' | 'workout' | 'progress') => {
     if (tab === 'home') {
@@ -306,6 +332,31 @@ export default function GymScreen() {
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
+
+        {/* Floating CTA Button */}
+        <Animated.View 
+          entering={ZoomIn.delay(600).springify()} 
+          style={styles.floatingButton}
+        >
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handlePersonalizedWorkoutPress}
+            style={styles.ctaButton}
+          >
+            <LinearGradient
+              colors={[colors.primary, colors.primary + 'DD'] as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ctaGradient}
+            >
+              <Ionicons 
+                name={hasPersonalizedWorkout ? "fitness" : "add-circle"} 
+                size={28} 
+                color={colors.white} 
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
         <BottomNavigation activeTab="gym" onTabPress={handleTabPress} />
 
@@ -495,5 +546,30 @@ const styles = StyleSheet.create({
 
   bottomSpacing: {
     height: 100,
+  },
+
+  // Floating CTA Button
+  floatingButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: 100,
+    zIndex: 10,
+  },
+  ctaButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  ctaGradient: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
