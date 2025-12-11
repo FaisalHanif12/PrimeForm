@@ -392,7 +392,7 @@ export default function PersonalizedWorkoutScreen() {
                         <View style={styles.exerciseItemMeta}>
                           <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
                           <View style={styles.calorieTag}>
-                            <Ionicons name="flame" size={12} color="#FF3B30" />
+                            <Ionicons name="flame" size={12} color={colors.primary} />
                             <Text style={styles.calorieText}>{exercise.calories || 60} cal</Text>
                           </View>
                         </View>
@@ -455,7 +455,7 @@ export default function PersonalizedWorkoutScreen() {
                           <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
                         </View>
                         <View style={styles.currentCalorieTag}>
-                          <Ionicons name="flame" size={16} color="#FF3B30" />
+                          <Ionicons name="flame" size={16} color={colors.primary} />
                           <Text style={styles.currentCalorieText}>{currentExercise.calories || 60} cal</Text>
                         </View>
                       </View>
@@ -785,13 +785,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FF3B3020',
+    backgroundColor: colors.primary + '20',
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
     borderRadius: radius.sm,
   },
   calorieText: {
-    color: '#FF3B30',
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '600',
     fontFamily: fonts.body,
@@ -929,10 +929,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.sm,
-    backgroundColor: '#FF3B3020',
+    backgroundColor: colors.primary + '20',
   },
   currentCalorieText: {
-    color: '#FF3B30',
+    color: colors.primary,
     fontSize: 13,
     fontWeight: '600',
     fontFamily: fonts.body,
