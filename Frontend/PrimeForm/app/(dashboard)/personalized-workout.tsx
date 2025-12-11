@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, Pressable } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, ZoomIn, SlideInRight, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../../src/theme/colors';
@@ -82,6 +82,7 @@ export default function PersonalizedWorkoutScreen() {
   const [completedExercises, setCompletedExercises] = useState<number[]>([]);
   const [isWorkoutStarted, setIsWorkoutStarted] = useState(false);
   const [todayCompleted, setTodayCompleted] = useState(false);
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -174,7 +175,7 @@ export default function PersonalizedWorkoutScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
-          style: 'destructive', 
+          style: 'destructive',
           onPress: async () => {
             try {
               // Remove both the workout and the completion date
@@ -189,6 +190,27 @@ export default function PersonalizedWorkoutScreen() {
         },
       ]
     );
+  };
+
+  const handleReorderToggle = () => {
+    setIsReorderMode(!isReorderMode);
+  };
+
+  const handleMoveExercise = (fromIndex: number, toIndex: number) => {
+    const newExercises = [...exercises];
+    const [movedExercise] = newExercises.splice(fromIndex, 1);
+    newExercises.splice(toIndex, 0, movedExercise);
+    setExercises(newExercises);
+  };
+
+  const handleSaveOrder = async () => {
+    try {
+      await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(exercises));
+      showToast('success', 'Exercise order saved!');
+      setIsReorderMode(false);
+    } catch (error) {
+      showToast('error', 'Failed to save order');
+    }
   };
 
   const currentExercise = exercises[currentExerciseIndex];
@@ -209,9 +231,24 @@ export default function PersonalizedWorkoutScreen() {
             <Text style={styles.headerTitle}>My Daily Workout</Text>
             <Text style={styles.headerSubtitle}>{exercises.length} exercises</Text>
           </View>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWorkout} activeOpacity={0.8}>
-            <Ionicons name="trash-outline" size={22} color="#FF3B30" />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            {!isWorkoutStarted && !todayCompleted && (
+              <TouchableOpacity 
+                style={[styles.reorderButton, isReorderMode && styles.reorderButtonActive]} 
+                onPress={handleReorderToggle} 
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name={isReorderMode ? "checkmark" : "swap-vertical"} 
+                  size={22} 
+                  color={isReorderMode ? colors.primary : colors.white} 
+                />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWorkout} activeOpacity={0.8}>
+              <Ionicons name="trash-outline" size={22} color="#FF3B30" />
+            </TouchableOpacity>
+          </View>
         </Animated.View>
 
         <ScrollView 
@@ -250,7 +287,14 @@ export default function PersonalizedWorkoutScreen() {
 
               {/* Exercises List */}
               <View style={styles.exercisesList}>
-                <Text style={styles.sectionTitle}>Your Exercises</Text>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Your Exercises</Text>
+                  {isReorderMode && (
+                    <TouchableOpacity onPress={handleSaveOrder} style={styles.saveOrderButton}>
+                      <Text style={styles.saveOrderText}>Save Order</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {exercises.map((exercise, index) => (
                   <Animated.View
                     key={exercise.id}
@@ -261,6 +305,32 @@ export default function PersonalizedWorkoutScreen() {
                       colors={[colors.surface, colors.cardBackground] as [string, string]}
                       style={styles.exerciseItemGradient}
                     >
+                      {isReorderMode && (
+                        <View style={styles.reorderControls}>
+                          <TouchableOpacity
+                            onPress={() => index > 0 && handleMoveExercise(index, index - 1)}
+                            disabled={index === 0}
+                            style={[styles.reorderArrow, index === 0 && styles.reorderArrowDisabled]}
+                          >
+                            <Ionicons 
+                              name="chevron-up" 
+                              size={20} 
+                              color={index === 0 ? colors.cardBorder : colors.primary} 
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => index < exercises.length - 1 && handleMoveExercise(index, index + 1)}
+                            disabled={index === exercises.length - 1}
+                            style={[styles.reorderArrow, index === exercises.length - 1 && styles.reorderArrowDisabled]}
+                          >
+                            <Ionicons 
+                              name="chevron-down" 
+                              size={20} 
+                              color={index === exercises.length - 1 ? colors.cardBorder : colors.primary} 
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                       <View style={styles.exerciseItemIconContainer}>
                         <Ionicons 
                           name={exerciseIcons[exercise.id] as any || 'fitness-outline'} 
@@ -272,7 +342,13 @@ export default function PersonalizedWorkoutScreen() {
                         <Text style={styles.exerciseItemName}>{exercise.name}</Text>
                         <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                      {isReorderMode ? (
+                        <View style={styles.orderNumber}>
+                          <Text style={styles.orderNumberText}>{index + 1}</Text>
+                        </View>
+                      ) : (
+                        <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                      )}
                     </LinearGradient>
                   </Animated.View>
                 ))}
@@ -466,6 +542,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginTop: 2,
   },
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  reorderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  reorderButtonActive: {
+    backgroundColor: colors.primary + '20',
+    borderColor: colors.primary,
+  },
   deleteButton: {
     width: 44,
     height: 44,
@@ -508,12 +602,29 @@ const styles = StyleSheet.create({
   exercisesList: {
     marginBottom: spacing.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
-    marginBottom: spacing.md,
+  },
+  saveOrderButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primary,
+  },
+  saveOrderText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
   },
   exerciseItem: {
     marginBottom: spacing.sm,
@@ -548,6 +659,37 @@ const styles = StyleSheet.create({
     color: colors.mutedText,
     fontSize: 13,
     fontFamily: fonts.body,
+  },
+  reorderControls: {
+    flexDirection: 'column',
+    marginRight: spacing.sm,
+  },
+  reorderArrow: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary + '20',
+    borderRadius: 16,
+    marginVertical: 2,
+  },
+  reorderArrowDisabled: {
+    backgroundColor: colors.surface,
+    opacity: 0.3,
+  },
+  orderNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderNumberText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
   },
 
   // Progress Section
