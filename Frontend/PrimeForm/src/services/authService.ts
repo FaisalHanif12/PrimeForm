@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
+import secureStorageService from './secureStorageService';
 
 interface LoginResponse {
   success: boolean;
@@ -52,8 +53,8 @@ class AuthService {
         },
       };
 
-      // Add authorization header if token exists
-      const token = await AsyncStorage.getItem('authToken');
+      // Add authorization header if token exists (using secure storage)
+      const token = await secureStorageService.getItem('auth_token');
       if (token) {
         config.headers = {
           ...config.headers,
@@ -104,19 +105,19 @@ class AuthService {
     }
   }
 
-  // Store auth token
+  // Store auth token (using secure storage)
   private async storeToken(token: string): Promise<void> {
-    await AsyncStorage.setItem('authToken', token);
+    await secureStorageService.setItem('auth_token', token);
   }
 
-  // Get stored token
+  // Get stored token (using secure storage)
   async getToken(): Promise<string | null> {
-    return await AsyncStorage.getItem('authToken');
+    return await secureStorageService.getItem('auth_token');
   }
 
-  // Clear auth token
+  // Clear auth token (using secure storage)
   async clearToken(): Promise<void> {
-    await AsyncStorage.removeItem('authToken');
+    await secureStorageService.removeItem('auth_token');
   }
 
   // Clear all user-related data
