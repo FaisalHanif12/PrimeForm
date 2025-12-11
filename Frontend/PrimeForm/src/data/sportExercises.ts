@@ -52,7 +52,6 @@ export const sportCategories: SportCategory[] = [
           'Focus on quick, powerful movements',
           'Engage core throughout for stability',
         ],
-        animationUrl: 'punches',
       },
       {
         id: 'jump_squats',
@@ -71,7 +70,6 @@ export const sportCategories: SportCategory[] = [
           'Land softly and immediately repeat',
           'Maintain balance and control throughout',
         ],
-        animationUrl: 'jump_squats',
       },
       {
         id: 't_plank',
@@ -90,7 +88,6 @@ export const sportCategories: SportCategory[] = [
           'Hold and control the rotation',
           'Switch sides evenly',
         ],
-        animationUrl: 't_plank',
       },
     ],
   },
@@ -119,7 +116,6 @@ export const sportCategories: SportCategory[] = [
           'Essential for powerful kicking and sprinting',
           'Maintain upright posture throughout',
         ],
-        animationUrl: 'lunges',
       },
       {
         id: 'squat_kicks',
@@ -138,7 +134,6 @@ export const sportCategories: SportCategory[] = [
           'Focus on balance and control',
           'Build kicking power and leg endurance',
         ],
-        animationUrl: 'squat_kicks',
       },
       {
         id: 'running',
@@ -157,7 +152,6 @@ export const sportCategories: SportCategory[] = [
           'Essential for constant movement on field',
           'Focus on breathing rhythm',
         ],
-        animationUrl: 'running',
       },
     ],
   },
@@ -186,7 +180,6 @@ export const sportCategories: SportCategory[] = [
           'Build explosive court coverage ability',
           'Maintain balance and control',
         ],
-        animationUrl: 'split_jump',
       },
       {
         id: 'overhead_press',
@@ -205,7 +198,6 @@ export const sportCategories: SportCategory[] = [
           'Focus on controlled, powerful movement',
           'Essential for racquet sport power',
         ],
-        animationUrl: 'overhead_press',
       },
       {
         id: 'flutter_kicks',
@@ -224,7 +216,6 @@ export const sportCategories: SportCategory[] = [
           'Essential for tennis footwork',
           'Maintain lower back contact with ground',
         ],
-        animationUrl: 'flutter_kicks',
       },
     ],
   },
@@ -253,7 +244,6 @@ export const sportCategories: SportCategory[] = [
           'Control movement throughout',
           'Focus on forearm engagement',
         ],
-        animationUrl: 'hammer_curls',
       },
       {
         id: 'squats',
@@ -272,7 +262,6 @@ export const sportCategories: SportCategory[] = [
           'Essential for explosive base running',
           'Maintain upright posture',
         ],
-        animationUrl: 'squats',
       },
       {
         id: 'deadbug',
@@ -291,7 +280,6 @@ export const sportCategories: SportCategory[] = [
           'Essential for rotational baseball movements',
           'Keep lower back pressed to ground',
         ],
-        animationUrl: 'deadbug',
       },
     ],
   },
