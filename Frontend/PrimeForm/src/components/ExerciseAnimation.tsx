@@ -96,6 +96,7 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           style={styles.animation}
           colorFilters={[]}
           renderMode="AUTOMATIC"
+          resizeMode="contain"
         />
       </View>
     );
@@ -112,6 +113,7 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
         onAnimationFinish={onAnimationComplete}
         colorFilters={[]}
         renderMode="AUTOMATIC"
+        resizeMode="contain"
       />
     </View>
   );
@@ -123,10 +125,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   animation: {
-    width: '100%',
-    height: '100%',
+    width: '150%',
+    height: '150%',
     backgroundColor: 'transparent',
   },
 });
