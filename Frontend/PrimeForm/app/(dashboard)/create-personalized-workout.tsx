@@ -122,6 +122,25 @@ export default function CreatePersonalizedWorkoutScreen() {
   const { showToast } = useToast();
   const [selectedExercises, setSelectedExercises] = useState<typeof ALL_EXERCISES>([]);
   const [filterCategory, setFilterCategory] = useState<string>('All');
+  const [isAddingToExisting, setIsAddingToExisting] = useState(false);
+
+  // Load existing workout if any
+  useEffect(() => {
+    loadExistingWorkout();
+  }, []);
+
+  const loadExistingWorkout = async () => {
+    try {
+      const savedWorkout = await AsyncStorage.getItem('personalizedWorkout');
+      if (savedWorkout) {
+        const existing = JSON.parse(savedWorkout);
+        setSelectedExercises(existing);
+        setIsAddingToExisting(true);
+      }
+    } catch (error) {
+      console.error('Error loading existing workout:', error);
+    }
+  };
 
   const categories = ['All', 'Chest', 'Back', 'Arms', 'Legs', 'Abs', 'Full Body'];
 
@@ -180,8 +199,12 @@ export default function CreatePersonalizedWorkoutScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Create Your Workout</Text>
-            <Text style={styles.headerSubtitle}>Select up to 8 exercises</Text>
+            <Text style={styles.headerTitle}>
+              {isAddingToExisting ? 'Add More Exercises' : 'Create Your Workout'}
+            </Text>
+            <Text style={styles.headerSubtitle}>
+              {selectedExercises.length}/8 selected
+            </Text>
           </View>
           <View style={styles.selectionBadge}>
             <Text style={styles.selectionBadgeText}>{selectedExercises.length}/8</Text>

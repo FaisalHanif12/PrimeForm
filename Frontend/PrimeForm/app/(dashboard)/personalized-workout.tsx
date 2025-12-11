@@ -213,6 +213,40 @@ export default function PersonalizedWorkoutScreen() {
     }
   };
 
+  const handleDeleteExercise = (index: number) => {
+    Alert.alert(
+      'Remove Exercise',
+      `Are you sure you want to remove "${exercises[index].name}" from your workout?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const newExercises = exercises.filter((_, i) => i !== index);
+              
+              if (newExercises.length === 0) {
+                // If no exercises left, delete the entire workout
+                await AsyncStorage.removeItem('personalizedWorkout');
+                await AsyncStorage.removeItem('lastWorkoutCompletion');
+                showToast('success', 'Workout deleted');
+                router.back();
+              } else {
+                // Update with remaining exercises
+                setExercises(newExercises);
+                await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(newExercises));
+                showToast('success', 'Exercise removed');
+              }
+            } catch (error) {
+              showToast('error', 'Failed to remove exercise');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const currentExercise = exercises[currentExerciseIndex];
   const progress = exercises.length > 0 ? ((completedExercises.length / exercises.length) * 100) : 0;
 
@@ -245,9 +279,15 @@ export default function PersonalizedWorkoutScreen() {
                 />
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteWorkout} activeOpacity={0.8}>
-              <Ionicons name="trash-outline" size={22} color="#FF3B30" />
-            </TouchableOpacity>
+            {!isWorkoutStarted && !todayCompleted && exercises.length < 8 && (
+              <TouchableOpacity 
+                style={styles.addButton} 
+                onPress={() => router.push('/(dashboard)/create-personalized-workout')} 
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
 
@@ -347,7 +387,13 @@ export default function PersonalizedWorkoutScreen() {
                           <Text style={styles.orderNumberText}>{index + 1}</Text>
                         </View>
                       ) : (
-                        <Ionicons name="chevron-forward" size={20} color={colors.mutedText} />
+                        <TouchableOpacity 
+                          onPress={() => handleDeleteExercise(index)}
+                          style={styles.exerciseDeleteButton}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        </TouchableOpacity>
                       )}
                     </LinearGradient>
                   </Animated.View>
@@ -560,7 +606,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '20',
     borderColor: colors.primary,
   },
-  deleteButton: {
+  addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -690,6 +736,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+  exerciseDeleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
 
   // Progress Section
