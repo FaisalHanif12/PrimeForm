@@ -160,6 +160,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       setEditedUserInfo(convertedUserInfo);
       setLoadError(null);
       setHasCheckedExisting(true);
+      setIsInitialLoading(false); // Stop loading immediately if we have userInfo
     }
     // Note: No API call here - profile data is passed from parent component
     // API is only called when user saves/updates their profile
@@ -182,6 +183,14 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
     const ensureProfileLoaded = async () => {
       if (!visible || userInfo || hasCheckedExisting || isInitialLoading) {
+        return;
+      }
+
+      // Small delay to allow parent to pass userInfo first (prevents flash of loading)
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Check again after delay - if userInfo arrived, skip API call
+      if (isCancelled || userInfo) {
         return;
       }
 
@@ -352,7 +361,52 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     </View>
   );
 
+  const renderProfileDisplay = () => {
+    const safeUserInfo = userInfo || {} as any;
+    
+    return (
+      <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
+        {/* Personal Information */}
+        {renderInfoSection('Personal Information', (
+          <>
+            {renderPickerRow('Country', safeUserInfo.country || '', 'country', countries)}
+            {renderInfoRow('Age', safeUserInfo.age || '', 'age')}
+            {renderPickerRow('Gender', safeUserInfo.gender || '', 'gender', genderOptions)}
+            {renderInfoRow('Height', safeUserInfo.height || '', 'height')}
+            {renderInfoRow('Current Weight', safeUserInfo.currentWeight || '', 'currentWeight')}
+            {/* Show target weight field if body goal requires it */}
+            {(safeUserInfo.bodyGoal === 'Lose Fat' || safeUserInfo.bodyGoal === 'Gain Muscle') && (
+              renderInfoRow('Target Weight', safeUserInfo.targetWeight || '', 'targetWeight')
+            )}
+          </>
+        ))}
+
+        {/* Goals & Preferences */}
+        {renderInfoSection('Goals & Preferences', (
+          <>
+            {renderPickerRow('Body Goal', safeUserInfo.bodyGoal || '', 'bodyGoal', bodyGoals)}
+            {renderPickerRow('Diet Preference', safeUserInfo.dietPreference || '', 'dietPreference', dietPreferences)}
+          </>
+        ))}
+
+        {/* Lifestyle & Health */}
+        {renderInfoSection('Lifestyle & Health', (
+          <>
+            {renderPickerRow('Occupation', safeUserInfo.occupationType || '', 'occupationType', occupationTypes)}
+            {renderPickerRow('Available Equipment', safeUserInfo.availableEquipment || '', 'availableEquipment', equipmentOptions)}
+            {renderInfoRow('Medical Conditions', safeUserInfo.medicalConditions || '', 'medicalConditions')}
+          </>
+        ))}
+      </ScrollView>
+    );
+  };
+
   const renderProfileContent = () => {
+    // If we have userInfo, show it immediately (don't wait for loading checks)
+    if (userInfo) {
+      return renderProfileDisplay();
+    }
+
     if (isInitialLoading) {
       return (
         <View style={styles.noProfileSection}>
@@ -405,44 +459,8 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       );
     }
 
-    // Profile exists - show full profile (safe guard for missing props)
-    const safeUserInfo = userInfo || {} as any;
-
-    return (
-      <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
-        {/* Personal Information */}
-        {renderInfoSection('Personal Information', (
-          <>
-            {renderPickerRow('Country', safeUserInfo.country || '', 'country', countries)}
-            {renderInfoRow('Age', safeUserInfo.age || '', 'age')}
-            {renderPickerRow('Gender', safeUserInfo.gender || '', 'gender', genderOptions)}
-            {renderInfoRow('Height', safeUserInfo.height || '', 'height')}
-            {renderInfoRow('Current Weight', safeUserInfo.currentWeight || '', 'currentWeight')}
-            {/* Show target weight field if body goal requires it */}
-            {(safeUserInfo.bodyGoal === 'Lose Fat' || safeUserInfo.bodyGoal === 'Gain Muscle') && (
-              renderInfoRow('Target Weight', safeUserInfo.targetWeight || '', 'targetWeight')
-            )}
-          </>
-        ))}
-
-        {/* Goals & Preferences */}
-        {renderInfoSection('Goals & Preferences', (
-          <>
-            {renderPickerRow('Body Goal', safeUserInfo.bodyGoal || '', 'bodyGoal', bodyGoals)}
-            {renderPickerRow('Diet Preference', safeUserInfo.dietPreference || '', 'dietPreference', dietPreferences)}
-          </>
-        ))}
-
-        {/* Lifestyle & Health */}
-        {renderInfoSection('Lifestyle & Health', (
-          <>
-            {renderPickerRow('Occupation', safeUserInfo.occupationType || '', 'occupationType', occupationTypes)}
-            {renderPickerRow('Available Equipment', safeUserInfo.availableEquipment || '', 'availableEquipment', equipmentOptions)}
-            {renderInfoRow('Medical Conditions', safeUserInfo.medicalConditions || '', 'medicalConditions')}
-          </>
-        ))}
-      </ScrollView>
-    );
+    // Fallback: show profile display
+    return renderProfileDisplay();
   };
 
   if (!visible) return null;
