@@ -103,7 +103,10 @@ class PushNotificationService {
   // Save push token to server
   async savePushTokenToServer(token) {
     try {
-      const authToken = await AsyncStorage.getItem('authToken');
+      // Get auth token from SecureStore via authService
+      const { authService } = await import('./authService');
+      const authToken = await authService.getToken();
+      
       if (!authToken) {
         console.log('❌ No auth token found, cannot save push token');
         return;
@@ -189,11 +192,15 @@ class PushNotificationService {
         return false;
       }
 
+      // Get auth token from SecureStore via authService
+      const { authService } = await import('./authService');
+      const authToken = await authService.getToken();
+
       const response = await fetch(`${API_BASE_URL}/notifications/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await AsyncStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           pushToken: this.expoPushToken,

@@ -51,9 +51,9 @@ class ApiClient {
 
   private async getAuthToken(): Promise<string | null> {
     try {
-      // Import AsyncStorage dynamically to avoid circular dependencies
-      const AsyncStorage = await import('@react-native-async-storage/async-storage');
-      return await AsyncStorage.default.getItem('authToken');
+      // Get auth token from SecureStore via authService
+      const { authService } = await import('../services/authService');
+      return await authService.getToken();
     } catch (error) {
       console.error('Failed to get auth token:', error);
       return null;

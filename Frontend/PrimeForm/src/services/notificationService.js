@@ -6,10 +6,12 @@ class NotificationService {
         this.baseURL = `${API_BASE_URL}/notifications`;
     }
 
-    // Get auth token from storage
+    // Get auth token from secure storage
     async getAuthToken() {
         try {
-            const token = await AsyncStorage.getItem('authToken');
+            // Use authService to get token from SecureStore
+            const { authService } = await import('./authService');
+            const token = await authService.getToken();
             return token;
         } catch (error) {
             console.error('Error getting auth token:', error);
