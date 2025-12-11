@@ -217,75 +217,75 @@ export default function CreatePersonalizedWorkoutScreen() {
           </ScrollView>
         </Animated.View>
 
-        {/* Exercises Grid */}
+        {/* Exercises List - Horizontal Cards */}
         <ScrollView 
           style={styles.container}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.exercisesGrid}>
-            {filteredExercises.map((exercise, index) => {
-              const isSelected = !!selectedExercises.find(ex => ex.id === exercise.id);
-              
-              return (
-                <Animated.View
-                  key={exercise.id}
-                  entering={ZoomIn.delay(200 + index * 50).springify()}
-                  style={styles.exerciseCardWrapper}
+          {filteredExercises.map((exercise, index) => {
+            const isSelected = !!selectedExercises.find(ex => ex.id === exercise.id);
+            
+            return (
+              <Animated.View
+                key={exercise.id}
+                entering={FadeInUp.delay(200 + index * 30).springify()}
+                style={styles.exerciseCardWrapper}
+              >
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => handleToggleExercise(exercise)}
+                  style={[
+                    styles.exerciseCard,
+                    isSelected && styles.exerciseCardSelected
+                  ]}
                 >
-                  <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={() => handleToggleExercise(exercise)}
-                    style={[
-                      styles.exerciseCard,
-                      isSelected && styles.exerciseCardSelected
-                    ]}
+                  <LinearGradient
+                    colors={
+                      isSelected 
+                        ? [colors.primary + '30', colors.primary + '20'] as [string, string]
+                        : [colors.surface, colors.cardBackground] as [string, string]
+                    }
+                    style={styles.exerciseCardGradient}
                   >
-                    <LinearGradient
-                      colors={
-                        isSelected 
-                          ? [colors.primary + '30', colors.primary + '20'] as [string, string]
-                          : [colors.surface, colors.cardBackground] as [string, string]
-                      }
-                      style={styles.exerciseCardGradient}
-                    >
-                      {/* Selection Indicator */}
-                      {isSelected && (
-                        <View style={styles.selectionIndicator}>
-                          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                        </View>
-                      )}
+                    {/* Left Side - Icon */}
+                    <View style={styles.exerciseIconContainer}>
+                      <Ionicons 
+                        name={exerciseIcons[exercise.id] as any || 'fitness'} 
+                        size={32} 
+                        color={colors.primary} 
+                      />
+                    </View>
 
-                      {/* Exercise Icon */}
-                      <View style={styles.exerciseIconContainer}>
-                        <Ionicons 
-                          name={exerciseIcons[exercise.id] as any || 'fitness'} 
-                          size={40} 
-                          color={colors.primary} 
-                        />
-                      </View>
-                      
-                      {/* Exercise Name */}
-                      <Text style={styles.exerciseName} numberOfLines={2}>
+                    {/* Middle - Exercise Info */}
+                    <View style={styles.exerciseInfo}>
+                      <Text style={styles.exerciseName} numberOfLines={1}>
                         {exercise.name}
                       </Text>
-                      
-                      {/* Category Tag */}
-                      <View style={styles.categoryTag}>
-                        <Text style={styles.categoryTagText}>{exercise.category}</Text>
+                      <View style={styles.exerciseMeta}>
+                        <View style={styles.categoryTag}>
+                          <Text style={styles.categoryTagText}>{exercise.category}</Text>
+                        </View>
+                        <View style={[
+                          styles.difficultyDot,
+                          { backgroundColor: getDifficultyColor(exercise.difficulty) }
+                        ]} />
                       </View>
+                    </View>
 
-                      {/* Difficulty Dot */}
-                      <View style={[
-                        styles.difficultyDot,
-                        { backgroundColor: getDifficultyColor(exercise.difficulty) }
-                      ]} />
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </View>
+                    {/* Right Side - Selection Indicator */}
+                    <View style={styles.selectionIconContainer}>
+                      {isSelected ? (
+                        <Ionicons name="checkmark-circle" size={28} color={colors.primary} />
+                      ) : (
+                        <View style={styles.unselectedCircle} />
+                      )}
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
 
           <View style={{ height: 120 }} />
         </ScrollView>
@@ -413,15 +413,9 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
 
-  // Exercises Grid
-  exercisesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    justifyContent: 'space-between',
-  },
+  // Exercises List - Horizontal Cards
   exerciseCardWrapper: {
-    width: (screenWidth - spacing.lg * 2 - spacing.md) / 2,
+    marginBottom: spacing.md,
   },
   exerciseCard: {
     borderRadius: radius.lg,
@@ -433,53 +427,63 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   exerciseCardGradient: {
-    padding: spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 160,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  selectionIndicator: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    zIndex: 10,
+    padding: spacing.md,
+    gap: spacing.md,
   },
   exerciseIconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.primary + '20',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+  },
+  exerciseInfo: {
+    flex: 1,
   },
   exerciseName: {
     color: colors.white,
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600',
     fontFamily: fonts.heading,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  exerciseMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   categoryTag: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radius.sm,
     backgroundColor: colors.cardBackground,
-    marginBottom: spacing.xs,
   },
   categoryTagText: {
     color: colors.mutedText,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: fonts.body,
   },
   difficultyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: spacing.xs,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  selectionIconContainer: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unselectedCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.cardBorder,
   },
 
   // Save Button
