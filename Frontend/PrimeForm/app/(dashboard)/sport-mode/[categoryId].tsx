@@ -70,21 +70,6 @@ export default function SportCategoryPage() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Sport Description Banner */}
-        <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.descriptionBanner}>
-          <LinearGradient
-            colors={[category.color + '20', category.color + '08']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.bannerGradient}
-          >
-            <View style={[styles.bannerIconCircle, { backgroundColor: category.color + '25' }]}>
-              <Ionicons name="information-circle" size={20} color={category.color} />
-            </View>
-            <Text style={styles.bannerText}>{category.description}</Text>
-          </LinearGradient>
-        </Animated.View>
-
         {/* Exercise List */}
         <View style={styles.exerciseList}>
           <View style={styles.sectionHeader}>
@@ -112,13 +97,10 @@ export default function SportCategoryPage() {
                   end={{ x: 1, y: 0 }}
                   style={styles.cardGradient}
                 >
-                  {/* Left Section - Number & Icon */}
+                  {/* Left Section - Number Only */}
                   <View style={styles.leftSection}>
                     <View style={[styles.exerciseNumber, { backgroundColor: category.color }]}>
                       <Text style={styles.exerciseNumberText}>{index + 1}</Text>
-                    </View>
-                    <View style={[styles.iconCircle, { backgroundColor: category.color + '15' }]}>
-                      <Ionicons name="fitness" size={24} color={category.color} />
                     </View>
                   </View>
 
@@ -231,33 +213,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.xl * 2,
-  },
-  descriptionBanner: {
-    marginBottom: spacing.xl,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  bannerGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.md,
-  },
-  bannerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bannerText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.mutedText,
-    lineHeight: 18,
-    fontFamily: fonts.regular,
   },
   exerciseList: {
     gap: spacing.md,
@@ -297,29 +254,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   leftSection: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
   exerciseNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   exerciseNumberText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   middleSection: {
     flex: 1,
