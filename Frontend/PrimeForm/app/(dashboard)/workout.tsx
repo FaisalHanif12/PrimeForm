@@ -7,6 +7,7 @@ import { colors, spacing, typography, fonts, radius } from '../../src/theme/colo
 import { useLanguage } from '../../src/context/LanguageContext';
 import userProfileService from '../../src/services/userProfileService';
 import aiWorkoutService, { WorkoutPlan, WorkoutExercise } from '../../src/services/aiWorkoutService';
+import rateLimitService from '../../src/services/rateLimitService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
@@ -251,6 +252,14 @@ export default function WorkoutScreen() {
 
   const handleGenerateClick = async () => {
     if (userInfo) {
+      // Check rate limit first
+      const rateLimitCheck = await rateLimitService.canGenerate('workout');
+      
+      if (!rateLimitCheck.allowed) {
+        showToast('info', rateLimitCheck.message || 'Please wait before generating again.');
+        return;
+      }
+      
       // User already has profile, generate AI workout plan
       setIsGeneratingPlan(true);
       setShowGenerationModal(true);
@@ -272,6 +281,8 @@ export default function WorkoutScreen() {
 
         if (response.success && response.data) {
           setWorkoutPlan(response.data);
+          // Record successful generation
+          await rateLimitService.recordGeneration('workout');
           showToast('success', 'Your personalized workout plan is ready!');
 
           // Clear timer and hide modal immediately when plan is ready
@@ -422,6 +433,14 @@ export default function WorkoutScreen() {
       return;
     }
 
+    // Check rate limit for new plan generation
+    const rateLimitCheck = await rateLimitService.canGenerate('workout');
+    
+    if (!rateLimitCheck.allowed) {
+      showToast('info', rateLimitCheck.message || 'Please wait before generating again.');
+      return;
+    }
+
     setIsGeneratingPlan(true);
     setGenerationProgress('Preparing new plan...');
 
@@ -443,6 +462,8 @@ export default function WorkoutScreen() {
       const response = await aiWorkoutService.generateWorkoutPlan(userInfo);
       if (response.success && response.data) {
         setWorkoutPlan(response.data);
+        // Record successful generation
+        await rateLimitService.recordGeneration('workout');
         showToast('success', 'New workout plan generated successfully!');
       } else {
         showToast('error', response.message || 'Failed to generate new workout plan. Please try again.');

@@ -9,6 +9,7 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
 import aiDietService from '../../src/services/aiDietService';
+import rateLimitService from '../../src/services/rateLimitService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
@@ -171,6 +172,14 @@ export default function DietScreen() {
 
   const handleGenerateClick = async () => {
     if (userInfo) {
+      // Check rate limit first
+      const rateLimitCheck = await rateLimitService.canGenerate('diet');
+      
+      if (!rateLimitCheck.allowed) {
+        showToast('info', rateLimitCheck.message || 'Please wait before generating again.');
+        return;
+      }
+      
       // User already has profile, generate diet plan
       setIsGenerating(true);
       try {
@@ -178,6 +187,8 @@ export default function DietScreen() {
 
         if (response.success && response.data) {
           setDietPlan(response.data);
+          // Record successful generation
+          await rateLimitService.recordGeneration('diet');
           showToast('success', 'Your personalized diet plan is ready!');
         } else {
           showToast('error', 'Failed to generate diet plan. Please try again.');
@@ -212,12 +223,15 @@ export default function DietScreen() {
         showToast('success', 'Profile created! Now generating your diet plan...');
 
         // Automatically generate diet plan after profile creation
+        // Rate limit doesn't apply to first-time generation
         try {
           setIsGenerating(true);
           const dietResponse = await aiDietService.generateDietPlan(userInfoData);
 
           if (dietResponse.success && dietResponse.data) {
             setDietPlan(dietResponse.data);
+            // Record successful generation
+            await rateLimitService.recordGeneration('diet');
             showToast('success', 'Your personalized diet plan is ready!');
           } else {
             showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
