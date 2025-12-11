@@ -10,6 +10,7 @@ import DecorativeBackground from '../../src/components/DecorativeBackground';
 import { useLanguage } from '../../src/context/LanguageContext';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseAnimation from '../../src/components/ExerciseAnimation';
+import { useToast } from '../../src/context/ToastContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -21,59 +22,46 @@ interface ExerciseLevel {
   sets: number;
   repsPerSet: string;
   description: string;
+  calories: number;
 }
 
-const getExerciseLevels = (exerciseId: string): ExerciseLevel[] => {
-  const baseExercises: Record<string, ExerciseLevel[]> = {
-    pushups: [
-      {
-        level: 'easy',
-        title: 'Easy',
-        sets: 2,
-        repsPerSet: '8-12',
-        description: 'Perfect for beginners starting their fitness journey'
-      },
-      {
-        level: 'medium',
-        title: 'Medium',
-        sets: 4,
-        repsPerSet: '15-20',
-        description: 'Ideal for intermediate level with moderate challenge'
-      },
-      {
-        level: 'hard',
-        title: 'Hard',
-        sets: 6,
-        repsPerSet: '20-30',
-        description: 'Advanced level for experienced athletes'
-      }
-    ],
-    squats: [
-      {
-        level: 'easy',
-        title: 'Easy',
-        sets: 2,
-        repsPerSet: '12-15',
-        description: 'Perfect for beginners starting their fitness journey'
-      },
-      {
-        level: 'medium',
-        title: 'Medium',
-        sets: 4,
-        repsPerSet: '20-25',
-        description: 'Ideal for intermediate level with moderate challenge'
-      },
-      {
-        level: 'hard',
-        title: 'Hard',
-        sets: 6,
-        repsPerSet: '30-40',
-        description: 'Advanced level for experienced athletes'
-      }
-    ],
+// Get calories based on difficulty level
+const getCaloriesByDifficulty = (baseCalories: number, difficulty: DifficultyLevel): number => {
+  const multipliers = {
+    easy: 0.6,    // 60% of base calories
+    medium: 1.0,  // 100% of base calories
+    hard: 1.5     // 150% of base calories
   };
-  
-  return baseExercises[exerciseId] || baseExercises['pushups'];
+  return Math.round(baseCalories * multipliers[difficulty]);
+};
+
+const getExerciseLevels = (exerciseId: string, baseCalories: number): ExerciseLevel[] => {
+  return [
+    {
+      level: 'easy',
+      title: 'Easy',
+      sets: 2,
+      repsPerSet: '8-12',
+      description: 'Perfect for beginners starting their fitness journey',
+      calories: getCaloriesByDifficulty(baseCalories, 'easy')
+    },
+    {
+      level: 'medium',
+      title: 'Medium',
+      sets: 4,
+      repsPerSet: '15-20',
+      description: 'Ideal for intermediate level with moderate challenge',
+      calories: getCaloriesByDifficulty(baseCalories, 'medium')
+    },
+    {
+      level: 'hard',
+      title: 'Hard',
+      sets: 6,
+      repsPerSet: '20-30',
+      description: 'Advanced level for experienced athletes',
+      calories: getCaloriesByDifficulty(baseCalories, 'hard')
+    }
+  ];
 };
 
 const getExerciseVideo = (exerciseId: string): string => {
@@ -88,6 +76,7 @@ export default function ExerciseDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('medium');
   const [showLevelPicker, setShowLevelPicker] = useState(false);
@@ -101,8 +90,9 @@ export default function ExerciseDetailScreen() {
   const exerciseName = params.exerciseName as string || 'Push-ups';
   const exerciseEmoji = params.exerciseEmoji as string || '💪';
   const category = params.category as string || 'chest';
+  const baseCalories = parseInt(params.calories as string) || 60;
 
-  const exerciseLevels = getExerciseLevels(exerciseId);
+  const exerciseLevels = getExerciseLevels(exerciseId, baseCalories);
   const currentLevel = exerciseLevels.find(level => level.level === selectedLevel) || exerciseLevels[0];
   const videoUrl = getExerciseVideo(exerciseId);
 
@@ -137,8 +127,11 @@ export default function ExerciseDetailScreen() {
         });
       }, 1000);
     } else {
-      // Workout complete - navigate back to exercises list
-      router.back();
+      // Workout complete - show calories burned and navigate back
+      showToast('success', `🔥 Workout Complete! You burned ${currentLevel.calories} calories!`);
+      setTimeout(() => {
+        router.back();
+      }, 2000);
     }
   };
 
@@ -186,9 +179,7 @@ export default function ExerciseDetailScreen() {
             <Text style={styles.headerCategory}>{category.toUpperCase()}</Text>
           </View>
 
-          <TouchableOpacity style={styles.favoriteButton} activeOpacity={0.8}>
-            <Ionicons name="heart-outline" size={24} color={colors.white} />
-          </TouchableOpacity>
+          <View style={{ width: 44 }} />
         </Animated.View>
 
         <ScrollView
@@ -374,6 +365,16 @@ export default function ExerciseDetailScreen() {
                 </View>
                     <Text style={styles.detailValue}>{currentLevel.repsPerSet}</Text>
                     <Text style={styles.detailLabel}>Reps per Set</Text>
+            </View>
+
+                  <View style={styles.detailDivider} />
+
+                  <View style={styles.detailItem}>
+                    <View style={[styles.detailIconBox, { backgroundColor: '#FF3B30' + '20' }]}>
+                      <Ionicons name="flame" size={28} color="#FF3B30" />
+                </View>
+                    <Text style={styles.detailValue}>{currentLevel.calories}</Text>
+                    <Text style={styles.detailLabel}>Calories</Text>
             </View>
               </View>
               </LinearGradient>

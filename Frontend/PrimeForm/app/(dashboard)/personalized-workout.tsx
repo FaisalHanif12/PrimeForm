@@ -19,6 +19,7 @@ interface Exercise {
   category: string;
   emoji: string;
   difficulty: string;
+  calories?: number;
 }
 
 // Professional icons for exercises with variety
@@ -155,15 +156,18 @@ export default function PersonalizedWorkoutScreen() {
 
   const handleWorkoutComplete = async () => {
     try {
+      // Calculate total calories burned
+      const totalCalories = exercises.reduce((sum, ex) => sum + (ex.calories || 60), 0);
+      
       const today = new Date().toDateString();
       await AsyncStorage.setItem('lastWorkoutCompletion', today);
       setTodayCompleted(true);
       setIsWorkoutStarted(false);
-      showToast('success', '🎉 Congratulations! You completed your daily workout!');
+      showToast('success', `🎉 Workout Complete! You burned ${totalCalories} calories!`);
       
       setTimeout(() => {
         router.back();
-      }, 2000);
+      }, 2500);
     } catch (error) {
       showToast('error', 'Failed to save completion');
     }
@@ -385,7 +389,13 @@ export default function PersonalizedWorkoutScreen() {
                       </View>
                       <View style={styles.exerciseItemInfo}>
                         <Text style={styles.exerciseItemName}>{exercise.name}</Text>
-                        <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
+                        <View style={styles.exerciseItemMeta}>
+                          <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
+                          <View style={styles.calorieTag}>
+                            <Ionicons name="flame" size={12} color="#FF3B30" />
+                            <Text style={styles.calorieText}>{exercise.calories || 60} cal</Text>
+                          </View>
+                        </View>
                       </View>
                       {isReorderMode ? (
                         <View style={styles.orderNumber}>
@@ -440,8 +450,14 @@ export default function PersonalizedWorkoutScreen() {
                     {/* Exercise Info */}
                     <View style={styles.currentExerciseInfo}>
                       <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
-                      <View style={styles.currentExerciseTag}>
-                        <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
+                      <View style={styles.currentExerciseTags}>
+                        <View style={styles.currentExerciseTag}>
+                          <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
+                        </View>
+                        <View style={styles.currentCalorieTag}>
+                          <Ionicons name="flame" size={16} color="#FF3B30" />
+                          <Text style={styles.currentCalorieText}>{currentExercise.calories || 60} cal</Text>
+                        </View>
                       </View>
                     </View>
                   </LinearGradient>
@@ -753,11 +769,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: fonts.heading,
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  exerciseItemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   exerciseItemCategory: {
     color: colors.mutedText,
     fontSize: 13,
+    fontFamily: fonts.body,
+  },
+  calorieTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FF3B3020',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+  },
+  calorieText: {
+    color: '#FF3B30',
+    fontSize: 11,
+    fontWeight: '600',
     fontFamily: fonts.body,
   },
   reorderControls: {
@@ -869,6 +905,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
+  currentExerciseTags: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   currentExerciseTag: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -877,6 +918,21 @@ const styles = StyleSheet.create({
   },
   currentExerciseTagText: {
     color: colors.mutedText,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+  },
+  currentCalorieTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    backgroundColor: '#FF3B3020',
+  },
+  currentCalorieText: {
+    color: '#FF3B30',
     fontSize: 13,
     fontWeight: '600',
     fontFamily: fonts.body,

@@ -648,6 +648,7 @@ export default function GymExercisesScreen() {
         exerciseName: exercise.name,
         exerciseEmoji: exercise.emoji,
         category,
+        calories: exercise.calories.toString(),
         targetMuscles: JSON.stringify(exercise.primaryMuscles),
       },
     });
