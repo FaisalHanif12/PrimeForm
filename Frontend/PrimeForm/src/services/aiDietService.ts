@@ -1,6 +1,7 @@
 import { UserProfile } from './userProfileService';
 import dietPlanService from './dietPlanService';
 import Storage from '../utils/storage';
+import networkUtils from '../utils/networkUtils';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -154,11 +155,14 @@ Generate complete 7-day plan now.
 
   async generateDietPlan(userProfile: UserProfile): Promise<AIDietResponse> {
     try {
+      // Check network connection first
+      await networkUtils.checkConnectionOrThrow('Diet plan generation');
+      
       // Check if API key is available
       if (!OPENROUTER_API_KEY) {
         throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
       }
-      
+
       const prompt = this.generatePrompt(userProfile);
 
       const startTime = Date.now();
