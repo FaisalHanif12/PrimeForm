@@ -1094,7 +1094,7 @@ export default function DashboardScreen() {
                 <View style={styles.waterStatusInfo}>
                   <View style={styles.waterStatusTextContainer}>
                     <Text style={styles.waterStatusText} numberOfLines={1}>
-                      {waterCompleted ? '✅ Done' : '⏳ Due'}
+                      {waterCompleted ? '✅ Done' : '⏱️ Due'}
                     </Text>
                   </View>
                   <Text style={styles.waterAmountText}>
@@ -1106,12 +1106,11 @@ export default function DashboardScreen() {
                   styles.waterStatusIndicator,
                   waterCompleted && styles.waterStatusIndicatorCompleted
                 ]}>
-                  <Text style={[
-                    styles.waterStatusIndicatorText,
-                    waterCompleted && styles.waterStatusIndicatorTextCompleted
-                  ]}>
-                    {waterCompleted ? '✓' : '○'}
-                  </Text>
+                  <Ionicons 
+                    name={waterCompleted ? "checkmark-circle" : "time-outline"} 
+                    size={24} 
+                    color={waterCompleted ? colors.green : colors.mutedText} 
+                  />
                 </View>
               </View>
 

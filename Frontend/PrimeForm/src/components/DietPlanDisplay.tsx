@@ -1510,7 +1510,7 @@ const styles = StyleSheet.create({
   },
   premiumDayCardSelected: {
     backgroundColor: 'transparent',
-    borderColor: colors.blue,
+    borderColor: '#4ADE80', // Light green color
     borderWidth: 2,
     elevation: 0,
     shadowColor: 'transparent',
