@@ -213,27 +213,28 @@ export default function ProgressScreen() {
     }
   };
 
-  // Load user info when profile page is opened if it's missing
+  // Load user info on mount
   useEffect(() => {
-    if (showProfilePage && !userInfo) {
-      const loadUserInfo = async () => {
-        try {
-          const cachedData = userProfileService.getCachedData();
-          if (cachedData && cachedData.data) {
-            setUserInfo(cachedData.data);
-          } else {
-            const response = await userProfileService.getUserProfile();
-            if (response.success && response.data) {
-              setUserInfo(response.data);
-            }
+    const loadUserInfo = async () => {
+      try {
+        const cachedData = userProfileService.getCachedData();
+        if (cachedData && cachedData.data) {
+          setUserInfo(cachedData.data);
+        } else {
+          const response = await userProfileService.getUserProfile();
+          if (response.success && response.data) {
+            setUserInfo(response.data);
           }
-        } catch (error) {
-          // Failed to load user info
         }
-      };
+      } catch (error) {
+        // Failed to load user info
+      }
+    };
+    
+    if (!userInfo) {
       loadUserInfo();
     }
-  }, [showProfilePage]);
+  }, []);
 
   const handleSidebarMenuPress = async (action: string) => {
     switch (action) {

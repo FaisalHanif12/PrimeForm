@@ -165,6 +165,16 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     // API is only called when user saves/updates their profile
   }, [userInfo]);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setIsInitialLoading(false);
+      setLoadError(null);
+      setHasCheckedExisting(false);
+      setIsEditing(false);
+    }
+  }, [visible]);
+
   // Ensure we never wrongly show "Create Profile" for users who already have a profile.
   // If no userInfo was passed but the modal is visible, we proactively check the backend once.
   useEffect(() => {
@@ -196,10 +206,12 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           }
         } else {
           setLoadError(response.message || 'Unable to fetch your profile. Please try again later.');
+          setHasCheckedExisting(true); // Mark as checked even on error
         }
       } catch (error) {
         if (!isCancelled) {
           setLoadError('Unable to fetch your profile. Please check your connection and try again.');
+          setHasCheckedExisting(true); // Mark as checked even on error
         }
       } finally {
         if (!isCancelled) {
