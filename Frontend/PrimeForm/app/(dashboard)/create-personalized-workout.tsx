@@ -144,22 +144,22 @@ export default function CreatePersonalizedWorkoutScreen() {
 
   const categories = ['All', 'Chest', 'Back', 'Arms', 'Legs', 'Abs', 'Full Body'];
 
+  // Filter out already selected exercises from the display
+  const availableExercises = ALL_EXERCISES.filter(
+    exercise => !selectedExercises.find(selected => selected.id === exercise.id)
+  );
+
   const filteredExercises = filterCategory === 'All' 
-    ? ALL_EXERCISES 
-    : ALL_EXERCISES.filter(ex => ex.category === filterCategory);
+    ? availableExercises 
+    : availableExercises.filter(ex => ex.category === filterCategory);
 
   const handleToggleExercise = (exercise: typeof ALL_EXERCISES[0]) => {
-    if (selectedExercises.find(ex => ex.id === exercise.id)) {
-      // Remove from selection
-      setSelectedExercises(selectedExercises.filter(ex => ex.id !== exercise.id));
-    } else {
-      // Add to selection (max 8)
-      if (selectedExercises.length >= 8) {
-        showToast('warning', 'You can select maximum 8 exercises');
-        return;
-      }
-      setSelectedExercises([...selectedExercises, exercise]);
+    // Only allow adding exercises (not removing when in add mode)
+    if (selectedExercises.length >= 8) {
+      showToast('warning', 'You can select maximum 8 exercises');
+      return;
     }
+    setSelectedExercises([...selectedExercises, exercise]);
   };
 
   const handleSaveWorkout = async () => {
@@ -246,69 +246,68 @@ export default function CreatePersonalizedWorkoutScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {filteredExercises.map((exercise, index) => {
-            const isSelected = !!selectedExercises.find(ex => ex.id === exercise.id);
-            
-            return (
-              <Animated.View
-                key={exercise.id}
-                entering={FadeInUp.delay(200 + index * 30).springify()}
-                style={styles.exerciseCardWrapper}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={() => handleToggleExercise(exercise)}
-                  style={[
-                    styles.exerciseCard,
-                    isSelected && styles.exerciseCardSelected
-                  ]}
+          {filteredExercises.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
+              <Text style={styles.emptyStateText}>All exercises selected!</Text>
+              <Text style={styles.emptyStateSubtext}>
+                {isAddingToExisting 
+                  ? "You've selected all available exercises. Remove some to add different ones."
+                  : "You can now save your workout!"}
+              </Text>
+            </View>
+          ) : (
+            filteredExercises.map((exercise, index) => {
+              return (
+                <Animated.View
+                  key={exercise.id}
+                  entering={FadeInUp.delay(200 + index * 30).springify()}
+                  style={styles.exerciseCardWrapper}
                 >
-                  <LinearGradient
-                    colors={
-                      isSelected 
-                        ? [colors.primary + '30', colors.primary + '20'] as [string, string]
-                        : [colors.surface, colors.cardBackground] as [string, string]
-                    }
-                    style={styles.exerciseCardGradient}
+                  <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => handleToggleExercise(exercise)}
+                    style={styles.exerciseCard}
                   >
-                    {/* Left Side - Icon */}
-                    <View style={styles.exerciseIconContainer}>
-                      <Ionicons 
-                        name={exerciseIcons[exercise.id] as any || 'fitness'} 
-                        size={32} 
-                        color={colors.primary} 
-                      />
-                    </View>
-
-                    {/* Middle - Exercise Info */}
-                    <View style={styles.exerciseInfo}>
-                      <Text style={styles.exerciseName} numberOfLines={1}>
-                        {exercise.name}
-                      </Text>
-                      <View style={styles.exerciseMeta}>
-                        <View style={styles.categoryTag}>
-                          <Text style={styles.categoryTagText}>{exercise.category}</Text>
-                        </View>
-                        <View style={[
-                          styles.difficultyDot,
-                          { backgroundColor: getDifficultyColor(exercise.difficulty) }
-                        ]} />
+                    <LinearGradient
+                      colors={[colors.surface, colors.cardBackground] as [string, string]}
+                      style={styles.exerciseCardGradient}
+                    >
+                      {/* Left Side - Icon */}
+                      <View style={styles.exerciseIconContainer}>
+                        <Ionicons 
+                          name={exerciseIcons[exercise.id] as any || 'fitness-outline'} 
+                          size={32} 
+                          color={colors.primary} 
+                        />
                       </View>
-                    </View>
 
-                    {/* Right Side - Selection Indicator */}
-                    <View style={styles.selectionIconContainer}>
-                      {isSelected ? (
-                        <Ionicons name="checkmark-circle" size={28} color={colors.primary} />
-                      ) : (
-                        <View style={styles.unselectedCircle} />
-                      )}
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
+                      {/* Middle - Exercise Info */}
+                      <View style={styles.exerciseInfo}>
+                        <Text style={styles.exerciseName} numberOfLines={1}>
+                          {exercise.name}
+                        </Text>
+                        <View style={styles.exerciseMeta}>
+                          <View style={styles.categoryTag}>
+                            <Text style={styles.categoryTagText}>{exercise.category}</Text>
+                          </View>
+                          <View style={[
+                            styles.difficultyDot,
+                            { backgroundColor: getDifficultyColor(exercise.difficulty) }
+                          ]} />
+                        </View>
+                      </View>
+
+                      {/* Right Side - Add Icon */}
+                      <View style={styles.addIconContainer}>
+                        <Ionicons name="add-circle" size={28} color={colors.primary} />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })
+          )}
 
           <View style={{ height: 120 }} />
         </ScrollView>
@@ -443,11 +442,6 @@ const styles = StyleSheet.create({
   exerciseCard: {
     borderRadius: radius.lg,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  exerciseCardSelected: {
-    borderColor: colors.primary,
   },
   exerciseCardGradient: {
     flexDirection: 'row',
@@ -495,18 +489,32 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  selectionIconContainer: {
-    width: 32,
-    height: 32,
+  addIconContainer: {
+    width: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unselectedCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.cardBorder,
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 100,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyStateText: {
+    fontSize: 22,
+    fontFamily: fonts.bold,
+    color: colors.white,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 15,
+    fontFamily: fonts.regular,
+    color: colors.mutedText,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 
   // Save Button
