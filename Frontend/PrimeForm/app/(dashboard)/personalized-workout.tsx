@@ -21,56 +21,56 @@ interface Exercise {
   difficulty: string;
 }
 
-// Icons8 professional icons for exercises
+// Professional icons for exercises with variety
 const exerciseIcons: Record<string, string> = {
-  // Chest
-  'military_pushups': 'fitness',
-  'staggered_pushups': 'fitness',
-  'wide_arm_pushup': 'fitness',
-  'decline_pushups': 'fitness',
-  'incline_pushups': 'fitness',
-  'diamond_pushups': 'fitness',
+  // Chest - Push-up variations
+  'military_pushups': 'fitness-outline',
+  'staggered_pushups': 'git-compare-outline',
+  'wide_arm_pushup': 'expand-outline',
+  'decline_pushups': 'trending-down-outline',
+  'incline_pushups': 'trending-up-outline',
+  'diamond_pushups': 'diamond-outline',
   
-  // Back
-  'pullups': 'body',
-  'deadlifts': 'barbell',
-  'superman': 'airplane',
-  'rows': 'barbell',
+  // Back - Pull & Row exercises
+  'pullups': 'arrow-up-circle-outline',
+  'deadlifts': 'barbell-outline',
+  'superman': 'airplane-outline',
+  'rows': 'remove-outline',
   
-  // Arms
-  'bicep_curls': 'barbell',
-  'tricep_dips': 'remove',
-  'hammer_curls': 'barbell',
-  'overhead_press': 'barbell',
-  'shoulder_press': 'barbell',
+  // Arms - Curl & Press movements
+  'bicep_curls': 'refresh-outline',
+  'tricep_dips': 'chevron-down-circle-outline',
+  'hammer_curls': 'hammer-outline',
+  'overhead_press': 'arrow-up-outline',
+  'shoulder_press': 'push-outline',
   
-  // Legs
-  'squats': 'walk',
-  'lunges': 'walk',
-  'jump_squats': 'fitness',
-  'squat_kicks': 'footsteps',
-  'squat_reach': 'hand-right',
-  'split_jump': 'rocket',
-  'leg_press': 'walk',
-  'single_leg_rotation': 'sync-circle',
+  // Legs - Squat & Jump movements
+  'squats': 'resize-outline',
+  'lunges': 'walk-outline',
+  'jump_squats': 'rocket-outline',
+  'squat_kicks': 'tennisball-outline',
+  'squat_reach': 'hand-right-outline',
+  'split_jump': 'flash-outline',
+  'leg_press': 'arrows-collapse-outline',
+  'single_leg_rotation': 'sync-outline',
   
-  // Abs
-  'planks': 'fitness',
-  't_plank': 'fitness',
-  'crunches': 'fitness',
-  'sit_ups': 'fitness',
-  'flutter_kicks': 'footsteps',
-  'reverse_crunches': 'fitness',
-  'deadbug': 'bug',
-  'seated_abs_circles': 'sync',
-  'frog_press': 'fitness',
+  // Abs - Core exercises
+  'planks': 'remove-circle-outline',
+  't_plank': 'git-branch-outline',
+  'crunches': 'contrast-outline',
+  'sit_ups': 'triangle-outline',
+  'flutter_kicks': 'pulse-outline',
+  'reverse_crunches': 'return-up-back-outline',
+  'deadbug': 'bug-outline',
+  'seated_abs_circles': 'disc-outline',
+  'frog_press': 'paw-outline',
   
-  // Full Body
-  'burpees': 'flame',
-  'jumping_jacks': 'star',
-  'running': 'walk',
-  'punches': 'hand-left',
-  'squat_kick': 'footsteps',
+  // Full Body - Cardio & Compound movements
+  'burpees': 'flame-outline',
+  'jumping_jacks': 'star-outline',
+  'running': 'speedometer-outline',
+  'punches': 'hand-left-outline',
+  'squat_kick': 'football-outline',
 };
 
 export default function PersonalizedWorkoutScreen() {
