@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, ZoomIn, SlideInRight, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../../src/theme/colors';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
@@ -88,6 +88,13 @@ export default function PersonalizedWorkoutScreen() {
     checkTodayCompletion();
   }, []);
 
+  // Re-check completion status when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      checkTodayCompletion();
+    }, [])
+  );
+
   const loadWorkout = async () => {
     try {
       const savedWorkout = await AsyncStorage.getItem('personalizedWorkout');
@@ -162,7 +169,7 @@ export default function PersonalizedWorkoutScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
-          style: 'destructive',
+          style: 'destructive', 
           onPress: async () => {
             try {
               // Remove both the workout and the completion date
