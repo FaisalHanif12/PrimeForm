@@ -9,12 +9,12 @@ interface DailyProgressCardProps {
   onPress?: () => void;
 }
 
-export default function DailyProgressCard({ 
+const DailyProgressCard = React.memo(({ 
   dayName, 
   date, 
   status, 
   onPress 
-}: DailyProgressCardProps) {
+}: DailyProgressCardProps) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'completed':
@@ -103,7 +103,7 @@ export default function DailyProgressCard({
       </Text>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -154,3 +154,5 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 });
+
+export default DailyProgressCard;

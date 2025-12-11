@@ -13,13 +13,13 @@ interface WorkoutPlanCardProps {
   delay?: number;
 }
 
-export default function WorkoutPlanCard({ 
+const WorkoutPlanCard = React.memo(({ 
   title, 
   workouts, 
   completedExercises = new Set(),
   onPress, 
   delay = 0 
-}: WorkoutPlanCardProps) {
+}: WorkoutPlanCardProps) => {
   const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
   
   // Get today's date for completion checking (use local timezone to avoid UTC offset)
@@ -101,7 +101,7 @@ export default function WorkoutPlanCard({
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -248,3 +248,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+
+export default WorkoutPlanCard;

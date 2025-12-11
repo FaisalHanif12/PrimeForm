@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ScrollView, 
-  SafeAreaView, 
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  FlatList,
+  SafeAreaView,
   Dimensions,
   Platform,
   Image
@@ -661,14 +661,14 @@ export default function GymExercisesScreen() {
     return sum + duration;
   }, 0) / (exercises.length || 1));
 
-  const renderExerciseCard = (exercise: any, index: number) => {
+  // Optimized with useCallback to prevent re-creation on every render
+  const renderExerciseCard = useCallback(({ item: exercise, index }: { item: any; index: number }) => {
     // Get difficulty color and icon
     const difficultyColor = difficultyColors[exercise.difficulty as keyof typeof difficultyColors];
     const iconUrl = exerciseIcons[exercise.id] || exerciseIcons.pushups;
     
     return (
       <Animated.View
-        key={exercise.id}
         entering={SlideInRight.delay(100 + index * 50).springify()}
         style={styles.exerciseWrapper}
       >
@@ -761,7 +761,34 @@ export default function GymExercisesScreen() {
         </TouchableOpacity>
       </Animated.View>
     );
-  };
+  }, []);
+
+  // Key extractor for FlatList
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
+  // Empty component
+  const renderEmptyComponent = useCallback(() => (
+    <Animated.View entering={ZoomIn.delay(300).springify()} style={styles.emptyState}>
+      <View style={styles.emptyStateIcon}>
+        <Ionicons name="search-outline" size={48} color={colors.mutedText} />
+      </View>
+      <Text style={styles.emptyStateTitle}>No exercises found</Text>
+      <Text style={styles.emptyStateText}>
+        Try adjusting your filters to see more exercises
+      </Text>
+      <TouchableOpacity
+        style={styles.resetButton}
+        onPress={() => router.back()}
+      >
+        <Text style={styles.resetButtonText}>Go Back</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  ), [router]);
+
+  // Footer component
+  const renderFooter = useCallback(() => (
+    <View style={styles.bottomSpacing} />
+  ), []);
 
   return (
     <DecorativeBackground>
@@ -824,36 +851,21 @@ export default function GymExercisesScreen() {
 
         {/* Filter Chips - Removed */}
 
-        {/* Exercise List */}
-        <ScrollView
-          style={styles.container}
+        {/* Exercise List - Optimized with FlatList */}
+        <FlatList
+          data={exercises}
+          renderItem={renderExerciseCard}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
-        >
-          {exercises.length > 0 ? (
-            exercises.map((exercise, index) => renderExerciseCard(exercise, index))
-          ) : (
-            <Animated.View entering={ZoomIn.delay(300).springify()} style={styles.emptyState}>
-              <View style={styles.emptyStateIcon}>
-                <Ionicons name="search-outline" size={48} color={colors.mutedText} />
-              </View>
-              <Text style={styles.emptyStateTitle}>No exercises found</Text>
-              <Text style={styles.emptyStateText}>
-                Try adjusting your filters to see more exercises
-              </Text>
-              <TouchableOpacity 
-                style={styles.resetButton}
-                onPress={() => {
-                  // No filters to reset
-                }}
-              >
-                <Text style={styles.resetButtonText}>Go Back</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          )}
-
-          <View style={styles.bottomSpacing} />
-        </ScrollView>
+          ListEmptyComponent={renderEmptyComponent}
+          ListFooterComponent={renderFooter}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={10}
+          windowSize={10}
+        />
       </SafeAreaView>
     </DecorativeBackground>
   );

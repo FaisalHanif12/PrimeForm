@@ -20,7 +20,7 @@ interface Props {
   delay?: number;
 }
 
-export default function MealPlanCard({ title, meals, totalCalories, completedMeals = new Set(), onPress, delay = 0 }: Props) {
+const MealPlanCard = React.memo(({ title, meals, totalCalories, completedMeals = new Set(), onPress, delay = 0 }: Props) => {
   const { t } = useLanguage();
   
   // Helper function to check if meal is completed
@@ -94,7 +94,7 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
       </TouchableOpacity>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -224,3 +224,4 @@ const styles = StyleSheet.create({
   },
 });
 
+export default MealPlanCard;
