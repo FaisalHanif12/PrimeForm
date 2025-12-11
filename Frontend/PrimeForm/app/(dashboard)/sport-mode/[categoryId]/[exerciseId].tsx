@@ -156,77 +156,85 @@ export default function ExercisePlayerPage() {
         <View style={styles.headerSpacer} />
       </LinearGradient>
 
-      {/* Exercise Animation - Full Screen */}
+      {/* Exercise Animation Card */}
       <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.animationSection}>
-        <LinearGradient
-          colors={[category.color + '15', colors.background]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.animationGradient}
-        >
-          {/* Exercise Animation */}
-          <View style={styles.animationWrapper}>
-            <ExerciseAnimation
-              exerciseType={exercise.id}
-              isVisible={true}
-              style={styles.animation}
-            />
-          </View>
+        {/* White Card Container */}
+        <View style={styles.animationCard}>
+          <ExerciseAnimation
+            exerciseType={exercise.id}
+            isVisible={true}
+            style={styles.animation}
+          />
+        </View>
 
-          {/* Status Badge */}
-          {isPlaying && (
-            <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
-              <View style={[styles.statusDot, { backgroundColor: isPaused ? '#FF9800' : colors.primary }]} />
-              <Text style={styles.statusText}>{isPaused ? 'PAUSED' : 'TRAINING'}</Text>
-            </Animated.View>
-          )}
+        {/* Status Badge */}
+        {isPlaying && (
+          <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: isPaused ? '#FF9800' : colors.primary }]} />
+            <Text style={styles.statusText}>{isPaused ? 'PAUSED' : 'IN PROGRESS'}</Text>
+          </Animated.View>
+        )}
 
-          {/* Sport Badge */}
-          <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
-            <Text style={styles.sportIcon}>{category.icon}</Text>
-          </View>
-        </LinearGradient>
+        {/* Sport Badge */}
+        <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
+          <Text style={styles.sportIcon}>{category.icon}</Text>
+        </View>
       </Animated.View>
 
       {/* Stats Section */}
       <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.statsSection}>
-        <View style={styles.statsGrid}>
-          {/* Time Card */}
-          <View style={styles.statCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="time" size={24} color={colors.primary} />
+        {/* Time & Progress */}
+        <View style={styles.timeCard}>
+          <View style={styles.timeHeader}>
+            <View style={styles.timeInfo}>
+              <Ionicons name="time-outline" size={20} color={colors.mutedText} />
+              <Text style={styles.timeLabel}>Time Remaining</Text>
             </View>
-            <Text style={styles.statValue}>{formatTime(timeRemaining)}</Text>
-            <Text style={styles.statLabel}>TIME</Text>
-            {/* Progress Bar */}
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: category.color }]} />
+            <Text style={styles.timeValue}>{formatTime(timeRemaining)}</Text>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: category.color }]} />
+          </View>
+        </View>
+
+        {/* Reps & Sets Row */}
+        <View style={styles.statsRow}>
+          {/* Reps */}
+          <View style={[styles.miniStatCard, { flex: 1 }]}>
+            <View style={styles.miniStatHeader}>
+              <Ionicons name="repeat-outline" size={18} color={colors.mutedText} />
+              <Text style={styles.miniStatLabel}>Reps</Text>
             </View>
+            <Text style={styles.miniStatValue}>{currentRep}/{exercise.reps}</Text>
+            {isPlaying && !isPaused && (
+              <TouchableOpacity
+                style={[styles.miniCompleteButton, { backgroundColor: category.color }]}
+                onPress={handleRepComplete}
+              >
+                <Ionicons name="add" size={16} color={colors.white} />
+                <Text style={styles.miniCompleteText}>Complete</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Reps Card */}
-          <View style={styles.statCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: colors.blue + '20' }]}>
-              <Ionicons name="repeat" size={24} color={colors.blue} />
+          {/* Sets */}
+          <View style={[styles.miniStatCard, { flex: 1 }]}>
+            <View style={styles.miniStatHeader}>
+              <Ionicons name="layers-outline" size={18} color={colors.mutedText} />
+              <Text style={styles.miniStatLabel}>Sets</Text>
             </View>
-            <Text style={styles.statValue}>{currentRep}/{exercise.reps}</Text>
-            <Text style={styles.statLabel}>REPS</Text>
-            <TouchableOpacity
-              style={[styles.completeButton, { backgroundColor: colors.blue + '25' }]}
-              onPress={handleRepComplete}
-              disabled={!isPlaying || isPaused}
-            >
-              <Text style={[styles.completeButtonText, { color: colors.blue }]}>+1</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Sets Card */}
-          <View style={styles.statCard}>
-            <View style={[styles.statIconCircle, { backgroundColor: colors.gold + '20' }]}>
-              <Ionicons name="layers" size={24} color={colors.gold} />
+            <Text style={styles.miniStatValue}>{currentSet}/{exercise.sets}</Text>
+            <View style={styles.setsIndicator}>
+              {Array.from({ length: exercise.sets }).map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.setDot,
+                    { backgroundColor: index < currentSet ? category.color : colors.cardBorder }
+                  ]}
+                />
+              ))}
             </View>
-            <Text style={styles.statValue}>{currentSet}/{exercise.sets}</Text>
-            <Text style={styles.statLabel}>SETS</Text>
           </View>
         </View>
       </Animated.View>
@@ -312,23 +320,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   animationSection: {
-    height: screenHeight * 0.45,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+    position: 'relative',
+  },
+  animationCard: {
+    height: screenHeight * 0.48,
+    backgroundColor: colors.white,
     borderRadius: radius.xl,
-    margin: spacing.lg,
     overflow: 'hidden',
+    padding: spacing.lg,
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 12,
-  },
-  animationGradient: {
-    flex: 1,
-    position: 'relative',
-  },
-  animationWrapper: {
-    flex: 1,
-    padding: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -338,107 +345,148 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     position: 'absolute',
-    top: spacing.lg,
-    right: spacing.lg,
+    top: spacing.md,
+    right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: colors.surface + 'EE',
+    backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radius.lg,
     elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   sportBadge: {
     position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.lg,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    bottom: spacing.md,
+    left: spacing.md,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   sportIcon: {
-    fontSize: 28,
+    fontSize: 26,
   },
   statsSection: {
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-  },
-  statsGrid: {
-    flexDirection: 'row',
     gap: spacing.md,
   },
-  statCard: {
-    flex: 1,
+  timeCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     padding: spacing.lg,
-    alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
+  },
+  timeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
+  timeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
   },
-  statIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+  timeLabel: {
+    fontSize: 13,
+    color: colors.mutedText,
+    fontFamily: fonts.regular,
   },
-  statValue: {
-    fontSize: 22,
+  timeValue: {
+    fontSize: 28,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
   },
-  statLabel: {
-    fontSize: 10,
-    color: colors.mutedText,
-    fontFamily: fonts.regular,
-    letterSpacing: 1,
-  },
   progressBar: {
     width: '100%',
-    height: 4,
+    height: 6,
     backgroundColor: colors.background,
-    borderRadius: 2,
-    marginTop: spacing.xs,
+    borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
-  completeButton: {
-    marginTop: spacing.xs,
-    width: '100%',
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  miniStatCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  miniStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  miniStatLabel: {
+    fontSize: 12,
+    color: colors.mutedText,
+    fontFamily: fonts.regular,
+  },
+  miniStatValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.white,
+    fontFamily: fonts.bold,
+    marginBottom: spacing.sm,
+  },
+  miniCompleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     paddingVertical: spacing.xs,
     borderRadius: radius.md,
-    alignItems: 'center',
   },
-  completeButtonText: {
-    fontSize: 12,
+  miniCompleteText: {
+    fontSize: 11,
     fontWeight: '700',
+    color: colors.white,
     fontFamily: fonts.bold,
+  },
+  setsIndicator: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  setDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   controlSection: {
     paddingHorizontal: spacing.lg,
