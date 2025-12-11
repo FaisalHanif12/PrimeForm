@@ -71,7 +71,7 @@ const workoutCategories = [
     name: 'Full Body',
     iconName: 'accessibility',
     description: 'Complete workout',
-    exerciseCount: 6,
+    exerciseCount: 5,
     gradientColors: ['#a8edea', '#fed6e3'],
     iconBg: '#a8edea'
   },

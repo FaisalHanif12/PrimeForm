@@ -59,7 +59,7 @@ const exerciseAnimations: Record<string, any> = {
   // Full body exercises
   burpees: require('../../assets/Drafts/Burpee and Jump Exercise.json'),
   jumping_jacks: require('../../assets/Drafts/Jumping Jack.json'),
-  butterfly: require('../../assets/Drafts/Shoulder Stretch.json'), // Using Shoulder Stretch as butterfly has rendering issues
+  butterfly: require('../../assets/Drafts/Butterfly Exercise.json'),
   running: require('../../assets/Drafts/Running Boy.json'),
   punches: require('../../assets/Drafts/Punches.json'),
   squat_kick: require('../../assets/Drafts/Squat Kick.json'),
