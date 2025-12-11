@@ -19,9 +19,11 @@ import Animated, {
   withSequence,
   withTiming,
   Easing,
+  FadeIn,
 } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../../../src/theme/colors';
 import { getExercise, getSportCategory } from '../../../../src/data/sportExercises';
+import ExerciseAnimation from '../../../../src/components/ExerciseAnimation';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -206,20 +208,36 @@ export default function ExercisePlayerPage() {
         {/* Exercise Animation Display */}
         <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.animationContainer}>
           <LinearGradient
-            colors={[category.color + '20', category.color + '10']}
+            colors={[category.color + '30', category.color + '15', colors.background]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
             style={styles.animationGradient}
           >
-            <Animated.View style={[styles.exerciseIcon, animatedStyle]}>
-              <Text style={styles.exerciseIconText}>{category.icon}</Text>
-            </Animated.View>
+            {/* Live Exercise Animation */}
+            <View style={styles.liveAnimationWrapper}>
+              <ExerciseAnimation
+                exerciseType={exercise.id}
+                isVisible={true}
+                style={styles.liveAnimation}
+              />
+            </View>
 
+            {/* Status & Title Overlay */}
             {isPlaying && (
-              <View style={styles.statusBadge}>
+              <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
+                <View style={[styles.statusDot, { 
+                  backgroundColor: isPaused ? '#FF9800' : colors.primary 
+                }]} />
                 <Text style={styles.statusText}>
-                  {isPaused ? '⏸ PAUSED' : '▶ TRAINING'}
+                  {isPaused ? 'PAUSED' : 'IN PROGRESS'}
                 </Text>
-              </View>
+              </Animated.View>
             )}
+
+            {/* Sport Icon Badge */}
+            <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
+              <Text style={styles.sportIcon}>{category.icon}</Text>
+            </View>
           </LinearGradient>
         </Animated.View>
 
@@ -397,100 +415,141 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     margin: spacing.lg,
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   animationGradient: {
-    height: 280,
+    height: 320,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    paddingVertical: spacing.xl,
   },
-  exerciseIcon: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: colors.surface,
+  liveAnimationWrapper: {
+    width: '80%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
   },
-  exerciseIconText: {
-    fontSize: 80,
+  liveAnimation: {
+    width: '100%',
+    height: '100%',
   },
   statusBadge: {
     position: 'absolute',
     top: spacing.lg,
     right: spacing.lg,
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.surface + 'CC',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
+    letterSpacing: 0.5,
+  },
+  sportBadge: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    left: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  sportIcon: {
+    fontSize: 32,
   },
   statsContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
   statCard: {
     flex: 1,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    elevation: 3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: colors.white,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
     fontFamily: fonts.bold,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.mutedText,
-    marginTop: 2,
+    marginTop: 4,
     fontFamily: fonts.regular,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   progressBar: {
     width: '100%',
-    height: 4,
+    height: 6,
     backgroundColor: colors.background,
-    borderRadius: 2,
-    marginTop: spacing.sm,
+    borderRadius: 3,
+    marginTop: spacing.md,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   repButton: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
   },
   repButtonText: {
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   controls: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   controlButton: {
     flex: 1,
@@ -498,13 +557,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    elevation: 4,
+    paddingVertical: spacing.lg,
+    borderRadius: radius.xl,
+    elevation: 6,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
   },
   startButton: {
     flex: 1,
@@ -513,39 +572,48 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue,
   },
   resetButton: {
-    backgroundColor: colors.cardBorder,
+    backgroundColor: '#FF6B6B',
   },
   controlButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
+    letterSpacing: 0.5,
   },
   controlButtonTextSmall: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.white,
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
   },
   detailsSection: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   detailCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
   },
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
   detailTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
     color: colors.white,
     fontFamily: fonts.bold,
@@ -553,67 +621,70 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 15,
     color: colors.mutedText,
-    lineHeight: 22,
-    marginBottom: spacing.md,
+    lineHeight: 23,
+    marginBottom: spacing.lg,
     fontFamily: fonts.regular,
   },
   difficultyBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
   },
   difficultyText: {
     fontSize: 14,
-    fontWeight: '600',
-    fontFamily: fonts.semiBold,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   instructionItem: {
     flexDirection: 'row',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     alignItems: 'flex-start',
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    borderRadius: radius.lg,
   },
   instructionNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary + '20',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
+    marginRight: spacing.md,
     marginTop: 2,
   },
   instructionNumberText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.white,
     fontFamily: fonts.bold,
   },
   instructionText: {
     flex: 1,
     fontSize: 14,
-    color: colors.mutedText,
-    lineHeight: 20,
+    color: colors.white,
+    lineHeight: 21,
     fontFamily: fonts.regular,
   },
   muscleChips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   muscleChip: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.primary + '25',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: colors.primary + '50',
   },
   muscleChipText: {
     fontSize: 13,
     color: colors.primary,
-    fontWeight: '600',
-    fontFamily: fonts.semiBold,
+    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   equipmentList: {
     gap: spacing.sm,
