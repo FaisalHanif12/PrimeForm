@@ -94,6 +94,8 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
           autoPlay
           loop
           style={styles.animation}
+          colorFilters={[]}
+          renderMode="AUTOMATIC"
         />
       </View>
     );
@@ -108,6 +110,8 @@ const ExerciseAnimation: React.FC<ExerciseAnimationProps> = ({
         loop
         style={styles.animation}
         onAnimationFinish={onAnimationComplete}
+        colorFilters={[]}
+        renderMode="AUTOMATIC"
       />
     </View>
   );
@@ -123,6 +127,7 @@ const styles = StyleSheet.create({
   animation: {
     width: '100%',
     height: '100%',
+    backgroundColor: 'transparent',
   },
 });
 

@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   },
   animationSection: {
     height: 340,
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1091,7 +1091,7 @@ const styles = StyleSheet.create({
   },
   fullscreenAnimationSection: {
     height: 450,
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
