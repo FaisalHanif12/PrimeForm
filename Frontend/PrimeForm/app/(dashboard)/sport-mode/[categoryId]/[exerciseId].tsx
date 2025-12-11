@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -156,117 +157,123 @@ export default function ExercisePlayerPage() {
         <View style={styles.headerSpacer} />
       </LinearGradient>
 
-      {/* Exercise Animation Card */}
-      <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.animationSection}>
-        {/* White Card Container */}
-        <View style={styles.animationCard}>
-          <ExerciseAnimation
-            exerciseType={exercise.id}
-            isVisible={true}
-            style={styles.animation}
-          />
-        </View>
-
-        {/* Status Badge */}
-        {isPlaying && (
-          <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
-            <View style={[styles.statusDot, { backgroundColor: isPaused ? '#FF9800' : colors.primary }]} />
-            <Text style={styles.statusText}>{isPaused ? 'PAUSED' : 'IN PROGRESS'}</Text>
-          </Animated.View>
-        )}
-
-        {/* Sport Badge */}
-        <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
-          <Text style={styles.sportIcon}>{category.icon}</Text>
-        </View>
-      </Animated.View>
-
-      {/* Stats Section */}
-      <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.statsSection}>
-        {/* Time & Progress */}
-        <View style={styles.timeCard}>
-          <View style={styles.timeHeader}>
-            <View style={styles.timeInfo}>
-              <Ionicons name="time-outline" size={20} color={colors.mutedText} />
-              <Text style={styles.timeLabel}>Time Remaining</Text>
-            </View>
-            <Text style={styles.timeValue}>{formatTime(timeRemaining)}</Text>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Exercise Animation Card */}
+        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.animationSection}>
+          {/* White Card Container with Border Radius */}
+          <View style={styles.animationCard}>
+            <ExerciseAnimation
+              exerciseType={exercise.id}
+              isVisible={true}
+              style={styles.animation}
+            />
           </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: category.color }]} />
-          </View>
-        </View>
 
-        {/* Reps & Sets Row */}
-        <View style={styles.statsRow}>
-          {/* Reps */}
-          <View style={[styles.miniStatCard, { flex: 1 }]}>
-            <View style={styles.miniStatHeader}>
-              <Ionicons name="repeat-outline" size={18} color={colors.mutedText} />
-              <Text style={styles.miniStatLabel}>Reps</Text>
+          {/* Status Badge */}
+          {isPlaying && (
+            <Animated.View entering={FadeIn.duration(400)} style={styles.statusBadge}>
+              <View style={[styles.statusDot, { backgroundColor: isPaused ? '#FF9800' : colors.primary }]} />
+              <Text style={styles.statusText}>{isPaused ? 'PAUSED' : 'IN PROGRESS'}</Text>
+            </Animated.View>
+          )}
+
+          {/* Sport Badge */}
+          <View style={[styles.sportBadge, { backgroundColor: category.color }]}>
+            <Text style={styles.sportIcon}>{category.icon}</Text>
+          </View>
+        </Animated.View>
+
+        {/* Stats Section */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.statsSection}>
+          {/* Time & Progress */}
+          <View style={styles.timeCard}>
+            <View style={styles.timeHeader}>
+              <View style={styles.timeInfo}>
+                <Ionicons name="time-outline" size={20} color={colors.mutedText} />
+                <Text style={styles.timeLabel}>Time Remaining</Text>
+              </View>
+              <Text style={styles.timeValue}>{formatTime(timeRemaining)}</Text>
             </View>
-            <Text style={styles.miniStatValue}>{currentRep}/{exercise.reps}</Text>
-            {isPlaying && !isPaused && (
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: category.color }]} />
+            </View>
+          </View>
+
+          {/* Reps & Sets Row */}
+          <View style={styles.statsRow}>
+            {/* Reps */}
+            <View style={[styles.miniStatCard, { flex: 1 }]}>
+              <View style={styles.miniStatHeader}>
+                <Ionicons name="repeat-outline" size={18} color={colors.mutedText} />
+                <Text style={styles.miniStatLabel}>Reps</Text>
+              </View>
+              <Text style={styles.miniStatValue}>{currentRep}/{exercise.reps}</Text>
+              {isPlaying && !isPaused && (
+                <TouchableOpacity
+                  style={[styles.miniCompleteButton, { backgroundColor: category.color }]}
+                  onPress={handleRepComplete}
+                >
+                  <Ionicons name="add" size={16} color={colors.white} />
+                  <Text style={styles.miniCompleteText}>Complete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Sets */}
+            <View style={[styles.miniStatCard, { flex: 1 }]}>
+              <View style={styles.miniStatHeader}>
+                <Ionicons name="layers-outline" size={18} color={colors.mutedText} />
+                <Text style={styles.miniStatLabel}>Sets</Text>
+              </View>
+              <Text style={styles.miniStatValue}>{currentSet}/{exercise.sets}</Text>
+              <View style={styles.setsIndicator}>
+                {Array.from({ length: exercise.sets }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.setDot,
+                      { backgroundColor: index < currentSet ? category.color : colors.cardBorder }
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Control Buttons */}
+        <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.controlSection}>
+          {!isPlaying ? (
+            <TouchableOpacity
+              style={[styles.primaryButton, { backgroundColor: category.color }]}
+              onPress={handleStart}
+            >
+              <Ionicons name="play" size={28} color={colors.white} />
+              <Text style={styles.primaryButtonText}>Start Exercise</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.controlRow}>
               <TouchableOpacity
-                style={[styles.miniCompleteButton, { backgroundColor: category.color }]}
-                onPress={handleRepComplete}
+                style={[styles.secondaryButton, { backgroundColor: isPaused ? colors.primary : '#FF9800' }]}
+                onPress={handlePause}
               >
-                <Ionicons name="add" size={16} color={colors.white} />
-                <Text style={styles.miniCompleteText}>Complete</Text>
+                <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.white} />
               </TouchableOpacity>
-            )}
-          </View>
 
-          {/* Sets */}
-          <View style={[styles.miniStatCard, { flex: 1 }]}>
-            <View style={styles.miniStatHeader}>
-              <Ionicons name="layers-outline" size={18} color={colors.mutedText} />
-              <Text style={styles.miniStatLabel}>Sets</Text>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { backgroundColor: '#FF6B6B' }]}
+                onPress={handleReset}
+              >
+                <Ionicons name="refresh" size={24} color={colors.white} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.miniStatValue}>{currentSet}/{exercise.sets}</Text>
-            <View style={styles.setsIndicator}>
-              {Array.from({ length: exercise.sets }).map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.setDot,
-                    { backgroundColor: index < currentSet ? category.color : colors.cardBorder }
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* Control Buttons */}
-      <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.controlSection}>
-        {!isPlaying ? (
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: category.color }]}
-            onPress={handleStart}
-          >
-            <Ionicons name="play" size={28} color={colors.white} />
-            <Text style={styles.primaryButtonText}>Start Exercise</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.controlRow}>
-            <TouchableOpacity
-              style={[styles.secondaryButton, { backgroundColor: isPaused ? colors.primary : '#FF9800' }]}
-              onPress={handlePause}
-            >
-              <Ionicons name={isPaused ? 'play' : 'pause'} size={24} color={colors.white} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.secondaryButton, { backgroundColor: '#FF6B6B' }]}
-              onPress={handleReset}
-            >
-              <Ionicons name="refresh" size={24} color={colors.white} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </Animated.View>
+          )}
+        </Animated.View>
+      </ScrollView>
     </View>
   );
 }
@@ -275,6 +282,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl * 2,
   },
   header: {
     paddingTop: 60,
@@ -328,7 +341,7 @@ const styles = StyleSheet.create({
   animationCard: {
     height: screenHeight * 0.48,
     backgroundColor: colors.white,
-    borderRadius: radius.xl,
+    borderRadius: 24,
     overflow: 'hidden',
     padding: spacing.lg,
     elevation: 8,
@@ -342,6 +355,7 @@ const styles = StyleSheet.create({
   animation: {
     width: '100%',
     height: '100%',
+    borderRadius: 16,
   },
   statusBadge: {
     position: 'absolute',
@@ -490,7 +504,7 @@ const styles = StyleSheet.create({
   },
   controlSection: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.md,
     gap: spacing.md,
   },
   primaryButton: {
@@ -499,7 +513,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
     paddingVertical: spacing.lg,
-    borderRadius: radius.xl,
+    borderRadius: 16,
     elevation: 6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 3 },
@@ -522,7 +536,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: spacing.lg,
-    borderRadius: radius.xl,
+    borderRadius: 16,
     elevation: 4,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
