@@ -180,11 +180,14 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   // If no userInfo was passed but the modal is visible, we proactively check the backend once.
   useEffect(() => {
     let isCancelled = false;
+    let hasStartedLoading = false;
 
     const ensureProfileLoaded = async () => {
-      if (!visible || userInfo || hasCheckedExisting || isInitialLoading) {
+      if (!visible || userInfo || hasCheckedExisting || hasStartedLoading) {
         return;
       }
+      
+      hasStartedLoading = true;
 
       // Small delay to allow parent to pass userInfo first (prevents flash of loading)
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -234,7 +237,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     return () => {
       isCancelled = true;
     };
-  }, [visible, userInfo, hasCheckedExisting, isInitialLoading, onUpdateUserInfo]);
+  }, [visible, userInfo, hasCheckedExisting]); // Removed onUpdateUserInfo and isInitialLoading to prevent infinite loop
 
   const handleEdit = () => {
     setIsEditing(true);
