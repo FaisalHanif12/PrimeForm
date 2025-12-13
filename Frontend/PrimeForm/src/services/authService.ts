@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
+import { extractUserIdFromToken, setCurrentUserId, clearCurrentUserId, clearUserCache, validateCacheOnLogin, cleanupOrphanedCache } from '../utils/cacheKeys';
 
 interface LoginResponse {
   success: boolean;
@@ -104,9 +105,18 @@ class AuthService {
     }
   }
 
-  // Store auth token
+  // Store auth token and extract user ID
   private async storeToken(token: string): Promise<void> {
     await AsyncStorage.setItem('authToken', token);
+    
+    // Extract and store user ID from token for cache key management
+    const userId = extractUserIdFromToken(token);
+    if (userId) {
+      await setCurrentUserId(userId);
+      console.log('✅ User ID stored for cache management:', userId);
+    } else {
+      console.warn('⚠️ Could not extract user ID from token');
+    }
   }
 
   // Get stored token
@@ -114,39 +124,32 @@ class AuthService {
     return await AsyncStorage.getItem('authToken');
   }
 
-  // Clear auth token
+  // Clear auth token and user ID
   async clearToken(): Promise<void> {
     await AsyncStorage.removeItem('authToken');
+    await clearCurrentUserId();
   }
 
   // Clear all user-related data
   async clearAllUserData(): Promise<void> {
     try {
-      // Clear auth token
+      // Get current user ID before clearing token
+      const currentUserId = await AsyncStorage.getItem('current_user_id');
+
+      // Clear all user-specific cache using the utility
+      if (currentUserId) {
+        await clearUserCache(currentUserId);
+      }
+
+      // Clear auth token and user ID (this must happen after clearing cache)
       await this.clearToken();
 
-      // Clear any cached user profile data
+      // Clear any cached user profile data (legacy keys)
       await AsyncStorage.removeItem('userProfileData');
       await AsyncStorage.removeItem('userProfileImage'); // Clear profile image
       await AsyncStorage.removeItem('primeform_user_info_completed');
       await AsyncStorage.removeItem('primeform_user_info_cancelled');
       await AsyncStorage.removeItem('primeform_permission_modal_seen');
-
-      // Clear any other user-specific data
-      const keys = await AsyncStorage.getAllKeys();
-      const userDataKeys = keys.filter(key =>
-        key.includes('user') ||
-        key.includes('profile') ||
-        key.includes('primeform') ||
-        key.includes('image') ||
-        key.includes('avatar') ||
-        key.includes('photo')
-      );
-
-      if (userDataKeys.length > 0) {
-        await AsyncStorage.multiRemove(userDataKeys);
-        console.log('Cleared user data keys:', userDataKeys);
-      }
 
       // Clear user profile service cache
       try {
@@ -155,6 +158,38 @@ class AuthService {
         console.log('✅ User profile service cache cleared');
       } catch (error) {
         console.log('User profile service not available for cache clearing');
+      }
+
+      // Clear AI services cache (both in-memory and persistent)
+      try {
+        const { default: aiDietService } = await import('./aiDietService');
+        aiDietService.clearInMemoryCache(); // Clear in-memory cache first
+        await aiDietService.clearDietPlanFromDatabase(); // Then clear persistent cache
+      } catch (error) {
+        // Ignore if service not available
+      }
+
+      try {
+        const { default: aiWorkoutService } = await import('./aiWorkoutService');
+        aiWorkoutService.clearInMemoryCache(); // Clear in-memory cache first
+        await aiWorkoutService.clearWorkoutPlanFromDatabase(); // Then clear persistent cache
+      } catch (error) {
+        // Ignore if service not available
+      }
+
+      // Clear completion services (reset in-memory data)
+      try {
+        const { default: mealCompletionService } = await import('./mealCompletionService');
+        await mealCompletionService.resetCompletionData();
+      } catch (error) {
+        // Ignore if service not available
+      }
+
+      try {
+        const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+        await exerciseCompletionService.clearCompletionData();
+      } catch (error) {
+        // Ignore if service not available
       }
 
       console.log('✅ All user data cleared successfully');
@@ -174,11 +209,40 @@ class AuthService {
       console.log('Login API Response:', response);
 
       if (response.success && response.token) {
+        // Extract user ID from token first (before clearing)
+        const newUserId = extractUserIdFromToken(response.token);
+        
         // Clear any existing user data before storing new token
         await this.clearAllUserData();
+        
+        // Clean up any orphaned cache from other users
+        if (newUserId) {
+          await cleanupOrphanedCache(newUserId);
+        }
 
-        // Store new token
+        // Store new token and extract user ID
         await this.storeToken(response.token);
+        
+        // Validate and clean cache for the new user
+        if (newUserId) {
+          await validateCacheOnLogin(newUserId);
+          
+          // Reinitialize completion services for new user
+          try {
+            const { default: mealCompletionService } = await import('./mealCompletionService');
+            await mealCompletionService.reinitialize();
+          } catch (error) {
+            // Ignore if service not available
+          }
+
+          try {
+            const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+            await exerciseCompletionService.reinitialize();
+          } catch (error) {
+            // Ignore if service not available
+          }
+        }
+        
         return response;
       }
 
@@ -216,9 +280,39 @@ class AuthService {
       const response = await this.apiCall('/auth/signup', 'POST', payload);
 
       if (response.success && response.token) {
+        // Extract user ID from token first (before clearing)
+        const newUserId = extractUserIdFromToken(response.token);
+        
         // Clear any existing user data before storing new token
         await this.clearAllUserData();
+        
+        // Clean up any orphaned cache from other users
+        if (newUserId) {
+          await cleanupOrphanedCache(newUserId);
+        }
+        
+        // Store new token and extract user ID
         await this.storeToken(response.token);
+        
+        // Validate and clean cache for the new user
+        if (newUserId) {
+          await validateCacheOnLogin(newUserId);
+          
+          // Reinitialize completion services for new user
+          try {
+            const { default: mealCompletionService } = await import('./mealCompletionService');
+            await mealCompletionService.reinitialize();
+          } catch (error) {
+            // Ignore if service not available
+          }
+
+          try {
+            const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+            await exerciseCompletionService.reinitialize();
+          } catch (error) {
+            // Ignore if service not available
+          }
+        }
 
         // Check if this is the first time this user has signed up
         const hasSignedUpBefore = await AsyncStorage.getItem(`user_${payload.email}_has_signed_up`);

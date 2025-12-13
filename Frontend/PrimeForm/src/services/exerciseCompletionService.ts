@@ -2,6 +2,7 @@ import Storage from '../utils/storage';
 import workoutPlanService from './workoutPlanService';
 import streakService from './streakService';
 import { DeviceEventEmitter } from 'react-native';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 
 interface CompletionData {
   completedExercises: string[];
@@ -29,10 +30,23 @@ class ExerciseCompletionService {
     try {
       console.log('🔄 Initializing exercise completion service...');
       
-      // Load from AsyncStorage
+      // Load from AsyncStorage with user-specific keys
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        // No user ID, initialize with empty data
+        this.completionData.completedExercises = [];
+        this.completionData.completedDays = [];
+        return;
+      }
+
+      const [exercisesKey, daysKey] = await Promise.all([
+        getUserCacheKey('completed_exercises', userId),
+        getUserCacheKey('completed_workout_days', userId),
+      ]);
+
       const [exercisesData, daysData] = await Promise.all([
-        Storage.getItem('completed_exercises'),
-        Storage.getItem('completed_workout_days'),
+        Storage.getItem(exercisesKey),
+        Storage.getItem(daysKey),
       ]);
 
       this.completionData.completedExercises = exercisesData ? JSON.parse(exercisesData) : [];
@@ -187,9 +201,20 @@ class ExerciseCompletionService {
   // Save completion data to storage
   private async saveToStorage(): Promise<void> {
     try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot save exercise completion data');
+        return;
+      }
+
+      const [exercisesKey, daysKey] = await Promise.all([
+        getUserCacheKey('completed_exercises', userId),
+        getUserCacheKey('completed_workout_days', userId),
+      ]);
+
       await Promise.all([
-        Storage.setItem('completed_exercises', JSON.stringify(this.completionData.completedExercises)),
-        Storage.setItem('completed_workout_days', JSON.stringify(this.completionData.completedDays)),
+        Storage.setItem(exercisesKey, JSON.stringify(this.completionData.completedExercises)),
+        Storage.setItem(daysKey, JSON.stringify(this.completionData.completedDays)),
       ]);
       console.log('💾 Completion data saved to storage');
     } catch (error) {
@@ -209,15 +234,37 @@ class ExerciseCompletionService {
         lastUpdated: new Date().toISOString(),
       };
 
-      await Promise.all([
-        Storage.removeItem('completed_exercises'),
-        Storage.removeItem('completed_workout_days'),
-      ]);
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const [exercisesKey, daysKey] = await Promise.all([
+          getUserCacheKey('completed_exercises', userId),
+          getUserCacheKey('completed_workout_days', userId),
+        ]);
+
+        await Promise.all([
+          Storage.removeItem(exercisesKey),
+          Storage.removeItem(daysKey),
+          // Also clear old global keys for migration
+          Storage.removeItem('completed_exercises'),
+          Storage.removeItem('completed_workout_days'),
+        ]);
+      }
 
       console.log('✅ All completion data cleared');
     } catch (error) {
       console.error('❌ Error clearing completion data:', error);
     }
+  }
+
+  // Reinitialize for new user (clears in-memory data and reloads from storage)
+  async reinitialize(): Promise<void> {
+    this.completionData = {
+      completedExercises: [],
+      completedDays: [],
+      lastUpdated: new Date().toISOString(),
+    };
+    await this.initialize(); // Reload from storage for new user
+    console.log('🔄 Exercise completion service reinitialized for new user');
   }
 
   // Sync with database (for when app starts)

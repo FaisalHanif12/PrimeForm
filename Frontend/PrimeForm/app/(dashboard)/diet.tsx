@@ -85,10 +85,19 @@ export default function DietScreen() {
     const initializeData = async () => {
       try {
         // OPTIMIZATION: Use cached data only - no API calls on page visit
-        const cachedData = userProfileService.getCachedData();
+        const cachedData = await userProfileService.getCachedData();
+        // Validate cached data belongs to current user
         if (cachedData && cachedData.data) {
-          setUserInfo(cachedData.data);
-          setIsLoading(false);
+          const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+          const userId = await getCurrentUserId();
+          if (userId && validateCachedData(cachedData.data, userId)) {
+            setUserInfo(cachedData.data);
+            setIsLoading(false);
+          } else {
+            // Cached data doesn't belong to current user, clear it
+            await userProfileService.clearCache();
+            setIsLoading(false);
+          }
         } else {
           // No cached data - show profile creation UI
           setIsLoading(false);
@@ -302,26 +311,33 @@ export default function DietScreen() {
     try {
       setLoadError(null);
       
-      // ✅ CRITICAL: First check local storage immediately (synchronous check)
+      // ✅ CRITICAL: First check local storage with user-specific key
       // This prevents showing generation screen if plan exists locally
       try {
+        const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
         const Storage = await import('../../src/utils/storage');
-        const cachedPlan = await Storage.default.getItem('cached_diet_plan');
-        if (cachedPlan) {
-          const plan = JSON.parse(cachedPlan);
-          if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-            console.log('✅ Found diet plan in local storage, using it immediately');
-            setDietPlan(plan);
-            setHasCheckedLocalStorage(true);
-            // Still try to sync with database in background, but don't wait
-            aiDietService.loadDietPlanFromDatabase().then((dbPlan) => {
-              if (dbPlan && dbPlan !== plan) {
-                setDietPlan(dbPlan);
-              }
-            }).catch(() => {
-              // Ignore background sync errors
-            });
-            return;
+        
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+          const cachedPlan = await Storage.default.getItem(userCacheKey);
+          if (cachedPlan) {
+            const plan = JSON.parse(cachedPlan);
+            // Validate cached data belongs to current user
+            if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+              console.log('✅ Found diet plan in local storage, using it immediately');
+              setDietPlan(plan);
+              setHasCheckedLocalStorage(true);
+              // Still try to sync with database in background, but don't wait
+              aiDietService.loadDietPlanFromDatabase().then((dbPlan) => {
+                if (dbPlan && dbPlan !== plan) {
+                  setDietPlan(dbPlan);
+                }
+              }).catch(() => {
+                // Ignore background sync errors
+              });
+              return;
+            }
           }
         }
       } catch (localError) {
@@ -343,15 +359,22 @@ export default function DietScreen() {
       
       // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
       try {
+        const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
         const Storage = await import('../../src/utils/storage');
-        const cachedPlan = await Storage.default.getItem('cached_diet_plan');
-        if (cachedPlan) {
-          const plan = JSON.parse(cachedPlan);
-          if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-            console.log('✅ Fallback: Found diet plan in local storage after error');
-            setDietPlan(plan);
-            setLoadError(null); // Clear error since we found plan locally
-            return;
+        
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+          const cachedPlan = await Storage.default.getItem(userCacheKey);
+          if (cachedPlan) {
+            const plan = JSON.parse(cachedPlan);
+            // Validate cached data belongs to current user
+            if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+              console.log('✅ Fallback: Found diet plan in local storage after error');
+              setDietPlan(plan);
+              setLoadError(null); // Clear error since we found plan locally
+              return;
+            }
           }
         }
       } catch (localError) {

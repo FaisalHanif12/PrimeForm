@@ -3,6 +3,7 @@ import Storage from '../utils/storage';
 import aiWorkoutService from './aiWorkoutService';
 import aiDietService from './aiDietService';
 import userProfileService from './userProfileService';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -71,8 +72,18 @@ class AITrainerService {
         console.warn('⚠️ Backend not available, loading from local storage');
       }
 
-      // Load current conversation from local storage
-      const currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
+      // Load current conversation from local storage with user-specific key
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return {
+          success: false,
+          message: 'User not authenticated',
+          data: []
+        };
+      }
+
+      const currentConversationIdKey = await getUserCacheKey('ai_trainer_current_conversation_id', userId);
+      const currentConversationId = await Storage.getItem(currentConversationIdKey);
       
       if (currentConversationId) {
         const conversations = await this.getAllConversations();
@@ -89,8 +100,9 @@ class AITrainerService {
         }
       }
 
-      // Fallback to old format for backward compatibility
-      const chatHistory = await Storage.getItem('ai_trainer_chat') || '[]';
+      // Fallback to old format for backward compatibility (with user-specific key)
+      const chatHistoryKey = await getUserCacheKey('ai_trainer_chat', userId);
+      const chatHistory = await Storage.getItem(chatHistoryKey) || '[]';
       const messages = JSON.parse(chatHistory).map((msg: any) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
@@ -115,7 +127,13 @@ class AITrainerService {
   // Get all conversations
   async getAllConversations(): Promise<ChatConversation[]> {
     try {
-      const conversationsJson = await Storage.getItem('ai_trainer_conversations') || '[]';
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return [];
+      }
+
+      const conversationsKey = await getUserCacheKey('ai_trainer_conversations', userId);
+      const conversationsJson = await Storage.getItem(conversationsKey) || '[]';
       const conversations = JSON.parse(conversationsJson).map((conv: any) => ({
         ...conv,
         messages: conv.messages.map((msg: any) => ({
@@ -172,8 +190,15 @@ class AITrainerService {
         updatedAt: conv.updatedAt instanceof Date ? conv.updatedAt.toISOString() : conv.updatedAt
       }));
       
-      await Storage.setItem('ai_trainer_conversations', JSON.stringify(serializedConversations));
-      await Storage.setItem('ai_trainer_current_conversation_id', conversationId);
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const [conversationsKey, currentIdKey] = await Promise.all([
+          getUserCacheKey('ai_trainer_conversations', userId),
+          getUserCacheKey('ai_trainer_current_conversation_id', userId),
+        ]);
+        await Storage.setItem(conversationsKey, JSON.stringify(serializedConversations));
+        await Storage.setItem(currentIdKey, conversationId);
+      }
       
       return conversationId;
     } catch (error) {
@@ -187,10 +212,18 @@ class AITrainerService {
     try {
       const conversations = await this.getAllConversations();
       const filtered = conversations.filter(conv => conv.id !== conversationId);
-      await Storage.setItem('ai_trainer_conversations', JSON.stringify(filtered));
+      
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return { wasCurrent: false, switchedToNew: false };
+      }
+
+      const conversationsKey = await getUserCacheKey('ai_trainer_conversations', userId);
+      await Storage.setItem(conversationsKey, JSON.stringify(filtered));
       
       // If deleted conversation was current, switch to another conversation or create new one
-      const currentId = await Storage.getItem('ai_trainer_current_conversation_id');
+      const currentIdKey = await getUserCacheKey('ai_trainer_current_conversation_id', userId);
+      const currentId = await Storage.getItem(currentIdKey);
       const wasCurrent = currentId === conversationId;
       let switchedToNew = false;
       
@@ -225,7 +258,11 @@ class AITrainerService {
         };
       }
 
-      await Storage.setItem('ai_trainer_current_conversation_id', conversationId);
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const currentIdKey = await getUserCacheKey('ai_trainer_current_conversation_id', userId);
+        await Storage.setItem(currentIdKey, conversationId);
+      }
       
       return {
         success: true,
@@ -627,7 +664,14 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
   // Save chat message to local storage
   private async saveChatMessage(userMessage: string, aiMessage: string, category: 'workout' | 'diet' | 'motivation' | 'general'): Promise<void> {
     try {
-      let currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot save chat message');
+        return;
+      }
+
+      const currentIdKey = await getUserCacheKey('ai_trainer_current_conversation_id', userId);
+      let currentConversationId = await Storage.getItem(currentIdKey);
       
       // Create new conversation if none exists
       if (!currentConversationId) {
@@ -639,7 +683,8 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
       
       if (!currentConversation) {
         // Fallback to old format
-        const chatHistory = await Storage.getItem('ai_trainer_chat') || '[]';
+        const chatHistoryKey = await getUserCacheKey('ai_trainer_chat', userId);
+        const chatHistory = await Storage.getItem(chatHistoryKey) || '[]';
         const messages = JSON.parse(chatHistory);
         const timestamp = new Date();
         
@@ -659,7 +704,8 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
         });
         
         const recentMessages = messages.slice(-50);
-        await Storage.setItem('ai_trainer_chat', JSON.stringify(recentMessages));
+        // Reuse chatHistoryKey variable (already declared above)
+        await Storage.setItem(chatHistoryKey, JSON.stringify(recentMessages));
         return;
       }
 
@@ -732,7 +778,11 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
         };
       });
       
-      await Storage.setItem('ai_trainer_conversations', JSON.stringify(updatedConversations));
+      // Reuse userId variable (already declared at the beginning of the function)
+      if (userId) {
+        const conversationsKey = await getUserCacheKey('ai_trainer_conversations', userId);
+        await Storage.setItem(conversationsKey, JSON.stringify(updatedConversations));
+      }
       
     } catch (error) {
       console.error('❌ Error saving chat message:', error);
@@ -774,8 +824,22 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
     try {
       // Get user progress data
       const userProfile = await userProfileService.getUserProfile();
-      const completedExercises = await Storage.getItem('completed_exercises') || '[]';
-      const completedMeals = await Storage.getItem('completed_meals') || '[]';
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        return {
+          success: false,
+          message: 'User not authenticated',
+          data: []
+        };
+      }
+
+      const [exercisesKey, mealsKey] = await Promise.all([
+        getUserCacheKey('completed_exercises', userId),
+        getUserCacheKey('completed_meals', userId),
+      ]);
+
+      const completedExercises = await Storage.getItem(exercisesKey) || '[]';
+      const completedMeals = await Storage.getItem(mealsKey) || '[]';
       
       const exercisesList = JSON.parse(completedExercises);
       const mealsList = JSON.parse(completedMeals);
@@ -1148,9 +1212,24 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
   // Clear chat history
   async clearChatHistory(): Promise<void> {
     try {
-      await Storage.removeItem('ai_trainer_chat');
-      await Storage.removeItem('ai_trainer_conversations');
-      await Storage.removeItem('ai_trainer_current_conversation_id');
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const [chatKey, conversationsKey, currentIdKey] = await Promise.all([
+          getUserCacheKey('ai_trainer_chat', userId),
+          getUserCacheKey('ai_trainer_conversations', userId),
+          getUserCacheKey('ai_trainer_current_conversation_id', userId),
+        ]);
+
+        await Promise.all([
+          Storage.removeItem(chatKey),
+          Storage.removeItem(conversationsKey),
+          Storage.removeItem(currentIdKey),
+          // Also clear old global keys for migration
+          Storage.removeItem('ai_trainer_chat'),
+          Storage.removeItem('ai_trainer_conversations'),
+          Storage.removeItem('ai_trainer_current_conversation_id'),
+        ]);
+      }
       console.log('🗑️ AI trainer chat history cleared');
     } catch (error) {
       console.error('❌ Error clearing chat history:', error);

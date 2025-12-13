@@ -4,6 +4,7 @@ import aiWorkoutService, { WorkoutPlan, WorkoutDay, WorkoutExercise } from './ai
 import aiDietService, { DietPlan, DietDay, DietMeal } from './aiDietService';
 import exerciseCompletionService from './exerciseCompletionService';
 import mealCompletionService from './mealCompletionService';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 
 interface ProgressStats {
   caloriesConsumed: number;
@@ -150,9 +151,12 @@ class ProgressService {
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
       const mealCompletionData = mealCompletionService.getCompletionData();
       
-      // Load water intake data
-      const waterIntakeData = await Storage.getItem('water_intake') || '{}';
-      const waterCompletedData = await Storage.getItem('water_completed') || '{}';
+      // Load water intake data with user-specific keys
+      const userId = await getCurrentUserId();
+      const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+      const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+      const waterIntakeData = await Storage.getItem(waterIntakeKey) || '{}';
+      const waterCompletedData = await Storage.getItem(waterCompletedKey) || '{}';
       const waterData = JSON.parse(waterIntakeData);
       const waterCompleted = JSON.parse(waterCompletedData);
 
@@ -1235,8 +1239,11 @@ class ProgressService {
     selectedWeek?: number,
     selectedMonth?: number
   ): Promise<number[]> {
-    const waterIntakeData = await Storage.getItem('water_intake') || '{}';
-    const waterCompletedData = await Storage.getItem('water_completed') || '{}';
+    const userId = await getCurrentUserId();
+    const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+    const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+    const waterIntakeData = await Storage.getItem(waterIntakeKey) || '{}';
+    const waterCompletedData = await Storage.getItem(waterCompletedKey) || '{}';
     const waterData = JSON.parse(waterIntakeData);
     const waterCompleted = JSON.parse(waterCompletedData);
     
@@ -1642,8 +1649,22 @@ class ProgressService {
     try {
       await exerciseCompletionService.clearCompletionData();
       await mealCompletionService.resetCompletionData();
-      await Storage.removeItem('water_intake');
-      await Storage.removeItem('water_completed');
+      
+      // Clear water data with user-specific keys
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const [waterIntakeKey, waterCompletedKey] = await Promise.all([
+          getUserCacheKey('water_intake', userId),
+          getUserCacheKey('water_completed', userId),
+        ]);
+        await Promise.all([
+          Storage.removeItem(waterIntakeKey),
+          Storage.removeItem(waterCompletedKey),
+          // Also clear old global keys for migration
+          Storage.removeItem('water_intake'),
+          Storage.removeItem('water_completed'),
+        ]);
+      }
       await Storage.removeItem('last_progress_cleanup');
     } catch (error) {
       // Error clearing progress data
