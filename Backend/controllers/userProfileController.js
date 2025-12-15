@@ -76,6 +76,9 @@ exports.createOrUpdateProfile = async (req, res) => {
     console.log('🔍 createOrUpdateProfile - User email:', req.user.email);
     console.log('🔍 createOrUpdateProfile - Profile data received:', profileData);
     
+    // Find existing profile first (needed for validation logic)
+    let userProfile = await UserProfile.findOne({ userId });
+    
     // Validate required fields
     const requiredFields = ['country', 'age', 'gender', 'height', 'currentWeight', 'bodyGoal'];
     const missingFields = requiredFields.filter(field => !profileData[field]);
@@ -107,9 +110,6 @@ exports.createOrUpdateProfile = async (req, res) => {
         });
       }
     }
-    
-    // Find existing profile or create new one
-    let userProfile = await UserProfile.findOne({ userId });
     
     console.log('🔍 createOrUpdateProfile - Existing profile found:', userProfile ? 'Yes' : 'No');
     if (userProfile) {

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
@@ -27,6 +28,7 @@ import SignupModal from '../../src/components/SignupModal';
 import { useToast } from '../../src/context/ToastContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../src/contexts/NotificationContext';
+import { getUserCacheKey, getCurrentUserId } from '../../src/utils/cacheKeys';
 
 
 interface DashboardData {
@@ -325,9 +327,9 @@ export default function DashboardScreen() {
   }, [showProfilePage, isAuthenticated]);
 
   // OPTIMIZATION: Check backend availability using cached data only - no API call
-  const checkBackendAvailability = () => {
+  const checkBackendAvailability = async () => {
     // Use cached data to determine availability - no API call needed
-    const cachedProfile = userProfileService.getCachedData();
+    const cachedProfile = await userProfileService.getCachedData();
     if (cachedProfile) {
       setBackendAvailable(true);
       setOfflineMode(false);
@@ -390,12 +392,27 @@ export default function DashboardScreen() {
   // OPTIMIZATION: Load user info from cache first, fallback to API only if authenticated and no cache
   const loadUserInfoFromCacheFirst = async () => {
     try {
-      // Check if we have cached data first
-      const cachedData = userProfileService.getCachedData();
+      // Check if we have cached data first (await the async call)
+      const cachedData = await userProfileService.getCachedData();
       if (cachedData && cachedData.success && cachedData.data) {
-        setUserInfo(cachedData.data);
-        setBackendAvailable(true);
-        setOfflineMode(false);
+        // Validate cached data belongs to current user
+        const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+        const userId = await getCurrentUserId();
+        if (userId && validateCachedData(cachedData.data, userId)) {
+          setUserInfo(cachedData.data);
+          setBackendAvailable(true);
+          setOfflineMode(false);
+        } else {
+          // Cached data doesn't belong to current user, clear it and load fresh
+          await userProfileService.clearCache();
+          if (isAuthenticated) {
+            await loadUserInfo();
+          } else {
+            setUserInfo(null);
+            setBackendAvailable(false);
+            setOfflineMode(true);
+          }
+        }
       } else {
         // No cached data - but if user is authenticated, load from API once to populate cache
         if (isAuthenticated) {
@@ -681,28 +698,38 @@ export default function DashboardScreen() {
       let localExercises = new Set<string>();
 
       try {
-        // Load completed meals from local storage
-        const completedMealsData = await AsyncStorage.getItem('completed_meals');
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          // No user ID, skip loading completion data
+          return;
+        }
+
+        // Load completed meals from local storage with user-specific key
+        const mealsKey = await getUserCacheKey('completed_meals', userId);
+        const completedMealsData = await AsyncStorage.getItem(mealsKey);
         if (completedMealsData) {
           localMeals = new Set(JSON.parse(completedMealsData) as string[]);
         }
 
-        // Load completed exercises from local storage
-        const completedExercisesData = await AsyncStorage.getItem('completed_exercises');
+        // Load completed exercises from local storage with user-specific key
+        const exercisesKey = await getUserCacheKey('completed_exercises', userId);
+        const completedExercisesData = await AsyncStorage.getItem(exercisesKey);
         if (completedExercisesData) {
           localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
         }
 
-        // Load water intake from local storage
-        const waterData = await AsyncStorage.getItem('water_intake');
+        // Load water intake from local storage with user-specific key
+        const waterKey = await getUserCacheKey('water_intake', userId);
+        const waterData = await AsyncStorage.getItem(waterKey);
         if (waterData) {
           const waterObj = JSON.parse(waterData);
           const today = new Date().toISOString().split('T')[0];
           setWaterIntake(waterObj[today] || 0);
         }
 
-        // Load water completion status from local storage
-        const waterCompletedData = await AsyncStorage.getItem('water_completed');
+        // Load water completion status from local storage with user-specific key
+        const waterCompletedKey = await getUserCacheKey('water_completed', userId);
+        const waterCompletedData = await AsyncStorage.getItem(waterCompletedKey);
         if (waterCompletedData) {
           const waterCompletedObj = JSON.parse(waterCompletedData);
           const today = new Date().toISOString().split('T')[0];

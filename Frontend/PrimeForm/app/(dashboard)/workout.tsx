@@ -102,47 +102,63 @@ export default function WorkoutScreen() {
       try {
         // OPTIMIZATION: Use cached data only - no API calls on page visit
         // User profile is passed from dashboard or loaded from cache
-        const cachedData = userProfileService.getCachedData();
+        const cachedData = await userProfileService.getCachedData();
+        // Validate cached data belongs to current user
         if (cachedData && cachedData.data) {
-          setUserInfo(cachedData.data);
-          setIsLoading(false);
+          const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+          const userId = await getCurrentUserId();
+          if (userId && validateCachedData(cachedData.data, userId)) {
+            setUserInfo(cachedData.data);
+            setIsLoading(false);
+          } else {
+            // Cached data doesn't belong to current user, clear it
+            await userProfileService.clearCache();
+            setIsLoading(false);
+          }
         } else {
           // No cached data - show profile creation UI
           setIsLoading(false);
         }
 
-        // ✅ CRITICAL: First check local storage immediately (synchronous check)
+        // ✅ CRITICAL: First check local storage with user-specific key
         // This prevents showing generation screen if plan exists locally
         setLoadError(null);
         try {
+          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
           const Storage = await import('../../src/utils/storage');
-          const cachedPlan = await Storage.default.getItem('cached_workout_plan');
-          if (cachedPlan) {
-            const plan = JSON.parse(cachedPlan);
-            if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-              console.log('✅ Found workout plan in local storage, using it immediately');
-              setWorkoutPlan(plan);
-              setHasCheckedLocalStorage(true);
-              // PERFORMANCE: Only sync in background if cache might be stale (older than 5 minutes)
-              // This prevents unnecessary API calls when data is fresh
-              const planTimestamp = plan.updatedAt || plan.createdAt;
-              const shouldSync = planTimestamp 
-                ? (Date.now() - new Date(planTimestamp).getTime() > 5 * 60 * 1000)
-                : true; // If no timestamp, sync once to be safe
-              
-              if (shouldSync) {
-                // Only sync if cache might be stale
-                aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
-                  if (dbPlan && dbPlan !== plan) {
-                    setWorkoutPlan(dbPlan);
-                  }
-                }).catch(() => {
-                  // Ignore background sync errors
-                });
+          
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+            const cachedPlan = await Storage.default.getItem(userCacheKey);
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              // Validate cached data belongs to current user
+              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                console.log('✅ Found workout plan in local storage, using it immediately');
+                setWorkoutPlan(plan);
+                setHasCheckedLocalStorage(true);
+                // PERFORMANCE: Only sync in background if cache might be stale (older than 5 minutes)
+                // This prevents unnecessary API calls when data is fresh
+                const planTimestamp = plan.updatedAt || plan.createdAt;
+                const shouldSync = planTimestamp 
+                  ? (Date.now() - new Date(planTimestamp).getTime() > 5 * 60 * 1000)
+                  : true; // If no timestamp, sync once to be safe
+                
+                if (shouldSync) {
+                  // Only sync if cache might be stale
+                  aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
+                    if (dbPlan && dbPlan !== plan) {
+                      setWorkoutPlan(dbPlan);
+                    }
+                  }).catch(() => {
+                    // Ignore background sync errors
+                  });
+                }
+                setIsLoadingPlan(false);
+                setInitialLoadComplete(true);
+                return;
               }
-              setIsLoadingPlan(false);
-              setInitialLoadComplete(true);
-              return;
             }
           }
         } catch (localError) {
@@ -163,17 +179,24 @@ export default function WorkoutScreen() {
         
         // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
         try {
+          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
           const Storage = await import('../../src/utils/storage');
-          const cachedPlan = await Storage.default.getItem('cached_workout_plan');
-          if (cachedPlan) {
-            const plan = JSON.parse(cachedPlan);
-            if (plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-              console.log('✅ Fallback: Found workout plan in local storage after error');
-              setWorkoutPlan(plan);
-              setLoadError(null); // Clear error since we found plan locally
-              setIsLoadingPlan(false);
-              setInitialLoadComplete(true);
-              return;
+          
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+            const cachedPlan = await Storage.default.getItem(userCacheKey);
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              // Validate cached data belongs to current user
+              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                console.log('✅ Fallback: Found workout plan in local storage after error');
+                setWorkoutPlan(plan);
+                setLoadError(null); // Clear error since we found plan locally
+                setIsLoadingPlan(false);
+                setInitialLoadComplete(true);
+                return;
+              }
             }
           }
         } catch (localError) {

@@ -1,6 +1,7 @@
 import { UserProfile } from './userProfileService';
 import workoutPlanService from './workoutPlanService';
 import Storage from '../utils/storage';
+import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -53,16 +54,29 @@ class AIWorkoutService {
   private dataCache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache - workout plan rarely changes
 
-  private getCachedData(key: string): any | null {
+  private async getCachedData(key: string): Promise<any | null> {
     const cached = this.dataCache.get(key);
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
+      // Validate cached data belongs to current user
+      const { getCurrentUserId, validateCachedData } = await import('../utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      if (userId && validateCachedData(cached.data, userId)) {
+        return cached.data;
+      } else {
+        // Cached data doesn't belong to current user, clear it
+        this.dataCache.delete(key);
+        return null;
+      }
     }
     return null;
   }
 
-  private setCachedData(key: string, data: any): void {
-    this.dataCache.set(key, { data, timestamp: Date.now() });
+  private async setCachedData(key: string, data: any): Promise<void> {
+    // Add userId to cached data for validation
+    const { getCurrentUserId } = await import('../utils/cacheKeys');
+    const userId = await getCurrentUserId();
+    const dataWithUserId = userId ? { ...data, userId } : data;
+    this.dataCache.set(key, { data: dataWithUserId, timestamp: Date.now() });
   }
 
   private clearCache(key?: string): void {
@@ -73,6 +87,13 @@ class AIWorkoutService {
       this.dataCache.clear();
       this.loadingCache.clear();
     }
+  }
+
+  // Public method to clear all in-memory cache (called on user change)
+  clearInMemoryCache(): void {
+    this.dataCache.clear();
+    this.loadingCache.clear();
+    console.log('✅ AI Workout Service in-memory cache cleared');
   }
 
   private generatePrompt(userProfile: UserProfile): string {
@@ -252,8 +273,13 @@ Generate the **final personalized plan now.**
         try {
           saveResponse = await workoutPlanService.createWorkoutPlan(workoutPlan);
           if (saveResponse.success) {
-            // Also cache locally as backup
-            await Storage.setItem('cached_workout_plan', JSON.stringify(workoutPlan));
+            // Also cache locally as backup with user-specific key
+            const userId = await getCurrentUserId();
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+              const dataToCache = { ...workoutPlan, userId };
+              await Storage.setItem(userCacheKey, JSON.stringify(dataToCache));
+            }
             break;
           } else {
             throw new Error(`Database save failed: ${saveResponse.message}`);
@@ -262,8 +288,13 @@ Generate the **final personalized plan now.**
           retryCount++;
           
           if (retryCount >= maxRetries) {
-            // Cache locally as fallback
-            await Storage.setItem('cached_workout_plan', JSON.stringify(workoutPlan));
+            // Cache locally as fallback with user-specific key
+            const userId = await getCurrentUserId();
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+              const dataToCache = { ...workoutPlan, userId };
+              await Storage.setItem(userCacheKey, JSON.stringify(dataToCache));
+            }
             // Don't throw error - allow user to use the plan even if not saved to DB
           } else {
             // Wait before retry
@@ -295,9 +326,9 @@ Generate the **final personalized plan now.**
 
     // Check memory cache first (unless forcing refresh)
     if (!forceRefresh) {
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) {
-      return cachedData;
+      const cachedData = await this.getCachedData(cacheKey);
+      if (cachedData) {
+        return cachedData;
       }
     }
 
@@ -307,11 +338,18 @@ Generate the **final personalized plan now.**
         // OPTIMIZATION: Try local storage first to avoid API call
         if (!forceRefresh) {
           try {
-            const cachedPlan = await Storage.getItem('cached_workout_plan');
-            if (cachedPlan) {
-              const plan = JSON.parse(cachedPlan);
-              this.setCachedData(cacheKey, plan);
-              return plan;
+            const userId = await getCurrentUserId();
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+              const cachedPlan = await Storage.getItem(userCacheKey);
+              if (cachedPlan) {
+                const plan = JSON.parse(cachedPlan);
+                // Validate cached data belongs to current user
+                if (validateCachedData(plan, userId)) {
+                  await this.setCachedData(cacheKey, plan);
+                  return plan;
+                }
+              }
             }
           } catch (cacheError) {
             // Could not load from local cache
@@ -321,19 +359,32 @@ Generate the **final personalized plan now.**
         // Only call API if no local cache or forcing refresh
         const response = await workoutPlanService.getActiveWorkoutPlan();
         if (response.success && response.data) {
-          this.setCachedData(cacheKey, response.data);
-          // Also update local cache
-          await Storage.setItem('cached_workout_plan', JSON.stringify(response.data));
+          await this.setCachedData(cacheKey, response.data);
+          // Also update local cache with user-specific key
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+            // Add userId to cached data for validation
+            const dataToCache = { ...response.data, userId };
+            await Storage.setItem(userCacheKey, JSON.stringify(dataToCache));
+          }
           return response.data;
         }
       } catch (error) {
         // Try to load from local cache as fallback
         try {
-          const cachedPlan = await Storage.getItem('cached_workout_plan');
-          if (cachedPlan) {
-            const plan = JSON.parse(cachedPlan);
-            this.setCachedData(cacheKey, plan);
-            return plan;
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+            const cachedPlan = await Storage.getItem(userCacheKey);
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              // Validate cached data belongs to current user
+              if (validateCachedData(plan, userId)) {
+                await this.setCachedData(cacheKey, plan);
+                return plan;
+              }
+            }
           }
         } catch (cacheError) {
           // Could not load from cache either
@@ -360,7 +411,13 @@ Generate the **final personalized plan now.**
     try {
       await workoutPlanService.clearAllWorkoutPlans();
 
-      // Also clear local cache
+      // Also clear local cache (both user-specific and old global)
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+        await Storage.removeItem(userCacheKey);
+      }
+      // Clear old global key for migration
       await Storage.removeItem('cached_workout_plan');
       
       // Clear memory cache

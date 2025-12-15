@@ -1,5 +1,6 @@
 import { api } from '../config/api';
 import Storage from '../utils/storage';
+import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 
 export interface UserInfo {
   country: string;
@@ -44,24 +45,31 @@ export interface ProfileCompletionStatus {
 }
 
 class UserProfileService {
-  private cache: { data: any; timestamp: number } | null = null;
+  private cache: { data: any; timestamp: number; userId?: string } | null = null;
   private cacheTimeout = 30 * 60 * 1000; // 30 minutes cache - profile rarely changes
   private isLoading = false;
   private pendingCall: Promise<any> | null = null;
   private hasInitialized = false;
-  private storageKey = 'cached_user_profile';
+  private baseStorageKey = 'cached_user_profile';
 
   // Initialize: Load from AsyncStorage on service creation
   private async initializeCache() {
     if (this.hasInitialized) return;
     
     try {
-      const stored = await Storage.getItem(this.storageKey);
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        this.hasInitialized = true;
+        return; // No user ID, skip cache initialization
+      }
+
+      const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+      const stored = await Storage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Check if cache is still valid
-        if (Date.now() - parsed.timestamp < this.cacheTimeout) {
-          this.cache = parsed;
+        // Validate that cached data belongs to current user
+        if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
+          this.cache = { ...parsed, userId };
         }
       }
       this.hasInitialized = true;
@@ -74,8 +82,19 @@ class UserProfileService {
   // Clear cache when user changes (called from auth service)
   async clearCache() {
     this.cache = null;
+    this.hasInitialized = false;
+    this.isLoading = false;
+    this.pendingCall = null;
     try {
-      await Storage.removeItem(this.storageKey);
+      // Clear both old global key and user-specific keys
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+        await Storage.removeItem(storageKey);
+      }
+      // Also clear old global key for migration
+      await Storage.removeItem(this.baseStorageKey);
+      console.log('✅ User Profile Service cache cleared');
     } catch (error) {
       // Ignore storage errors
     }
@@ -95,14 +114,18 @@ class UserProfileService {
 
       // Check AsyncStorage (instant, no network)
       try {
-        const stored = await Storage.getItem(this.storageKey);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          // Check if cache is still valid
-          if (Date.now() - parsed.timestamp < this.cacheTimeout) {
-            // Restore to memory cache
-            this.cache = parsed;
-            return parsed.data;
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+          const stored = await Storage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            // Validate that cached data belongs to current user
+            if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
+              // Restore to memory cache
+              this.cache = { ...parsed, userId };
+              return parsed.data;
+            }
           }
         }
       } catch (error) {
@@ -124,13 +147,17 @@ class UserProfileService {
     try {
       const result = await this.pendingCall;
       // Cache the successful result in both memory and AsyncStorage
-      const cacheEntry = { data: result, timestamp: Date.now() };
-      this.cache = cacheEntry;
-      
-      // Persist to AsyncStorage (non-blocking)
-      Storage.setItem(this.storageKey, JSON.stringify(cacheEntry)).catch(() => {
-        // Ignore storage errors
-      });
+      const userId = await getCurrentUserId();
+      if (userId) {
+        const cacheEntry = { data: result, timestamp: Date.now(), userId };
+        this.cache = cacheEntry;
+        
+        // Persist to AsyncStorage with user-specific key (non-blocking)
+        const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+        Storage.setItem(storageKey, JSON.stringify(cacheEntry)).catch(() => {
+          // Ignore storage errors
+        });
+      }
       
       return result;
     } finally {
@@ -143,19 +170,25 @@ class UserProfileService {
   async hasCachedData(): Promise<boolean> {
     await this.initializeCache();
     
+    const userId = await getCurrentUserId();
+    if (!userId) return false;
+    
     // Check memory cache
-    if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-      return true;
+    if (this.cache && this.cache.userId === userId && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      if (validateCachedData(this.cache.data, userId)) {
+        return true;
+      }
     }
     
     // Check AsyncStorage
     try {
-      const stored = await Storage.getItem(this.storageKey);
+      const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+      const stored = await Storage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Date.now() - parsed.timestamp < this.cacheTimeout) {
+        if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
           // Restore to memory
-          this.cache = parsed;
+          this.cache = { ...parsed, userId };
           return true;
         }
       }
@@ -167,10 +200,47 @@ class UserProfileService {
   }
 
   // Get cached data without API call (synchronous check of memory only)
-  getCachedData(): { success: boolean; data: UserProfile | null; message: string } | null {
-    if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-      return this.cache.data;
+  async getCachedData(): Promise<{ success: boolean; data: UserProfile | null; message: string } | null> {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      // No user ID, clear any cached data
+      this.cache = null;
+      return null;
     }
+    
+    // Check memory cache - must match current user ID
+    if (this.cache && this.cache.userId === userId && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      // Validate cached data belongs to current user
+      if (validateCachedData(this.cache.data, userId)) {
+        return this.cache.data;
+      } else {
+        // Cached data doesn't belong to current user, clear it
+        this.cache = null;
+        return null;
+      }
+    } else if (this.cache && this.cache.userId !== userId) {
+      // Cache belongs to different user, clear it
+      this.cache = null;
+      return null;
+    }
+    
+    // Try loading from AsyncStorage
+    try {
+      const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+      const stored = await Storage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Validate cached data belongs to current user
+        if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
+          // Restore to memory cache
+          this.cache = { ...parsed, userId };
+          return parsed.data;
+        }
+      }
+    } catch (error) {
+      // Ignore storage errors
+    }
+    
     return null;
   }
 
@@ -253,9 +323,13 @@ class UserProfileService {
       if (response && response.success) {
         // Clear cache when profile is updated and cache new data
         await this.clearCache();
-        const cacheEntry = { data: response, timestamp: Date.now() };
-        this.cache = cacheEntry;
-        Storage.setItem(this.storageKey, JSON.stringify(cacheEntry)).catch(() => {});
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const cacheEntry = { data: response, timestamp: Date.now(), userId };
+          this.cache = cacheEntry;
+          const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
+          Storage.setItem(storageKey, JSON.stringify(cacheEntry)).catch(() => {});
+        }
         return response;
       } else {
         return {

@@ -2,6 +2,7 @@ import Storage from '../utils/storage';
 import dietPlanService from './dietPlanService';
 import streakService from './streakService';
 import { DeviceEventEmitter } from 'react-native';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 
 interface MealCompletionData {
   completedMeals: string[];
@@ -29,10 +30,23 @@ class MealCompletionService {
     try {
       console.log('🔄 Initializing meal completion service...');
       
-      // Load from AsyncStorage
+      // Load from AsyncStorage with user-specific keys
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        // No user ID, initialize with empty data
+        this.completionData.completedMeals = [];
+        this.completionData.completedDays = [];
+        return;
+      }
+
+      const [mealsKey, daysKey] = await Promise.all([
+        getUserCacheKey('completed_meals', userId),
+        getUserCacheKey('completed_diet_days', userId),
+      ]);
+
       const [mealsData, daysData] = await Promise.all([
-        Storage.getItem('completed_meals'),
-        Storage.getItem('completed_diet_days'),
+        Storage.getItem(mealsKey),
+        Storage.getItem(daysKey),
       ]);
 
       this.completionData.completedMeals = mealsData ? JSON.parse(mealsData) : [];
@@ -188,9 +202,20 @@ class MealCompletionService {
   // Save to AsyncStorage
   private async saveToStorage(): Promise<void> {
     try {
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot save meal completion data');
+        return;
+      }
+
+      const [mealsKey, daysKey] = await Promise.all([
+        getUserCacheKey('completed_meals', userId),
+        getUserCacheKey('completed_diet_days', userId),
+      ]);
+
       await Promise.all([
-        Storage.setItem('completed_meals', JSON.stringify(this.completionData.completedMeals)),
-        Storage.setItem('completed_diet_days', JSON.stringify(this.completionData.completedDays)),
+        Storage.setItem(mealsKey, JSON.stringify(this.completionData.completedMeals)),
+        Storage.setItem(daysKey, JSON.stringify(this.completionData.completedDays)),
       ]);
       console.log('💾 Meal completion data saved to storage');
     } catch (error) {
@@ -207,6 +232,17 @@ class MealCompletionService {
     };
     await this.saveToStorage();
     console.log('🔄 Meal completion data reset');
+  }
+
+  // Reinitialize for new user (clears in-memory data and reloads from storage)
+  async reinitialize(): Promise<void> {
+    this.completionData = {
+      completedMeals: [],
+      completedDays: [],
+      lastUpdated: new Date().toISOString(),
+    };
+    await this.initialize(); // Reload from storage for new user
+    console.log('🔄 Meal completion service reinitialized for new user');
   }
 
   // Sync with database (useful for data recovery)
