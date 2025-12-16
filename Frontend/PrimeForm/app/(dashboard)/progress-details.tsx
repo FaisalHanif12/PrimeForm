@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, DeviceEventEmitter } from 'react-native';
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
@@ -183,6 +183,352 @@ export default function ProgressDetailsScreen() {
     };
     loadProfileIfNeeded();
   }, [showProfilePage, userInfo, profileLoaded]);
+
+  // ✅ CRITICAL: Listen for real-time updates to refresh progress data
+  useEffect(() => {
+    const listeners = [
+      DeviceEventEmitter.addListener('exerciseCompleted', () => {
+        progressService.invalidateCaches();
+        // Force refresh stats and charts for current period
+        if (isCurrentPeriod) {
+          const loadStats = async () => {
+            try {
+              setIsLoading(true);
+              const period = mode;
+              const statsResponse = await progressService.getProgressStats(
+                period,
+                mode === 'weekly' ? selectedWeek || undefined : undefined,
+                mode === 'monthly' ? selectedMonth || undefined : undefined,
+                true // Force refresh for real-time updates
+              );
+              if (statsResponse.success && statsResponse.data) {
+                const nextStats = statsResponse.data as ProgressStats;
+                setStats(nextStats);
+                setStatsByPeriod(prev => ({
+                  ...prev,
+                  [periodKey]: nextStats,
+                }));
+              }
+              // ✅ CRITICAL: Also refresh charts for real-time updates with force refresh
+              if (chartsLoaded) {
+                setChartsLoaded(false);
+                // Force refresh charts to get latest data
+                const refreshCharts = async () => {
+                  try {
+                    setIsLoadingCharts(true);
+                    const period = mode;
+                    const chartsResponse = await progressService.getChartData(
+                      period,
+                      mode === 'weekly' ? selectedWeek || undefined : undefined,
+                      mode === 'monthly' ? selectedMonth || undefined : undefined,
+                      true // ✅ CRITICAL: Force refresh for real-time updates
+                    );
+                    if (chartsResponse.success && chartsResponse.data) {
+                      const nextCharts: ProgressCharts = {
+                        calories: chartsResponse.data.calories,
+                        workouts: chartsResponse.data.workouts,
+                        water: chartsResponse.data.water,
+                      };
+                      setCharts(nextCharts);
+                      setChartsByPeriod(prev => ({
+                        ...prev,
+                        [periodKey]: nextCharts,
+                      }));
+                      setChartsLoaded(true);
+                    }
+                  } catch (error) {
+                    // Error loading charts
+                  } finally {
+                    setIsLoadingCharts(false);
+                  }
+                };
+                refreshCharts();
+              }
+            } catch (error) {
+              // Error loading stats
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          loadStats();
+        }
+      }),
+      DeviceEventEmitter.addListener('mealCompleted', () => {
+        progressService.invalidateCaches();
+        // Force refresh stats and charts for current period
+        if (isCurrentPeriod) {
+          const loadStats = async () => {
+            try {
+              setIsLoading(true);
+              const period = mode;
+              const statsResponse = await progressService.getProgressStats(
+                period,
+                mode === 'weekly' ? selectedWeek || undefined : undefined,
+                mode === 'monthly' ? selectedMonth || undefined : undefined,
+                true // Force refresh for real-time updates
+              );
+              if (statsResponse.success && statsResponse.data) {
+                const nextStats = statsResponse.data as ProgressStats;
+                setStats(nextStats);
+                setStatsByPeriod(prev => ({
+                  ...prev,
+                  [periodKey]: nextStats,
+                }));
+              }
+              // ✅ CRITICAL: Also refresh charts for real-time updates with force refresh
+              if (chartsLoaded) {
+                setChartsLoaded(false);
+                // Force refresh charts to get latest data
+                const refreshCharts = async () => {
+                  try {
+                    setIsLoadingCharts(true);
+                    const period = mode;
+                    const chartsResponse = await progressService.getChartData(
+                      period,
+                      mode === 'weekly' ? selectedWeek || undefined : undefined,
+                      mode === 'monthly' ? selectedMonth || undefined : undefined,
+                      true // ✅ CRITICAL: Force refresh for real-time updates
+                    );
+                    if (chartsResponse.success && chartsResponse.data) {
+                      const nextCharts: ProgressCharts = {
+                        calories: chartsResponse.data.calories,
+                        workouts: chartsResponse.data.workouts,
+                        water: chartsResponse.data.water,
+                      };
+                      setCharts(nextCharts);
+                      setChartsByPeriod(prev => ({
+                        ...prev,
+                        [periodKey]: nextCharts,
+                      }));
+                      setChartsLoaded(true);
+                    }
+                  } catch (error) {
+                    // Error loading charts
+                  } finally {
+                    setIsLoadingCharts(false);
+                  }
+                };
+                refreshCharts();
+              }
+            } catch (error) {
+              // Error loading stats
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          loadStats();
+        }
+      }),
+      DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
+        progressService.invalidateCaches();
+        // Force refresh stats and charts for current period
+        if (isCurrentPeriod) {
+          const loadStats = async () => {
+            try {
+              setIsLoading(true);
+              const period = mode;
+              const statsResponse = await progressService.getProgressStats(
+                period,
+                mode === 'weekly' ? selectedWeek || undefined : undefined,
+                mode === 'monthly' ? selectedMonth || undefined : undefined,
+                true // Force refresh for real-time updates
+              );
+              if (statsResponse.success && statsResponse.data) {
+                const nextStats = statsResponse.data as ProgressStats;
+                setStats(nextStats);
+                setStatsByPeriod(prev => ({
+                  ...prev,
+                  [periodKey]: nextStats,
+                }));
+              }
+              // ✅ CRITICAL: Also refresh charts for real-time updates with force refresh
+              if (chartsLoaded) {
+                setChartsLoaded(false);
+                // Force refresh charts to get latest data
+                const refreshCharts = async () => {
+                  try {
+                    setIsLoadingCharts(true);
+                    const period = mode;
+                    const chartsResponse = await progressService.getChartData(
+                      period,
+                      mode === 'weekly' ? selectedWeek || undefined : undefined,
+                      mode === 'monthly' ? selectedMonth || undefined : undefined,
+                      true // ✅ CRITICAL: Force refresh for real-time updates
+                    );
+                    if (chartsResponse.success && chartsResponse.data) {
+                      const nextCharts: ProgressCharts = {
+                        calories: chartsResponse.data.calories,
+                        workouts: chartsResponse.data.workouts,
+                        water: chartsResponse.data.water,
+                      };
+                      setCharts(nextCharts);
+                      setChartsByPeriod(prev => ({
+                        ...prev,
+                        [periodKey]: nextCharts,
+                      }));
+                      setChartsLoaded(true);
+                    }
+                  } catch (error) {
+                    // Error loading charts
+                  } finally {
+                    setIsLoadingCharts(false);
+                  }
+                };
+                refreshCharts();
+              }
+            } catch (error) {
+              // Error loading stats
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          loadStats();
+        }
+      }),
+      DeviceEventEmitter.addListener('dietProgressUpdated', () => {
+        progressService.invalidateCaches();
+        // Force refresh stats and charts for current period
+        if (isCurrentPeriod) {
+          const loadStats = async () => {
+            try {
+              setIsLoading(true);
+              const period = mode;
+              const statsResponse = await progressService.getProgressStats(
+                period,
+                mode === 'weekly' ? selectedWeek || undefined : undefined,
+                mode === 'monthly' ? selectedMonth || undefined : undefined,
+                true // Force refresh for real-time updates
+              );
+              if (statsResponse.success && statsResponse.data) {
+                const nextStats = statsResponse.data as ProgressStats;
+                setStats(nextStats);
+                setStatsByPeriod(prev => ({
+                  ...prev,
+                  [periodKey]: nextStats,
+                }));
+              }
+              // ✅ CRITICAL: Also refresh charts for real-time updates with force refresh
+              if (chartsLoaded) {
+                setChartsLoaded(false);
+                // Force refresh charts to get latest data
+                const refreshCharts = async () => {
+                  try {
+                    setIsLoadingCharts(true);
+                    const period = mode;
+                    const chartsResponse = await progressService.getChartData(
+                      period,
+                      mode === 'weekly' ? selectedWeek || undefined : undefined,
+                      mode === 'monthly' ? selectedMonth || undefined : undefined,
+                      true // ✅ CRITICAL: Force refresh for real-time updates
+                    );
+                    if (chartsResponse.success && chartsResponse.data) {
+                      const nextCharts: ProgressCharts = {
+                        calories: chartsResponse.data.calories,
+                        workouts: chartsResponse.data.workouts,
+                        water: chartsResponse.data.water,
+                      };
+                      setCharts(nextCharts);
+                      setChartsByPeriod(prev => ({
+                        ...prev,
+                        [periodKey]: nextCharts,
+                      }));
+                      setChartsLoaded(true);
+                    }
+                  } catch (error) {
+                    // Error loading charts
+                  } finally {
+                    setIsLoadingCharts(false);
+                  }
+                };
+                refreshCharts();
+              }
+            } catch (error) {
+              // Error loading stats
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          loadStats();
+        }
+      }),
+      DeviceEventEmitter.addListener('workoutProgressUpdated', () => {
+        progressService.invalidateCaches();
+        // Force refresh stats and charts for current period
+        if (isCurrentPeriod) {
+          const loadStats = async () => {
+            try {
+              setIsLoading(true);
+              const period = mode;
+              const statsResponse = await progressService.getProgressStats(
+                period,
+                mode === 'weekly' ? selectedWeek || undefined : undefined,
+                mode === 'monthly' ? selectedMonth || undefined : undefined,
+                true // Force refresh for real-time updates
+              );
+              if (statsResponse.success && statsResponse.data) {
+                const nextStats = statsResponse.data as ProgressStats;
+                setStats(nextStats);
+                setStatsByPeriod(prev => ({
+                  ...prev,
+                  [periodKey]: nextStats,
+                }));
+              }
+              // ✅ CRITICAL: Also refresh charts for real-time updates with force refresh
+              if (chartsLoaded) {
+                setChartsLoaded(false);
+                // Force refresh charts to get latest data
+                const refreshCharts = async () => {
+                  try {
+                    setIsLoadingCharts(true);
+                    const period = mode;
+                    const chartsResponse = await progressService.getChartData(
+                      period,
+                      mode === 'weekly' ? selectedWeek || undefined : undefined,
+                      mode === 'monthly' ? selectedMonth || undefined : undefined,
+                      true // ✅ CRITICAL: Force refresh for real-time updates
+                    );
+                    if (chartsResponse.success && chartsResponse.data) {
+                      const nextCharts: ProgressCharts = {
+                        calories: chartsResponse.data.calories,
+                        workouts: chartsResponse.data.workouts,
+                        water: chartsResponse.data.water,
+                      };
+                      setCharts(nextCharts);
+                      setChartsByPeriod(prev => ({
+                        ...prev,
+                        [periodKey]: nextCharts,
+                      }));
+                      setChartsLoaded(true);
+                    }
+                  } catch (error) {
+                    // Error loading charts
+                  } finally {
+                    setIsLoadingCharts(false);
+                  }
+                };
+                refreshCharts();
+              }
+            } catch (error) {
+              // Error loading stats
+            } finally {
+              setIsLoading(false);
+            }
+          };
+          loadStats();
+        }
+      }),
+    ];
+
+    return () => {
+      listeners.forEach(listener => {
+        try {
+          listener.remove();
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      });
+    };
+  }, [mode, selectedWeek, selectedMonth, periodKey, isCurrentPeriod]);
 
   // PERFORMANCE: Load stats only when period is selected (deferred loading)
   useEffect(() => {

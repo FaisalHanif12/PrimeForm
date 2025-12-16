@@ -22,12 +22,12 @@ export default function LoadingModal({
   subtitle,
   type 
 }: LoadingModalProps) {
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(15);
   const [spinValue] = useState(new Animated.Value(0));
 
   useEffect(() => {
     if (visible) {
-      setCountdown(10);
+      setCountdown(15);
       startSpinAnimation();
       startCountdown();
     }
@@ -150,8 +150,8 @@ export default function LoadingModal({
 
             {/* Status Text */}
             <Text style={styles.statusText}>
-              {countdown > 7 ? 'Analyzing your profile...' :
-               countdown > 4 ? 'Generating personalized plan...' :
+              {countdown > 10 ? 'Analyzing your profile...' :
+               countdown > 5 ? 'Generating personalized plan...' :
                countdown > 1 ? 'Finalizing recommendations...' :
                'Almost ready!'}
             </Text>

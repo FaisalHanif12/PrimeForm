@@ -421,21 +421,48 @@ Generate the **final personalized plan now.**
   // Clear workout plan from database
   async clearWorkoutPlanFromDatabase(): Promise<void> {
     try {
+      // Clear from database first
       await workoutPlanService.clearAllWorkoutPlans();
 
-      // Also clear local cache (both user-specific and old global)
+      // Clear local cache (both user-specific and old global)
       const userId = await getCurrentUserId();
       if (userId) {
         const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
         await Storage.removeItem(userCacheKey);
+        
+        // Also clear all related workout completion data
+        const completedExercisesKey = await getUserCacheKey('completed_exercises', userId);
+        const completedDaysKey = await getUserCacheKey('completed_days', userId);
+        
+        await Storage.removeItem(completedExercisesKey);
+        await Storage.removeItem(completedDaysKey);
       }
-      // Clear old global key for migration
-      await Storage.removeItem('cached_workout_plan');
       
+      // Clear old global keys for migration
+      await Storage.removeItem('cached_workout_plan');
+      await Storage.removeItem('completed_exercises');
+      await Storage.removeItem('completed_days');
+
       // Clear memory cache
       this.clearCache('workout-plan-active');
+      
+      if (__DEV__) {
+        console.log('✅ Workout plan and all related data cleared successfully');
+      }
     } catch (error) {
-      // Could not clear workout plans from database
+      console.error('❌ Error clearing workout plan from database:', error);
+      // Still try to clear local cache even if database clear fails
+      try {
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+          await Storage.removeItem(userCacheKey);
+        }
+        await Storage.removeItem('cached_workout_plan');
+        this.clearCache('workout-plan-active');
+      } catch (cacheError) {
+        console.error('❌ Error clearing local cache:', cacheError);
+      }
     }
   }
 
@@ -457,9 +484,20 @@ Generate the **final personalized plan now.**
     const weeklyPlan: WorkoutDay[] = this.parseAIWorkoutDays(aiResponse);
 
     // Calculate dates based on calculated duration
+    // CRITICAL: Use local date (not UTC) to ensure correct day
     const startDate = new Date();
-    const endDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // Set to midnight local time
+    const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + (totalWeeks * 7));
+    endDate.setHours(0, 0, 0, 0);
+
+    // Format as local date string (YYYY-MM-DD) to avoid timezone issues
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return {
       goal: goal,
@@ -471,8 +509,8 @@ Generate the **final personalized plan now.**
         'Track your progress weekly'
       ],
       weeklyPlan: weeklyPlan, // Keep the 7-day pattern
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: formatLocalDate(startDate),
+      endDate: formatLocalDate(endDate),
       totalWeeks: totalWeeks // Add this for frontend reference
     };
   }

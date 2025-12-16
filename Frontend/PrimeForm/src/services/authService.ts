@@ -177,6 +177,20 @@ class AuthService {
         // Ignore if service not available
       }
 
+      // ✅ CRITICAL: Clear progress service cache (user-specific)
+      try {
+        const { default: progressService } = await import('./progressService');
+        const currentUserId = await AsyncStorage.getItem('current_user_id');
+        if (currentUserId) {
+          await progressService.clearUserCaches(currentUserId);
+        } else {
+          progressService.invalidateCaches(); // Clear all if no user ID
+        }
+        console.log('✅ Progress service cache cleared');
+      } catch (error) {
+        // Ignore if service not available
+      }
+
       // Clear completion services (reset in-memory data)
       try {
         const { default: mealCompletionService } = await import('./mealCompletionService');

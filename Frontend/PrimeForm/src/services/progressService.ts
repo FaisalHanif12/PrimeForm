@@ -62,6 +62,7 @@ class ProgressService {
   }
   
   // Clear caches when completion data changes (public method for external use)
+  // ✅ CRITICAL: Also clear cache when user switches accounts
   invalidateCaches(): void {
     this.statsCache.clear();
     this.chartsCache.clear();
@@ -70,9 +71,32 @@ class ProgressService {
     this.lastCompletionUpdate = Date.now();
   }
   
-  // Generate cache key for stats/charts
-  private getCacheKey(period: string, week?: number, month?: number): string {
-    return `${period}-${week || 0}-${month || 0}`;
+  // Clear all caches for a specific user (called on logout or account switch)
+  async clearUserCaches(userId?: string): Promise<void> {
+    if (userId) {
+      // Clear only caches for this specific user
+      const userCachePrefix = `user_${userId}_`;
+      for (const key of this.statsCache.keys()) {
+        if (key.startsWith(userCachePrefix)) {
+          this.statsCache.delete(key);
+        }
+      }
+      for (const key of this.chartsCache.keys()) {
+        if (key.startsWith(userCachePrefix)) {
+          this.chartsCache.delete(key);
+        }
+      }
+    } else {
+      // Clear all caches if no userId provided
+      this.invalidateCaches();
+    }
+  }
+  
+  // Generate cache key for stats/charts - includes user ID for account-specific caching
+  private async getCacheKey(period: string, week?: number, month?: number): Promise<string> {
+    const userId = await getCurrentUserId();
+    // Include user ID in cache key to ensure account-specific caching
+    return `user_${userId || 'anonymous'}_${period}-${week || 0}-${month || 0}`;
   }
 
   // Perform periodic cleanup of old data
@@ -97,7 +121,7 @@ class ProgressService {
   async getProgressStats(period: 'daily' | 'weekly' | 'monthly', selectedWeek?: number, selectedMonth?: number, forceRefresh = false): Promise<ProgressServiceResponse<ProgressStats>> {
     try {
       // PERFORMANCE: Check cache first (unless forcing refresh)
-      const cacheKey = this.getCacheKey(period, selectedWeek, selectedMonth);
+      const cacheKey = await this.getCacheKey(period, selectedWeek, selectedMonth);
       if (!forceRefresh) {
         const cached = this.statsCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
@@ -115,7 +139,7 @@ class ProgressService {
       // Calculate from local data directly - this ensures accuracy
       const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth, forceRefresh);
       
-      // PERFORMANCE: Cache the result
+      // PERFORMANCE: Cache the result with user-specific key
       this.statsCache.set(cacheKey, {
         data: localStats,
         timestamp: Date.now()
@@ -208,18 +232,39 @@ class ProgressService {
       }
 
       // Calculate water intake
-      // ✅ FIXED: When water is marked as "Done", use target amount from diet plan (100% completion)
+      // ✅ CRITICAL: When water is marked as "Done", use target amount from diet plan (100% completion)
+      // ✅ CRITICAL: Check both filteredWater.intake and filteredWater.completed to ensure all dates are considered
       let waterIntake = 0;
-      for (const [date, amount] of Object.entries(filteredWater.intake)) {
+      
+      // Get all unique dates from both intake and completed
+      const allWaterDates = new Set([
+        ...Object.keys(filteredWater.intake),
+        ...Object.keys(filteredWater.completed)
+      ]);
+      
+      for (const date of allWaterDates) {
         // If water is marked as completed, use the target water amount from diet plan (100% completion)
         if (filteredWater.completed[date]) {
           // Get target water from diet plan for this specific date
-          const dietPlanDay = dietPlan?.weeklyPlan.find(day => day.date === date);
-          const targetWater = dietPlanDay?.waterIntake ? Number(dietPlanDay.waterIntake) : 3000; // Default 3000ml (3L)
+          // Try to find exact date match first
+          let dietPlanDay = dietPlan?.weeklyPlan.find(day => day.date === date);
+          
+          // If no exact date match, try to find by day of week
+          if (!dietPlanDay && dietPlan) {
+            const [year, month, day] = date.split('-').map(Number);
+            const waterDate = new Date(year, month - 1, day);
+            const dayOfWeek = waterDate.getDay();
+            if (dayOfWeek < dietPlan.weeklyPlan.length) {
+              dietPlanDay = dietPlan.weeklyPlan[dayOfWeek];
+            }
+          }
+          
+          // ✅ CRITICAL: Parse water intake string (e.g., "2-3 liters", "3000ml", "3L") to milliliters
+          const targetWater = this.parseWaterIntakeToMl(dietPlanDay?.waterIntake) || 3000; // Default 3000ml (3L)
           waterIntake += targetWater; // Use target amount for 100% completion
-        } else if (Number(amount) > 0) {
+        } else if (filteredWater.intake[date] !== undefined && Number(filteredWater.intake[date]) > 0) {
           // If not completed but has some intake, add the actual amount
-          waterIntake += Number(amount) || 0;
+          waterIntake += Number(filteredWater.intake[date]) || 0;
         }
       }
       // Convert to liters (amounts are stored in ml)
@@ -378,6 +423,7 @@ class ProgressService {
   }
 
   // Filter completion IDs by date range (extracts date from ID format: "YYYY-MM-DD-name")
+  // ✅ CRITICAL: Parse dates as local dates to avoid timezone issues
   private filterCompletionsByDateRange(
     completionIds: string[],
     startDate: Date,
@@ -388,9 +434,12 @@ class ProgressService {
       const dateMatch = id.match(/^(\d{4}-\d{2}-\d{2})/);
       if (!dateMatch) return false;
       
-      const itemDate = new Date(dateMatch[1]);
+      // ✅ CRITICAL: Parse date as local date to avoid timezone issues
+      const [year, month, day] = dateMatch[1].split('-').map(Number);
+      const itemDate = new Date(year, month - 1, day);
       itemDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
       
+      // Normalize start and end dates for comparison
       const start = new Date(startDate);
       start.setHours(0, 0, 0, 0);
       
@@ -402,6 +451,7 @@ class ProgressService {
   }
 
   // Filter water data by date range
+  // ✅ CRITICAL: Check both waterIntake and waterCompleted to ensure completed water is included
   private filterWaterByDateRange(
     waterIntake: { [key: string]: number },
     waterCompleted: { [key: string]: boolean },
@@ -411,13 +461,33 @@ class ProgressService {
     const filteredIntake: { [key: string]: number } = {};
     const filteredCompleted: { [key: string]: boolean } = {};
     
-    for (const date of Object.keys(waterIntake)) {
-      const waterDate = new Date(date);
-      waterDate.setHours(12, 0, 0, 0);
+    // ✅ CRITICAL: Check all dates from both waterIntake and waterCompleted
+    const allDates = new Set([
+      ...Object.keys(waterIntake),
+      ...Object.keys(waterCompleted)
+    ]);
+    
+    for (const dateStr of allDates) {
+      // Parse date string (format: YYYY-MM-DD) as local date
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const waterDate = new Date(year, month - 1, day);
+      waterDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
       
-      if (waterDate >= startDate && waterDate <= endDate) {
-        filteredIntake[date] = waterIntake[date];
-        filteredCompleted[date] = waterCompleted[date] || false;
+      // Normalize startDate and endDate to noon for comparison
+      const normalizedStartDate = new Date(startDate);
+      normalizedStartDate.setHours(12, 0, 0, 0);
+      const normalizedEndDate = new Date(endDate);
+      normalizedEndDate.setHours(12, 0, 0, 0);
+      
+      if (waterDate >= normalizedStartDate && waterDate <= normalizedEndDate) {
+        // Include intake if available
+        if (waterIntake[dateStr] !== undefined) {
+          filteredIntake[dateStr] = waterIntake[dateStr];
+        }
+        // Include completion status if available
+        if (waterCompleted[dateStr] !== undefined) {
+          filteredCompleted[dateStr] = waterCompleted[dateStr];
+        }
       }
     }
     
@@ -425,6 +495,7 @@ class ProgressService {
   }
 
   // Get meal data from meal ID
+  // ✅ CRITICAL: Improved date matching to handle both exact dates and day-of-week patterns
   private getMealDataFromId(mealId: string, dietPlan: DietPlan): DietMeal | null {
     // Format: "YYYY-MM-DD-mealType-mealName" (mealName may contain hyphens)
     // Use regex to extract date and mealType, then get mealName from the rest
@@ -435,52 +506,69 @@ class ProgressService {
     const mealType = dateMatch[2] as 'breakfast' | 'lunch' | 'dinner' | 'snack';
     const mealName = dateMatch[3];
     
-    // Find the day in the weekly plan by exact date match first
-    for (const day of dietPlan.weeklyPlan) {
-      if (day.date === dateStr) {
-        if (mealType === 'breakfast') return day.meals.breakfast;
-        if (mealType === 'lunch') return day.meals.lunch;
-        if (mealType === 'dinner') return day.meals.dinner;
+    // ✅ CRITICAL: Parse date as local date to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const mealDate = new Date(year, month - 1, day);
+    const dayOfWeek = mealDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Strategy 1: Try exact date match first
+    for (const planDay of dietPlan.weeklyPlan) {
+      if (planDay.date === dateStr) {
+        if (mealType === 'breakfast') return planDay.meals.breakfast;
+        if (mealType === 'lunch') return planDay.meals.lunch;
+        if (mealType === 'dinner') return planDay.meals.dinner;
         if (mealType === 'snack') {
           // Find matching snack by name
-          const snack = day.meals.snacks.find(s => s.name === mealName);
+          const snack = planDay.meals.snacks.find(s => s.name === mealName);
           if (snack) return snack;
           // Fallback to first snack if name doesn't match (for backwards compatibility)
-          return day.meals.snacks[0] || null;
+          return planDay.meals.snacks[0] || null;
         }
       }
     }
     
-    // If exact date not found, try to match by day of week pattern
-    try {
-    const mealDate = new Date(dateStr);
-      if (isNaN(mealDate.getTime())) return null;
-      
-    const dayOfWeek = mealDate.getDay();
-    
-    for (const day of dietPlan.weeklyPlan) {
-        if (!day.date) continue;
-        let planDate: Date;
-        try {
-          planDate = new Date(day.date);
-          if (isNaN(planDate.getTime())) continue;
-        } catch {
-          continue;
-        }
-        
-      if (planDate.getDay() === dayOfWeek) {
-        if (mealType === 'breakfast') return day.meals.breakfast;
-        if (mealType === 'lunch') return day.meals.lunch;
-        if (mealType === 'dinner') return day.meals.dinner;
+    // Strategy 2: Match by day of week (diet plan: Sunday=0, Monday=1, etc.)
+    // The weeklyPlan array is indexed by day of week: [0]=Sunday, [1]=Monday, etc.
+    if (dayOfWeek < dietPlan.weeklyPlan.length) {
+      const planDay = dietPlan.weeklyPlan[dayOfWeek];
+      if (planDay) {
+        if (mealType === 'breakfast') return planDay.meals.breakfast;
+        if (mealType === 'lunch') return planDay.meals.lunch;
+        if (mealType === 'dinner') return planDay.meals.dinner;
         if (mealType === 'snack') {
-            const snack = day.meals.snacks.find(s => s.name === mealName);
-            if (snack) return snack;
-            return day.meals.snacks[0] || null;
+          // Find matching snack by name
+          const snack = planDay.meals.snacks.find(s => s.name === mealName);
+          if (snack) return snack;
+          // Fallback to first snack if name doesn't match
+          return planDay.meals.snacks[0] || null;
         }
       }
+    }
+    
+    // Strategy 3: Try to match by parsing plan day dates (fallback)
+    try {
+      for (const planDay of dietPlan.weeklyPlan) {
+        if (!planDay.date) continue;
+        
+        // Parse plan day date as local date
+        const [planYear, planMonth, planDay] = planDay.date.split('-').map(Number);
+        const planDate = new Date(planYear, planMonth - 1, planDay);
+        
+        if (planDate.getDay() === dayOfWeek) {
+          if (mealType === 'breakfast') return planDay.meals.breakfast;
+          if (mealType === 'lunch') return planDay.meals.lunch;
+          if (mealType === 'dinner') return planDay.meals.dinner;
+          if (mealType === 'snack') {
+            const snack = planDay.meals.snacks.find(s => s.name === mealName);
+            if (snack) return snack;
+            return planDay.meals.snacks[0] || null;
+          }
+        }
       }
     } catch (error) {
-      console.warn('Error matching meal by day of week:', error);
+      if (__DEV__) {
+        console.warn('Error matching meal by plan day date:', error);
+      }
     }
     
     return null;
@@ -567,15 +655,20 @@ class ProgressService {
       
       // Find today's workout day by matching date
       if (workoutPlan) {
-        // Generate dates for the current week and find matching day
-        const planStartDate = new Date(workoutPlan.startDate);
-        planStartDate.setHours(0, 0, 0, 0);
+        // ✅ CRITICAL: Map day of week to workout plan index
+        // JavaScript Date.getDay(): Sunday=0, Monday=1, ..., Saturday=6
+        // Workout plan: Monday=0, Tuesday=1, ..., Sunday=6
         const dayOfWeek = today.getDay();
-      const workoutPlanIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const workoutPlanIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         
         if (workoutPlanIndex < workoutPlan.weeklyPlan.length) {
-        const todayWorkout = workoutPlan.weeklyPlan[workoutPlanIndex];
-          totalWorkouts = todayWorkout.isRestDay ? 0 : (todayWorkout.exercises?.length || 0);
+          const todayWorkout = workoutPlan.weeklyPlan[workoutPlanIndex];
+          // ✅ CRITICAL: Sunday (index 6) should be rest day - ensure totalWorkouts is 0
+          if (todayWorkout.isRestDay || (dayOfWeek === 0 && todayWorkout.exercises?.length === 0)) {
+            totalWorkouts = 0;
+          } else {
+            totalWorkouts = todayWorkout.exercises?.length || 0;
+          }
         }
       }
       
@@ -588,8 +681,8 @@ class ProgressService {
           // Found exact date match
           totalMeals = 3 + (todayDietDay.meals?.snacks?.length || 0);
           targetCalories = todayDietDay.totalCalories || dietPlan.targetCalories || 2000;
-          // ✅ FIXED: Use actual day's target water, not hardcoded 3L
-          targetWater = todayDietDay.waterIntake ? (Number(todayDietDay.waterIntake) / 1000) : 3;
+          // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+          targetWater = todayDietDay.waterIntake ? (this.parseWaterIntakeToMl(todayDietDay.waterIntake) / 1000) : 3;
           // ✅ Calculate target macros from diet plan (daily target)
           targetProtein = dietPlan.targetProtein || 0;
           targetCarbs = dietPlan.targetCarbs || 0;
@@ -601,7 +694,8 @@ class ProgressService {
         const todayDiet = dietPlan.weeklyPlan[dayOfWeek];
             totalMeals = 3 + (todayDiet.meals?.snacks?.length || 0);
         targetCalories = todayDiet.totalCalories || dietPlan.targetCalories || 2000;
-            targetWater = todayDiet.waterIntake ? (Number(todayDiet.waterIntake) / 1000) : 3;
+            // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+            targetWater = todayDiet.waterIntake ? (this.parseWaterIntakeToMl(todayDiet.waterIntake) / 1000) : 3;
             // ✅ Calculate target macros from diet plan (daily target)
             targetProtein = dietPlan.targetProtein || 0;
             targetCarbs = dietPlan.targetCarbs || 0;
@@ -657,7 +751,8 @@ class ProgressService {
           if (dietDay) {
             totalMeals += 3 + (dietDay.meals?.snacks?.length || 0);
             totalTargetCalories += dietDay.totalCalories || dietPlan.targetCalories || 2000;
-            totalTargetWater += dietDay.waterIntake ? (Number(dietDay.waterIntake) / 1000) : 3;
+            // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+            totalTargetWater += dietDay.waterIntake ? (this.parseWaterIntakeToMl(dietDay.waterIntake) / 1000) : 3;
             // ✅ FIXED: Sum target macros for each day in the weekly period
             totalTargetProtein += dietPlan.targetProtein || 0;
             totalTargetCarbs += dietPlan.targetCarbs || 0;
@@ -669,7 +764,8 @@ class ProgressService {
               const dayPlan = dietPlan.weeklyPlan[dayOfWeek];
               totalMeals += 3 + (dayPlan.meals?.snacks?.length || 0);
               totalTargetCalories += dayPlan.totalCalories || dietPlan.targetCalories || 2000;
-              totalTargetWater += dayPlan.waterIntake ? (Number(dayPlan.waterIntake) / 1000) : 3;
+              // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+              totalTargetWater += dayPlan.waterIntake ? (this.parseWaterIntakeToMl(dayPlan.waterIntake) / 1000) : 3;
               // ✅ FIXED: Sum target macros for each day in the weekly period
               totalTargetProtein += dietPlan.targetProtein || 0;
               totalTargetCarbs += dietPlan.targetCarbs || 0;
@@ -736,7 +832,8 @@ class ProgressService {
           if (dietDay) {
             totalMeals += 3 + (dietDay.meals?.snacks?.length || 0);
             totalTargetCalories += dietDay.totalCalories || dietPlan.targetCalories || 2000;
-            totalTargetWater += dietDay.waterIntake ? (Number(dietDay.waterIntake) / 1000) : 3;
+            // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+            totalTargetWater += dietDay.waterIntake ? (this.parseWaterIntakeToMl(dietDay.waterIntake) / 1000) : 3;
             // ✅ Sum target macros for each day in the period
             totalTargetProtein += dietPlan.targetProtein || 0;
             totalTargetCarbs += dietPlan.targetCarbs || 0;
@@ -748,7 +845,8 @@ class ProgressService {
               const dayPlan = dietPlan.weeklyPlan[dayOfWeek];
               totalMeals += 3 + (dayPlan.meals?.snacks?.length || 0);
               totalTargetCalories += dayPlan.totalCalories || dietPlan.targetCalories || 2000;
-              totalTargetWater += dayPlan.waterIntake ? (Number(dayPlan.waterIntake) / 1000) : 3;
+              // ✅ CRITICAL: Parse water intake string to ml, then convert to liters
+              totalTargetWater += dayPlan.waterIntake ? (this.parseWaterIntakeToMl(dayPlan.waterIntake) / 1000) : 3;
               // ✅ Sum target macros for each day in the period
               totalTargetProtein += dietPlan.targetProtein || 0;
               totalTargetCarbs += dietPlan.targetCarbs || 0;
@@ -831,7 +929,7 @@ class ProgressService {
   }>> {
     try {
       // PERFORMANCE: Check cache first (unless forcing refresh)
-      const cacheKey = this.getCacheKey(period, selectedWeek, selectedMonth);
+      const cacheKey = await this.getCacheKey(period, selectedWeek, selectedMonth);
       if (!forceRefresh) {
         const cached = this.chartsCache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
@@ -854,9 +952,10 @@ class ProgressService {
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
       const mealCompletionData = mealCompletionService.getCompletionData();
       
-      // Generate labels based on plan weeks/months and selected filters
+      // ✅ CRITICAL: Generate labels based on plan weeks/months and selected filters
+      // Labels must match the data points exactly
       const labels = this.generateLabels(period, workoutPlan, dietPlan, selectedWeek, selectedMonth);
-      const dataPoints = labels.length;
+      const dataPoints = labels.length; // ✅ CRITICAL: Use label count to ensure data matches labels
 
       // Generate data based on actual completions and selected filters
       const caloriesData = await this.generateCaloriesChartData(
@@ -1150,7 +1249,7 @@ class ProgressService {
     return { startDate, endDate };
   }
 
-  // Generate workout chart data
+  // Generate workout chart data - ✅ CRITICAL: Use plan-based date ranges for accurate data
   private async generateWorkoutChartData(
     period: 'daily' | 'weekly' | 'monthly',
     dataPoints: number,
@@ -1161,26 +1260,8 @@ class ProgressService {
   ): Promise<number[]> {
     const data: number[] = [];
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Normalize to start of day
+    now.setHours(0, 0, 0, 0);
     
-    // When a specific week/month is selected, shift the base date window backwards
-    let weekOffset = 0;
-    let monthOffset = 0;
-
-    if (workoutPlan && workoutPlan.startDate) {
-      const planStartDate = new Date(workoutPlan.startDate);
-      planStartDate.setHours(0, 0, 0, 0);
-      const currentWeek = this.getCurrentWeekNumber(planStartDate, now);
-      const currentMonth = this.getCurrentMonthNumber(planStartDate, now);
-
-      if (selectedWeek && period === 'weekly') {
-        weekOffset = Math.max(0, currentWeek - selectedWeek);
-      }
-      if (selectedMonth && period === 'monthly') {
-        monthOffset = Math.max(0, currentMonth - selectedMonth);
-      }
-    }
-
     if (period === 'daily') {
       // ✅ Daily: single data point for TODAY only
       const startDate = new Date(now);
@@ -1193,33 +1274,100 @@ class ProgressService {
       return data;
     }
 
+    if (!workoutPlan || !workoutPlan.startDate) {
+      // Fallback: use calendar-based calculation
+      return this.generateWorkoutChartDataFallback(period, dataPoints, completedExercises);
+    }
+    
+    const planStartDate = new Date(workoutPlan.startDate);
+    planStartDate.setHours(0, 0, 0, 0);
+    const currentWeek = this.getCurrentWeekNumber(planStartDate, now);
+    const currentMonth = this.getCurrentMonthNumber(planStartDate, now);
+
+    // Use selected week/month if provided, otherwise fall back to current
+    const baseWeek = selectedWeek || currentWeek;
+    const baseMonth = selectedMonth || currentMonth;
+    
+    // Calculate which weeks/months to show (matching the labels)
+    let weeksToShow: number[] = [];
+    let monthsToShow: number[] = [];
+    
+    if (period === 'weekly') {
+      const weeksToDisplay = Math.min(dataPoints, baseWeek);
+      const startWeek = Math.max(1, baseWeek - weeksToDisplay + 1);
+      for (let week = startWeek; week <= baseWeek; week++) {
+        weeksToShow.push(week);
+      }
+    } else if (period === 'monthly') {
+      const monthsToDisplay = Math.min(dataPoints, baseMonth);
+      const startMonth = Math.max(1, baseMonth - monthsToDisplay + 1);
+      for (let month = startMonth; month <= baseMonth; month++) {
+        monthsToShow.push(month);
+      }
+    }
+    
+    for (let i = 0; i < dataPoints; i++) {
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (period === 'weekly') {
+        // ✅ CRITICAL: Use plan week numbers and date ranges
+        if (i >= weeksToShow.length) break;
+        const weekNumber = weeksToShow[i];
+        const weekRange = this.getWeekDateRange(planStartDate, weekNumber);
+        startDate = weekRange.startDate;
+        endDate = weekRange.endDate;
+      } else {
+        // ✅ CRITICAL: Use plan month numbers and date ranges
+        if (i >= monthsToShow.length) break;
+        const monthNumber = monthsToShow[i];
+        const monthRange = this.getMonthDateRange(planStartDate, monthNumber);
+        startDate = monthRange.startDate;
+        endDate = monthRange.endDate;
+      }
+      
+      const filtered = this.filterCompletionsByDateRange(completedExercises, startDate, endDate);
+      data.push(filtered.length);
+    }
+    
+    return data;
+  }
+  
+  // Fallback method for calendar-based calculation (when plan is not available)
+  private async generateWorkoutChartDataFallback(
+    period: 'daily' | 'weekly' | 'monthly',
+    dataPoints: number,
+    completedExercises: string[]
+  ): Promise<number[]> {
+    const data: number[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
     for (let i = dataPoints - 1; i >= 0; i--) {
       let startDate = new Date(now);
       let endDate = new Date(now);
       
-      if (period === 'weekly') {
-        // Weekly: Show last 4 weeks (Monday to Sunday)
-        const currentDayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // Convert to Monday-based
-        
-        // Calculate the Monday of the current week
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        const currentDayOfWeek = now.getDay();
+        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
         const currentWeekMonday = new Date(now);
-        currentWeekMonday.setDate(now.getDate() - daysFromMonday - (weekOffset * 7));
+        currentWeekMonday.setDate(now.getDate() - daysFromMonday);
         currentWeekMonday.setHours(0, 0, 0, 0);
-        
-        // Go back i weeks from current week
         startDate = new Date(currentWeekMonday);
         startDate.setDate(currentWeekMonday.getDate() - (i * 7));
         startDate.setHours(0, 0, 0, 0);
-        
         endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6); // Sunday of that week
+        endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
       } else {
-        // Monthly: Show last 6 months
-        startDate = new Date(now.getFullYear(), now.getMonth() - i - monthOffset, 1);
+        startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now.getFullYear(), now.getMonth() - i - monthOffset + 1, 0); // Last day of that month
+        endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
         endDate.setHours(23, 59, 59, 999);
       }
       
@@ -1230,7 +1378,7 @@ class ProgressService {
     return data;
   }
 
-  // Generate water chart data
+  // Generate water chart data - ✅ CRITICAL: Use plan-based date ranges and account-specific data
   private async generateWaterChartData(
     period: 'daily' | 'weekly' | 'monthly',
     dataPoints: number,
@@ -1239,6 +1387,7 @@ class ProgressService {
     selectedWeek?: number,
     selectedMonth?: number
   ): Promise<number[]> {
+    // ✅ CRITICAL: Use user-specific cache keys for account-specific data
     const userId = await getCurrentUserId();
     const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
     const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
@@ -1249,26 +1398,7 @@ class ProgressService {
     
     const data: number[] = [];
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Normalize to start of day
-
-    // When a specific week/month is selected, shift the base date window backwards
-    let weekOffset = 0;
-    let monthOffset = 0;
-
-    const planForOffsets = workoutPlan || dietPlan;
-    if (planForOffsets && planForOffsets.startDate) {
-      const planStartDate = new Date(planForOffsets.startDate);
-      planStartDate.setHours(0, 0, 0, 0);
-      const currentWeek = this.getCurrentWeekNumber(planStartDate, now);
-      const currentMonth = this.getCurrentMonthNumber(planStartDate, now);
-
-      if (selectedWeek && period === 'weekly') {
-        weekOffset = Math.max(0, currentWeek - selectedWeek);
-      }
-      if (selectedMonth && period === 'monthly') {
-        monthOffset = Math.max(0, currentMonth - selectedMonth);
-      }
-    }
+    now.setHours(0, 0, 0, 0);
     
     if (period === 'daily') {
       // ✅ Daily: single data point for TODAY only
@@ -1279,42 +1409,159 @@ class ProgressService {
 
       const filtered = this.filterWaterByDateRange(waterData, waterCompleted, startDate, endDate);
       let water = 0;
-      for (const [date, amount] of Object.entries(filtered.intake)) {
+      
+      // ✅ CRITICAL: Check all dates from both intake and completed
+      const allWaterDates = new Set([
+        ...Object.keys(filtered.intake),
+        ...Object.keys(filtered.completed)
+      ]);
+      
+      for (const date of allWaterDates) {
         if (filtered.completed[date]) {
-          water += Number(amount) || 0;
+          // Get target water from diet plan for this specific date
+          let dietPlanDay = dietPlan?.weeklyPlan.find(day => day.date === date);
+          if (!dietPlanDay && dietPlan) {
+            const [year, month, day] = date.split('-').map(Number);
+            const waterDate = new Date(year, month - 1, day);
+            const dayOfWeek = waterDate.getDay();
+            if (dayOfWeek < dietPlan.weeklyPlan.length) {
+              dietPlanDay = dietPlan.weeklyPlan[dayOfWeek];
+            }
+          }
+          const targetWater = dietPlanDay?.waterIntake ? this.parseWaterIntakeToMl(dietPlanDay.waterIntake) : 3000;
+          water += targetWater;
+        } else if (filtered.intake[date] !== undefined && Number(filtered.intake[date]) > 0) {
+          water += Number(filtered.intake[date]) || 0;
         }
       }
+      
       data.push(Math.round((water / 1000) * 10) / 10); // liters
       return data;
     }
 
+    const planForRanges = workoutPlan || dietPlan;
+    if (!planForRanges || !planForRanges.startDate) {
+      // Fallback: use calendar-based calculation
+      return this.generateWaterChartDataFallback(period, dataPoints, waterData, waterCompleted);
+    }
+    
+    const planStartDate = new Date(planForRanges.startDate);
+    planStartDate.setHours(0, 0, 0, 0);
+    const currentWeek = this.getCurrentWeekNumber(planStartDate, now);
+    const currentMonth = this.getCurrentMonthNumber(planStartDate, now);
+
+    // Use selected week/month if provided, otherwise fall back to current
+    const baseWeek = selectedWeek || currentWeek;
+    const baseMonth = selectedMonth || currentMonth;
+    
+    // Calculate which weeks/months to show (matching the labels)
+    let weeksToShow: number[] = [];
+    let monthsToShow: number[] = [];
+    
+    if (period === 'weekly') {
+      const weeksToDisplay = Math.min(dataPoints, baseWeek);
+      const startWeek = Math.max(1, baseWeek - weeksToDisplay + 1);
+      for (let week = startWeek; week <= baseWeek; week++) {
+        weeksToShow.push(week);
+      }
+    } else if (period === 'monthly') {
+      const monthsToDisplay = Math.min(dataPoints, baseMonth);
+      const startMonth = Math.max(1, baseMonth - monthsToDisplay + 1);
+      for (let month = startMonth; month <= baseMonth; month++) {
+        monthsToShow.push(month);
+      }
+    }
+    
+    for (let i = 0; i < dataPoints; i++) {
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (period === 'weekly') {
+        // ✅ CRITICAL: Use plan week numbers and date ranges
+        if (i >= weeksToShow.length) break;
+        const weekNumber = weeksToShow[i];
+        const weekRange = this.getWeekDateRange(planStartDate, weekNumber);
+        startDate = weekRange.startDate;
+        endDate = weekRange.endDate;
+      } else {
+        // ✅ CRITICAL: Use plan month numbers and date ranges
+        if (i >= monthsToShow.length) break;
+        const monthNumber = monthsToShow[i];
+        const monthRange = this.getMonthDateRange(planStartDate, monthNumber);
+        startDate = monthRange.startDate;
+        endDate = monthRange.endDate;
+      }
+      
+      const filtered = this.filterWaterByDateRange(waterData, waterCompleted, startDate, endDate);
+      let water = 0;
+      
+      // ✅ CRITICAL: Check all dates from both intake and completed
+      const allWaterDates = new Set([
+        ...Object.keys(filtered.intake),
+        ...Object.keys(filtered.completed)
+      ]);
+      
+      for (const date of allWaterDates) {
+        if (filtered.completed[date]) {
+          // Get target water from diet plan for this specific date
+          let dietPlanDay = dietPlan?.weeklyPlan.find(day => day.date === date);
+          if (!dietPlanDay && dietPlan) {
+            const [year, month, day] = date.split('-').map(Number);
+            const waterDate = new Date(year, month - 1, day);
+            const dayOfWeek = waterDate.getDay();
+            if (dayOfWeek < dietPlan.weeklyPlan.length) {
+              dietPlanDay = dietPlan.weeklyPlan[dayOfWeek];
+            }
+          }
+          const targetWater = dietPlanDay?.waterIntake ? this.parseWaterIntakeToMl(dietPlanDay.waterIntake) : 3000;
+          water += targetWater;
+        } else if (filtered.intake[date] !== undefined && Number(filtered.intake[date]) > 0) {
+          water += Number(filtered.intake[date]) || 0;
+        }
+      }
+      
+      data.push(Math.round((water / 1000) * 10) / 10); // Convert to liters
+    }
+    
+    return data;
+  }
+  
+  // Fallback method for calendar-based calculation (when plan is not available)
+  private async generateWaterChartDataFallback(
+    period: 'daily' | 'weekly' | 'monthly',
+    dataPoints: number,
+    waterData: { [key: string]: number },
+    waterCompleted: { [key: string]: boolean }
+  ): Promise<number[]> {
+    const data: number[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
     for (let i = dataPoints - 1; i >= 0; i--) {
       let startDate = new Date(now);
       let endDate = new Date(now);
       
-      if (period === 'weekly') {
-        // Weekly: Show last 4 weeks (Monday to Sunday)
-        const currentDayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // Convert to Monday-based
-        
-        // Calculate the Monday of the current week
+      if (period === 'daily') {
+        startDate.setDate(now.getDate() - i);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (period === 'weekly') {
+        const currentDayOfWeek = now.getDay();
+        const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
         const currentWeekMonday = new Date(now);
-        currentWeekMonday.setDate(now.getDate() - daysFromMonday - (weekOffset * 7));
+        currentWeekMonday.setDate(now.getDate() - daysFromMonday);
         currentWeekMonday.setHours(0, 0, 0, 0);
-        
-        // Go back i weeks from current week
         startDate = new Date(currentWeekMonday);
         startDate.setDate(currentWeekMonday.getDate() - (i * 7));
         startDate.setHours(0, 0, 0, 0);
-        
         endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 6); // Sunday of that week
+        endDate.setDate(startDate.getDate() + 6);
         endDate.setHours(23, 59, 59, 999);
       } else {
-        // Monthly: Show last 6 months
-        startDate = new Date(now.getFullYear(), now.getMonth() - i - monthOffset, 1);
+        startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
         startDate.setHours(0, 0, 0, 0);
-        endDate = new Date(now.getFullYear(), now.getMonth() - i - monthOffset + 1, 0); // Last day of that month
+        endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
         endDate.setHours(23, 59, 59, 999);
       }
       
@@ -1325,8 +1572,7 @@ class ProgressService {
           water += Number(amount) || 0;
         }
       }
-      
-      data.push(Math.round(water / 1000 * 10) / 10); // Convert to liters
+      data.push(Math.round((water / 1000) * 10) / 10);
     }
     
     return data;
@@ -1452,7 +1698,7 @@ class ProgressService {
         labels.push('Today');
         break;
       case 'weekly':
-        // Weekly: Show last 4 weeks based on plan week numbers
+        // ✅ CRITICAL: Weekly labels based on plan week numbers - must match data points
         const planForWeeks = workoutPlan || dietPlan;
         if (planForWeeks && planForWeeks.startDate) {
           const planStartDate = new Date(planForWeeks.startDate);
@@ -1463,8 +1709,9 @@ class ProgressService {
           const baseWeek = selectedWeek || currentWeek;
           const totalWeeks = planForWeeks.totalWeeks || 12;
           
-          // Show last 4 weeks (or available weeks if less than 4)
-          const weeksToShow = Math.min(4, baseWeek);
+          // ✅ CRITICAL: Show weeks up to baseWeek (or all available weeks)
+          // This ensures labels match the data points generated
+          const weeksToShow = Math.min(4, baseWeek); // Show up to 4 weeks
           const startWeek = Math.max(1, baseWeek - weeksToShow + 1);
           
           for (let week = startWeek; week <= baseWeek; week++) {
@@ -1472,13 +1719,13 @@ class ProgressService {
           }
         } else {
           // Fallback: generic week labels
-        for (let i = 3; i >= 0; i--) {
-          labels.push(`Week ${4 - i}`);
+          for (let i = 3; i >= 0; i--) {
+            labels.push(`Week ${4 - i}`);
           }
         }
         break;
       case 'monthly':
-        // Monthly: Show last 6 months based on plan months
+        // ✅ CRITICAL: Monthly labels based on plan months - must match data points
         const planForMonths = workoutPlan || dietPlan;
         if (planForMonths && planForMonths.startDate) {
           const planStartDate = new Date(planForMonths.startDate);
@@ -1490,22 +1737,23 @@ class ProgressService {
           const totalWeeks = planForMonths.totalWeeks || 12;
           const totalMonths = Math.ceil(totalWeeks / 4); // Approximate months
           
-          // Show last 6 months (or available months if less than 6)
-          const monthsToShow = Math.min(6, baseMonth);
+          // ✅ CRITICAL: Show months up to baseMonth (or all available months)
+          // This ensures labels match the data points generated
+          const monthsToShow = Math.min(6, baseMonth); // Show up to 6 months
           const startMonth = Math.max(1, baseMonth - monthsToShow + 1);
           
           for (let month = startMonth; month <= baseMonth; month++) {
             // Calculate the actual month date
             const monthDate = new Date(planStartDate);
             monthDate.setMonth(planStartDate.getMonth() + (month - 1));
-            labels.push(monthDate.toLocaleDateString('en', { month: 'short' }));
+            labels.push(monthDate.toLocaleDateString('en', { month: 'short', year: 'numeric' }));
           }
         } else {
           // Fallback: generic month labels
-        for (let i = 5; i >= 0; i--) {
-          const date = new Date(now);
-          date.setMonth(now.getMonth() - i);
-          labels.push(date.toLocaleDateString('en', { month: 'short' }));
+          for (let i = 5; i >= 0; i--) {
+            const date = new Date(now);
+            date.setMonth(now.getMonth() - i);
+            labels.push(date.toLocaleDateString('en', { month: 'short', year: 'numeric' }));
           }
         }
         break;
@@ -1645,6 +1893,44 @@ class ProgressService {
   }
 
   // Clear all progress data
+  // ✅ Helper function to parse water intake string to milliliters
+  // Handles formats like "2-3 liters", "3000ml", "3L", "2.5L", etc.
+  private parseWaterIntakeToMl(waterIntakeStr: string | undefined): number {
+    if (!waterIntakeStr) return 3000; // Default 3L
+    
+    const str = waterIntakeStr.trim().toLowerCase();
+    
+    // Try to extract number from string (handles "2-3 liters", "3000ml", "3L", etc.)
+    // Match patterns like: "3000ml", "3L", "2.5L", "2-3 liters", "3000 ml"
+    const mlMatch = str.match(/(\d+(?:\.\d+)?)\s*ml/i);
+    if (mlMatch) {
+      return Math.round(parseFloat(mlMatch[1]));
+    }
+    
+    const literMatch = str.match(/(\d+(?:\.\d+)?)\s*l/i);
+    if (literMatch) {
+      return Math.round(parseFloat(literMatch[1]) * 1000);
+    }
+    
+    // Handle range format like "2-3 liters" - use the higher value
+    const rangeMatch = str.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*(?:liters?|l)/i);
+    if (rangeMatch) {
+      const maxValue = Math.max(parseFloat(rangeMatch[1]), parseFloat(rangeMatch[2]));
+      return Math.round(maxValue * 1000);
+    }
+    
+    // Try to extract any number and assume it's in liters if no unit specified
+    const numberMatch = str.match(/(\d+(?:\.\d+)?)/);
+    if (numberMatch) {
+      const value = parseFloat(numberMatch[1]);
+      // If value is > 10, assume it's in ml; otherwise assume liters
+      return value > 10 ? Math.round(value) : Math.round(value * 1000);
+    }
+    
+    // Default fallback
+    return 3000; // 3L default
+  }
+
   async clearProgressData(): Promise<void> {
     try {
       await exerciseCompletionService.clearCompletionData();

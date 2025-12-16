@@ -169,7 +169,21 @@ export default function CreatePersonalizedWorkoutScreen() {
     }
 
     try {
-      await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(selectedExercises));
+      // ✅ CRITICAL: Use user-specific cache key for account-specific data
+      const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        showToast('error', 'User not authenticated. Please login again.');
+        return;
+      }
+
+      const personalizedWorkoutKey = await getUserCacheKey('personalizedWorkout', userId);
+      await AsyncStorage.setItem(personalizedWorkoutKey, JSON.stringify(selectedExercises));
+      
+      // Also clear old global key if it exists (migration)
+      await AsyncStorage.removeItem('personalizedWorkout');
+      
       showToast('success', `Your personalized workout with ${selectedExercises.length} exercises is ready!`);
       // Navigate to the personalized workout screen instead of going back
       router.replace('/(dashboard)/personalized-workout');

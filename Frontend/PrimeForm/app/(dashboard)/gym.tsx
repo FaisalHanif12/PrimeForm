@@ -191,10 +191,21 @@ export default function GymScreen() {
 
   const checkPersonalizedWorkout = async () => {
     try {
-      const savedExercises = await AsyncStorage.getItem('personalizedWorkout');
+      // ✅ CRITICAL: Use user-specific cache key for account-specific data
+      const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        setHasPersonalizedWorkout(false);
+        return;
+      }
+
+      const personalizedWorkoutKey = await getUserCacheKey('personalizedWorkout', userId);
+      const savedExercises = await AsyncStorage.getItem(personalizedWorkoutKey);
       setHasPersonalizedWorkout(!!savedExercises);
     } catch (error) {
       console.error('Error checking personalized workout:', error);
+      setHasPersonalizedWorkout(false);
     }
   };
 

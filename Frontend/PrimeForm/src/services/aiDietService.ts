@@ -143,6 +143,12 @@ ${targetWeightLine ? `${targetWeightLine}\n` : ''}- Diet: ${userProfile.dietPref
 - ${userProfile.bodyGoal.includes('Gain') ? 'High protein, caloric surplus' : userProfile.bodyGoal.includes('Loss') || userProfile.bodyGoal.includes('Fat') ? 'High protein, caloric deficit' : 'Balanced nutrition'}
 - ${userProfile.medicalConditions ? `Modify for: ${userProfile.medicalConditions}` : 'No medical restrictions'}
 
+**CRITICAL - DIET TYPE & REGIONAL CUISINE:**
+- **Diet Type Compliance:** The diet MUST strictly follow ${userProfile.dietPreference || 'no restrictions'} diet type. If vegetarian - NO meat, fish, or poultry. If pescatarian - include fish but NO meat or poultry. If non-vegetarian - can include all protein sources. If vegan - NO animal products whatsoever.
+- **Regional Authenticity:** Since the user is from ${userProfile.country || 'International'}, create meals using POPULAR, AUTHENTIC, and HEALTHY dishes from ${userProfile.country || 'international'} cuisine that are commonly eaten in that region.
+- **Diet Type + Regional Balance:** Combine regional authenticity with diet type - select traditional ${userProfile.country || 'international'} dishes that naturally fit the ${userProfile.dietPreference || 'no restrictions'} diet type. For example, if vegetarian and from India, use dishes like "Dal Tadka", "Palak Paneer", "Chana Masala". If non-vegetarian and from Pakistan, use dishes like "Chicken Karahi", "Beef Biryani", "Mutton Curry".
+- **Cultural Relevance:** Ensure all meals reflect the cooking styles, spices, and ingredients commonly used in ${userProfile.country || 'international'} cuisine while maintaining nutritional balance and diet type restrictions.
+
 **CRITICAL - PLAN DURATION:**
 - This plan must be designed for a total duration of **${durationForPrompt}**
 - The 7-day plan you create will repeat weekly for ${planDuration.totalWeeks} weeks
@@ -158,21 +164,31 @@ ${targetWeightLine ? `${targetWeightLine}\n` : ''}- Diet: ${userProfile.dietPref
 #### 🍽️ 7-Day Plan  
 
 **Day 1: [Day Name]**  
-**Breakfast:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Breakfast:** [ACTUAL MEAL NAME like "Oatmeal with Berries" or "Scrambled Eggs with Toast"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
 - Ingredients: [list]
 - Instructions: [brief method]
 
-**Lunch:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Lunch:** [ACTUAL MEAL NAME like "Grilled Chicken Salad" or "Vegetable Curry"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
 - Ingredients: [list]
 - Instructions: [brief method]
 
-**Dinner:** [Name] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Dinner:** [ACTUAL MEAL NAME like "Baked Salmon with Vegetables" or "Lentil Soup"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
 - Ingredients: [list]
 - Instructions: [brief method]
 
 **Snacks:**
-- Snack 1: [Name] – [Cal] kcal
-- Snack 2: [Name] – [Cal] kcal
+- Snack 1: [ACTUAL SNACK NAME like "Apple with Almonds" or "Greek Yogurt"] – [Cal] kcal
+- Snack 2: [ACTUAL SNACK NAME like "Trail Mix" or "Protein Bar"] – [Cal] kcal
+
+**CRITICAL MEAL NAMING RULES:**
+1. NEVER use generic labels like "Breakfast", "Lunch", "Dinner", or "Snack" as the meal name
+2. ALWAYS use SPECIFIC, DESCRIPTIVE names that describe the actual food using ${userProfile.country || 'regional'} dish names when applicable
+3. Each meal name should be unique and tell the user exactly what dish they're eating
+4. Use authentic ${userProfile.country || 'regional'} dish names when possible (e.g., for ${userProfile.country || 'international'} cuisine: use traditional dish names from that region)
+5. Examples of GOOD names: ${userProfile.dietPreference?.toLowerCase().includes('veg') ? '"Dal Tadka with Rice", "Palak Paneer with Roti", "Chana Masala"' : userProfile.dietPreference?.toLowerCase().includes('pescatarian') || userProfile.dietPreference?.toLowerCase().includes('fish') ? '"Grilled Fish Curry", "Fish Biryani", "Salmon Tikka"' : '"Chicken Karahi", "Beef Biryani", "Mutton Curry"'} or international dishes like "Oatmeal with Berries", "Grilled Chicken Salad", "Baked Salmon with Vegetables"
+6. Examples of BAD names: "Breakfast", "Lunch", "Dinner", "Meal 1", "Food"
+7. The meal name should appear immediately after "**Breakfast:**", "**Lunch:**", or "**Dinner:**" and before the "–" symbol
+8. Prioritize popular, healthy, and authentic ${userProfile.country || 'regional'} dishes that fit the ${userProfile.dietPreference || 'diet'} type
 
 **Daily Totals:** [Total] kcal | P: [X]g | C: [X]g | F: [X]g  
 **Water Intake:** [X] liters  
@@ -299,9 +315,15 @@ Generate complete 7-day plan now.
   async loadDietPlanFromDatabase(forceRefresh = false): Promise<DietPlan | null> {
     const cacheKey = 'diet-plan-active';
 
-    // Check if there's already a request in flight
-    if (this.loadingCache.has(cacheKey)) {
-      return this.loadingCache.get(cacheKey);
+    // If forcing refresh, clear any existing loading cache
+    if (forceRefresh) {
+      this.loadingCache.delete(cacheKey);
+      this.clearCache(cacheKey);
+    } else {
+      // Check if there's already a request in flight
+      if (this.loadingCache.has(cacheKey)) {
+        return this.loadingCache.get(cacheKey);
+      }
     }
 
     // Check memory cache first (unless forcing refresh)
@@ -315,7 +337,7 @@ Generate complete 7-day plan now.
     // Create new request and cache the promise to prevent duplicates
     const request = (async () => {
       try {
-        // OPTIMIZATION: Try local storage first to avoid API call
+        // OPTIMIZATION: Try local storage first to avoid API call (skip if forceRefresh)
         if (!forceRefresh) {
           try {
             const userId = await getCurrentUserId();
@@ -351,23 +373,25 @@ Generate complete 7-day plan now.
           return response.data;
         }
       } catch (error) {
-        // Try to load from local cache as fallback
-        try {
-          const userId = await getCurrentUserId();
-          if (userId) {
-            const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
-            const cachedPlan = await Storage.getItem(userCacheKey);
-            if (cachedPlan) {
-              const plan = JSON.parse(cachedPlan);
-              // Validate cached data belongs to current user
-              if (validateCachedData(plan, userId)) {
-                await this.setCachedData(cacheKey, plan);
-                return plan;
+        // Only try to load from local cache as fallback if NOT forcing refresh
+        if (!forceRefresh) {
+          try {
+            const userId = await getCurrentUserId();
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+              const cachedPlan = await Storage.getItem(userCacheKey);
+              if (cachedPlan) {
+                const plan = JSON.parse(cachedPlan);
+                // Validate cached data belongs to current user
+                if (validateCachedData(plan, userId)) {
+                  await this.setCachedData(cacheKey, plan);
+                  return plan;
+                }
               }
             }
+          } catch (cacheError) {
+            // Could not load from cache either
           }
-        } catch (cacheError) {
-          // Could not load from cache either
         }
       } finally {
         // Remove from loading cache after request completes
@@ -389,21 +413,67 @@ Generate complete 7-day plan now.
   // Clear diet plan from database
   async clearDietPlanFromDatabase(): Promise<void> {
     try {
+      // Clear loading cache first to prevent any in-flight requests
+      this.loadingCache.delete('diet-plan-active');
+      
+      // Clear from database
       await dietPlanService.clearAllDietPlans();
 
-      // Also clear local cache (both user-specific and old global)
+      // Clear local cache (both user-specific and old global)
       const userId = await getCurrentUserId();
       if (userId) {
         const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
         await Storage.removeItem(userCacheKey);
+        
+        // Also clear all related diet completion data
+        const completedMealsKey = await getUserCacheKey('completed_meals', userId);
+        const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
+        const waterIntakeKey = await getUserCacheKey('water_intake', userId);
+        const waterCompletedKey = await getUserCacheKey('water_completed', userId);
+        
+        await Storage.removeItem(completedMealsKey);
+        await Storage.removeItem(completedDaysKey);
+        await Storage.removeItem(waterIntakeKey);
+        await Storage.removeItem(waterCompletedKey);
       }
-      // Clear old global key for migration
+      
+      // Clear old global keys for migration
       await Storage.removeItem('cached_diet_plan');
+      await Storage.removeItem('completed_meals');
+      await Storage.removeItem('completed_diet_days');
+      await Storage.removeItem('water_intake');
+      await Storage.removeItem('water_completed');
 
       // Clear memory cache
       this.clearCache('diet-plan-active');
+      
+      // Clear ALL loading cache entries related to diet
+      for (const key of this.loadingCache.keys()) {
+        if (key.includes('diet')) {
+          this.loadingCache.delete(key);
+        }
+      }
+      
+      if (__DEV__) {
+        console.log('✅ Diet plan and all related data cleared successfully');
+      }
     } catch (error) {
-      // Could not clear diet plans from database
+      console.error('❌ Error clearing diet plan from database:', error);
+      // Still try to clear local cache even if database clear fails
+      try {
+        // Clear loading cache
+        this.loadingCache.delete('diet-plan-active');
+        
+        const userId = await getCurrentUserId();
+        if (userId) {
+          const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+          await Storage.removeItem(userCacheKey);
+        }
+        await Storage.removeItem('cached_diet_plan');
+        this.clearCache('diet-plan-active');
+      } catch (cacheError) {
+        console.error('❌ Error clearing local cache:', cacheError);
+      }
     }
   }
 
@@ -438,9 +508,20 @@ Generate complete 7-day plan now.
     const weeklyPlan: DietDay[] = this.parseAIDietDays(aiResponse);
 
     // Calculate dates based on calculated duration
+    // CRITICAL: Use local date (not UTC) to ensure correct day
     const startDate = new Date();
-    const endDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // Set to midnight local time
+    const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + (totalWeeks * 7));
+    endDate.setHours(0, 0, 0, 0);
+
+    // Format as local date string (YYYY-MM-DD) to avoid timezone issues
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
     return {
       goal: goal,
@@ -454,8 +535,8 @@ Generate complete 7-day plan now.
         'Include variety to ensure all nutrients are covered'
       ],
       weeklyPlan: weeklyPlan, // Keep the 7-day pattern
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: formatLocalDate(startDate),
+      endDate: formatLocalDate(endDate),
       totalWeeks: totalWeeks,
       targetCalories: targetCalories,
       targetProtein: Math.round(targetCalories * 0.2 / 4), // 20% protein
@@ -542,37 +623,149 @@ Generate complete 7-day plan now.
     snacks: DietMeal[];
   } {
     // Parse breakfast, lunch, dinner, and snacks from the day section
-    const breakfast = this.parseMealSection(daySection, 'breakfast') || this.getDefaultMeal('Breakfast', '🍳');
-    const lunch = this.parseMealSection(daySection, 'lunch') || this.getDefaultMeal('Lunch', '🥗');
-    const dinner = this.parseMealSection(daySection, 'dinner') || this.getDefaultMeal('Dinner', '🍽️');
+    // Try to parse each meal, and only use default if parsing completely fails
+    let breakfast = this.parseMealSection(daySection, 'breakfast');
+    let lunch = this.parseMealSection(daySection, 'lunch');
+    let dinner = this.parseMealSection(daySection, 'dinner');
+    
+    // If parsing failed, try alternative patterns or extract from raw text
+    if (!breakfast) {
+      breakfast = this.parseMealSectionAlternative(daySection, 'breakfast') || this.getDefaultMeal('Breakfast', '🍳');
+    }
+    if (!lunch) {
+      lunch = this.parseMealSectionAlternative(daySection, 'lunch') || this.getDefaultMeal('Lunch', '🥗');
+    }
+    if (!dinner) {
+      dinner = this.parseMealSectionAlternative(daySection, 'dinner') || this.getDefaultMeal('Dinner', '🍽️');
+    }
+    
     const snacks = this.parseSnacksSection(daySection);
 
     return { breakfast, lunch, dinner, snacks };
   }
 
+  // Alternative parsing method - tries to extract meal name even from less structured formats
+  private parseMealSectionAlternative(daySection: string, mealType: string): DietMeal | null {
+    // Look for meal type followed by colon and meal name
+    const patterns = [
+      new RegExp(`${mealType}:\\s*([A-Z][^–\\n]+?)(?:\\s*–|\\s*\\||\\n)`, 'i'),
+      new RegExp(`\\*\\*${mealType}:\\*\\*\\s*([A-Z][^–\\n]+?)(?:\\s*–|\\s*\\||\\n)`, 'i'),
+      new RegExp(`${mealType}\\s+([A-Z][^–\\n]+?)(?:\\s*–|\\s*\\||\\n)`, 'i'),
+    ];
+
+    for (const pattern of patterns) {
+      const match = daySection.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        // Only accept if it's a real meal name (not just "Breakfast", "Lunch", etc.)
+        if (name && name.toLowerCase() !== mealType.toLowerCase() && name.length > 3) {
+          // Try to extract calories from nearby text
+          const caloriesMatch = daySection.match(new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*?(\\d+)\\s*kcal`, 'i'));
+          const calories = caloriesMatch ? parseInt(caloriesMatch[1]) : 300;
+          
+          return {
+            name: name,
+            emoji: this.getMealEmoji(name),
+            ingredients: this.extractIngredients(daySection, mealType),
+            calories: calories,
+            protein: Math.round(calories * 0.2 / 4),
+            carbs: Math.round(calories * 0.5 / 4),
+            fats: Math.round(calories * 0.3 / 9),
+            preparationTime: '15 min',
+            servingSize: '1 serving',
+            instructions: this.extractInstructions(daySection, mealType) || 'Prepare according to standard cooking methods'
+          };
+        }
+      }
+    }
+
+    return null;
+  }
+
   private parseMealSection(daySection: string, mealType: string): DietMeal | null {
-    const mealRegex = new RegExp(`\\*\\*${mealType}:\\*\\*\\s*(.+?)\\s*–\\s*(\\d+)\\s*kcal.*?Protein:\\s*(\\d+)g.*?Carbs:\\s*(\\d+)g.*?Fats:\\s*(\\d+)g.*?Prep:\\s*([^\\n]+)`, 'i');
-    const match = daySection.match(mealRegex);
+    // Try multiple regex patterns to handle different AI response formats
+    // Pattern 1: Full format with all fields
+    let mealRegex = new RegExp(`\\*\\*${mealType}:\\*\\*\\s*(.+?)\\s*[–-]\\s*(\\d+)\\s*kcal.*?[Pp]rotein:\\s*(\\d+)g.*?[Cc]arbs?:\\s*(\\d+)g.*?[Ff]ats?:\\s*(\\d+)g.*?[Pp]rep?:\\s*([^\\n]+)`, 'i');
+    let match = daySection.match(mealRegex);
+
+    // Pattern 2: Format with | separator (P: Xg | C: Xg | F: Xg)
+    if (!match) {
+      mealRegex = new RegExp(`\\*\\*${mealType}:\\*\\*\\s*(.+?)\\s*[–-]\\s*(\\d+)\\s*kcal.*?[Pp]:\\s*(\\d+)g.*?[Cc]:\\s*(\\d+)g.*?[Ff]:\\s*(\\d+)g`, 'i');
+      match = daySection.match(mealRegex);
+    }
+
+    // Pattern 3: Just name and calories (minimal format)
+    if (!match) {
+      mealRegex = new RegExp(`\\*\\*${mealType}:\\*\\*\\s*(.+?)\\s*[–-]\\s*(\\d+)\\s*kcal`, 'i');
+      match = daySection.match(mealRegex);
+    }
+
+    // Pattern 4: Without ** markers (some AI responses might not use them)
+    if (!match) {
+      mealRegex = new RegExp(`${mealType}:\\s*(.+?)\\s*[–-]\\s*(\\d+)\\s*kcal`, 'i');
+      match = daySection.match(mealRegex);
+    }
 
     if (match) {
-      const [, name, calories, protein, carbs, fats, prepTime] = match;
+      const name = match[1]?.trim() || '';
+      const calories = parseInt(match[2]) || 0;
+      
+      // Extract macros if available
+      let protein = 0, carbs = 0, fats = 0;
+      if (match[3] && match[4] && match[5]) {
+        protein = parseInt(match[3]) || 0;
+        carbs = parseInt(match[4]) || 0;
+        fats = parseInt(match[5]) || 0;
+      } else {
+        // Try to extract macros separately if not in main match
+        const proteinMatch = daySection.match(new RegExp(`[Pp]rotein:?\\s*(\\d+)g`, 'i')) || daySection.match(new RegExp(`[Pp]:\\s*(\\d+)g`, 'i'));
+        const carbsMatch = daySection.match(new RegExp(`[Cc]arbs?:?\\s*(\\d+)g`, 'i')) || daySection.match(new RegExp(`[Cc]:\\s*(\\d+)g`, 'i'));
+        const fatsMatch = daySection.match(new RegExp(`[Ff]ats?:?\\s*(\\d+)g`, 'i')) || daySection.match(new RegExp(`[Ff]:\\s*(\\d+)g`, 'i'));
+        
+        protein = proteinMatch ? parseInt(proteinMatch[1]) : Math.round(calories * 0.2 / 4);
+        carbs = carbsMatch ? parseInt(carbsMatch[1]) : Math.round(calories * 0.5 / 4);
+        fats = fatsMatch ? parseInt(fatsMatch[1]) : Math.round(calories * 0.3 / 9);
+      }
+
+      // Extract prep time if available
+      const prepTimeMatch = daySection.match(new RegExp(`[Pp]rep?:?\\s*([^\\n]+)`, 'i')) || 
+                           daySection.match(new RegExp(`[Tt]ime:?\\s*([^\\n]+)`, 'i'));
+      const prepTime = prepTimeMatch ? prepTimeMatch[1].trim() : '15 min';
+
       const ingredients = this.extractIngredients(daySection, mealType);
       const instructions = this.extractInstructions(daySection, mealType);
 
-      return {
-        name: name.trim(),
-        emoji: this.getMealEmoji(name.trim()),
-        ingredients: ingredients.length > 0 ? ingredients : ['Healthy ingredients'],
-        calories: parseInt(calories) || 0,
-        protein: parseInt(protein) || 0,
-        carbs: parseInt(carbs) || 0,
-        fats: parseInt(fats) || 0,
-        preparationTime: prepTime.trim(),
-        servingSize: '1 serving',
-        instructions: instructions || 'Prepare according to standard cooking methods'
-      };
+      // Only return if we have a valid name (not empty and not just the meal type)
+      if (name && name.toLowerCase() !== mealType.toLowerCase() && name.length > 2) {
+        const parsedMeal = {
+          name: name.trim(),
+          emoji: this.getMealEmoji(name.trim()),
+          ingredients: ingredients.length > 0 ? ingredients : ['Healthy ingredients'],
+          calories: calories,
+          protein: protein,
+          carbs: carbs,
+          fats: fats,
+          preparationTime: prepTime,
+          servingSize: '1 serving',
+          instructions: instructions || 'Prepare according to standard cooking methods'
+        };
+        
+        if (__DEV__) {
+          console.log(`✅ Successfully parsed ${mealType}: "${parsedMeal.name}"`);
+        }
+        
+        return parsedMeal;
+      } else {
+        if (__DEV__) {
+          console.warn(`⚠️ Parsed ${mealType} but name is invalid: "${name}"`);
+        }
+      }
     }
 
+    if (__DEV__) {
+      console.warn(`⚠️ Failed to parse ${mealType} from day section. Trying alternative methods...`);
+    }
+    
     return null;
   }
 

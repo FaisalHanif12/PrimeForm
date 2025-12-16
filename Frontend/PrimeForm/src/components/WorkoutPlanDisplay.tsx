@@ -144,10 +144,25 @@ export default function WorkoutPlanDisplay({
     
     const weekDays: WorkoutDay[] = [];
     const currentWeek = getCurrentWeek();
-    const startDate = new Date(workoutPlan.startDate);
-    const today = new Date();
     
-    // If we're in week 1, show days from plan start date to end of first week
+    // Parse startDate carefully to avoid timezone issues
+    // If startDate is a string like "2025-12-16", parse it as local date
+    let startDate: Date;
+    if (typeof workoutPlan.startDate === 'string') {
+      const [year, month, day] = workoutPlan.startDate.split('-').map(Number);
+      startDate = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      startDate = new Date(workoutPlan.startDate);
+    }
+    startDate.setHours(0, 0, 0, 0); // Ensure it's at midnight local time
+    
+    // CRITICAL: Store the generation day of week to ensure we only show days from that day onwards
+    const generationDayOfWeek = startDate.getDay();
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // If we're in week 1, show days from plan start date (generation day) to Sunday
     if (currentWeek === 1) {
       const planStartDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
@@ -166,11 +181,36 @@ export default function WorkoutPlanDisplay({
           dayName: 'Sunday'
         });
       } else {
-        // Week 1: from plan generation day to Sunday (or end of available days)
-        for (let i = 0; i < 7; i++) {
+        // Week 1: from plan generation day to Sunday (inclusive)
+        // Calculate how many days from generation day to Sunday (inclusive)
+        // If generation day is Monday (1), we need 7 days (Mon-Sun)
+        // If generation day is Tuesday (2), we need 6 days (Tue-Sun)
+        // If generation day is Wednesday (3), we need 5 days (Wed-Sun)
+        // Formula: days needed = 7 - planStartDayOfWeek
+        const daysUntilSunday = 7 - planStartDayOfWeek;
+        
+        // Start from generation day (i=0) and continue until we reach Sunday (inclusive)
+        // i=0: generation day, i=daysUntilSunday: Sunday
+        let dayCounter = 1; // Track day number starting from 1
+        for (let i = 0; i <= daysUntilSunday; i++) {
           const dayDate = new Date(startDate);
           dayDate.setDate(startDate.getDate() + i);
           dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+          
+          // CRITICAL: Only include days from generation day onwards
+          // Skip any days that are before the generation day
+          if (dayDate < startDate) {
+            continue;
+          }
+          
+          // CRITICAL: Verify this day's day of week matches what we expect
+          // If generation day is Wednesday (3), we should only see days with getDay() >= 3 OR Sunday (0)
+          const currentDayOfWeek = dayDate.getDay();
+          // Skip days before generation day, but always include Sunday (0) if we're in week 1
+          if (currentDayOfWeek < generationDayOfWeek && currentDayOfWeek !== 0 && generationDayOfWeek !== 0) {
+            // Skip days before generation day (unless it's Sunday or generation day is Sunday)
+            continue;
+          }
           
           // Format date in local timezone to avoid UTC offset issues
           const year = dayDate.getFullYear();
@@ -181,20 +221,20 @@ export default function WorkoutPlanDisplay({
           // Workout plan: Monday=0, Tuesday=1, ..., Sunday=6
           // dayDate.getDay(): Sunday=0, Monday=1, ..., Saturday=6
           // Map: Sunday(0)->6, Monday(1)->0, Tuesday(2)->1, etc.
-          const planIndex = dayDate.getDay() === 0 ? 6 : dayDate.getDay() - 1;
+          const planIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
           
-          if (planIndex < workoutPlan.weeklyPlan.length) {
+          // CRITICAL: Only add days that are on or after the generation day
+          // This ensures we don't show days before the generation day
+          // Include Sunday (0) even if generation day is a weekday
+          const isValidDay = (currentDayOfWeek === 0) || (currentDayOfWeek >= generationDayOfWeek);
+          if (planIndex < workoutPlan.weeklyPlan.length && dayDate >= startDate && isValidDay) {
             weekDays.push({
               ...workoutPlan.weeklyPlan[planIndex],
               date: dateString,
-              day: i + 1,
+              day: dayCounter,
               dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
             });
-          }
-          
-          // Stop after reaching Sunday
-          if (dayDate.getDay() === 0 && i > 0) {
-            break;
+            dayCounter++;
           }
         }
       }
@@ -1822,6 +1862,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deleteButtonText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+  },
+
+  // Testing Button Styles
+  testingButtonContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    marginTop: spacing.md,
+  },
+  testingDeleteButton: {
+    backgroundColor: colors.error + '20',
+    borderRadius: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.error + '40',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  testingDeleteButtonText: {
     color: colors.error,
     fontSize: 14,
     fontWeight: '700',
