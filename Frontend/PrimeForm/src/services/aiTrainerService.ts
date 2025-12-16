@@ -703,7 +703,8 @@ ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}
           category
         });
         
-        const recentMessages = messages.slice(-50);
+        // Keep only the last 100 messages in the legacy single-conversation cache
+        const recentMessages = messages.slice(-100);
         // Reuse chatHistoryKey variable (already declared above)
         await Storage.setItem(chatHistoryKey, JSON.stringify(recentMessages));
         return;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
@@ -71,6 +71,27 @@ export default function ProgressDetailsScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
+  // PERFORMANCE: Memoized per-period stats & charts (past periods become immutable snapshots)
+  const [statsByPeriod, setStatsByPeriod] = useState<Record<string, ProgressStats>>({});
+  const [chartsByPeriod, setChartsByPeriod] = useState<Record<string, ProgressCharts>>({});
+
+  const periodKey = useMemo(() => {
+    if (mode === 'weekly') {
+      return selectedWeek != null ? `w:${selectedWeek}` : '';
+    }
+    return selectedMonth != null ? `m:${selectedMonth}` : '';
+  }, [mode, selectedWeek, selectedMonth]);
+
+  const isCurrentPeriod = useMemo(() => {
+    if (mode === 'weekly' && selectedWeek && availableWeeks.length > 0) {
+      return selectedWeek === availableWeeks[availableWeeks.length - 1];
+    }
+    if (mode === 'monthly' && selectedMonth && availableMonths.length > 0) {
+      return selectedMonth === availableMonths[availableMonths.length - 1];
+    }
+    return false;
+  }, [mode, selectedWeek, selectedMonth, availableWeeks, availableMonths]);
+
   // PERFORMANCE: Load available weeks/months only (uses cached data, no API calls)
   useEffect(() => {
     const init = async () => {
@@ -121,7 +142,7 @@ export default function ProgressDetailsScreen() {
 
     const loadProfile = async () => {
       try {
-        const cached = userProfileService.getCachedData();
+        const cached = await userProfileService.getCachedData();
         if (cached?.data) {
           setUserInfo(cached.data);
           setProfileLoaded(true);
@@ -145,7 +166,7 @@ export default function ProgressDetailsScreen() {
     const loadProfileIfNeeded = async () => {
       if (!showProfilePage || userInfo || profileLoaded) return;
       try {
-        const cached = userProfileService.getCachedData();
+        const cached = await userProfileService.getCachedData();
         if (cached?.data) {
           setUserInfo(cached.data);
           setProfileLoaded(true);
@@ -168,6 +189,13 @@ export default function ProgressDetailsScreen() {
     const loadStats = async () => {
       if (mode === 'weekly' && !selectedWeek) return;
       if (mode === 'monthly' && !selectedMonth) return;
+      if (!periodKey) return;
+
+      // PERFORMANCE: For past periods, use memoized snapshot and skip recomputation / DB calls
+      if (!isCurrentPeriod && statsByPeriod[periodKey]) {
+        setStats(statsByPeriod[periodKey]);
+        return;
+      }
       
       try {
         setIsLoading(true);
@@ -181,7 +209,13 @@ export default function ProgressDetailsScreen() {
           false // Use cached data for performance
         );
         if (statsResponse.success && statsResponse.data) {
-          setStats(statsResponse.data as ProgressStats);
+          const nextStats = statsResponse.data as ProgressStats;
+          setStats(nextStats);
+          // Memoize snapshot keyed by period (both current and past); current can be refreshed on next call
+          setStatsByPeriod(prev => ({
+            ...prev,
+            [periodKey]: nextStats,
+          }));
         }
       } catch (error) {
         // Error loading stats
@@ -194,7 +228,7 @@ export default function ProgressDetailsScreen() {
     // PERFORMANCE: Reset charts loaded flag when period changes
     setChartsLoaded(false);
     setCharts(null);
-  }, [mode, selectedWeek, selectedMonth]);
+  }, [mode, selectedWeek, selectedMonth, periodKey, isCurrentPeriod]);
 
   // PERFORMANCE: Lazy load charts - only load when user scrolls near charts section or explicitly requests
   const loadCharts = useCallback(async () => {
@@ -202,6 +236,14 @@ export default function ProgressDetailsScreen() {
     
     if (mode === 'weekly' && !selectedWeek) return;
     if (mode === 'monthly' && !selectedMonth) return;
+    if (!periodKey) return;
+
+    // PERFORMANCE: For past periods, reuse memoized charts and skip service call
+    if (!isCurrentPeriod && chartsByPeriod[periodKey]) {
+      setCharts(chartsByPeriod[periodKey]);
+      setChartsLoaded(true);
+      return;
+    }
     
     try {
       setIsLoadingCharts(true);
@@ -215,11 +257,16 @@ export default function ProgressDetailsScreen() {
         false // Use cached data for performance
       );
       if (chartsResponse.success && chartsResponse.data) {
-        setCharts({
+        const nextCharts: ProgressCharts = {
           calories: chartsResponse.data.calories,
           workouts: chartsResponse.data.workouts,
           water: chartsResponse.data.water,
-        });
+        };
+        setCharts(nextCharts);
+        setChartsByPeriod(prev => ({
+          ...prev,
+          [periodKey]: nextCharts,
+        }));
         setChartsLoaded(true);
       }
     } catch (error) {
@@ -227,7 +274,7 @@ export default function ProgressDetailsScreen() {
     } finally {
       setIsLoadingCharts(false);
     }
-  }, [mode, selectedWeek, selectedMonth, chartsLoaded]);
+  }, [mode, selectedWeek, selectedMonth, chartsLoaded, periodKey, isCurrentPeriod]);
 
   const currentPeriodLabel =
     mode === 'weekly'
@@ -238,13 +285,13 @@ export default function ProgressDetailsScreen() {
         ? `Month ${selectedMonth}`
         : 'Month';
 
-  const overallCompletion = (() => {
+  const overallCompletion = useMemo(() => {
     if (!stats) return 0;
     const workoutCompletion = stats.totalWorkouts > 0 ? stats.workoutsCompleted / stats.totalWorkouts : 0;
     const mealCompletion = stats.totalMeals > 0 ? stats.mealsCompleted / stats.totalMeals : 0;
     const hydrationRatio = stats.targetWater > 0 ? stats.waterIntake / stats.targetWater : 0;
     return Math.round(((workoutCompletion + mealCompletion + hydrationRatio) / 3) * 100);
-  })();
+  }, [stats]);
 
   const handleProfilePress = () => {
     setSidebarVisible(true);

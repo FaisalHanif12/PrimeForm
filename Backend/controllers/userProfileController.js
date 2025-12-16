@@ -89,10 +89,6 @@ exports.createOrUpdateProfile = async (req, res) => {
       missingFields.push('targetWeight');
     }
   
-    if (userProfile && !profileData.targetWeight) {
-      delete profileData.targetWeight;
-    }
-    
     if (missingFields.length > 0) {
       return res.status(400).json({
         success: false,

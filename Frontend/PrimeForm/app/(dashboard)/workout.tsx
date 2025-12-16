@@ -371,11 +371,23 @@ export default function WorkoutScreen() {
   // Load user info when profile page is opened if it's missing
   useEffect(() => {
     if (showProfilePage && !userInfo) {
-  const loadUserInfo = async () => {
-    try {
-          const cachedData = userProfileService.getCachedData();
+      const loadUserInfo = async () => {
+        try {
+          const cachedData = await userProfileService.getCachedData();
+          // Validate cached data belongs to current user
           if (cachedData && cachedData.data) {
-            setUserInfo(cachedData.data);
+            const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+            const userId = await getCurrentUserId();
+            if (userId && validateCachedData(cachedData.data, userId)) {
+              setUserInfo(cachedData.data);
+            } else {
+              // Cached data doesn't belong to current user, clear it and fetch fresh
+              await userProfileService.clearCache();
+              const response = await userProfileService.getUserProfile();
+              if (response.success && response.data) {
+                setUserInfo(response.data);
+              }
+            }
           } else {
             const response = await userProfileService.getUserProfile();
             if (response.success && response.data) {
@@ -574,27 +586,64 @@ export default function WorkoutScreen() {
 
     // Only show generation screens if we've confirmed no plan exists
     if (userInfo) {
-      // User has profile - show profile summary and confirm button
+      // User has profile - show richer profile summary and confirm button
       return (
         <View style={styles.profileSummaryContainer}>
           <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
 
           <View style={styles.profileSummaryCard}>
+            {/* Goal & occupation / equipment are most important for workout */}
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
             </View>
+
+            {/* Age & height */}
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('userinfo.age')}</Text>
+              <Text style={styles.profileSummaryValue}>{userInfo.age}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('userinfo.height')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.height ? `${userInfo.height}` : t('profile.summary.none')}
+              </Text>
+            </View>
+
+            {/* Weights */}
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.current.weight')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.currentWeight ? `${userInfo.currentWeight} kg` : t('profile.summary.none')}
+              </Text>
+            </View>
+            {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
+              <View style={styles.profileSummaryRow}>
+                <Text style={styles.profileSummaryLabel}>{t('profile.summary.target.weight')}</Text>
+                <Text style={styles.profileSummaryValue}>
+                  {userInfo.targetWeight ? `${userInfo.targetWeight} kg` : t('profile.summary.none')}
+                </Text>
+              </View>
+            )}
+
+            {/* Lifestyle */}
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.occupation')}</Text>
-              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.occupationType, 'occupation')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {translateValue(userInfo.occupationType, 'occupation')}
+              </Text>
             </View>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.equipment')}</Text>
-              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.availableEquipment, 'equipment')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {translateValue(userInfo.availableEquipment, 'equipment')}
+              </Text>
             </View>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.medical.conditions')}</Text>
-              <Text style={styles.profileSummaryValue}>{userInfo.medicalConditions || t('profile.summary.none')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.medicalConditions || t('profile.summary.none')}
+              </Text>
             </View>
           </View>
 
@@ -618,26 +667,30 @@ export default function WorkoutScreen() {
       );
     }
 
-    // User has no profile - show beautiful start card
+    // User has no profile - show simple, clean start card
     return (
       <View style={styles.startCardContainer}>
         <View style={styles.startCard}>
-          <View style={styles.startCardIconContainer}>
+          <View style={styles.startCardIconWrapper}>
             <Text style={styles.startCardIcon}>🏋️</Text>
           </View>
 
           <Text style={styles.startCardTitle}>
-            {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی ورکاؤٹ پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized workout through AI?'}
+            {language === 'ur'
+              ? 'چلیں آپ کے لئے ذاتی workout بنائیں؟'
+              : 'Let’s build your personal workout plan.'}
           </Text>
 
           <Text style={styles.startCardSubtitle}>
-            {t('workout.hero.subtitle')}
+            {language === 'ur'
+              ? 'صرف چند آسان سوالات، پھر AI آپ کے لئے مکمل پلان تیار کرے گا۔'
+              : 'Answer a few quick questions and AI will design a plan just for you.'}
           </Text>
 
           <TouchableOpacity
             style={styles.startButton}
             onPress={() => setShowUserInfoModal(true)}
-            activeOpacity={0.8}
+            activeOpacity={0.9}
           >
             <Text style={styles.startButtonText}>{t('onboarding.start')}</Text>
           </TouchableOpacity>
@@ -1034,50 +1087,72 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl * 2,
   },
   startCard: {
-    backgroundColor: colors.surface,
+    width: '100%',
+    maxWidth: 440,
     borderRadius: radius.lg,
     padding: spacing.xl,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     shadowColor: colors.background,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  startCardIconWrapper: {
+    marginBottom: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  startCardIconHalo: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   startCardIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.gold,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    shadowColor: colors.gold,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
   startCardIcon: {
-    fontSize: 40,
+    fontSize: 44,
+  },
+  startCardKicker: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
   startCardTitle: {
     color: colors.white,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: fonts.heading,
     textAlign: 'center',
     marginBottom: spacing.md,
     lineHeight: 32,
   },
   startCardSubtitle: {
-    color: colors.mutedText,
+    color: 'rgba(255,255,255,0.78)',
     fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
@@ -1085,20 +1160,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   startButton: {
+    marginTop: spacing.lg,
     borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.gold,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   startButtonText: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+    letterSpacing: 0.2,
   },
 
   // Error Screen Styles

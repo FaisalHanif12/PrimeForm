@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserCacheKey, getCurrentUserId } from '../../src/utils/cacheKeys';
 import { useToast } from '../../src/context/ToastContext';
 import ExerciseAnimation from '../../src/components/ExerciseAnimation';
 
@@ -99,12 +100,34 @@ export default function PersonalizedWorkoutScreen() {
     }, [])
   );
 
+  const getStorageKeys = async () => {
+    const userId = await getCurrentUserId();
+    const workoutKey = userId
+      ? await getUserCacheKey('personalizedWorkout', userId)
+      : 'personalizedWorkout';
+    const completionKey = userId
+      ? await getUserCacheKey('lastWorkoutCompletion', userId)
+      : 'lastWorkoutCompletion';
+    return { workoutKey, completionKey };
+  };
+
   const loadWorkout = async () => {
     try {
-      const savedWorkout = await AsyncStorage.getItem('personalizedWorkout');
+      const { workoutKey } = await getStorageKeys();
+      const savedWorkout = await AsyncStorage.getItem(workoutKey);
       if (savedWorkout) {
         setExercises(JSON.parse(savedWorkout));
       } else {
+        // Fallback: migrate legacy global key if present
+        if (workoutKey !== 'personalizedWorkout') {
+          const legacy = await AsyncStorage.getItem('personalizedWorkout');
+          if (legacy) {
+            await AsyncStorage.setItem(workoutKey, legacy);
+            await AsyncStorage.removeItem('personalizedWorkout');
+            setExercises(JSON.parse(legacy));
+            return;
+          }
+        }
         router.back();
       }
     } catch (error) {
@@ -114,7 +137,8 @@ export default function PersonalizedWorkoutScreen() {
 
   const checkTodayCompletion = async () => {
     try {
-      const lastCompletionDate = await AsyncStorage.getItem('lastWorkoutCompletion');
+      const { completionKey } = await getStorageKeys();
+      const lastCompletionDate = await AsyncStorage.getItem(completionKey);
       const today = new Date().toDateString();
       
       // Explicitly set the state based on whether dates match
@@ -160,7 +184,8 @@ export default function PersonalizedWorkoutScreen() {
       const totalCalories = exercises.reduce((sum, ex) => sum + (ex.calories || 60), 0);
       
       const today = new Date().toDateString();
-      await AsyncStorage.setItem('lastWorkoutCompletion', today);
+      const { completionKey } = await getStorageKeys();
+      await AsyncStorage.setItem(completionKey, today);
       setTodayCompleted(true);
       setIsWorkoutStarted(false);
       showToast('success', `🎉 Workout Complete! You burned ${totalCalories} calories!`);
@@ -185,8 +210,9 @@ export default function PersonalizedWorkoutScreen() {
           onPress: async () => {
             try {
               // Remove both the workout and the completion date
-              await AsyncStorage.removeItem('personalizedWorkout');
-              await AsyncStorage.removeItem('lastWorkoutCompletion');
+              const { workoutKey, completionKey } = await getStorageKeys();
+              await AsyncStorage.removeItem(workoutKey);
+              await AsyncStorage.removeItem(completionKey);
               showToast('success', 'Workout deleted');
               router.back();
             } catch (error) {
@@ -211,7 +237,8 @@ export default function PersonalizedWorkoutScreen() {
 
   const handleSaveOrder = async () => {
     try {
-      await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(exercises));
+      const { workoutKey } = await getStorageKeys();
+      await AsyncStorage.setItem(workoutKey, JSON.stringify(exercises));
       showToast('success', 'Exercise order saved!');
       setIsReorderMode(false);
     } catch (error) {
@@ -232,15 +259,17 @@ export default function PersonalizedWorkoutScreen() {
       
       if (newExercises.length === 0) {
         // If no exercises left, delete the entire workout
-        await AsyncStorage.removeItem('personalizedWorkout');
-        await AsyncStorage.removeItem('lastWorkoutCompletion');
+        const { workoutKey, completionKey } = await getStorageKeys();
+        await AsyncStorage.removeItem(workoutKey);
+        await AsyncStorage.removeItem(completionKey);
         showToast('success', 'Workout deleted');
         setShowDeleteModal(false);
         router.back();
       } else {
         // Update with remaining exercises
         setExercises(newExercises);
-        await AsyncStorage.setItem('personalizedWorkout', JSON.stringify(newExercises));
+        const { workoutKey } = await getStorageKeys();
+        await AsyncStorage.setItem(workoutKey, JSON.stringify(newExercises));
         showToast('success', 'Exercise removed');
         setShowDeleteModal(false);
         setExerciseToDelete(null);

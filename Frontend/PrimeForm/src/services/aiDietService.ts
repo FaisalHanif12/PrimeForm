@@ -2,6 +2,7 @@ import { UserProfile } from './userProfileService';
 import dietPlanService from './dietPlanService';
 import Storage from '../utils/storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
+import { calculatePlanDuration, formatDurationForPrompt, PlanDuration } from '../utils/planDurationCalculator';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -112,17 +113,26 @@ class AIDietService {
   }
 
   private generatePrompt(userProfile: UserProfile): string {
-    const dailyCalories = userProfile.gender === 'Male' ? 
-      Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 : 
+    const dailyCalories = userProfile.gender === 'Male' ?
+      Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 :
       Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4;
-      
+
+    const targetWeightLine =
+      userProfile.bodyGoal?.includes('Gain') || userProfile.bodyGoal?.includes('Lose') || userProfile.bodyGoal?.includes('Fat')
+        ? `- Target Weight: ${userProfile.targetWeight ? `${userProfile.targetWeight}kg` : 'Not provided'}`
+        : null;
+
+    // Calculate optimal plan duration based on user profile
+    const planDuration = calculatePlanDuration(userProfile);
+    const durationForPrompt = formatDurationForPrompt(planDuration);
+
     const prompt = `
 You are a certified nutritionist. Create a **7-day diet plan** for this user:
 
 **USER PROFILE:**
 - Age: ${userProfile.age}, Gender: ${userProfile.gender}, Height: ${userProfile.height}cm, Weight: ${userProfile.currentWeight}kg
 - Goal: ${userProfile.bodyGoal} (PRIORITY)
-- Diet: ${userProfile.dietPreference || 'No restriction'}
+${targetWeightLine ? `${targetWeightLine}\n` : ''}- Diet: ${userProfile.dietPreference || 'No restriction'}
 - Country: ${userProfile.country || 'International'}
 - Calories: ${dailyCalories} kcal/day
 - Medical: ${userProfile.medicalConditions || 'None'}
@@ -133,10 +143,16 @@ You are a certified nutritionist. Create a **7-day diet plan** for this user:
 - ${userProfile.bodyGoal.includes('Gain') ? 'High protein, caloric surplus' : userProfile.bodyGoal.includes('Loss') || userProfile.bodyGoal.includes('Fat') ? 'High protein, caloric deficit' : 'Balanced nutrition'}
 - ${userProfile.medicalConditions ? `Modify for: ${userProfile.medicalConditions}` : 'No medical restrictions'}
 
+**CRITICAL - PLAN DURATION:**
+- This plan must be designed for a total duration of **${durationForPrompt}**
+- The 7-day plan you create will repeat weekly for ${planDuration.totalWeeks} weeks
+- Ensure the plan supports sustainable progress over this entire period
+- Use Duration: **${planDuration.duration}** in your output (exactly as specified)
+
 **OUTPUT FORMAT:**
 
 **Goal:** [goal]  
-**Duration:** [duration]  
+**Duration:** ${planDuration.duration} (MUST use this exact duration)  
 **Target Daily Calories:** [calories]
 
 #### 🍽️ 7-Day Plan  
@@ -179,7 +195,7 @@ Generate complete 7-day plan now.
       if (!OPENROUTER_API_KEY) {
         throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
       }
-      
+
       const prompt = this.generatePrompt(userProfile);
 
       const startTime = Date.now();
@@ -250,7 +266,7 @@ Generate complete 7-day plan now.
           }
         } catch (error) {
           retryCount++;
-          
+
           if (retryCount >= maxRetries) {
             // Cache locally as fallback with user-specific key
             const userId = await getCurrentUserId();
@@ -282,7 +298,7 @@ Generate complete 7-day plan now.
   // Load diet plan - prioritizes local cache to minimize API calls
   async loadDietPlanFromDatabase(forceRefresh = false): Promise<DietPlan | null> {
     const cacheKey = 'diet-plan-active';
-    
+
     // Check if there's already a request in flight
     if (this.loadingCache.has(cacheKey)) {
       return this.loadingCache.get(cacheKey);
@@ -383,7 +399,7 @@ Generate complete 7-day plan now.
       }
       // Clear old global key for migration
       await Storage.removeItem('cached_diet_plan');
-      
+
       // Clear memory cache
       this.clearCache('diet-plan-active');
     } catch (error) {
@@ -392,15 +408,17 @@ Generate complete 7-day plan now.
   }
 
   private parseAIResponse(aiResponse: string, userProfile: UserProfile): DietPlan {
-    // Extract goal and duration from the AI response
+    // Calculate optimal plan duration based on user profile (PRIORITY - use this over AI response)
+    const planDuration = calculatePlanDuration(userProfile);
+    
+    // Extract goal and calories from the AI response (still parse these from AI)
     const goalMatch = aiResponse.match(/\*\*Goal:\*\*\s*(.+?)(?:\n|$)/i);
-    const durationMatch = aiResponse.match(/\*\*Duration:\*\*\s*(.+?)(?:\n|$)/i);
     const caloriesMatch = aiResponse.match(/\*\*Target Daily Calories:\*\*\s*(\d+)/i);
     const countryMatch = aiResponse.match(/\*\*Country Cuisine:\*\*\s*(.+?)(?:\n|$)/i);
 
     // Ensure goal matches user profile more closely and normalize format
     let goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Health';
-    
+
     // Normalize goal to match expected values
     if (goal.toLowerCase().includes('gain') && goal.toLowerCase().includes('muscle')) {
       goal = 'Muscle Gain';
@@ -409,30 +427,19 @@ Generate complete 7-day plan now.
     } else if (goal.toLowerCase().includes('maintain') || goal.toLowerCase().includes('general')) {
       goal = 'General Health';
     }
-    
-    const duration = durationMatch ? durationMatch[1].trim() : '12 weeks';
+
+    // Use calculated duration (not from AI) to ensure consistency
+    const duration = planDuration.duration;
+    const totalWeeks = planDuration.totalWeeks;
     const targetCalories = caloriesMatch ? parseInt(caloriesMatch[1]) : 2000;
     const country = countryMatch ? countryMatch[1].trim() : userProfile.country || 'International';
 
     // Parse the AI response to extract diet days
     const weeklyPlan: DietDay[] = this.parseAIDietDays(aiResponse);
 
-    // Calculate dates based on duration
+    // Calculate dates based on calculated duration
     const startDate = new Date();
     const endDate = new Date();
-    // Convert human-readable duration to total weeks
-    let totalWeeks = 12;
-    const numMatch = duration.toLowerCase().match(/(\d+)[\s-]*(week|weeks|month|months)/);
-    if (numMatch) {
-      const num = parseInt(numMatch[1]);
-      const unit = numMatch[2];
-      totalWeeks = unit.startsWith('month') ? num * 4 : num; // approx 4 weeks per month
-    } else {
-      const weeksDirect = duration.toLowerCase().match(/(\d+)/)?.[1];
-      if (weeksDirect) totalWeeks = parseInt(weeksDirect);
-    }
-
-    // The backend expects a 7-day weekly pattern, similar to workout plan
     endDate.setDate(startDate.getDate() + (totalWeeks * 7));
 
     return {
@@ -463,26 +470,26 @@ Generate complete 7-day plan now.
 
     // Split the response into day sections using --- as delimiter
     const daySections = aiResponse.split(/---/).filter(section => section.trim());
-    
+
     // Get today's day of week to start first week from current day
     const today = new Date();
     const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() + i);
-      
+
       // Calculate the day name based on current day rotation
       const actualDayIndex = (currentDayOfWeek + i) % 7;
       const dayName = days[actualDayIndex];
-      
+
       // Find the corresponding day section - look for Day 1:, Day 2:, etc.
       const dayNumber = i + 1;
       const daySection = daySections.find(section => {
         const sectionText = section.toLowerCase();
-        return sectionText.includes(`day ${dayNumber}:`) || 
-               sectionText.includes(`**day ${dayNumber}:`) ||
-               sectionText.includes(`day ${dayNumber} `);
+        return sectionText.includes(`day ${dayNumber}:`) ||
+          sectionText.includes(`**day ${dayNumber}:`) ||
+          sectionText.includes(`day ${dayNumber} `);
       });
 
       if (daySection) {
@@ -490,7 +497,7 @@ Generate complete 7-day plan now.
         const dailyTotals = this.calculateDailyTotals(meals);
         const waterIntake = this.extractWaterIntake(daySection);
         const notes = this.extractDayNotes(daySection);
-        
+
         weeklyPlan.push({
           day: i + 1,
           dayName: dayName, // Use calculated day name
@@ -546,12 +553,12 @@ Generate complete 7-day plan now.
   private parseMealSection(daySection: string, mealType: string): DietMeal | null {
     const mealRegex = new RegExp(`\\*\\*${mealType}:\\*\\*\\s*(.+?)\\s*–\\s*(\\d+)\\s*kcal.*?Protein:\\s*(\\d+)g.*?Carbs:\\s*(\\d+)g.*?Fats:\\s*(\\d+)g.*?Prep:\\s*([^\\n]+)`, 'i');
     const match = daySection.match(mealRegex);
-    
+
     if (match) {
       const [, name, calories, protein, carbs, fats, prepTime] = match;
       const ingredients = this.extractIngredients(daySection, mealType);
       const instructions = this.extractInstructions(daySection, mealType);
-      
+
       return {
         name: name.trim(),
         emoji: this.getMealEmoji(name.trim()),
@@ -565,7 +572,7 @@ Generate complete 7-day plan now.
         instructions: instructions || 'Prepare according to standard cooking methods'
       };
     }
-    
+
     return null;
   }
 
@@ -573,7 +580,7 @@ Generate complete 7-day plan now.
     const snacks: DietMeal[] = [];
     const snackRegex = /- Snack \d+:\s*(.+?)\s*–\s*(\d+)\s*kcal/gi;
     let match;
-    
+
     while ((match = snackRegex.exec(daySection)) !== null) {
       const [, name, calories] = match;
       snacks.push({
@@ -589,25 +596,25 @@ Generate complete 7-day plan now.
         instructions: 'Enjoy as a healthy snack'
       });
     }
-    
+
     return snacks.length > 0 ? snacks : [this.getDefaultMeal('Healthy Snack', '🍎')];
   }
 
   private extractIngredients(daySection: string, mealType: string): string[] {
     const ingredientsRegex = new RegExp(`\\*\\*${mealType}:\\*\\*[\\s\\S]*?- Ingredients:\\s*([^\\n]+)`, 'i');
     const match = daySection.match(ingredientsRegex);
-    
+
     if (match) {
       return match[1].split(',').map(ing => ing.trim());
     }
-    
+
     return ['Various healthy ingredients'];
   }
 
   private extractInstructions(daySection: string, mealType: string): string {
     const instructionsRegex = new RegExp(`\\*\\*${mealType}:\\*\\*[\\s\\S]*?- Instructions:\\s*([^\\n]+)`, 'i');
     const match = daySection.match(instructionsRegex);
-    
+
     return match ? match[1].trim() : 'Prepare according to standard cooking methods';
   }
 
