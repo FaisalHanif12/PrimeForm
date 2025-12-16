@@ -143,20 +143,33 @@ class WorkoutPlanService {
       console.log('🗑️ Clearing all workout plans...');
       const plansResponse = await this.getUserWorkoutPlans(1, 100);
       
-      if (plansResponse.success && plansResponse.data) {
+      if (plansResponse.success && plansResponse.data && plansResponse.data.workoutPlans) {
         const plans = plansResponse.data.workoutPlans;
-        for (const plan of plans) {
-          // Use the plan's _id or id field
-          const planId = plan._id || plan.id;
-          if (planId) {
-            await this.deleteWorkoutPlan(planId);
+        // Check if plans is an array and has items
+        if (Array.isArray(plans) && plans.length > 0) {
+          for (const plan of plans) {
+            // Use the plan's _id or id field
+            const planId = plan._id || plan.id;
+            if (planId) {
+              try {
+                await this.deleteWorkoutPlan(planId);
+              } catch (deleteError) {
+                console.warn(`⚠️ Failed to delete plan ${planId}:`, deleteError);
+                // Continue with other plans even if one fails
+              }
+            }
           }
+          console.log('✅ All workout plans cleared');
+        } else {
+          console.log('ℹ️ No workout plans found to clear');
         }
-        console.log('✅ All workout plans cleared');
+      } else {
+        console.log('ℹ️ No workout plans found to clear');
       }
     } catch (error) {
       console.error('❌ Error clearing workout plans:', error);
-      throw error;
+      // Don't throw - allow deletion to continue even if API call fails
+      // This ensures local cache can still be cleared
     }
   }
 }

@@ -123,6 +123,99 @@ export default function DashboardScreen() {
     }
   }, [isAuthenticated, hasCompletedSignup]);
 
+  // OPTIMIZATION: Load completion states from local storage first, avoid API calls
+  // ✅ CRITICAL: Always reload completion states to ensure real-time updates
+  // Define this BEFORE the useEffect that uses it
+  const loadCompletionStates = useCallback(async (forceRefresh = false) => {
+    try {
+      // OPTIMIZATION: Load from local storage first - no API call needed
+      let localMeals = new Set<string>();
+      let localExercises = new Set<string>();
+
+      try {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+          // No user ID, skip loading completion data
+          setCompletedMeals(new Set());
+          setCompletedExercises(new Set());
+          setWaterIntake(0);
+          setWaterCompleted(false);
+          return;
+        }
+
+        // ✅ CRITICAL: Load completed meals from local storage with user-specific key
+        const mealsKey = await getUserCacheKey('completed_meals', userId);
+        const completedMealsData = await AsyncStorage.getItem(mealsKey);
+        if (completedMealsData) {
+          localMeals = new Set(JSON.parse(completedMealsData) as string[]);
+        }
+
+        // ✅ CRITICAL: Load completed exercises from local storage with user-specific key
+        const exercisesKey = await getUserCacheKey('completed_exercises', userId);
+        const completedExercisesData = await AsyncStorage.getItem(exercisesKey);
+        if (completedExercisesData) {
+          localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
+        }
+
+        // ✅ CRITICAL: Load water intake from local storage with user-specific key
+        const waterKey = await getUserCacheKey('water_intake', userId);
+        const waterData = await AsyncStorage.getItem(waterKey);
+        if (waterData) {
+          const waterObj = JSON.parse(waterData);
+          // Get today's date in local timezone
+          const todayDate = new Date();
+          todayDate.setHours(0, 0, 0, 0);
+          const year = todayDate.getFullYear();
+          const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+          const day = String(todayDate.getDate()).padStart(2, '0');
+          const today = `${year}-${month}-${day}`;
+          setWaterIntake(waterObj[today] || 0);
+        } else {
+          setWaterIntake(0);
+        }
+
+        // ✅ CRITICAL: Load water completion status from local storage with user-specific key
+        const waterCompletedKey = await getUserCacheKey('water_completed', userId);
+        const waterCompletedData = await AsyncStorage.getItem(waterCompletedKey);
+        if (waterCompletedData) {
+          const waterCompletedObj = JSON.parse(waterCompletedData);
+          // Get today's date in local timezone
+          const todayDate = new Date();
+          todayDate.setHours(0, 0, 0, 0);
+          const year = todayDate.getFullYear();
+          const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+          const day = String(todayDate.getDate()).padStart(2, '0');
+          const today = `${year}-${month}-${day}`;
+          setWaterCompleted(waterCompletedObj[today] || false);
+        } else {
+          setWaterCompleted(false);
+        }
+      } catch (storageError) {
+        // Could not load from local storage - reset to empty
+        setCompletedMeals(new Set());
+        setCompletedExercises(new Set());
+        setWaterIntake(0);
+        setWaterCompleted(false);
+      }
+
+      // ✅ CRITICAL: Always update state, even if empty, to trigger UI refresh
+      setCompletedMeals(localMeals);
+      setCompletedExercises(localExercises);
+
+      // OPTIMIZATION: Do NOT refresh full plans when completion events occur
+      // Completion events only need to update local completion states, not reload entire plans
+      // Full plan refresh should only happen on initial load or manual refresh
+      // The completion data is already saved to local storage by the completion services,
+      // so we only need to read from local storage here - no API calls needed
+    } catch (error) {
+      // Failed to load completion states - reset to empty
+      setCompletedMeals(new Set());
+      setCompletedExercises(new Set());
+      setWaterIntake(0);
+      setWaterCompleted(false);
+    }
+  }, []); // ✅ CRITICAL: Empty dependency array since we use getCurrentUserId inside
+
   // Check for new day only when app becomes active (no polling)
   useEffect(() => {
     let isChecking = false; // Prevent concurrent checks
@@ -194,22 +287,33 @@ export default function DashboardScreen() {
   // OPTIMIZATION: Only update local completion states, do NOT reload full plans
   useEffect(() => {
     const mealCompletedListener = DeviceEventEmitter.addListener('mealCompleted', async (data) => {
-      // Only refresh completion states from local storage - no API calls
+      // ✅ CRITICAL: Immediately refresh completion states from local storage - no API calls
+      // This ensures dashboard updates in real-time when meals are completed
       await loadCompletionStates(false);
     });
 
     const dayCompletedListener = DeviceEventEmitter.addListener('dayCompleted', async (data) => {
-      // Only refresh completion states from local storage - no API calls
+      // ✅ CRITICAL: Immediately refresh completion states from local storage - no API calls
       await loadCompletionStates(false);
     });
 
     const exerciseCompletedListener = DeviceEventEmitter.addListener('exerciseCompleted', async (data) => {
-      // Only refresh completion states from local storage - no API calls
+      // ✅ CRITICAL: Immediately refresh completion states from local storage - no API calls
       await loadCompletionStates(false);
     });
 
     const waterIntakeListener = DeviceEventEmitter.addListener('waterIntakeUpdated', async (data) => {
-      // Refresh water completion/intake from local storage so dashboard reflects "Done"
+      // ✅ CRITICAL: Refresh water completion/intake from local storage so dashboard reflects "Done"
+      await loadCompletionStates(false);
+    });
+
+    const dietProgressUpdatedListener = DeviceEventEmitter.addListener('dietProgressUpdated', async (data) => {
+      // ✅ CRITICAL: Refresh completion states when diet progress is updated
+      await loadCompletionStates(false);
+    });
+
+    const workoutProgressUpdatedListener = DeviceEventEmitter.addListener('workoutProgressUpdated', async (data) => {
+      // ✅ CRITICAL: Refresh completion states when workout progress is updated
       await loadCompletionStates(false);
     });
 
@@ -218,8 +322,10 @@ export default function DashboardScreen() {
       dayCompletedListener.remove();
       exerciseCompletedListener.remove();
       waterIntakeListener.remove();
+      dietProgressUpdatedListener.remove();
+      workoutProgressUpdatedListener.remove();
     };
-  }, []);
+  }, [loadCompletionStates]); // ✅ CRITICAL: Include loadCompletionStates in dependencies
 
   // Check app state on mount
   useEffect(() => {
@@ -694,70 +800,7 @@ export default function DashboardScreen() {
       setIsLoadingPlans(false);
       loadingInProgress.current = false;
     }
-  }, []);
-
-  // OPTIMIZATION: Load completion states from local storage first, avoid API calls
-  const loadCompletionStates = async (forceRefresh = false) => {
-    try {
-      // OPTIMIZATION: Load from local storage first - no API call needed
-      let localMeals = new Set<string>();
-      let localExercises = new Set<string>();
-
-      try {
-        const userId = await getCurrentUserId();
-        if (!userId) {
-          // No user ID, skip loading completion data
-          return;
-        }
-
-        // Load completed meals from local storage with user-specific key
-        const mealsKey = await getUserCacheKey('completed_meals', userId);
-        const completedMealsData = await AsyncStorage.getItem(mealsKey);
-        if (completedMealsData) {
-          localMeals = new Set(JSON.parse(completedMealsData) as string[]);
-        }
-
-        // Load completed exercises from local storage with user-specific key
-        const exercisesKey = await getUserCacheKey('completed_exercises', userId);
-        const completedExercisesData = await AsyncStorage.getItem(exercisesKey);
-        if (completedExercisesData) {
-          localExercises = new Set(JSON.parse(completedExercisesData) as string[]);
-        }
-
-        // Load water intake from local storage with user-specific key
-        const waterKey = await getUserCacheKey('water_intake', userId);
-        const waterData = await AsyncStorage.getItem(waterKey);
-        if (waterData) {
-          const waterObj = JSON.parse(waterData);
-          const today = new Date().toISOString().split('T')[0];
-          setWaterIntake(waterObj[today] || 0);
-        }
-
-        // Load water completion status from local storage with user-specific key
-        const waterCompletedKey = await getUserCacheKey('water_completed', userId);
-        const waterCompletedData = await AsyncStorage.getItem(waterCompletedKey);
-        if (waterCompletedData) {
-          const waterCompletedObj = JSON.parse(waterCompletedData);
-          const today = new Date().toISOString().split('T')[0];
-          setWaterCompleted(waterCompletedObj[today] || false);
-        }
-      } catch (storageError) {
-        // Could not load from local storage
-      }
-
-      // Set local data immediately for fast UI update
-      if (localMeals.size > 0) setCompletedMeals(localMeals);
-      if (localExercises.size > 0) setCompletedExercises(localExercises);
-
-      // OPTIMIZATION: Do NOT refresh full plans when completion events occur
-      // Completion events only need to update local completion states, not reload entire plans
-      // Full plan refresh should only happen on initial load or manual refresh
-      // The completion data is already saved to local storage by the completion services,
-      // so we only need to read from local storage here - no API calls needed
-    } catch (error) {
-      // Failed to load completion states
-    }
-  };
+  }, [loadCompletionStates]);
 
   // Function to refresh dashboard data (can be called from other components)
   const refreshDashboardData = async () => {
@@ -783,20 +826,65 @@ export default function DashboardScreen() {
   const getDynamicStats = useMemo(() => {
     const totalCalories = todayMeals.reduce((sum, meal) => sum + meal.calories, 0);
 
-    // Get today's date for completion checking
-    const today = new Date().toISOString().split('T')[0];
+    // Get today's date for completion checking (local timezone)
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
+    const year = todayDate.getFullYear();
+    const month = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const day = String(todayDate.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
 
-    // Check completion using the original meal names (without emojis)
-    const consumedCalories = todayMeals.filter(meal => {
-      // Extract original meal name by removing emoji prefix
-      const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
+    // Helper function to check if a meal is completed
+    // Meal ID format: `${date}-${mealType}-${mealName}`
+    // Example: "2025-12-17-breakfast-Vegetable Dalia (Broken Wheat Porridge)"
+    const isMealCompleted = (meal: typeof todayMeals[0]): boolean => {
+      // Extract meal type and name from dashboard meal format
+      // Format: "🌅 Vegetable Dalia (Broken Wheat Porridge)" or "🌞 Kadhi Pakora with Rice" or "🍎 Snack 1: Rice Cakes"
+      let mealType: string;
+      let mealName: string;
+      
+      if (meal.name.startsWith('🌅')) {
+        mealType = 'breakfast';
+        mealName = meal.name.replace(/^🌅\s*/, '').trim();
+      } else if (meal.name.startsWith('🌞')) {
+        mealType = 'lunch';
+        mealName = meal.name.replace(/^🌞\s*/, '').trim();
+      } else if (meal.name.startsWith('🌙')) {
+        mealType = 'dinner';
+        mealName = meal.name.replace(/^🌙\s*/, '').trim();
+      } else if (meal.name.startsWith('🍎')) {
+        // Snack format: "🍎 Snack 1: Rice Cakes with Avocado"
+        mealType = 'snack';
+        mealName = meal.name.replace(/^🍎\s*Snack\s+\d+:\s*/, '').trim();
+      } else {
+        // Fallback: try to extract from any format
+        mealName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '').trim();
+        // Try to infer meal type from name pattern
+        if (meal.name.includes('Breakfast') || meal.name.includes('🌅')) {
+          mealType = 'breakfast';
+        } else if (meal.name.includes('Lunch') || meal.name.includes('🌞')) {
+          mealType = 'lunch';
+        } else if (meal.name.includes('Dinner') || meal.name.includes('🌙')) {
+          mealType = 'dinner';
+        } else {
+          mealType = 'snack';
+        }
+      }
 
-      // Check if any completion key matches this meal
-      return Array.from(completedMeals).some(completedKey =>
-        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
-      );
-    }).reduce((sum, meal) => sum + meal.calories, 0);
+      // Check if any completion key matches: `${today}-${mealType}-${mealName}`
+      const expectedMealId = `${today}-${mealType}-${mealName}`;
+      
+      return Array.from(completedMeals).some(completedKey => {
+        if (typeof completedKey !== 'string') return false;
+        // Exact match is best
+        if (completedKey === expectedMealId) return true;
+        // Also check if it contains both date and meal name (for flexibility)
+        return completedKey.includes(today) && completedKey.includes(mealType) && completedKey.includes(mealName);
+      });
+    };
 
+    // Check completion using the improved matching logic
+    const consumedCalories = todayMeals.filter(isMealCompleted).reduce((sum, meal) => sum + meal.calories, 0);
     const remainingCalories = Math.max(0, totalCalories - consumedCalories);
 
     // Check completed workouts
@@ -804,14 +892,8 @@ export default function DashboardScreen() {
       completedExercises.has(`${today}-${workout.name}`)
     ).length;
 
-    // Check completed meals using original names
-    const completedMealsCount = todayMeals.filter(meal => {
-      const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
-      return Array.from(completedMeals).some(completedKey =>
-        typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
-      );
-    }).length;
-
+    // Check completed meals count
+    const completedMealsCount = todayMeals.filter(isMealCompleted).length;
     const remainingMeals = todayMeals.length - completedMealsCount;
 
     return [

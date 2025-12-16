@@ -14,12 +14,13 @@ import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
 import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
+import aiDietService from '../services/aiDietService';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
   onMealPress?: (meal: DietMeal) => void;
   onDayPress?: (day: DietDay) => void;
-  onGenerateNew?: () => void;
+  onGenerateNew?: () => void | Promise<void>;
   isGeneratingNew?: boolean;
 }
 
@@ -143,10 +144,25 @@ export default function DietPlanDisplay({
     
     const weekDays: DietDay[] = [];
     const currentWeek = getCurrentWeek();
-    const startDate = new Date(dietPlan.startDate);
-    const today = new Date();
     
-    // If we're in week 1, show days from plan start date to end of first week
+    // Parse startDate carefully to avoid timezone issues
+    // If startDate is a string like "2025-12-16", parse it as local date
+    let startDate: Date;
+    if (typeof dietPlan.startDate === 'string') {
+      const [year, month, day] = dietPlan.startDate.split('-').map(Number);
+      startDate = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      startDate = new Date(dietPlan.startDate);
+    }
+    startDate.setHours(0, 0, 0, 0); // Ensure it's at midnight local time
+    
+    // CRITICAL: Store the generation day of week to ensure we only show days from that day onwards
+    const generationDayOfWeek = startDate.getDay();
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // If we're in week 1, show days from plan start date (generation day) to Sunday
     if (currentWeek === 1) {
       const planStartDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
@@ -164,11 +180,36 @@ export default function DietPlanDisplay({
           dayName: 'Sunday'
         });
       } else {
-        // Week 1: from plan generation day to Sunday (or end of available days)
-        for (let i = 0; i < 7; i++) {
+        // Week 1: from plan generation day to Sunday (inclusive)
+        // Calculate how many days from generation day to Sunday (inclusive)
+        // If generation day is Monday (1), we need 7 days (Mon-Sun)
+        // If generation day is Tuesday (2), we need 6 days (Tue-Sun)
+        // If generation day is Wednesday (3), we need 5 days (Wed-Sun)
+        // Formula: days needed = 7 - planStartDayOfWeek
+        const daysUntilSunday = 7 - planStartDayOfWeek;
+        
+        // Start from generation day (i=0) and continue until we reach Sunday (inclusive)
+        // i=0: generation day, i=daysUntilSunday: Sunday
+        let dayCounter = 1; // Track day number starting from 1
+        for (let i = 0; i <= daysUntilSunday; i++) {
           const dayDate = new Date(startDate);
           dayDate.setDate(startDate.getDate() + i);
           dayDate.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
+          
+          // CRITICAL: Only include days from generation day onwards
+          // Skip any days that are before the generation day
+          if (dayDate < startDate) {
+            continue;
+          }
+          
+          // CRITICAL: Verify this day's day of week matches what we expect
+          // If generation day is Wednesday (3), we should only see days with getDay() >= 3 OR Sunday (0)
+          const currentDayOfWeek = dayDate.getDay();
+          // Skip days before generation day, but always include Sunday (0) if we're in week 1
+          if (currentDayOfWeek < generationDayOfWeek && currentDayOfWeek !== 0 && generationDayOfWeek !== 0) {
+            // Skip days before generation day (unless it's Sunday or generation day is Sunday)
+            continue;
+          }
           
           // Format date in local timezone to avoid UTC offset issues
           const year = dayDate.getFullYear();
@@ -177,20 +218,20 @@ export default function DietPlanDisplay({
           const dateString = `${year}-${month}-${day}`;
           
           // Get the correct weeklyPlan index based on day of week (Sunday=0, Monday=1, etc.)
-          const planIndex = dayDate.getDay();
+          const planIndex = currentDayOfWeek;
           
-          if (planIndex < dietPlan.weeklyPlan.length) {
+          // CRITICAL: Only add days that are on or after the generation day
+          // This ensures we don't show days before the generation day
+          // Include Sunday (0) even if generation day is a weekday
+          const isValidDay = (currentDayOfWeek === 0) || (currentDayOfWeek >= generationDayOfWeek);
+          if (planIndex < dietPlan.weeklyPlan.length && dayDate >= startDate && isValidDay) {
             weekDays.push({
               ...dietPlan.weeklyPlan[planIndex],
               date: dateString,
-              day: i + 1,
+              day: dayCounter,
               dayName: dayDate.toLocaleDateString('en-US', { weekday: 'long' })
             });
-          }
-          
-          // Stop after reaching Sunday
-          if (dayDate.getDay() === 0 && i > 0) {
-            break;
+            dayCounter++;
           }
         }
       }
@@ -698,6 +739,14 @@ export default function DietPlanDisplay({
 
   const toggleWaterCompletion = async () => {
     if (!selectedDay) return;
+    
+    // ✅ CRITICAL: Only allow water intake completion on current day
+    if (!isCurrentDay(selectedDay)) {
+      if (__DEV__) {
+        console.warn('Cannot complete water intake: only current day water intake can be completed');
+      }
+      return;
+    }
     
     const week = Math.ceil(selectedDay.day / 7);
     const isCompleted = waterCompleted[selectedDay.date] || false;
@@ -1305,17 +1354,18 @@ export default function DietPlanDisplay({
                   style={[
                     styles.waterCompletionButton,
                     waterCompleted[selectedDay.date] && styles.waterCompletionButtonCompleted,
-                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonDisabled
+                    (waterCompleted[selectedDay.date] || !isCurrentDay(selectedDay)) && styles.waterCompletionButtonDisabled
                   ]}
-                  onPress={waterCompleted[selectedDay.date] ? undefined : toggleWaterCompletion}
-                  disabled={waterCompleted[selectedDay.date]}
-                  activeOpacity={waterCompleted[selectedDay.date] ? 1 : 0.7}
+                  onPress={(waterCompleted[selectedDay.date] || !isCurrentDay(selectedDay)) ? undefined : toggleWaterCompletion}
+                  disabled={waterCompleted[selectedDay.date] || !isCurrentDay(selectedDay)}
+                  activeOpacity={(waterCompleted[selectedDay.date] || !isCurrentDay(selectedDay)) ? 1 : 0.7}
                 >
                   <Text style={[
                     styles.waterCompletionButtonText,
-                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonTextCompleted
+                    waterCompleted[selectedDay.date] && styles.waterCompletionButtonTextCompleted,
+                    !isCurrentDay(selectedDay) && styles.waterCompletionButtonTextDisabled
                   ]}>
-                    {waterCompleted[selectedDay.date] ? 'Done' : 'Mark Done'}
+                    {waterCompleted[selectedDay.date] ? 'Done' : !isCurrentDay(selectedDay) ? 'Not Available' : 'Mark Done'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -2092,6 +2142,10 @@ const styles = StyleSheet.create({
   },
   waterCompletionButtonTextCompleted: {
     color: colors.white,
+  },
+  waterCompletionButtonTextDisabled: {
+    color: colors.mutedText,
+    opacity: 0.5,
   },
 
   // Error Styles

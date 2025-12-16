@@ -177,22 +177,56 @@ class DietPlanService {
   async clearAllDietPlans(): Promise<void> {
     try {
       console.log('🗑️ Clearing all diet plans...');
-      const plansResponse = await this.getUserDietPlans(1, 100);
       
-      if (plansResponse.success && plansResponse.data) {
-        const plans = plansResponse.data.dietPlans;
-        for (const plan of plans) {
-          // Use the plan's _id or id field
-          const planId = plan._id || plan.id;
+      // First, try to get and delete the active plan directly (most common case)
+      try {
+        const activePlanResponse = await this.getActiveDietPlan();
+        if (activePlanResponse.success && activePlanResponse.data) {
+          const planId = activePlanResponse.data._id || activePlanResponse.data.id;
           if (planId) {
+            console.log(`🗑️ Deleting active diet plan: ${planId}`);
             await this.deleteDietPlan(planId);
+            console.log('✅ Active diet plan deleted');
           }
         }
-        console.log('✅ All diet plans cleared');
+      } catch (activeError) {
+        console.warn('⚠️ Could not delete active plan (may not exist):', activeError);
+      }
+      
+      // Then, try to get and delete all plans (including inactive ones)
+      try {
+        const plansResponse = await this.getUserDietPlans(1, 100);
+        
+        if (plansResponse.success && plansResponse.data && plansResponse.data.dietPlans) {
+          const plans = plansResponse.data.dietPlans;
+          // Check if plans is an array and has items
+          if (Array.isArray(plans) && plans.length > 0) {
+            for (const plan of plans) {
+              // Use the plan's _id or id field
+              const planId = plan._id || plan.id;
+              if (planId) {
+                try {
+                  await this.deleteDietPlan(planId);
+                } catch (deleteError) {
+                  console.warn(`⚠️ Failed to delete plan ${planId}:`, deleteError);
+                  // Continue with other plans even if one fails
+                }
+              }
+            }
+            console.log('✅ All diet plans cleared');
+          } else {
+            console.log('ℹ️ No additional diet plans found to clear');
+          }
+        } else {
+          console.log('ℹ️ No additional diet plans found to clear');
+        }
+      } catch (allPlansError) {
+        console.warn('⚠️ Could not get all plans:', allPlansError);
       }
     } catch (error) {
       console.error('❌ Error clearing diet plans:', error);
-      throw error;
+      // Don't throw - allow deletion to continue even if API call fails
+      // This ensures local cache can still be cleared
     }
   }
 

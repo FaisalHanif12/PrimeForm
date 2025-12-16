@@ -495,18 +495,29 @@ export default function WorkoutScreen() {
   // Handle delete plan - reset to profile summary interface
   const handleDeletePlan = async () => {
     try {
-      // Clear current plan from UI - this will show the profile summary interface
+      // Clear all workout plan data
+      await aiWorkoutService.clearWorkoutPlanFromDatabase();
+      
+      // Clear local state
       setWorkoutPlan(null);
-
-      // Clear local storage
-      const Storage = await import('../../src/utils/storage');
-      await Storage.default.removeItem('cached_workout_plan');
-      await Storage.default.removeItem('completed_exercises');
-      await Storage.default.removeItem('completed_days');
-
-      showToast('success', 'Workout plan deleted. You can now generate a new plan.');
+      setHasCheckedLocalStorage(false);
+      setIsLoadingPlan(true);
+      
+      // Force reload to ensure no cached data remains
+      const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase(true); // Force refresh
+      if (plan) {
+        setWorkoutPlan(plan);
+      }
+      
+      setIsLoadingPlan(false);
+      showToast('success', 'Workout plan deleted successfully. You can now generate a new one.');
     } catch (error) {
-      showToast('error', 'Failed to delete workout plan. Please try again.');
+      console.error('Error clearing workout plan:', error);
+      // Even if there's an error, clear local state
+      setWorkoutPlan(null);
+      setHasCheckedLocalStorage(false);
+      setIsLoadingPlan(false);
+      showToast('info', 'Workout plan cleared. You can now generate a new one.');
     }
   };
 

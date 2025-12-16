@@ -86,10 +86,37 @@ class StreakService {
   // Calculate streak data from local storage
   private async calculateLocalStreakData(): Promise<StreakData> {
     try {
-      // Load completion data from storage
+      // ✅ CRITICAL: Use user-specific cache keys for account-specific data
+      const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        // No user ID, return empty streak data
+        return {
+          currentWorkoutStreak: 0,
+          currentDietStreak: 0,
+          currentOverallStreak: 0,
+          longestWorkoutStreak: 0,
+          longestDietStreak: 0,
+          longestOverallStreak: 0,
+          weeklyConsistency: 0,
+          monthlyConsistency: 0,
+          totalActiveDays: 0,
+          streakHistory: [],
+          achievements: [],
+          milestones: []
+        };
+      }
+
+      // Load completion data from storage with user-specific keys
+      const [completedExercisesKey, completedMealsKey] = await Promise.all([
+        getUserCacheKey('completed_exercises', userId),
+        getUserCacheKey('completed_meals', userId)
+      ]);
+
       const [completedExercisesData, completedMealsData] = await Promise.all([
-        Storage.getItem('completed_exercises'),
-        Storage.getItem('completed_meals')
+        Storage.getItem(completedExercisesKey),
+        Storage.getItem(completedMealsKey)
       ]);
 
       const completedExercises = completedExercisesData ? JSON.parse(completedExercisesData) as string[] : [];
@@ -106,12 +133,27 @@ class StreakService {
       const completedExercisesSet = new Set<string>(completedExercises);
       const completedMealsSet = new Set<string>(completedMeals);
 
-      // Load workout and diet plans from local storage
-      const workoutPlanData = await Storage.getItem('cached_workout_plan');
-      const dietPlanData = await Storage.getItem('cached_diet_plan');
+      // Load workout and diet plans from local storage with user-specific keys
+      const [workoutPlanKey, dietPlanKey] = await Promise.all([
+        getUserCacheKey('cached_workout_plan', userId),
+        getUserCacheKey('cached_diet_plan', userId)
+      ]);
 
-      const workoutPlan = workoutPlanData ? JSON.parse(workoutPlanData) : null;
-      const dietPlan = dietPlanData ? JSON.parse(dietPlanData) : null;
+      const [workoutPlanData, dietPlanData] = await Promise.all([
+        Storage.getItem(workoutPlanKey),
+        Storage.getItem(dietPlanKey)
+      ]);
+
+      let workoutPlan = workoutPlanData ? JSON.parse(workoutPlanData) : null;
+      let dietPlan = dietPlanData ? JSON.parse(dietPlanData) : null;
+
+      // ✅ CRITICAL: Validate cached data belongs to current user
+      if (workoutPlan && !validateCachedData(workoutPlan, userId)) {
+        workoutPlan = null;
+      }
+      if (dietPlan && !validateCachedData(dietPlan, userId)) {
+        dietPlan = null;
+      }
 
       console.log('📊 StreakService: Plans loaded:', {
         hasWorkoutPlan: !!workoutPlan,

@@ -24,6 +24,8 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
   const { t } = useLanguage();
   
   // Helper function to check if meal is completed
+  // Meal ID format: `${date}-${mealType}-${mealName}`
+  // Example: "2025-12-17-breakfast-Vegetable Dalia (Broken Wheat Porridge)"
   const isMealCompleted = (meal: MealItem): boolean => {
     // Get today's date in local timezone to avoid UTC offset
     const todayDate = new Date();
@@ -33,11 +35,49 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
     const day = String(todayDate.getDate()).padStart(2, '0');
     const today = `${year}-${month}-${day}`;
     
-    const originalName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '');
+    // Extract meal type and name from dashboard meal format
+    // Format: "🌅 Vegetable Dalia (Broken Wheat Porridge)" or "🌞 Kadhi Pakora with Rice" or "🍎 Snack 1: Rice Cakes"
+    let mealType: string;
+    let mealName: string;
     
-    return Array.from(completedMeals).some(completedKey => 
-      typeof completedKey === 'string' && completedKey.includes(today) && completedKey.includes(originalName)
-    );
+    if (meal.name.startsWith('🌅')) {
+      mealType = 'breakfast';
+      mealName = meal.name.replace(/^🌅\s*/, '').trim();
+    } else if (meal.name.startsWith('🌞')) {
+      mealType = 'lunch';
+      mealName = meal.name.replace(/^🌞\s*/, '').trim();
+    } else if (meal.name.startsWith('🌙')) {
+      mealType = 'dinner';
+      mealName = meal.name.replace(/^🌙\s*/, '').trim();
+    } else if (meal.name.startsWith('🍎')) {
+      // Snack format: "🍎 Snack 1: Rice Cakes with Avocado"
+      mealType = 'snack';
+      mealName = meal.name.replace(/^🍎\s*Snack\s+\d+:\s*/, '').trim();
+    } else {
+      // Fallback: try to extract from any format
+      mealName = meal.name.replace(/^[🌅🌞🌙🍎]+\s*/, '').replace(/^(Breakfast|Lunch|Dinner|Snack \d+):\s*/, '').trim();
+      // Try to infer meal type from name pattern
+      if (meal.name.includes('Breakfast') || meal.name.includes('🌅')) {
+        mealType = 'breakfast';
+      } else if (meal.name.includes('Lunch') || meal.name.includes('🌞')) {
+        mealType = 'lunch';
+      } else if (meal.name.includes('Dinner') || meal.name.includes('🌙')) {
+        mealType = 'dinner';
+      } else {
+        mealType = 'snack';
+      }
+    }
+
+    // Check if any completion key matches: `${today}-${mealType}-${mealName}`
+    const expectedMealId = `${today}-${mealType}-${mealName}`;
+    
+    return Array.from(completedMeals).some(completedKey => {
+      if (typeof completedKey !== 'string') return false;
+      // Exact match is best
+      if (completedKey === expectedMealId) return true;
+      // Also check if it contains both date and meal name (for flexibility)
+      return completedKey.includes(today) && completedKey.includes(mealType) && completedKey.includes(mealName);
+    });
   };
   return (
     <Animated.View 

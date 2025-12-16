@@ -41,6 +41,7 @@ export default function DietScreen() {
   const [isLoadingPlan, setIsLoadingPlan] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hasCheckedLocalStorage, setHasCheckedLocalStorage] = useState(false);
+  const [justDeleted, setJustDeleted] = useState(false); // Flag to track if plan was just deleted
   const { showToast } = useToast();
 
   // Helper function to translate dynamic values (same approach as ProfilePage)
@@ -128,7 +129,57 @@ export default function DietScreen() {
       setTimeout(() => {
         StatusBar.setHidden(false, 'none');
       }, 0);
-    }, [])
+      
+      // ✅ CRITICAL: If plan was just deleted, ALWAYS check database first and never use cache
+      // This prevents the plan from reappearing when navigating back
+      if (justDeleted) {
+        // Plan was deleted, verify with database first (force refresh, skip cache)
+        (async () => {
+          try {
+            // Force refresh from database - this will skip all caches
+            const dbPlan = await aiDietService.loadDietPlanFromDatabase(true);
+            if (!dbPlan) {
+              // Confirmed: no plan in database
+              setDietPlan(null);
+              setLoadError(null);
+              setHasCheckedLocalStorage(true);
+              setIsLoadingPlan(false);
+              // Keep justDeleted flag until we're sure it's cleared
+              // This prevents cache reload on subsequent navigations
+            } else {
+              // Plan still exists in database (deletion might have failed)
+              // Try to delete it again
+              console.warn('⚠️ Plan still exists after deletion, attempting to delete again...');
+              try {
+                await aiDietService.clearDietPlanFromDatabase();
+                setDietPlan(null);
+                setLoadError(null);
+              } catch (deleteError) {
+                console.error('❌ Failed to delete plan on retry:', deleteError);
+                // Still set to null to show generation screen
+                setDietPlan(null);
+                setLoadError(null);
+              }
+              setHasCheckedLocalStorage(true);
+              setIsLoadingPlan(false);
+            }
+          } catch (error) {
+            // On error, assume plan is deleted and show generation screen
+            console.warn('⚠️ Error checking database after deletion:', error);
+            setDietPlan(null);
+            setLoadError(null);
+            setHasCheckedLocalStorage(true);
+            setIsLoadingPlan(false);
+          }
+        })();
+        // Don't reset justDeleted flag here - let it persist to prevent cache reload
+        // It will be reset when user generates a new plan
+      } else if (!dietPlan && hasCheckedLocalStorage) {
+        // If no plan and we've checked, reload to see if one was created elsewhere
+        // But only if we haven't just deleted
+        loadDietPlan(false);
+      }
+    }, [justDeleted])
   );
 
   const handleProfilePress = () => {
@@ -187,6 +238,7 @@ export default function DietScreen() {
 
         if (response.success && response.data) {
           setDietPlan(response.data);
+          setJustDeleted(false); // ✅ Reset deletion flag when new plan is generated
           showToast('success', 'Your personalized diet plan is ready!');
         } else {
           showToast('error', 'Failed to generate diet plan. Please try again.');
@@ -227,6 +279,7 @@ export default function DietScreen() {
 
           if (dietResponse.success && dietResponse.data) {
             setDietPlan(dietResponse.data);
+            setJustDeleted(false); // ✅ Reset deletion flag when new plan is generated
             showToast('success', 'Your personalized diet plan is ready!');
           } else {
             showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
@@ -307,47 +360,82 @@ export default function DietScreen() {
     }
   };
 
-  const loadDietPlan = async () => {
+  const loadDietPlan = async (skipCache = false) => {
     try {
       setLoadError(null);
       
-      // ✅ CRITICAL: First check local storage with user-specific key
-      // This prevents showing generation screen if plan exists locally
-      try {
-        const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
-        const Storage = await import('../../src/utils/storage');
-        
-        const userId = await getCurrentUserId();
-        if (userId) {
-          const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
-          const cachedPlan = await Storage.default.getItem(userCacheKey);
-          if (cachedPlan) {
-            const plan = JSON.parse(cachedPlan);
-            // Validate cached data belongs to current user
-            if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-              console.log('✅ Found diet plan in local storage, using it immediately');
-              setDietPlan(plan);
-              setHasCheckedLocalStorage(true);
-              // Still try to sync with database in background, but don't wait
-              aiDietService.loadDietPlanFromDatabase().then((dbPlan) => {
-                if (dbPlan && dbPlan !== plan) {
-                  setDietPlan(dbPlan);
-                }
-              }).catch(() => {
-                // Ignore background sync errors
-              });
-              return;
+      // ✅ CRITICAL: If plan was just deleted, ALWAYS check database first with force refresh
+      // This ensures we don't reload from cache after deletion
+      if (justDeleted || skipCache) {
+        setHasCheckedLocalStorage(true);
+        // Force refresh from database - this will return null if plan was deleted
+        const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase(true);
+        if (dietPlanFromDB) {
+          // Plan exists in database (shouldn't happen after deletion, but handle it)
+          setDietPlan(dietPlanFromDB);
+          setJustDeleted(false); // Reset flag
+        } else {
+          // No plan found in database - confirmed deleted
+          setDietPlan(null);
+          setJustDeleted(false); // Reset flag
+          console.log('ℹ️ No diet plan found - confirmed deleted');
+        }
+        return;
+      }
+      
+      // Normal flow: Check local storage first (ONLY if not just deleted)
+      // ✅ CRITICAL: Never use cache if justDeleted flag is set
+      if (!justDeleted) {
+        try {
+          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
+          const Storage = await import('../../src/utils/storage');
+          
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+            const cachedPlan = await Storage.default.getItem(userCacheKey);
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              // Validate cached data belongs to current user
+              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                console.log('✅ Found diet plan in local storage, using it immediately');
+                setDietPlan(plan);
+                setHasCheckedLocalStorage(true);
+                // Still try to sync with database in background, but don't wait
+                aiDietService.loadDietPlanFromDatabase().then(async (dbPlan) => {
+                  if (dbPlan && dbPlan !== plan) {
+                    setDietPlan(dbPlan);
+                  } else if (!dbPlan) {
+                    // Database says no plan - clear local cache and state
+                    setDietPlan(null);
+                    const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+                    const Storage = await import('../../src/utils/storage');
+                    const userId = await getCurrentUserId();
+                    if (userId) {
+                      const key = await getUserCacheKey('cached_diet_plan', userId);
+                      await Storage.default.removeItem(key);
+                    }
+                    await Storage.default.removeItem('cached_diet_plan');
+                  }
+                }).catch(() => {
+                  // Ignore background sync errors
+                });
+                return;
+              }
             }
           }
+        } catch (localError) {
+          console.warn('Could not check local storage:', localError);
         }
-      } catch (localError) {
-        console.warn('Could not check local storage:', localError);
+      } else {
+        // If justDeleted is true, skip cache entirely and go straight to database
+        console.log('⚠️ Skipping cache check - plan was just deleted');
       }
       
       setHasCheckedLocalStorage(true);
       
       // If no local cache, try to load from database
-      const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase();
+      const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase(false);
       if (dietPlanFromDB) {
         setDietPlan(dietPlanFromDB);
       } else {
@@ -358,27 +446,30 @@ export default function DietScreen() {
       console.error('❌ Error loading diet plan:', error);
       
       // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
-      try {
-        const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
-        const Storage = await import('../../src/utils/storage');
-        
-        const userId = await getCurrentUserId();
-        if (userId) {
-          const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
-          const cachedPlan = await Storage.default.getItem(userCacheKey);
-          if (cachedPlan) {
-            const plan = JSON.parse(cachedPlan);
-            // Validate cached data belongs to current user
-            if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-              console.log('✅ Fallback: Found diet plan in local storage after error');
-              setDietPlan(plan);
-              setLoadError(null); // Clear error since we found plan locally
-              return;
+      // BUT only if we didn't just delete
+      if (!justDeleted && !skipCache) {
+        try {
+          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
+          const Storage = await import('../../src/utils/storage');
+          
+          const userId = await getCurrentUserId();
+          if (userId) {
+            const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+            const cachedPlan = await Storage.default.getItem(userCacheKey);
+            if (cachedPlan) {
+              const plan = JSON.parse(cachedPlan);
+              // Validate cached data belongs to current user
+              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                console.log('✅ Fallback: Found diet plan in local storage after error');
+                setDietPlan(plan);
+                setLoadError(null); // Clear error since we found plan locally
+                return;
+              }
             }
           }
+        } catch (localError) {
+          console.warn('Could not check local storage on error:', localError);
         }
-      } catch (localError) {
-        console.warn('Could not check local storage on error:', localError);
       }
       
       // Only set error if we truly have no plan
@@ -419,11 +510,92 @@ export default function DietScreen() {
           dietPlan={dietPlan}
           onGenerateNew={async () => {
             try {
+              // Set deletion flag FIRST to prevent cache reload
+              setJustDeleted(true);
+              
+              // Clear all diet plan data from database and cache
               await aiDietService.clearDietPlanFromDatabase();
+              
+              // Also manually clear any remaining cache keys (double-check for completeness)
+              const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+              const Storage = await import('../../src/utils/storage');
+              const userId = await getCurrentUserId();
+              
+              if (userId) {
+                const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+                await Storage.default.removeItem(userCacheKey);
+                
+                // Clear all related completion data
+                const completedMealsKey = await getUserCacheKey('completed_meals', userId);
+                const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
+                const waterIntakeKey = await getUserCacheKey('water_intake', userId);
+                const waterCompletedKey = await getUserCacheKey('water_completed', userId);
+                
+                await Storage.default.removeItem(completedMealsKey);
+                await Storage.default.removeItem(completedDaysKey);
+                await Storage.default.removeItem(waterIntakeKey);
+                await Storage.default.removeItem(waterCompletedKey);
+              }
+              
+              // Clear global keys as well
+              await Storage.default.removeItem('cached_diet_plan');
+              await Storage.default.removeItem('completed_meals');
+              await Storage.default.removeItem('completed_diet_days');
+              await Storage.default.removeItem('water_intake');
+              await Storage.default.removeItem('water_completed');
+              
+              // Clear local state immediately to trigger UI update
               setDietPlan(null);
-              showToast('info', 'Previous diet plan cleared. You can now generate a new one.');
+              setLoadError(null); // Clear any previous errors
+              setHasCheckedLocalStorage(true); // Set to true so generation screen shows
+              setIsLoadingPlan(false); // Don't show loading - go straight to generation screen
+              // ✅ CRITICAL: Keep justDeleted flag set to prevent cache reload when navigating back
+              // This flag will persist until user generates a new plan
+              
+              // Small delay to ensure cache is fully cleared before showing generation screen
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+              showToast('success', 'Diet plan deleted successfully. You can now generate a new one.');
             } catch (error) {
-              showToast('error', 'Failed to clear previous plan. Please try again.');
+              console.error('Error clearing diet plan:', error);
+              
+              // Even if there's an error, clear local state to ensure navigation works
+              setJustDeleted(true); // Still set flag to prevent cache reload
+              setDietPlan(null);
+              setLoadError(null); // Clear any previous errors
+              setHasCheckedLocalStorage(true);
+              setIsLoadingPlan(false);
+              
+              // Try to clear cache manually as fallback
+              try {
+                const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+                const Storage = await import('../../src/utils/storage');
+                const userId = await getCurrentUserId();
+                if (userId) {
+                  const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
+                  await Storage.default.removeItem(userCacheKey);
+                  
+                  // Clear completion data as well
+                  const completedMealsKey = await getUserCacheKey('completed_meals', userId);
+                  const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
+                  const waterIntakeKey = await getUserCacheKey('water_intake', userId);
+                  const waterCompletedKey = await getUserCacheKey('water_completed', userId);
+                  
+                  await Storage.default.removeItem(completedMealsKey);
+                  await Storage.default.removeItem(completedDaysKey);
+                  await Storage.default.removeItem(waterIntakeKey);
+                  await Storage.default.removeItem(waterCompletedKey);
+                }
+                await Storage.default.removeItem('cached_diet_plan');
+                await Storage.default.removeItem('completed_meals');
+                await Storage.default.removeItem('completed_diet_days');
+                await Storage.default.removeItem('water_intake');
+                await Storage.default.removeItem('water_completed');
+              } catch (cacheError) {
+                console.error('Error clearing cache fallback:', cacheError);
+              }
+              
+              showToast('info', 'Diet plan cleared. You can now generate a new one.');
             }
           }}
           isGeneratingNew={isGenerating}

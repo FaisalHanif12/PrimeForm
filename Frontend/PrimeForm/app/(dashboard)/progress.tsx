@@ -182,6 +182,7 @@ export default function ProgressScreen() {
       DeviceEventEmitter.addListener('waterIntakeUpdated', () => {
         progressService.invalidateCaches(); // PERFORMANCE: Clear cache before refresh
         loadProgressData(true); // Force refresh after action - uses latest selectedPeriod via ref
+        // ✅ CRITICAL: Charts will be refreshed automatically via loadProgressData
       }),
     ];
 
