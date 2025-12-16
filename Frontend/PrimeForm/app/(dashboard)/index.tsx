@@ -208,10 +208,16 @@ export default function DashboardScreen() {
       await loadCompletionStates(false);
     });
 
+    const waterIntakeListener = DeviceEventEmitter.addListener('waterIntakeUpdated', async (data) => {
+      // Refresh water completion/intake from local storage so dashboard reflects "Done"
+      await loadCompletionStates(false);
+    });
+
     return () => {
       mealCompletedListener.remove();
       dayCompletedListener.remove();
       exerciseCompletedListener.remove();
+      waterIntakeListener.remove();
     };
   }, []);
 

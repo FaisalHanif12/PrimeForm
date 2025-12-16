@@ -292,6 +292,18 @@ class NotificationService {
   // Create profile completion badge notification
   static async createProfileCompletionBadgeNotification(userId, userFullName) {
     try {
+      // ✅ Guard: avoid duplicate profile-completion badge notifications
+      const existing = await Notification.findOne({
+        userId,
+        type: 'badge_earned',
+        'metadata.badgeType': 'profile_completion',
+      }).sort({ createdAt: -1 });
+
+      if (existing) {
+        console.log('ℹ️ Profile completion badge notification already exists, skipping duplicate.');
+        return existing;
+      }
+
       const userLanguage = await getUserLanguage(userId);
       const { title, message } = getTranslatedContent('profile_completion_badge', userLanguage, userFullName);
       

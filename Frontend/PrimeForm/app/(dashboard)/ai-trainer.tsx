@@ -55,6 +55,7 @@ export default function AITrainerScreen() {
   const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [visibleCount, setVisibleCount] = useState(15); // UI pagination: show last 15 messages by default
   const [currentMessage, setCurrentMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
@@ -62,6 +63,25 @@ export default function AITrainerScreen() {
   useEffect(() => {
     loadChatHistory();
   }, []);
+
+  // Ensure we always show at least the last 15 messages, and never more than exist.
+  useEffect(() => {
+    setVisibleCount(prev => {
+      const minVisible = 15;
+      const current = Math.max(prev, minVisible);
+      return Math.min(chatMessages.length, current || minVisible);
+    });
+  }, [chatMessages.length]);
+
+  const visibleMessages = chatMessages.length > visibleCount
+    ? chatMessages.slice(-visibleCount)
+    : chatMessages;
+
+  const canLoadMore = chatMessages.length > visibleMessages.length;
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => Math.min(prev + 15, chatMessages.length));
+  };
 
   const loadChatHistory = async () => {
     try {
@@ -351,7 +371,17 @@ export default function AITrainerScreen() {
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
           >
-            {chatMessages.map((message, index) => (
+            {canLoadMore && (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                onPress={handleLoadMore}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.loadMoreText}>Load previous messages</Text>
+              </TouchableOpacity>
+            )}
+
+            {visibleMessages.map((message, index) => (
               <Animated.View
                 key={message.id}
                 entering={FadeInUp.delay(index * 50)}

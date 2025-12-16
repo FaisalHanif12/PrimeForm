@@ -13,6 +13,7 @@ import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -313,11 +314,17 @@ export default function DietPlanDisplay({
     };
 
     const waterIntakeUpdatedListener = async () => {
-      // ✅ Load from local storage only (NO API CALL)
+      // ✅ Load from local storage only (NO API CALL), using user-specific keys
       try {
         const Storage = await import('../utils/storage');
-        const cachedWaterIntake = await Storage.default.getItem('water_intake');
-        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        const { getUserCacheKey, getCurrentUserId } = await import('../utils/cacheKeys');
+        const userId = await getCurrentUserId();
+        const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+        const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+
+        const cachedWaterIntake = await Storage.default.getItem(waterIntakeKey);
+        const cachedWaterCompleted = await Storage.default.getItem(waterCompletedKey);
+
         if (cachedWaterIntake) {
           setWaterIntake(JSON.parse(cachedWaterIntake));
         }
@@ -354,10 +361,18 @@ export default function DietPlanDisplay({
   const loadCompletionStatesFromLocalStorage = async () => {
       try {
         const Storage = await import('../utils/storage');
-        const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
-        const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
-        const cachedWaterIntake = await Storage.default.getItem('water_intake');
-      const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        const { getUserCacheKey, getCurrentUserId } = await import('../utils/cacheKeys');
+        const userId = await getCurrentUserId();
+
+        const completedMealsKey = userId ? await getUserCacheKey('completed_meals', userId) : 'completed_meals';
+        const completedDaysKey = userId ? await getUserCacheKey('completed_diet_days', userId) : 'completed_diet_days';
+        const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+        const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+
+        const cachedCompletedMeals = await Storage.default.getItem(completedMealsKey);
+        const cachedCompletedDays = await Storage.default.getItem(completedDaysKey);
+        const cachedWaterIntake = await Storage.default.getItem(waterIntakeKey);
+        const cachedWaterCompleted = await Storage.default.getItem(waterCompletedKey);
         
         if (cachedCompletedMeals) {
           const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
@@ -413,10 +428,18 @@ export default function DietPlanDisplay({
       // Also load from local storage and merge
       try {
         const Storage = await import('../utils/storage');
-        const cachedCompletedMeals = await Storage.default.getItem('completed_meals');
-        const cachedCompletedDays = await Storage.default.getItem('completed_diet_days');
-        const cachedWaterIntake = await Storage.default.getItem('water_intake');
-        const cachedWaterCompleted = await Storage.default.getItem('water_completed');
+        const { getUserCacheKey, getCurrentUserId } = await import('../utils/cacheKeys');
+        const userId = await getCurrentUserId();
+
+        const completedMealsKey = userId ? await getUserCacheKey('completed_meals', userId) : 'completed_meals';
+        const completedDaysKey = userId ? await getUserCacheKey('completed_diet_days', userId) : 'completed_diet_days';
+        const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+        const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+
+        const cachedCompletedMeals = await Storage.default.getItem(completedMealsKey);
+        const cachedCompletedDays = await Storage.default.getItem(completedDaysKey);
+        const cachedWaterIntake = await Storage.default.getItem(waterIntakeKey);
+        const cachedWaterCompleted = await Storage.default.getItem(waterCompletedKey);
         
         if (cachedCompletedMeals) {
           const localMeals = new Set<string>(JSON.parse(cachedCompletedMeals));
@@ -691,8 +714,14 @@ export default function DietPlanDisplay({
     
     try {
       const Storage = await import('../utils/storage');
-      await Storage.default.setItem('water_completed', JSON.stringify(newWaterCompleted));
-      await Storage.default.setItem('water_intake', JSON.stringify(newWaterIntake));
+      const { getUserCacheKey, getCurrentUserId } = await import('../utils/cacheKeys');
+      const userId = await getCurrentUserId();
+
+      const waterIntakeKey = userId ? await getUserCacheKey('water_intake', userId) : 'water_intake';
+      const waterCompletedKey = userId ? await getUserCacheKey('water_completed', userId) : 'water_completed';
+
+      await Storage.default.setItem(waterCompletedKey, JSON.stringify(newWaterCompleted));
+      await Storage.default.setItem(waterIntakeKey, JSON.stringify(newWaterIntake));
       
       // Broadcast water update
       DeviceEventEmitter.emit('waterIntakeUpdated', {

@@ -270,7 +270,7 @@ export default function DietScreen() {
     if (showProfilePage && !userInfo) {
       const loadUserInfoForProfile = async () => {
         try {
-          const cachedData = userProfileService.getCachedData();
+          const cachedData = await userProfileService.getCachedData();
           if (cachedData && cachedData.data) {
             setUserInfo(cachedData.data);
           } else {
@@ -456,27 +456,58 @@ export default function DietScreen() {
 
     // Only show generation screens if we've confirmed no plan exists
     if (userInfo) {
-      // User has profile but no diet plan - show profile summary and generate button
+      // User has profile but no diet plan - show richer profile summary and generate button
       return (
         <View style={styles.profileSummaryContainer}>
           <Text style={styles.profileSummaryTitle}>{t('profile.summary.title')}</Text>
 
           <View style={styles.profileSummaryCard}>
+            {/* Goal & diet preference */}
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.goal')}</Text>
               <Text style={styles.profileSummaryValue}>{translateValue(userInfo.bodyGoal, 'goal')}</Text>
             </View>
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.diet.preference')}</Text>
-              <Text style={styles.profileSummaryValue}>{translateValue(userInfo.dietPreference, 'diet')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {translateValue(userInfo.dietPreference, 'diet')}
+              </Text>
             </View>
+
+            {/* Age & height */}
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('userinfo.age')}</Text>
+              <Text style={styles.profileSummaryValue}>{userInfo.age}</Text>
+            </View>
+            <View style={styles.profileSummaryRow}>
+              <Text style={styles.profileSummaryLabel}>{t('userinfo.height')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.height ? `${userInfo.height}` : t('profile.summary.none')}
+              </Text>
+            </View>
+
+            {/* Weights */}
             <View style={styles.profileSummaryRow}>
               <Text style={styles.profileSummaryLabel}>{t('profile.summary.current.weight')}</Text>
-              <Text style={styles.profileSummaryValue}>{userInfo.currentWeight} kg</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.currentWeight ? `${userInfo.currentWeight} kg` : t('profile.summary.none')}
+              </Text>
             </View>
+            {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
+              <View style={styles.profileSummaryRow}>
+                <Text style={styles.profileSummaryLabel}>{t('profile.summary.target.weight')}</Text>
+                <Text style={styles.profileSummaryValue}>
+                  {userInfo.targetWeight ? `${userInfo.targetWeight} kg` : t('profile.summary.none')}
+                </Text>
+              </View>
+            )}
+
+            {/* Medical conditions (important for diet) */}
             <View style={styles.profileSummaryRow}>
-              <Text style={styles.profileSummaryLabel}>{t('profile.summary.target.weight')}</Text>
-              <Text style={styles.profileSummaryValue}>{userInfo.targetWeight || 'Not set'} kg</Text>
+              <Text style={styles.profileSummaryLabel}>{t('profile.summary.medical.conditions')}</Text>
+              <Text style={styles.profileSummaryValue}>
+                {userInfo.medicalConditions || t('profile.summary.none')}
+              </Text>
             </View>
           </View>
 
@@ -493,27 +524,31 @@ export default function DietScreen() {
       );
     }
 
-    // User has no profile - show beautiful start card
+    // User has no profile - show simple, clean start card
     // ✅ CRITICAL: Only show this if we've confirmed no plan exists
     return (
       <View style={styles.startCardContainer}>
         <View style={styles.startCard}>
-          <View style={styles.startCardIconContainer}>
+          <View style={styles.startCardIconWrapper}>
             <Text style={styles.startCardIcon}>🥗</Text>
           </View>
 
           <Text style={styles.startCardTitle}>
-            {language === 'ur' ? 'کیا آپ ان سوالات کے لیے تیار ہیں جو AI کے ذریعے آپ کا ذاتی غذائی پلان بنائیں گے؟' : 'Are you ready for questions that will make your personalized diet through AI?'}
+            {language === 'ur'
+              ? 'چلیں آپ کے لئے ذاتی diet پلان بنائیں؟'
+              : 'Let’s create your personal diet plan.'}
           </Text>
 
           <Text style={styles.startCardSubtitle}>
-            {t('diet.hero.subtitle')}
+            {language === 'ur'
+              ? 'چند مختصر سوالات، پھر AI آپ کے لئے موزوں meal plan تیار کرے گا۔'
+              : 'Answer a few quick questions and AI will build a meal plan for you.'}
           </Text>
 
           <TouchableOpacity
             style={styles.startButton}
             onPress={() => setShowUserInfoModal(true)}
-            activeOpacity={0.8}
+            activeOpacity={0.9}
           >
             <Text style={styles.startButtonText}>{t('onboarding.start')}</Text>
           </TouchableOpacity>
@@ -834,47 +869,72 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl * 2,
   },
   startCard: {
-    backgroundColor: colors.surface,
+    width: '100%',
+    maxWidth: 440,
     borderRadius: radius.lg,
     padding: spacing.xl,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    shadowColor: colors.background,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  startCardIconWrapper: {
+    marginBottom: spacing.md,
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
+    justifyContent: 'center',
+  },
+  startCardIconHalo: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   startCardIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.gold,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    shadowColor: colors.gold,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
   },
   startCardIcon: {
-    fontSize: 40,
+    fontSize: 44,
+  },
+  startCardKicker: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.3,
   },
   startCardTitle: {
     color: colors.white,
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: fonts.heading,
     textAlign: 'center',
     marginBottom: spacing.md,
     lineHeight: 32,
   },
   startCardSubtitle: {
-    color: colors.mutedText,
+    color: 'rgba(255,255,255,0.78)',
     fontSize: typography.body,
     fontFamily: fonts.body,
     textAlign: 'center',
@@ -882,21 +942,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   startButton: {
+    marginTop: spacing.lg,
     borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.gold,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
-
   startButtonText: {
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+    letterSpacing: 0.2,
   },
 
   // Error Screen Styles

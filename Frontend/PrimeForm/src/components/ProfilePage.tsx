@@ -175,57 +175,66 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     }
   }, [visible]);
 
-  // Ensure we never wrongly show "Create Profile" for users who already have a profile.
-  // If no userInfo was passed but the modal is visible, we proactively check the backend once.
+  // Check for cached profile first, then optionally check API in background
+  // For new users, immediately show profile creation form without loading screen
   useEffect(() => {
     let isCancelled = false;
 
-    const ensureProfileLoaded = async () => {
-      if (!visible || userInfo || hasCheckedExisting || isInitialLoading) {
+    const checkProfile = async () => {
+      if (!visible || userInfo || hasCheckedExisting) {
         return;
       }
 
-      setIsInitialLoading(true);
-      setLoadError(null);
+      // First, quickly check cached data (fast, no loading needed)
+      try {
+        const cachedData = await userProfileService.getCachedData();
+        if (cachedData && cachedData.success && cachedData.data) {
+          // Validate cached data belongs to current user
+          const { getCurrentUserId, validateCachedData } = await import('../utils/cacheKeys');
+          const userId = await getCurrentUserId();
+          if (userId && validateCachedData(cachedData.data, userId)) {
+            // We have cached profile data - use it immediately
+            if (onUpdateUserInfo) {
+              onUpdateUserInfo(cachedData.data as any);
+            }
+            setHasCheckedExisting(true);
+            return; // Don't make API call if we have valid cached data
+          }
+        }
+      } catch (error) {
+        // Ignore cache errors, continue to check API
+      }
 
+      // No cached data found - immediately show profile creation form for new users
+      // Don't show loading screen, just mark as checked
+      setHasCheckedExisting(true);
+      setIsInitialLoading(false);
+
+      // Optionally check API in background (non-blocking)
+      // This ensures we catch any profile that might exist on server but wasn't cached
       try {
         const response = await userProfileService.getUserProfile();
 
         if (isCancelled) return;
 
-        if (response.success) {
-          if (response.data) {
-            // We have an existing profile – let parent know so it can cache it.
-            if (onUpdateUserInfo) {
-              onUpdateUserInfo(response.data as any);
-            }
-            setHasCheckedExisting(true);
-          } else {
-            // Confirmed: no profile exists for this user.
-            setHasCheckedExisting(true);
+        if (response.success && response.data) {
+          // We found a profile on server - update parent
+          if (onUpdateUserInfo) {
+            onUpdateUserInfo(response.data as any);
           }
-        } else {
-          setLoadError(response.message || 'Unable to fetch your profile. Please try again later.');
-          setHasCheckedExisting(true); // Mark as checked even on error
         }
+        // If no profile found, that's fine - user can create one
       } catch (error) {
-        if (!isCancelled) {
-          setLoadError('Unable to fetch your profile. Please check your connection and try again.');
-          setHasCheckedExisting(true); // Mark as checked even on error
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsInitialLoading(false);
-        }
+        // Ignore API errors - user can still create profile
       }
     };
 
-    ensureProfileLoaded();
+    checkProfile();
 
     return () => {
       isCancelled = true;
     };
-  }, [visible, userInfo, hasCheckedExisting, isInitialLoading, onUpdateUserInfo]);
+  }, [visible, userInfo, hasCheckedExisting, onUpdateUserInfo]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -252,8 +261,8 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         occupationType: getEnglishValue(editedUserInfo.occupationType, occupationTypes),
         availableEquipment: getEnglishValue(editedUserInfo.availableEquipment, equipmentOptions),
         dietPreference: getEnglishValue(editedUserInfo.dietPreference, dietPreferences),
-        // Only include targetWeight if it's not empty
-        ...(editedUserInfo.targetWeight && { targetWeight: editedUserInfo.targetWeight })
+        // Always send targetWeight so clearing the field removes it server-side
+        targetWeight: editedUserInfo.targetWeight?.trim?.() ?? ''
       };
 
       // Update in backend database
@@ -353,7 +362,9 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
   );
 
   const renderProfileContent = () => {
-    if (isInitialLoading) {
+    // Only show loading if we're actively checking and haven't determined status yet
+    // For new users, we immediately show profile creation form
+    if (isInitialLoading && !hasCheckedExisting) {
       return (
         <View style={styles.noProfileSection}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -373,7 +384,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           <TouchableOpacity
             style={styles.createProfileButton}
             onPress={() => {
-              // Allow retry – next effect run will call ensureProfileLoaded again
+              // Allow retry
               setHasCheckedExisting(false);
               setLoadError(null);
             }}
@@ -385,8 +396,10 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       );
     }
 
+    // For new users (no userInfo and checked), immediately show profile creation form
+    // This is the critical fix - don't wait for API, show form immediately
     if (!userInfo && hasCheckedExisting) {
-      // No profile exists yet - show basic user info
+      // No profile exists yet - immediately show profile creation form
       return (
         <View style={styles.noProfileSection}>
           <View style={styles.noProfileIcon}>
@@ -407,20 +420,22 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
     // Profile exists - show full profile (safe guard for missing props)
     const safeUserInfo = userInfo || {} as any;
+    const displayValue = (field: keyof UserInfo) => (isEditing ? editedUserInfo[field] : safeUserInfo[field]) || '';
+    const displayGoal = (isEditing ? editedUserInfo.bodyGoal : safeUserInfo.bodyGoal) || '';
 
     return (
       <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
         {/* Personal Information */}
         {renderInfoSection('Personal Information', (
           <>
-            {renderPickerRow('Country', safeUserInfo.country || '', 'country', countries)}
-            {renderInfoRow('Age', safeUserInfo.age || '', 'age')}
-            {renderPickerRow('Gender', safeUserInfo.gender || '', 'gender', genderOptions)}
-            {renderInfoRow('Height', safeUserInfo.height || '', 'height')}
-            {renderInfoRow('Current Weight', safeUserInfo.currentWeight || '', 'currentWeight')}
+            {renderPickerRow('Country', displayValue('country'), 'country', countries)}
+            {renderInfoRow('Age', displayValue('age'), 'age')}
+            {renderPickerRow('Gender', displayValue('gender'), 'gender', genderOptions)}
+            {renderInfoRow('Height', displayValue('height'), 'height')}
+            {renderInfoRow('Current Weight', displayValue('currentWeight'), 'currentWeight')}
             {/* Show target weight field if body goal requires it */}
-            {(safeUserInfo.bodyGoal === 'Lose Fat' || safeUserInfo.bodyGoal === 'Gain Muscle') && (
-              renderInfoRow('Target Weight', safeUserInfo.targetWeight || '', 'targetWeight')
+            {(displayGoal === 'Lose Fat' || displayGoal === 'Gain Muscle') && (
+              renderInfoRow('Target Weight', displayValue('targetWeight'), 'targetWeight')
             )}
           </>
         ))}
@@ -428,17 +443,17 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         {/* Goals & Preferences */}
         {renderInfoSection('Goals & Preferences', (
           <>
-            {renderPickerRow('Body Goal', safeUserInfo.bodyGoal || '', 'bodyGoal', bodyGoals)}
-            {renderPickerRow('Diet Preference', safeUserInfo.dietPreference || '', 'dietPreference', dietPreferences)}
+            {renderPickerRow('Body Goal', displayValue('bodyGoal'), 'bodyGoal', bodyGoals)}
+            {renderPickerRow('Diet Preference', displayValue('dietPreference'), 'dietPreference', dietPreferences)}
           </>
         ))}
 
         {/* Lifestyle & Health */}
         {renderInfoSection('Lifestyle & Health', (
           <>
-            {renderPickerRow('Occupation', safeUserInfo.occupationType || '', 'occupationType', occupationTypes)}
-            {renderPickerRow('Available Equipment', safeUserInfo.availableEquipment || '', 'availableEquipment', equipmentOptions)}
-            {renderInfoRow('Medical Conditions', safeUserInfo.medicalConditions || '', 'medicalConditions')}
+            {renderPickerRow('Occupation', displayValue('occupationType'), 'occupationType', occupationTypes)}
+            {renderPickerRow('Available Equipment', displayValue('availableEquipment'), 'availableEquipment', equipmentOptions)}
+            {renderInfoRow('Medical Conditions', displayValue('medicalConditions'), 'medicalConditions')}
           </>
         ))}
       </ScrollView>

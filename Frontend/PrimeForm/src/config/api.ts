@@ -15,10 +15,10 @@ const getApiConfig = (): ApiConfig => {
      * Use the SAME IP that Metro is using (shown in the Expo terminal as
      * "exp://192.168.xxx.xxx:8081"). This is the IP your phone can reach.
      *
-     * Right now Metro is running on: http://192.168.182.204:8081
+     * Right now Metro is running on: http://192.168.48.129:8081
      * So we use that base IP with the backend port 5001.
      */
-    const baseURL = 'http://192.168.182.204:5001/api';
+    const baseURL = 'http://192.168.48.129:5001/api';
 
     console.log('🔍 API URL (development):', baseURL);
 
@@ -102,6 +102,32 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+
+        // Gracefully handle known "no active plan" 404 responses without treating them as hard errors.
+        if (
+          response.status === 404 &&
+          errorData &&
+          typeof errorData.message === 'string' &&
+          (
+            errorData.message === 'No active workout plan found' ||
+            errorData.message === 'No active diet plan found'
+          )
+        ) {
+          console.log(`ℹ️ API Info (${response.status}):`, errorData);
+          return errorData;
+        }
+
+        // Gracefully handle 401 "Not authorized" as a soft auth failure
+        if (
+          response.status === 401 &&
+          errorData &&
+          typeof errorData.message === 'string' &&
+          errorData.message === 'Not authorized to access this route'
+        ) {
+          console.log(`ℹ️ API Unauthorized (${response.status}):`, errorData);
+          return errorData;
+        }
+
         console.error(`❌ HTTP Error: ${response.status}`, errorData);
         throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
       }

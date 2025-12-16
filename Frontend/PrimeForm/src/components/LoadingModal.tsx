@@ -64,10 +64,6 @@ export default function LoadingModal({
     outputRange: ['0deg', '360deg'],
   });
 
-  const getIcon = () => {
-    return type === 'workout' ? '💪' : '🥗';
-  };
-
   const getGradientColors = () => {
     return type === 'workout' ? [colors.primary, colors.gold] : [colors.gold, colors.green];
   };
@@ -101,11 +97,6 @@ export default function LoadingModal({
 
           {/* Main Content */}
           <View style={styles.contentContainer}>
-            {/* Icon */}
-            <View style={styles.iconContainer}>
-              <Text style={styles.mainIcon}>{getIcon()}</Text>
-            </View>
-
             {/* Spinning Loader */}
             <View style={styles.loaderContainer}>
               <Animated.View 
@@ -224,12 +215,6 @@ const styles = StyleSheet.create({
   contentContainer: {
     alignItems: 'center',
     zIndex: 1,
-  },
-  iconContainer: {
-    marginBottom: spacing.lg,
-  },
-  mainIcon: {
-    fontSize: 48,
   },
 
   // Spinner

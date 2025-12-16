@@ -404,17 +404,25 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
       {/* Conditional Target Weight Field */}
       {(userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && (
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>{t('userinfo.target.weight')} *</Text>
+          <Text style={styles.inputLabel}>{t('profile.summary.target.weight')} *</Text>
           <TextInput
             style={[styles.textInput, validationErrors.targetWeight && styles.inputError]}
             value={userInfo.targetWeight}
             onChangeText={(value) => updateUserInfo('targetWeight', value)}
-            placeholder={t('placeholder.target.weight')}
+            placeholder={
+              language === 'ur'
+                ? userInfo.bodyGoal === 'Lose Fat'
+                  ? 'آپ کتنا وزن کم کرنا چاہتے ہیں؟ (کلوگرام میں)'
+                  : 'آپ کتنا وزن بڑھانا چاہتے ہیں؟ (کلوگرام میں)'
+                : userInfo.bodyGoal === 'Lose Fat'
+                  ? 'How many kg do you want to lose?'
+                  : 'How many kg do you want to gain?'
+            }
             placeholderTextColor={colors.mutedText}
             keyboardType="numeric"
           />
           {validationErrors.targetWeight && (
-            <Text style={styles.errorText}>{t('validation.target.weight.required')}</Text>
+            <Text style={styles.errorText}>{t('validation.weight.required')}</Text>
           )}
         </View>
       )}

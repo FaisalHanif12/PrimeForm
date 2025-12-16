@@ -2,6 +2,7 @@ import { UserProfile } from './userProfileService';
 import workoutPlanService from './workoutPlanService';
 import Storage from '../utils/storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
+import { calculatePlanDuration, formatDurationForPrompt, PlanDuration } from '../utils/planDurationCalculator';
 
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
@@ -97,6 +98,15 @@ class AIWorkoutService {
   }
 
   private generatePrompt(userProfile: UserProfile): string {
+    const targetWeightLine =
+      userProfile.bodyGoal?.includes('Gain') || userProfile.bodyGoal?.includes('Lose') || userProfile.bodyGoal?.includes('Fat')
+        ? `- Target Weight: ${userProfile.targetWeight ? `${userProfile.targetWeight} kg` : 'Not provided'}`
+        : null;
+
+    // Calculate optimal plan duration based on user profile
+    const planDuration = calculatePlanDuration(userProfile);
+    const durationForPrompt = formatDurationForPrompt(planDuration);
+
     const prompt = `
 You are a world-class certified fitness trainer with 15+ years of experience in highly personalized training programs.  
 Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** based on this EXACT user profile:
@@ -104,7 +114,8 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 ### CRITICAL USER ANALYSIS
 - Age: ${userProfile.age} years (${userProfile.age < 25 ? 'Young adult - higher recovery, can handle intense training' : userProfile.age < 40 ? 'Adult - balanced approach, moderate recovery' : userProfile.age < 55 ? 'Middle-aged - focus on joint health, longer recovery' : 'Mature - emphasize mobility, low-impact exercises'})
 - Gender: ${userProfile.gender} (${userProfile.gender === 'Male' ? 'Typically higher muscle mass, focus on strength' : 'Often better flexibility, may need more upper body focus'})
-- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg → ${userProfile.targetWeight} kg
+- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg${targetWeightLine ? ` → ${userProfile.targetWeight} kg` : ''}
+${targetWeightLine ? `${targetWeightLine}\n` : ''}- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - BALANCED APPROACH' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 'OBESE - LOW-IMPACT, GRADUAL PROGRESSION'})
 - BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - BALANCED APPROACH' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 'OBESE - LOW-IMPACT, GRADUAL PROGRESSION'})
 - PRIMARY GOAL: ${userProfile.bodyGoal} (THIS IS THE #1 PRIORITY - EVERY EXERCISE MUST ALIGN WITH THIS GOAL)
 - Fitness Level: Beginner (START SLOW, FOCUS ON FORM, BASIC MOVEMENTS)
@@ -120,11 +131,12 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 5. **MEDICAL SAFETY**: ${userProfile.medicalConditions ? 'MANDATORY modifications for medical conditions' : 'No medical restrictions'}
 
 ### MANDATORY STRUCTURE REQUIREMENTS
-1. First, analyze the profile (goal + health + equipment + age).  
-   - If goal = **Muscle Gain** → Recommend **3–6-9 months** duration (depending on condition).  
-   - If goal = **Fat Loss** → Recommend **3–6-9 months** duration.  
-   - If goal = **General Fitness/Endurance/Training** → Recommend a **long-term plan** (6–12 months).  
-   - Clearly show the chosen duration in the output.  
+1. **CRITICAL - PLAN DURATION (MUST USE THIS EXACT DURATION):**
+   - This workout plan must be designed for a total duration of **${durationForPrompt}**
+   - The 7-day plan you create will repeat weekly for ${planDuration.totalWeeks} weeks
+   - Ensure the plan supports progressive overload and sustainable progress over this entire period
+   - Use Duration: **${planDuration.duration}** in your output (exactly as specified)
+   - DO NOT calculate your own duration - use the one provided above  
 
 2. Equipment Adaptation - CRITICAL:  
    - If user has **full gym access** → use gym-based exercises.  
@@ -148,7 +160,7 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 7. Output format (must follow exactly):  
 
 **Goal:** [goal]  
-**Duration:** [calculated duration]  
+**Duration:** ${planDuration.duration} (MUST use this exact duration)  
 
 ---
 
@@ -429,33 +441,24 @@ Generate the **final personalized plan now.**
 
 
   private parseAIResponse(aiResponse: string, userProfile: UserProfile): WorkoutPlan {
-    // Extract goal and duration from the AI response
+    // Calculate optimal plan duration based on user profile (PRIORITY - use this over AI response)
+    const planDuration = calculatePlanDuration(userProfile);
+    
+    // Extract goal from the AI response (still parse this from AI)
     const goalMatch = aiResponse.match(/\*\*Goal:\*\*\s*(.+?)(?:\n|$)/i);
-    const durationMatch = aiResponse.match(/\*\*Duration:\*\*\s*(.+?)(?:\n|$)/i);
 
     const goal = goalMatch ? goalMatch[1].trim() : userProfile.bodyGoal || 'General Fitness';
-    const duration = durationMatch ? durationMatch[1].trim() : '12 weeks';
+    
+    // Use calculated duration (not from AI) to ensure consistency
+    const duration = planDuration.duration;
+    const totalWeeks = planDuration.totalWeeks;
 
     // Parse the AI response to extract workout days
     const weeklyPlan: WorkoutDay[] = this.parseAIWorkoutDays(aiResponse);
 
-    // Calculate dates based on duration
+    // Calculate dates based on calculated duration
     const startDate = new Date();
     const endDate = new Date();
-    // Convert human-readable duration to total weeks
-    let totalWeeks = 12;
-    const numMatch = duration.toLowerCase().match(/(\d+)[\s-]*(week|weeks|month|months)/);
-    if (numMatch) {
-      const num = parseInt(numMatch[1]);
-      const unit = numMatch[2];
-      totalWeeks = unit.startsWith('month') ? num * 4 : num; // approx 4 weeks per month
-    } else {
-      const weeksDirect = duration.toLowerCase().match(/(\d+)/)?.[1];
-      if (weeksDirect) totalWeeks = parseInt(weeksDirect);
-    }
-
-    // The backend expects a 7-day weekly pattern, not an expanded plan
-    // Store the total weeks and let the frontend handle the expansion
     endDate.setDate(startDate.getDate() + (totalWeeks * 7));
 
     return {
