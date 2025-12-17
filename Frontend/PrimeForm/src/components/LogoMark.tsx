@@ -15,7 +15,7 @@ export default function LogoMark({ subtitle }: Props) {
     <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/Primelogo1.png')} style={styles.icon} />
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText} numberOfLines={1}>PRIMEFORM</Text>
+        <Text style={styles.titleText} numberOfLines={1}>PURE BODY</Text>
       </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </Animated.View>
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     flexShrink: 0,
     flexWrap: 'nowrap',
-    minWidth: 280, // Increased to ensure "PRIME FORM" fits on one line
+    minWidth: 280, // Increased to ensure "PURE BODY" fits on one line
     maxWidth: 320, // Set max width to prevent excessive stretching
   },
   subtitle: {

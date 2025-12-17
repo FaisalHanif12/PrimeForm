@@ -1,6 +1,6 @@
-# PrimeForm Backend API
+# Pure Body Backend API
 
-🏃‍♂️ **Backend API for PrimeForm fitness application**
+🏃‍♂️ **Backend API for Pure Body fitness application**
 
 ## 🚀 Quick Start
 
@@ -180,7 +180,7 @@ The API sends beautifully designed HTML emails for:
 - 📧 **Email Verification** 
 - 🎉 **Welcome Email** (Post Signup)
 
-All emails are branded with PrimeForm styling and include:
+All emails are branded with Pure Body styling and include:
 - Navy + Golden theme colors
 - Responsive design
 - Clear call-to-action buttons
@@ -275,4 +275,4 @@ Create a `.env` file in the Backend directory with all required variables. The s
 
 ---
 
-**Built with ❤️ for PrimeForm Fitness App**
+**Built with ❤️ for Pure Body Fitness App**

@@ -57,7 +57,7 @@ const signup = asyncHandler(async (req, res) => {
     });
 
   // Send token response
-  sendTokenResponse(user, 201, res, 'Account created successfully! Welcome to PrimeForm');
+  sendTokenResponse(user, 201, res, 'Account created successfully! Welcome to Pure Body');
 });
 
 // @desc    Login user

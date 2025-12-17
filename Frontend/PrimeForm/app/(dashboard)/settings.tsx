@@ -313,7 +313,7 @@ export default function SettingsPage() {
       <View style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t('settings.app.name')}</Text>
-          <Text style={styles.infoValue}>PrimeForm</Text>
+          <Text style={styles.infoValue}>Pure Body</Text>
         </View>
         
         <View style={styles.infoRow}>
@@ -366,7 +366,7 @@ export default function SettingsPage() {
         onClose={() => setSidebarVisible(false)}
         onMenuItemPress={handleSidebarMenuPress}
         userName={user?.fullName || t('common.user')}
-        userEmail={user?.email || 'user@primeform.com'}
+          userEmail={user?.email || 'user@purebody.com'}
         isGuest={!isAuthenticated}
         userInfo={null}
         badges={[]}

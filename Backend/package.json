@@ -1,7 +1,7 @@
 {
   "name": "primeform-backend",
   "version": "1.0.0",
-  "description": "Backend API for PrimeForm fitness app",
+  "description": "Backend API for Pure Body fitness app",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -16,7 +16,7 @@
     "nodejs",
     "express"
   ],
-  "author": "PrimeForm Team",
+  "author": "Pure Body Team",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.2",

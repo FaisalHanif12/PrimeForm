@@ -1,11 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/**
- * User-specific cache key utility
- * Ensures all cached data is scoped to the current user
- */
 
-// Storage key for current user ID
 const CURRENT_USER_ID_KEY = 'current_user_id';
 
 /**
@@ -129,6 +124,25 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
 
     const cacheKeys = getUserCacheKeyPatterns(currentUserId);
     
+    // ✅ CRITICAL: Preserve per-account progress data (do NOT delete these keys)
+    // We want meal/workout completion and water intake to persist across logout/login
+    // while still being fully account-specific via user-prefixed keys.
+    const progressKeyFragments = [
+      '_completed_meals',
+      '_completed_exercises',
+      '_completed_diet_days',
+      '_completed_workout_days',
+      '_water_intake',
+    '_water_completed',
+    // Keep personalized workout plan + its completion date per account as well
+    '_personalizedWorkout',
+    '_lastWorkoutCompletion',
+    ];
+
+    const filteredUserCacheKeys = cacheKeys.filter(key =>
+      !progressKeyFragments.some(fragment => key.includes(fragment))
+    );
+    
     // Also clear old global cache keys (for migration)
     const oldGlobalKeys = [
       'cached_diet_plan',
@@ -139,7 +153,7 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
       'completed_diet_days',
       'completed_workout_days',
       'water_intake',
-      'water_completed',
+      'water_completed', // old non-account-specific keys are safe to remove
       'ai_trainer_chat',
       'ai_trainer_conversations',
       'ai_trainer_current_conversation_id',
@@ -148,7 +162,7 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
       'lastWorkoutCompletion',
     ];
 
-    const allKeysToRemove = [...cacheKeys, ...oldGlobalKeys];
+    const allKeysToRemove = [...filteredUserCacheKeys, ...oldGlobalKeys];
     
     await AsyncStorage.multiRemove(allKeysToRemove);
     console.log(`✅ Cleared ${allKeysToRemove.length} cache keys for user ${currentUserId}`);
@@ -179,28 +193,22 @@ export function validateCachedData(cachedData: any, currentUserId: string | null
 }
 
 /**
- * Clean up any cache data that doesn't belong to the current user
- * This ensures data integrity when switching between accounts
+ * Clean up legacy/global cache keys.
+ *
+ * IMPORTANT: We intentionally DO NOT delete other users' `user_<id>_...`
+ * cache entries anymore so that multiple accounts on the same device
+ * can keep their own cached data (diet/workout/progress, etc.).
+ *
+ * This function is now only responsible for removing old, non
+ * user‑scoped keys that were used before we introduced per‑user
+ * cache keys. Per‑user keys are left intact for ALL users.
  * @param currentUserId - Current user ID
  */
 export async function cleanupOrphanedCache(currentUserId: string): Promise<void> {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    
-    // Find all user-specific cache keys
-    const userCacheKeys = allKeys.filter(key => key.startsWith('user_'));
-    
-    // Find keys that don't belong to current user
-    const orphanedKeys = userCacheKeys.filter(key => {
-      // Extract user ID from key (format: user_<userId>_<baseKey>)
-      const match = key.match(/^user_([^_]+)_/);
-      if (match && match[1]) {
-        return match[1] !== currentUserId;
-      }
-      return false;
-    });
-    
-    // Also find old global cache keys that should be cleared
+
+    // Find old global cache keys that should be cleared (non user‑scoped)
     const oldGlobalKeys = allKeys.filter(key => {
       const oldKeys = [
         'cached_diet_plan',
@@ -218,13 +226,13 @@ export async function cleanupOrphanedCache(currentUserId: string): Promise<void>
       ];
       return oldKeys.includes(key);
     });
-    
-    // Remove orphaned keys and old global keys
-    const keysToRemove = [...orphanedKeys, ...oldGlobalKeys];
-    
+
+    // Remove only legacy/global keys, keep all user_<id>_* keys
+    const keysToRemove = [...oldGlobalKeys];
+
     if (keysToRemove.length > 0) {
       await AsyncStorage.multiRemove(keysToRemove);
-      console.log(`🧹 Cleaned up ${keysToRemove.length} orphaned cache keys for user ${currentUserId}`);
+      console.log(`🧹 Cleaned up ${keysToRemove.length} legacy global cache keys (kept per-user caches) for user ${currentUserId}`);
     }
   } catch (error) {
     console.error('Error cleaning up orphaned cache:', error);

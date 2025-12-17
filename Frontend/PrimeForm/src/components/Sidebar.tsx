@@ -114,7 +114,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
               </View>
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>{userName || 'User'}</Text>
-                <Text style={styles.userEmail}>{userEmail || 'user@primeform.com'}</Text>
+                <Text style={styles.userEmail}>{userEmail || 'user@purebody.com'}</Text>
               </View>
               {/* Close Button - Always navigates to home page */}
               <TouchableOpacity 

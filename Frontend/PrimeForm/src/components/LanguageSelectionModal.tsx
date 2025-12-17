@@ -77,7 +77,7 @@ export default function LanguageSelectionModal({
   // Language-specific content
   const content = {
     en: {
-      welcome: 'Welcome to PrimeForm! 🎉',
+      welcome: 'Welcome to Pure Body! 🎉',
       title: 'Choose Your Language',
       description: 'Select your preferred language to get started with your fitness journey',
       english: {
@@ -136,7 +136,7 @@ export default function LanguageSelectionModal({
               </View>
             </TouchableOpacity>
 
-            {/* PrimeForm Logo */}
+            {/* Pure Body Logo */}
             <View style={styles.logoContainer}>
               <View style={styles.logoBackground}>
                 <Image 

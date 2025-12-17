@@ -1,4 +1,4 @@
-// Test script for PrimeForm Backend API endpoints
+// Test script for Pure Body Backend API endpoints
 // Run this after starting the server to test basic functionality
 
 const axios = require('axios');
@@ -15,7 +15,7 @@ const testUser = {
 
 let authToken = '';
 
-console.log('🧪 Starting PrimeForm API Tests...\n');
+console.log('🧪 Starting Pure Body API Tests...\n');
 
 // Helper function for API calls
 const apiCall = async (method, url, data = null, token = null) => {
@@ -190,7 +190,7 @@ const testRateLimiting = async () => {
 // Main test runner
 const runAllTests = async () => {
   try {
-    console.log('🏃‍♂️ PrimeForm Backend API Tests');
+    console.log('🏃‍♂️ Pure Body Backend API Tests');
     console.log('================================\n');
 
     await testHealthCheck();

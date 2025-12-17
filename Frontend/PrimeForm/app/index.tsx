@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthContext } from '../src/context/AuthContext';
@@ -9,10 +9,23 @@ export default function Index() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthContext();
   const [isCheckingUserState, setIsCheckingUserState] = useState(true);
+  // ✅ CRITICAL: Use ref to track if we've already checked user state to prevent infinite loops
+  const hasCheckedRef = useRef(false);
+  const lastAuthStateRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     const checkUserState = async () => {
+      // ✅ CRITICAL: Prevent re-running if auth state hasn't meaningfully changed
+      // Only check when loading completes OR when auth state changes from null/undefined to a value
+      if (hasCheckedRef.current && lastAuthStateRef.current === isAuthenticated) {
+        return;
+      }
+
       try {
+        // Mark that we've checked
+        hasCheckedRef.current = true;
+        lastAuthStateRef.current = isAuthenticated;
+
         // Check if this is the very first launch of the app
         const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
         console.log('🔍 App State Check:', { isFirstLaunch, isAuthenticated });
@@ -86,10 +99,12 @@ export default function Index() {
       }
     };
 
+    // ✅ CRITICAL: Only run when loading completes (not on every auth state change)
+    // This prevents infinite loops while still responding to initial auth check
     if (!isLoading) {
       checkUserState();
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isLoading]); // ✅ Removed isAuthenticated from dependencies to prevent loops
 
   // Show loading while checking user state
   if (isLoading || isCheckingUserState) {

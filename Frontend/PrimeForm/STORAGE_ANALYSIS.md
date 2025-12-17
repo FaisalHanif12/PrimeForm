@@ -1,4 +1,4 @@
-# Local Storage Analysis - PrimeForm App
+# Local Storage Analysis - Pure Body App
 
 ## 📊 Complete Inventory of Data Stored in Local Storage
 

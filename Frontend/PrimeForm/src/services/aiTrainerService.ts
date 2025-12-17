@@ -8,7 +8,7 @@ import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://primeform.app';
-const SITE_NAME = process.env.EXPO_PUBLIC_SITE_NAME || 'PrimeForm';
+const SITE_NAME = process.env.EXPO_PUBLIC_SITE_NAME || 'Pure Body';
 
 export interface ChatMessage {
   id: string;

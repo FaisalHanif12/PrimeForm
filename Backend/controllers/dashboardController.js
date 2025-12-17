@@ -67,7 +67,7 @@ const getDashboard = asyncHandler(async (req, res) => {
   if (daysSinceJoining === 0) {
     dashboardData.notifications.push({
       type: 'welcome',
-      title: 'Welcome to PrimeForm! 🎉',
+      title: 'Welcome to Pure Body! 🎉',
       message: 'Start your fitness journey by completing your profile and setting your goals.',
       priority: 'high'
     });

@@ -1,7 +1,7 @@
 # API Call Flow Documentation
 
 ## Overview
-This document explains how API calls are made in the PrimeForm app, specifically for the Diet Plan functionality.
+This document explains how API calls are made in the Pure Body app, specifically for the Diet Plan functionality.
 
 ## API Call Flow When Opening Diet Screen
 
