@@ -621,7 +621,7 @@ const difficultyColors = {
 export default function GymExercisesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { t } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -708,9 +708,11 @@ export default function GymExercisesScreen() {
             
               {/* Middle - Info */}
               <View style={styles.cardMiddle}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
+                <Text style={styles.exerciseName}>
+                  {language === 'ur' ? transliterateText(exercise.name) : exercise.name}
+                </Text>
                 <Text style={styles.exerciseDescription} numberOfLines={2}>
-                  {exercise.description}
+                  {language === 'ur' ? transliterateText(exercise.description) : exercise.description}
                 </Text>
                 
                 {/* Inline Stats */}
@@ -739,7 +741,9 @@ export default function GymExercisesScreen() {
                   {exercise.primaryMuscles.slice(0, 2).map((muscle: string, idx: number) => (
                     <View key={idx} style={styles.muscleTagMini}>
                       <View style={[styles.muscleDot, { backgroundColor: colors.primary }]} />
-                      <Text style={styles.muscleTagMiniText}>{muscle}</Text>
+                      <Text style={styles.muscleTagMiniText}>
+                        {language === 'ur' ? transliterateText(muscle) : muscle}
+                      </Text>
                 </View>
               ))}
                   {exercise.primaryMuscles.length > 2 && (
@@ -779,7 +783,9 @@ export default function GymExercisesScreen() {
 
             {/* Header Content */}
           <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>{categoryName} Exercises</Text>
+            <Text style={styles.headerTitle}>
+              {t('gym.exercises.title').replace('{category}', language === 'ur' ? transliterateText(categoryName) : categoryName)}
+            </Text>
           </View>
 
             {/* Filter Button - Removed */}
@@ -801,7 +807,7 @@ export default function GymExercisesScreen() {
                 <Ionicons name="flash" size={20} color={colors.primary} />
               </View>
               <Text style={styles.statValue}>{exercises.length}</Text>
-              <Text style={styles.statLabel}>Exercises</Text>
+              <Text style={styles.statLabel}>{t('gym.exercises.stats.exercises')}</Text>
             </View>
             <View style={styles.statsCardDivider} />
             <View style={styles.statBox}>
@@ -809,7 +815,7 @@ export default function GymExercisesScreen() {
                 <Ionicons name="flame" size={20} color={colors.gold} />
               </View>
               <Text style={styles.statValue}>{totalCalories}</Text>
-              <Text style={styles.statLabel}>Total Cal</Text>
+              <Text style={styles.statLabel}>{t('gym.exercises.stats.total.cal')}</Text>
             </View>
             <View style={styles.statsCardDivider} />
             <View style={styles.statBox}>
@@ -817,7 +823,7 @@ export default function GymExercisesScreen() {
                 <Ionicons name="time" size={20} color="#FF3B30" />
               </View>
               <Text style={styles.statValue}>{avgDuration}m</Text>
-              <Text style={styles.statLabel}>Avg Time</Text>
+              <Text style={styles.statLabel}>{t('gym.exercises.stats.avg.time')}</Text>
             </View>
           </LinearGradient>
         </Animated.View>
@@ -837,17 +843,17 @@ export default function GymExercisesScreen() {
               <View style={styles.emptyStateIcon}>
                 <Ionicons name="search-outline" size={48} color={colors.mutedText} />
               </View>
-              <Text style={styles.emptyStateTitle}>No exercises found</Text>
+              <Text style={styles.emptyStateTitle}>{t('gym.exercises.empty.title')}</Text>
               <Text style={styles.emptyStateText}>
-                Try adjusting your filters to see more exercises
+                {t('gym.exercises.empty.text')}
               </Text>
               <TouchableOpacity 
                 style={styles.resetButton}
                 onPress={() => {
-                  // No filters to reset
+                  router.back();
                 }}
               >
-                <Text style={styles.resetButtonText}>Go Back</Text>
+                <Text style={styles.resetButtonText}>{t('gym.exercises.empty.go.back')}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}

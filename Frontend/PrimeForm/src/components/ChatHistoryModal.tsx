@@ -35,7 +35,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
   onNewChat,
   onDelete
 }) => {
-  const { t } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { showToast } = useToast();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
       setConversations(allConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
-      showToast('error', 'Failed to load chat history');
+      showToast('error', t('chatHistory.error.load'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
     
     try {
       const result = await aiTrainerService.deleteConversation(conversationToDelete.id);
-      showToast('success', 'Chat deleted successfully');
+      showToast('success', t('chatHistory.success.delete'));
       await loadConversations();
       
       // Notify parent if current conversation was deleted
@@ -99,7 +99,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
       }
     } catch (error) {
       console.error('Error deleting conversation:', error);
-      showToast('error', 'Failed to delete chat');
+      showToast('error', t('chatHistory.error.delete'));
     } finally {
       setDeleteModalVisible(false);
       setConversationToDelete(null);
@@ -117,11 +117,11 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-      return 'Today';
+      return t('chatHistory.today');
     } else if (diffDays === 1) {
-      return 'Yesterday';
+      return t('chatHistory.yesterday');
     } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
+      return `${diffDays} ${t('chatHistory.daysAgo')}`;
     } else {
       return date.toLocaleDateString();
     }
@@ -133,9 +133,14 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
 
   const renderConversationItem = (conversation: ChatConversation) => {
     const lastMessage = conversation.messages[conversation.messages.length - 1];
-    const preview = lastMessage 
+    const previewText = lastMessage 
       ? (lastMessage.message.substring(0, 60) + (lastMessage.message.length > 60 ? '...' : ''))
-      : 'No messages yet';
+      : t('chatHistory.noMessages');
+    const preview = language === 'ur' ? transliterateText(previewText) : previewText;
+    
+    const conversationTitle = language === 'ur' 
+      ? transliterateText(conversation.title)
+      : conversation.title;
 
     return (
       <Animated.View 
@@ -154,7 +159,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
 
           <View style={styles.conversationText}>
             <Text style={styles.conversationTitle} numberOfLines={1}>
-              {conversation.title}
+              {conversationTitle}
             </Text>
             <Text style={styles.conversationPreview} numberOfLines={1}>
               {preview}
@@ -164,7 +169,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
                 {formatDate(conversation.updatedAt)} • {formatTime(conversation.updatedAt)}
               </Text>
               <Text style={styles.messageCount}>
-                {conversation.messages.length} {conversation.messages.length === 1 ? 'message' : 'messages'}
+                {conversation.messages.length} {conversation.messages.length === 1 ? t('chatHistory.message') : t('chatHistory.messages')}
               </Text>
             </View>
           </View>
@@ -195,7 +200,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.primary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Chat History</Text>
+            <Text style={styles.headerTitle}>{t('chatHistory.title')}</Text>
           </View>
 
           <View style={styles.headerRight}>
@@ -213,7 +218,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
             activeOpacity={0.7}
           >
             <Ionicons name="add-circle" size={24} color={colors.white} />
-            <Text style={styles.newChatText}>New Chat</Text>
+            <Text style={styles.newChatText}>{t('chatHistory.newChat')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -222,14 +227,14 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
           {loading && conversations.length === 0 ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Loading chat history...</Text>
+              <Text style={styles.loadingText}>{t('chatHistory.loading')}</Text>
             </View>
           ) : conversations.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="chatbubbles-outline" size={64} color={colors.mutedText} />
-              <Text style={styles.emptyTitle}>No Chat History</Text>
+              <Text style={styles.emptyTitle}>{t('chatHistory.empty.title')}</Text>
               <Text style={styles.emptyMessage}>
-                Your previous conversations will appear here. Start a new chat to begin!
+                {t('chatHistory.empty.message')}
               </Text>
             </View>
           ) : (
@@ -277,11 +282,13 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
                 </View>
 
                 {/* Title */}
-                <Text style={styles.deleteModalTitle}>Delete Chat</Text>
+                <Text style={styles.deleteModalTitle}>{t('chatHistory.delete.title')}</Text>
 
                 {/* Message */}
                 <Text style={styles.deleteModalMessage}>
-                  Are you sure you want to delete "{conversationToDelete?.title}"?
+                  {t('chatHistory.delete.message')} "{language === 'ur' && conversationToDelete?.title 
+                    ? transliterateText(conversationToDelete.title)
+                    : conversationToDelete?.title}"?
                 </Text>
 
                 {/* Buttons */}
@@ -291,7 +298,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
                     onPress={cancelDelete}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.cancelButtonText}>CANCEL</Text>
+                    <Text style={styles.cancelButtonText}>{t('chatHistory.delete.cancel')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -299,7 +306,7 @@ const ChatHistoryModal: React.FC<ChatHistoryModalProps> = ({
                     onPress={confirmDelete}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.deleteButtonText}>DELETE</Text>
+                    <Text style={styles.deleteButtonText}>{t('chatHistory.delete.confirm')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

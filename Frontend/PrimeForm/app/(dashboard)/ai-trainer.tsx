@@ -43,7 +43,7 @@ interface ChatMessage {
 
 export default function AITrainerScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language, transliterateText, transliterateName } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -100,8 +100,11 @@ export default function AITrainerScreen() {
         setChatMessages(chatResponse.data);
       } else {
         // If no conversation exists, create a new one with welcome message
-        const welcomeText = user?.fullName 
-          ? t('aiTrainer.welcome').replace('{name}', user.fullName)
+        const userName = user?.fullName 
+          ? (language === 'ur' ? transliterateName(user.fullName) : user.fullName)
+          : '';
+        const welcomeText = userName
+          ? t('aiTrainer.welcome').replace('{name}', userName)
           : t('aiTrainer.welcome.guest');
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
@@ -144,8 +147,11 @@ export default function AITrainerScreen() {
       const newConversationId = await aiTrainerService.createNewConversation();
       
       // Reset chat messages with welcome message
-      const welcomeText = user?.fullName 
-        ? t('aiTrainer.welcome').replace('{name}', user.fullName)
+      const userName = user?.fullName 
+        ? (language === 'ur' ? transliterateName(user.fullName) : user.fullName)
+        : '';
+      const welcomeText = userName
+        ? t('aiTrainer.welcome').replace('{name}', userName)
         : t('aiTrainer.welcome.guest');
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
@@ -213,7 +219,7 @@ export default function AITrainerScreen() {
     Keyboard.dismiss();
 
     try {
-      const response = await aiTrainerService.sendMessage(messageToSend);
+      const response = await aiTrainerService.sendMessage(messageToSend, language);
 
       if (response.success && response.data) {
         const aiMessage: ChatMessage = {
@@ -407,7 +413,9 @@ export default function AITrainerScreen() {
                     styles.messageText,
                     message.type === 'user' ? styles.userMessageText : styles.aiMessageText
                   ]}>
-                    {message.message}
+                    {language === 'ur' 
+                      ? transliterateText(message.message)
+                      : message.message}
                   </Text>
                   <Text style={[
                     styles.messageTime,
@@ -569,6 +577,17 @@ const styles = StyleSheet.create({
   messagesContent: {
     paddingVertical: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  loadMoreButton: {
+    padding: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  loadMoreText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    fontWeight: '500',
   },
   messageRow: {
     flexDirection: 'row',

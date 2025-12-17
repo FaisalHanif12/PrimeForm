@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Enhanced workout categories with correct exercise counts and sport-style design
+// Note: Category names and descriptions will be translated in the component
 const workoutCategories = [
   {
     id: 'chest',
@@ -86,7 +87,7 @@ const totalCategories = workoutCategories.length;
 
 export default function GymScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const { unreadCount } = useNotifications();
@@ -243,11 +244,13 @@ export default function GymScreen() {
 
   const handleCategoryPress = (categoryId: string) => {
     // Navigate to exercise listing page with enhanced parameters (gender removed)
+    const category = workoutCategories.find(cat => cat.id === categoryId);
+    const categoryName = category ? (language === 'ur' ? t(`gym.category.${categoryId}`) : category.name) : categoryId;
     router.push({
       pathname: '/gym-exercises',
       params: {
         category: categoryId,
-        categoryName: workoutCategories.find(cat => cat.id === categoryId)?.name || categoryId,
+        categoryName: categoryName,
       },
     });
   };
@@ -273,22 +276,22 @@ export default function GymScreen() {
               colors={['rgba(0, 201, 124, 0.2)', 'rgba(0, 201, 124, 0.05)']}
               style={styles.heroGradient}
             >
-              <Text style={styles.heroTitle}>Transform Your Body</Text>
-              <Text style={styles.heroSubtitle}>Choose your perfect workout experience</Text>
+              <Text style={styles.heroTitle}>{t('gym.hero.title')}</Text>
+              <Text style={styles.heroSubtitle}>{t('gym.hero.subtitle')}</Text>
               <View style={styles.heroStats}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{totalExercises}</Text>
-                  <Text style={styles.statLabel}>Exercises</Text>
+                  <Text style={styles.statLabel}>{t('gym.hero.exercises')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>{totalCategories}</Text>
-                  <Text style={styles.statLabel}>Categories</Text>
+                  <Text style={styles.statLabel}>{t('gym.hero.categories')}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>24/7</Text>
-                  <Text style={styles.statLabel}>Access</Text>
+                  <Text style={styles.statLabel}>{t('gym.hero.access')}</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -296,7 +299,7 @@ export default function GymScreen() {
 
           {/* Categories Section */}
           <Animated.View entering={SlideInUp.delay(200)} style={styles.categoriesSection}>
-            <Text style={styles.sectionTitle}>Workout Categories</Text>
+            <Text style={styles.sectionTitle}>{t('gym.section.categories')}</Text>
             <View style={styles.categoriesGrid}>
               {workoutCategories.map((category, index) => (
                 <Animated.View
@@ -329,10 +332,14 @@ export default function GymScreen() {
 
                         {/* Text content */}
                         <View style={styles.categoryTextContainer}>
-                          <Text style={styles.categoryName}>{category.name}</Text>
-                          <Text style={styles.categoryDescription}>{category.description}</Text>
+                          <Text style={styles.categoryName}>
+                            {t(`gym.category.${category.id}`) || category.name}
+                          </Text>
+                          <Text style={styles.categoryDescription}>
+                            {t(`gym.category.${category.id}.description`) || category.description}
+                          </Text>
                           <Text style={styles.exerciseCount}>
-                            {category.exerciseCount} exercises
+                            {category.exerciseCount} {t('gym.category.exercises')}
                           </Text>
                         </View>
                       </View>

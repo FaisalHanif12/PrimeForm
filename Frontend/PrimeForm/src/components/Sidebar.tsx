@@ -40,18 +40,19 @@ interface Props {
   badges?: string[];
 }
 
-const menuItems: MenuItem[] = [
-  { icon: 'person-outline', label: 'Profile', action: 'profile' },
-  { icon: 'basketball-outline', label: 'Sport Mode', action: 'sport-mode', color: colors.white },
-  { icon: 'flame-outline', label: 'Streak Tracker', action: 'streak' },
-  { icon: 'fitness-outline', label: 'AI Trainer', action: 'ai-trainer' },
-  { icon: 'language-outline', label: 'Language', action: 'language' },
-  { icon: 'mail-outline', label: 'Contact Us', action: 'contact' },
-  { icon: 'settings-outline', label: 'Settings', action: 'settings' },
-];
-
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
-  const { t } = useLanguage();
+  const { t, language, transliterateName } = useLanguage();
+
+  // Menu items with translations
+  const menuItems: MenuItem[] = [
+    { icon: 'person-outline', label: t('sidebar.profile'), action: 'profile' },
+    { icon: 'basketball-outline', label: t('sidebar.sportMode'), action: 'sport-mode', color: colors.white },
+    { icon: 'flame-outline', label: t('sidebar.streakTracker'), action: 'streak' },
+    { icon: 'fitness-outline', label: t('sidebar.aiTrainer'), action: 'ai-trainer' },
+    { icon: 'language-outline', label: t('sidebar.language'), action: 'language' },
+    { icon: 'mail-outline', label: t('sidebar.contactUs'), action: 'contact' },
+    { icon: 'settings-outline', label: t('sidebar.settings'), action: 'settings' },
+  ];
 
   const handleMenuPress = (action: string) => {
     if (action === 'profile') {
@@ -113,7 +114,9 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
                 <Ionicons name="person" size={32} color={colors.gold} />
               </View>
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{userName || 'User'}</Text>
+                <Text style={styles.userName}>
+                  {userName ? (language === 'ur' ? transliterateName(userName) : userName) : t('common.user')}
+                </Text>
                 <Text style={styles.userEmail}>{userEmail || 'user@purebody.com'}</Text>
               </View>
               {/* Close Button - Always navigates to home page */}
@@ -174,7 +177,7 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
             >
               <View style={styles.logoutContent}>
                 <Ionicons name="power" size={22} color={colors.gold} />
-                <Text style={styles.logoutButtonText}>Log Out</Text>
+                <Text style={styles.logoutButtonText}>{t('sidebar.logout')}</Text>
               </View>
             </TouchableOpacity>
           </View>

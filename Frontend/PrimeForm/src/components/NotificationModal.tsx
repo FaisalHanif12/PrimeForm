@@ -41,7 +41,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     clearError
   } = useNotifications();
 
-  const { t } = useLanguage();
+  const { t, language, transliterateNumbers } = useLanguage();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
@@ -79,16 +79,16 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle mark all as read
   const handleMarkAllAsRead = () => {
     if (unreadCount === 0) {
-      showToast('info', 'No unread notifications');
+      showToast('info', t('notification.mark.all.read.success'));
       return;
     }
 
     Alert.alert(
-      'Mark All as Read',
-      'Are you sure you want to mark all notifications as read?',
+      t('notification.mark.all.read'),
+      t('notification.mark.all.read.confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Mark All', onPress: markAllAsRead }
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('notification.mark.all.read'), onPress: markAllAsRead }
       ]
     );
   };
@@ -96,11 +96,11 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle delete notification
   const handleDeleteNotification = (notificationId: string) => {
     Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
+      t('notification.delete'),
+      t('notification.delete.confirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteNotification(notificationId) }
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: language === 'ur' ? 'حذف' : 'Delete', style: 'destructive', onPress: () => deleteNotification(notificationId) }
       ]
     );
   };
@@ -108,18 +108,19 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle bulk actions
   const handleBulkAction = (action: 'markAsRead' | 'delete') => {
     if (selectedNotifications.length === 0) {
-      showToast('info', 'No notifications selected');
+      showToast('info', t('notification.no.selection'));
       return;
     }
 
-    const actionText = action === 'markAsRead' ? 'mark as read' : 'delete';
+    const actionText = action === 'markAsRead' ? t('notification.bulk.mark.read') : t('notification.bulk.delete');
+    const actionKey = action === 'markAsRead' ? 'mark as read' : 'delete';
     Alert.alert(
-      `Bulk ${actionText}`,
-      `Are you sure you want to ${actionText} ${selectedNotifications.length} notification(s)?`,
+      actionText,
+      t('notification.bulk.action.confirm').replace('{action}', actionKey).replace('{count}', String(selectedNotifications.length)),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: action === 'markAsRead' ? 'Mark as Read' : 'Delete',
+          text: action === 'markAsRead' ? t('notification.mark.all.read') : (language === 'ur' ? 'حذف' : 'Delete'),
           style: action === 'delete' ? 'destructive' : 'default',
           onPress: async () => {
             if (action === 'markAsRead') {
@@ -228,10 +229,12 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors.gold} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Notifications</Text>
+            <Text style={styles.headerTitle}>{t('notification.title')}</Text>
             {unreadCount > 0 && (
               <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>{unreadCount}</Text>
+                <Text style={styles.headerBadgeText}>
+                  {language === 'ur' ? transliterateNumbers(unreadCount) : unreadCount}
+                </Text>
               </View>
             )}
           </View>
@@ -258,7 +261,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
                   }}
                   style={styles.headerAction}
                 >
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={styles.cancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -279,22 +282,22 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
           {loading && notifications.length === 0 ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.gold} />
-              <Text style={styles.loadingText}>Loading notifications...</Text>
+              <Text style={styles.loadingText}>{t('notification.loading')}</Text>
             </View>
           ) : error ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color="#FF6B6B" />
               <Text style={styles.errorText}>{error}</Text>
               <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Retry</Text>
+                <Text style={styles.retryButtonText}>{t('notification.retry')}</Text>
               </TouchableOpacity>
             </View>
           ) : notifications.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Ionicons name="notifications-off" size={64} color="#666" />
-              <Text style={styles.emptyTitle}>No Notifications</Text>
+              <Text style={styles.emptyTitle}>{t('notification.empty.title')}</Text>
               <Text style={styles.emptyMessage}>
-                You're all caught up! New notifications will appear here.
+                {t('notification.empty.message')}
               </Text>
             </View>
           ) : (

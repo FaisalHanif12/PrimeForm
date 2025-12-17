@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Animated, { FadeInUp, FadeInLeft } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../theme/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProgressStats {
   caloriesConsumed: number;
@@ -38,6 +39,7 @@ interface HealthInsight {
 }
 
 export default function HealthRemarks({ remarks, progressStats, period }: HealthRemarksProps) {
+  const { t, language, transliterateNumbers } = useLanguage();
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
 
   const generateHealthInsights = (): HealthInsight[] => {
@@ -51,47 +53,51 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     const netCalorieBalance = Math.abs(calorieBalance);
 
     if (calorieRatio > 1.3) {
+      const percent = Math.round((calorieRatio - 1) * 100);
       insights.push({
         category: 'critical',
-        title: 'Significant Calorie Surplus',
-        message: `You're consuming ${Math.round((calorieRatio - 1) * 100)}% excess calories. This may slow your progress.`,
-        recommendation: 'Immediate action needed: Reduce portion sizes by 20% and add 15 minutes of cardio daily.',
+        title: t('health.insight.calorie.surplus.significant'),
+        message: t('health.insight.calorie.surplus.significant.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.calorie.surplus.significant.recommendation'),
         icon: '🚨',
         color: colors.error
       });
     } else if (calorieRatio > 1.15) {
+      const percent = Math.round((calorieRatio - 1) * 100);
       insights.push({
         category: 'warning',
-        title: 'Moderate Calorie Surplus',
-        message: `You're ${Math.round((calorieRatio - 1) * 100)}% above your calorie target.`,
-        recommendation: 'Fine-tune your portions or increase workout intensity to maintain balance.',
+        title: t('health.insight.calorie.surplus.moderate'),
+        message: t('health.insight.calorie.surplus.moderate.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.calorie.surplus.moderate.recommendation'),
         icon: '⚠️',
         color: colors.warning
       });
     } else if (calorieRatio < 0.7) {
+      const percent = Math.round((1 - calorieRatio) * 100);
       insights.push({
         category: 'critical',
-        title: 'Dangerously Low Calorie Intake',
-        message: `You're consuming ${Math.round((1 - calorieRatio) * 100)}% fewer calories than needed.`,
-        recommendation: 'Critical: Increase food intake immediately. Consider adding healthy snacks between meals.',
+        title: t('health.insight.calorie.low.dangerous'),
+        message: t('health.insight.calorie.low.dangerous.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.calorie.low.dangerous.recommendation'),
         icon: '🚨',
         color: colors.error
       });
     } else if (calorieRatio < 0.85) {
+      const percent = Math.round((1 - calorieRatio) * 100);
       insights.push({
         category: 'warning',
-        title: 'Low Calorie Intake',
-        message: `You're under-eating by ${Math.round((1 - calorieRatio) * 100)}%.`,
-        recommendation: 'Add nutrient-dense foods to meet your energy needs for optimal performance.',
+        title: t('health.insight.calorie.low'),
+        message: t('health.insight.calorie.low.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.calorie.low.recommendation'),
         icon: '🍽️',
         color: colors.warning
       });
     } else {
       insights.push({
         category: 'excellent',
-        title: 'Optimal Calorie Balance',
-        message: 'Your calorie intake perfectly aligns with your goals!',
-        recommendation: 'Excellent! Maintain this balance while monitoring your body\'s response.',
+        title: t('health.insight.calorie.optimal'),
+        message: t('health.insight.calorie.optimal.message'),
+        recommendation: t('health.insight.calorie.optimal.recommendation'),
         icon: '🎯',
         color: colors.green
       });
@@ -102,38 +108,42 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     const workoutGap = progressStats.totalWorkouts - progressStats.workoutsCompleted;
 
     if (workoutCompletion >= 0.95) {
+      const percent = Math.round(workoutCompletion * 100);
       insights.push({
         category: 'excellent',
-        title: 'Elite Performance Level',
-        message: `Outstanding! ${Math.round(workoutCompletion * 100)}% completion rate achieved.`,
-        recommendation: 'You\'re ready for advanced challenges. Consider progressive overload or new exercise variations.',
+        title: t('health.insight.workout.elite'),
+        message: t('health.insight.workout.elite.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.workout.elite.recommendation'),
         icon: '👑',
         color: colors.gold
       });
     } else if (workoutCompletion >= 0.8) {
+      const percent = Math.round(workoutCompletion * 100);
       insights.push({
         category: 'good',
-        title: 'Strong Consistency',
-        message: `Great work! ${Math.round(workoutCompletion * 100)}% workout completion.`,
-        recommendation: 'You\'re building excellent habits. Push for 90%+ to reach the next level.',
+        title: t('health.insight.workout.strong'),
+        message: t('health.insight.workout.strong.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.workout.strong.recommendation'),
         icon: '💪',
         color: colors.primary
       });
     } else if (workoutCompletion >= 0.6) {
+      const periodText = period === 'daily' ? t('progress.period.daily') : period === 'weekly' ? t('progress.period.weekly') : t('progress.period.monthly');
       insights.push({
         category: 'warning',
-        title: 'Inconsistent Training',
-        message: `You've missed ${workoutGap} workouts this ${period}. Progress may be slower.`,
-        recommendation: 'Schedule specific workout times and set reminders. Consistency beats intensity.',
+        title: t('health.insight.workout.inconsistent'),
+        message: t('health.insight.workout.inconsistent.message').replace('{missed}', String(workoutGap)).replace('{period}', periodText),
+        recommendation: t('health.insight.workout.inconsistent.recommendation'),
         icon: '📅',
         color: colors.warning
       });
     } else {
+      const percent = Math.round(workoutCompletion * 100);
       insights.push({
         category: 'critical',
-        title: 'Training Frequency Too Low',
-        message: `Only ${Math.round(workoutCompletion * 100)}% completion. Your goals are at risk.`,
-        recommendation: 'Emergency plan: Start with 15-minute daily sessions. Build the habit first, intensity later.',
+        title: t('health.insight.workout.low'),
+        message: t('health.insight.workout.low.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.workout.low.recommendation'),
         icon: '🆘',
         color: colors.error
       });
@@ -144,38 +154,42 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     const waterDeficit = progressStats.targetWater - progressStats.waterIntake;
 
     if (hydrationRatio >= 1.2) {
+      const percent = Math.round((hydrationRatio - 1) * 100);
       insights.push({
         category: 'excellent',
-        title: 'Optimal Hydration Plus',
-        message: `Excellent! You're exceeding hydration goals by ${Math.round((hydrationRatio - 1) * 100)}%.`,
-        recommendation: 'Perfect hydration supports peak performance. Monitor urine color for optimal levels.',
+        title: t('health.insight.hydration.optimal.plus'),
+        message: t('health.insight.hydration.optimal.plus.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.hydration.optimal.plus.recommendation'),
         icon: '💎',
         color: colors.blue
       });
     } else if (hydrationRatio >= 0.9) {
+      const percent = Math.round(hydrationRatio * 100);
       insights.push({
         category: 'good',
-        title: 'Good Hydration',
-        message: `You're at ${Math.round(hydrationRatio * 100)}% of your hydration target.`,
-        recommendation: 'Almost perfect! Add one more glass to reach optimal hydration.',
+        title: t('health.insight.hydration.good'),
+        message: t('health.insight.hydration.good.message').replace('{percent}', String(percent)),
+        recommendation: t('health.insight.hydration.good.recommendation'),
         icon: '💧',
         color: colors.primary
       });
     } else if (hydrationRatio >= 0.7) {
+      const deficit = language === 'ur' ? transliterateNumbers(parseFloat(waterDeficit.toFixed(1))) : waterDeficit.toFixed(1);
       insights.push({
         category: 'warning',
-        title: 'Mild Dehydration Risk',
-        message: `You need ${waterDeficit.toFixed(1)}L more water to meet daily goals.`,
-        recommendation: 'Set hourly water reminders. Dehydration reduces performance by up to 25%.',
+        title: t('health.insight.hydration.mild'),
+        message: t('health.insight.hydration.mild.message').replace('{deficit}', deficit),
+        recommendation: t('health.insight.hydration.mild.recommendation'),
         icon: '🚰',
         color: colors.warning
       });
     } else {
+      const deficit = language === 'ur' ? transliterateNumbers(parseFloat(waterDeficit.toFixed(1))) : waterDeficit.toFixed(1);
       insights.push({
         category: 'critical',
-        title: 'Severe Dehydration Risk',
-        message: `Critical water deficit: ${waterDeficit.toFixed(1)}L below target.`,
-        recommendation: 'Immediate action: Drink water now. Set alarms every 30 minutes.',
+        title: t('health.insight.hydration.severe'),
+        message: t('health.insight.hydration.severe.message').replace('{deficit}', deficit),
+        recommendation: t('health.insight.hydration.severe.recommendation'),
         icon: '🚨',
         color: colors.error
       });
@@ -191,20 +205,22 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
       const fatRatio = progressStats.fats / totalMacros;
 
       if (mealCompletion < 0.5) {
+        const percent = Math.round(mealCompletion * 100);
         insights.push({
           category: 'critical',
-          title: 'Nutrition Plan Abandoned',
-          message: `Only ${Math.round(mealCompletion * 100)}% of planned meals consumed.`,
-          recommendation: 'Critical: Your nutrition is derailing your fitness goals. Meal prep this weekend!',
+          title: t('health.insight.nutrition.abandoned'),
+          message: t('health.insight.nutrition.abandoned.message').replace('{percent}', String(percent)),
+          recommendation: t('health.insight.nutrition.abandoned.recommendation'),
           icon: '🍽️',
           color: colors.error
         });
       } else if (proteinRatio < 0.15) {
+        const percent = Math.round(proteinRatio * 100);
         insights.push({
           category: 'warning',
-          title: 'Protein Deficiency Alert',
-          message: `Protein is only ${Math.round(proteinRatio * 100)}% of your intake.`,
-          recommendation: 'Add protein to every meal: eggs, chicken, beans, or protein shakes.',
+          title: t('health.insight.nutrition.protein.deficiency'),
+          message: t('health.insight.nutrition.protein.deficiency.message').replace('{percent}', String(percent)),
+          recommendation: t('health.insight.nutrition.protein.deficiency.recommendation'),
           icon: '🥩',
           color: colors.warning
         });
@@ -213,9 +229,9 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
                  fatRatio >= 0.20 && fatRatio <= 0.35) {
         insights.push({
           category: 'excellent',
-          title: 'Perfect Macro Distribution',
-          message: 'Your macronutrient balance is scientifically optimal!',
-          recommendation: 'Outstanding nutrition! This balance maximizes performance and recovery.',
+          title: t('health.insight.nutrition.macro.perfect'),
+          message: t('health.insight.nutrition.macro.perfect.message'),
+          recommendation: t('health.insight.nutrition.macro.perfect.recommendation'),
           icon: '⚖️',
           color: colors.green
         });
@@ -228,36 +244,36 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     if (overallProgress >= 0.9) {
       insights.push({
         category: 'excellent',
-        title: 'Transformation in Progress',
-        message: 'You\'re operating at elite level across all metrics!',
-        recommendation: 'Incredible dedication! Document your progress and inspire others.',
+        title: t('health.insight.progress.transformation'),
+        message: t('health.insight.progress.transformation.message'),
+        recommendation: t('health.insight.progress.transformation.recommendation'),
         icon: '🌟',
         color: colors.gold
       });
     } else if (overallProgress >= 0.7) {
       insights.push({
         category: 'good',
-        title: 'Solid Foundation Built',
-        message: 'You\'re building strong healthy habits consistently.',
-        recommendation: 'Great momentum! Focus on the weakest area to accelerate progress.',
+        title: t('health.insight.progress.foundation'),
+        message: t('health.insight.progress.foundation.message'),
+        recommendation: t('health.insight.progress.foundation.recommendation'),
         icon: '🏗️',
         color: colors.primary
       });
     } else if (overallProgress >= 0.5) {
       insights.push({
         category: 'warning',
-        title: 'Progress Plateau Risk',
-        message: 'Your consistency is wavering. Results may stall.',
-        recommendation: 'Refocus time! Pick ONE area to improve this week, then build on success.',
+        title: t('health.insight.progress.plateau'),
+        message: t('health.insight.progress.plateau.message'),
+        recommendation: t('health.insight.progress.plateau.recommendation'),
         icon: '📈',
         color: colors.warning
       });
     } else {
       insights.push({
         category: 'critical',
-        title: 'Immediate Intervention Needed',
-        message: 'Your fitness goals are seriously at risk.',
-        recommendation: 'Emergency reset: Choose just 3 simple daily habits. Master basics before advancing.',
+        title: t('health.insight.progress.intervention'),
+        message: t('health.insight.progress.intervention.message'),
+        recommendation: t('health.insight.progress.intervention.recommendation'),
         icon: '🚨',
         color: colors.error
       });
@@ -341,10 +357,10 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
   };
 
   const getScoreStatus = (score: number) => {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Needs Improvement';
-    return 'Critical';
+    if (score >= 80) return t('health.score.status.excellent');
+    if (score >= 60) return t('health.score.status.good');
+    if (score >= 40) return t('health.score.status.needs.improvement');
+    return t('health.score.status.critical');
   };
 
   const getCategoryStyle = (category: string) => {
@@ -368,25 +384,28 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
     <Animated.View entering={FadeInUp.delay(900)} style={styles.container}>
       {/* Overall Health Score - Now at the TOP */}
       <Animated.View entering={FadeInUp.delay(950)} style={[styles.healthScoreContainer, { borderColor: scoreColor + '60' }]}>
-        <Text style={styles.healthScoreTitle}>Overall Health Score</Text>
+        <Text style={styles.healthScoreTitle}>{t('health.score.title')}</Text>
         <View style={[styles.healthScoreCircle, { borderColor: scoreColor, backgroundColor: scoreColor + '15' }]}>
           <Text style={[styles.healthScoreValue, { color: scoreColor }]}>
-            {healthScore}
+            {language === 'ur' ? transliterateNumbers(healthScore) : healthScore}
           </Text>
-          <Text style={styles.healthScoreLabel}>/ 100</Text>
+          <Text style={styles.healthScoreLabel}>/ {language === 'ur' ? transliterateNumbers(100) : 100}</Text>
         </View>
         <View style={[styles.scoreStatusBadge, { backgroundColor: scoreColor + '20' }]}>
           <Text style={[styles.scoreStatusText, { color: scoreColor }]}>{getScoreStatus(healthScore)}</Text>
         </View>
         <Text style={styles.healthScoreDescription}>
-          Based on {progressStats?.workoutsCompleted || 0} workouts, {progressStats?.mealsCompleted || 0} meals & {progressStats?.waterIntake?.toFixed(1) || 0}L water
+          {t('health.score.based.on')
+            .replace('{workouts}', language === 'ur' ? transliterateNumbers(progressStats?.workoutsCompleted || 0) : String(progressStats?.workoutsCompleted || 0))
+            .replace('{meals}', language === 'ur' ? transliterateNumbers(progressStats?.mealsCompleted || 0) : String(progressStats?.mealsCompleted || 0))
+            .replace('{water}', language === 'ur' ? transliterateNumbers(parseFloat((progressStats?.waterIntake?.toFixed(1) || 0))) : (progressStats?.waterIntake?.toFixed(1) || '0'))}
         </Text>
       </Animated.View>
 
       {/* Health Insights Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Health Insights & Recommendations</Text>
-        <Text style={styles.subtitle}>AI-powered analysis of your progress</Text>
+        <Text style={styles.title}>{t('health.insights.title')}</Text>
+        <Text style={styles.subtitle}>{t('health.insights.subtitle')}</Text>
       </View>
 
       <View style={styles.insightsContainer}>
@@ -406,7 +425,7 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
                 <View style={styles.insightHeaderText}>
                   <Text style={styles.insightTitle}>{insight.title}</Text>
                   <Text style={styles.insightCategory}>
-                    {insight.category.charAt(0).toUpperCase() + insight.category.slice(1)}
+                    {t(`health.insights.category.${insight.category}`)}
                   </Text>
                 </View>
               </View>
@@ -419,7 +438,7 @@ export default function HealthRemarks({ remarks, progressStats, period }: Health
               <Animated.View entering={FadeInUp.delay(200)} style={styles.insightContent}>
                 <Text style={styles.insightMessage}>{insight.message}</Text>
                 <View style={styles.recommendationContainer}>
-                  <Text style={styles.recommendationLabel}>💡 Recommendation:</Text>
+                  <Text style={styles.recommendationLabel}>{t('health.insights.recommendation')}</Text>
                   <Text style={styles.recommendationText}>{insight.recommendation}</Text>
                 </View>
               </Animated.View>

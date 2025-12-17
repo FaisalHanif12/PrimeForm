@@ -21,7 +21,7 @@ interface Props {
 }
 
 export default function MealPlanCard({ title, meals, totalCalories, completedMeals = new Set(), onPress, delay = 0 }: Props) {
-  const { t } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   
   // Helper function to check if meal is completed
   // Meal ID format: `${date}-${mealType}-${mealName}`
@@ -90,7 +90,7 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
               <Text style={styles.title}>{title}</Text>
               <View style={styles.calorieContainer}>
                 <Text style={styles.calorieCount}>{totalCalories}</Text>
-                <Text style={styles.calorieLabel}>kcal</Text>
+                <Text style={styles.calorieLabel}>{t('dashboard.stats.kcal')}</Text>
               </View>
             </View>
             
@@ -107,10 +107,16 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
                   </View>
                   
                   <View style={styles.mealContent}>
-                    <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>{meal.name}</Text>
+                    <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>
+                      {language === 'ur' ? transliterateText(meal.name) : meal.name}
+                    </Text>
                     <View style={styles.mealDetails}>
-                      <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>{meal.calories} kcal</Text>
-                      <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>{meal.weight}</Text>
+                      <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>
+                        {meal.calories} {t('dashboard.stats.kcal')}
+                      </Text>
+                      <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>
+                        {language === 'ur' ? transliterateText(meal.weight) : meal.weight}
+                      </Text>
                     </View>
                   </View>
                   

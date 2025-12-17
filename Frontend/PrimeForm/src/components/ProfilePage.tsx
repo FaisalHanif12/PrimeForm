@@ -102,7 +102,7 @@ const genderOptions = [
 ];
 
 export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserInfo }: Props) {
-  const { t, language } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { showToast } = useToast();
 
   // Helper function to get localized text
@@ -320,46 +320,61 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     </View>
   );
 
-  const renderInfoRow = (label: string, value: string, field?: keyof UserInfo) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      {isEditing && field ? (
-        <TextInput
-          style={styles.editInput}
-          value={value}
-          onChangeText={(text) => handleUpdateField(field, text)}
-          placeholder={`Enter ${label.toLowerCase()}`}
-          placeholderTextColor={colors.mutedText}
-        />
-      ) : (
-        <Text style={styles.infoValue}>{value || 'Not specified'}</Text>
-      )}
-    </View>
-  );
+  const renderInfoRow = (label: string, value: string, field?: keyof UserInfo) => {
+    // For dynamic values, use transliteration if in Urdu mode
+    // Convert value to string and handle null/undefined
+    const valueStr = value != null ? String(value) : '';
+    const displayValue = valueStr ? (language === 'ur' ? transliterateText(valueStr) : valueStr) : '';
+    const displayLabel = t(label);
+    const notSpecifiedText = t('profile.notSpecified');
+    
+    return (
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>{displayLabel}</Text>
+        {isEditing && field ? (
+          <TextInput
+            style={styles.editInput}
+            value={value}
+            onChangeText={(text) => handleUpdateField(field, text)}
+            placeholder={`Enter ${label.toLowerCase()}`}
+            placeholderTextColor={colors.mutedText}
+          />
+        ) : (
+          <Text style={styles.infoValue}>{displayValue || notSpecifiedText}</Text>
+        )}
+      </View>
+    );
+  };
 
-  const renderPickerRow = (label: string, value: string, field: keyof UserInfo, options: { en: string; ur: string }[]) => (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      {isEditing ? (
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={value}
-            onValueChange={(val) => handleUpdateField(field, val)}
-            style={styles.picker}
-          >
-            <Picker.Item label="Select..." value="" />
-            {options.map(option => (
-              <Picker.Item key={option.en} label={getLocalizedText(option)} value={getLocalizedText(option)} />
-            ))}
-          </Picker>
-        </View>
-      ) : (
-        <Text style={styles.infoValue}>
-          {value ? getLocalizedValue(value, options) : 'Not specified'}
-        </Text>
-      )}
-    </View>
-  );
+  const renderPickerRow = (label: string, value: string, field: keyof UserInfo, options: { en: string; ur: string }[]) => {
+    const displayLabel = t(label);
+    const notSpecifiedText = t('profile.notSpecified');
+    const selectText = t('profile.select');
+    
+    return (
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>{displayLabel}</Text>
+        {isEditing ? (
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={value}
+              onValueChange={(val) => handleUpdateField(field, val)}
+              style={styles.picker}
+            >
+              <Picker.Item label={selectText} value="" />
+              {options.map(option => (
+                <Picker.Item key={option.en} label={getLocalizedText(option)} value={getLocalizedText(option)} />
+              ))}
+            </Picker>
+          </View>
+        ) : (
+          <Text style={styles.infoValue}>
+            {value ? getLocalizedValue(value, options) : notSpecifiedText}
+          </Text>
+        )}
+      </View>
+    );
+  };
 
   const renderProfileContent = () => {
     // Only show loading if we're actively checking and haven't determined status yet
@@ -368,7 +383,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
       return (
         <View style={styles.noProfileSection}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.noProfileText}>Loading your profile...</Text>
+          <Text style={styles.noProfileText}>{t('profile.loading')}</Text>
         </View>
       );
     }
@@ -379,7 +394,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           <View style={styles.noProfileIcon}>
             <Text style={styles.noProfileEmoji}>⚠️</Text>
           </View>
-          <Text style={styles.noProfileTitle}>Unable to load your profile</Text>
+          <Text style={styles.noProfileTitle}>{t('profile.error.title')}</Text>
           <Text style={styles.noProfileText}>{loadError}</Text>
           <TouchableOpacity
             style={styles.createProfileButton}
@@ -390,7 +405,7 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.createProfileButtonText}>Try Again</Text>
+            <Text style={styles.createProfileButtonText}>{t('profile.error.retry')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -405,14 +420,14 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
           <View style={styles.noProfileIcon}>
             <Text style={styles.noProfileEmoji}>👤</Text>
           </View>
-          <Text style={styles.noProfileTitle}>Complete Your Profile</Text>
-          <Text style={styles.noProfileText}>Create your personalized profile to get started with AI-powered fitness plans tailored just for you.</Text>
+          <Text style={styles.noProfileTitle}>{t('profile.complete.title')}</Text>
+          <Text style={styles.noProfileText}>{t('profile.complete.text')}</Text>
           <TouchableOpacity 
             style={styles.createProfileButton}
             onPress={() => setShowUserInfoModal(true)}
             activeOpacity={0.8}
           >
-            <Text style={styles.createProfileButtonText}>Create Profile</Text>
+            <Text style={styles.createProfileButtonText}>{t('profile.complete.button')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -420,40 +435,43 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
 
     // Profile exists - show full profile (safe guard for missing props)
     const safeUserInfo = userInfo || {} as any;
-    const displayValue = (field: keyof UserInfo) => (isEditing ? editedUserInfo[field] : safeUserInfo[field]) || '';
+    const displayValue = (field: keyof UserInfo) => {
+      const val = isEditing ? editedUserInfo[field] : safeUserInfo[field];
+      return val != null ? String(val) : '';
+    };
     const displayGoal = (isEditing ? editedUserInfo.bodyGoal : safeUserInfo.bodyGoal) || '';
 
     return (
       <ScrollView style={styles.profileContent} showsVerticalScrollIndicator={false}>
         {/* Personal Information */}
-        {renderInfoSection('Personal Information', (
+        {renderInfoSection(t('profile.sections.personal'), (
           <>
-            {renderPickerRow('Country', displayValue('country'), 'country', countries)}
-            {renderInfoRow('Age', displayValue('age'), 'age')}
-            {renderPickerRow('Gender', displayValue('gender'), 'gender', genderOptions)}
-            {renderInfoRow('Height', displayValue('height'), 'height')}
-            {renderInfoRow('Current Weight', displayValue('currentWeight'), 'currentWeight')}
+            {renderPickerRow('profile.fields.country', displayValue('country'), 'country', countries)}
+            {renderInfoRow('profile.fields.age', displayValue('age'), 'age')}
+            {renderPickerRow('profile.fields.gender', displayValue('gender'), 'gender', genderOptions)}
+            {renderInfoRow('profile.fields.height', displayValue('height'), 'height')}
+            {renderInfoRow('profile.fields.weight', displayValue('currentWeight'), 'currentWeight')}
             {/* Show target weight field if body goal requires it */}
-            {(displayGoal === 'Lose Fat' || displayGoal === 'Gain Muscle') && (
-              renderInfoRow('Target Weight', displayValue('targetWeight'), 'targetWeight')
+            {(displayGoal === 'Lose Fat' || displayGoal === 'Gain Muscle' || displayGoal === 'چربی کم کریں' || displayGoal === 'پٹھے بنائیں') && (
+              renderInfoRow('profile.fields.targetWeight', displayValue('targetWeight'), 'targetWeight')
             )}
           </>
         ))}
 
         {/* Goals & Preferences */}
-        {renderInfoSection('Goals & Preferences', (
+        {renderInfoSection(t('profile.sections.goals'), (
           <>
-            {renderPickerRow('Body Goal', displayValue('bodyGoal'), 'bodyGoal', bodyGoals)}
-            {renderPickerRow('Diet Preference', displayValue('dietPreference'), 'dietPreference', dietPreferences)}
+            {renderPickerRow('profile.fields.bodyGoal', displayValue('bodyGoal'), 'bodyGoal', bodyGoals)}
+            {renderPickerRow('profile.fields.dietPreference', displayValue('dietPreference'), 'dietPreference', dietPreferences)}
           </>
         ))}
 
         {/* Lifestyle & Health */}
-        {renderInfoSection('Lifestyle & Health', (
+        {renderInfoSection(t('profile.sections.lifestyle'), (
           <>
-            {renderPickerRow('Occupation', displayValue('occupationType'), 'occupationType', occupationTypes)}
-            {renderPickerRow('Available Equipment', displayValue('availableEquipment'), 'availableEquipment', equipmentOptions)}
-            {renderInfoRow('Medical Conditions', displayValue('medicalConditions'), 'medicalConditions')}
+            {renderPickerRow('profile.fields.occupation', displayValue('occupationType'), 'occupationType', occupationTypes)}
+            {renderPickerRow('profile.fields.equipment', displayValue('availableEquipment'), 'availableEquipment', equipmentOptions)}
+            {renderInfoRow('profile.fields.medical', displayValue('medicalConditions'), 'medicalConditions')}
           </>
         ))}
       </ScrollView>
@@ -480,19 +498,19 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Profile</Text>
+              <Text style={styles.headerTitle}>{t('profile.title')}</Text>
               <View style={styles.headerActions}>
                 {!isEditing ? (
                   <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
-                    <Text style={styles.editButtonText}>Edit Profile</Text>
+                    <Text style={styles.editButtonText}>{t('profile.edit')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <View style={styles.editActions}>
                     <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={styles.cancelButtonText}>{t('profile.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                      <Text style={styles.saveButtonText}>Save</Text>
+                      <Text style={styles.saveButtonText}>{t('profile.save')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}

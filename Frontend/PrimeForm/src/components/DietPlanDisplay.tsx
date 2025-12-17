@@ -15,6 +15,7 @@ import dietPlanService from '../services/dietPlanService';
 import mealCompletionService from '../services/mealCompletionService';
 import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 import aiDietService from '../services/aiDietService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -31,6 +32,7 @@ export default function DietPlanDisplay({
   onGenerateNew,
   isGeneratingNew = false
 }: DietPlanDisplayProps) {
+  const { t, language, transliterateText, translateDayName } = useLanguage();
   const [selectedDay, setSelectedDay] = useState<DietDay | null>(null);
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
@@ -800,11 +802,11 @@ export default function DietPlanDisplay({
           <View style={styles.heroContent}>
             {/* Goal Badge */}
             <View style={styles.goalBadge}>
-              <Text style={styles.goalBadgeText}>🥗 {dietPlan.goal}</Text>
+              <Text style={styles.goalBadgeText}>🥗 {language === 'ur' ? transliterateText(dietPlan.goal) : dietPlan.goal}</Text>
             </View>
             
             {/* Main Title */}
-            <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {dietPlan.duration.split('(')[0].trim()}</Text>
+            <Text style={styles.heroSubtitle}>{t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()} • {language === 'ur' ? transliterateText(dietPlan.duration.split('(')[0].trim()) : dietPlan.duration.split('(')[0].trim()}</Text>
             
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
@@ -813,7 +815,7 @@ export default function DietPlanDisplay({
                 <View style={styles.progressCircleBackground} />
                 <View style={styles.progressCircleInner}>
                   <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
-                  <Text style={styles.progressCircleLabel}>Complete</Text>
+                  <Text style={styles.progressCircleLabel}>{t('diet.complete')}</Text>
                 </View>
               </View>
             </View>
@@ -826,7 +828,7 @@ export default function DietPlanDisplay({
                 }]} />
               </View>
               <Text style={styles.progressBarText}>
-                Week {getCurrentWeek()} of {getTotalWeeks()} • {progressPercentage}% Complete
+                {t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()} • {progressPercentage}% {t('diet.complete')}
               </Text>
             </View>
           </View>
@@ -837,8 +839,8 @@ export default function DietPlanDisplay({
       <View style={styles.premiumCalendarSection}>
         <View style={styles.calendarHeader}>
           <View style={styles.calendarHeaderLeft}>
-            <Text style={styles.calendarTitle}>This Week's Nutrition</Text>
-            <Text style={styles.calendarSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
+            <Text style={styles.calendarTitle}>{t('diet.week.nutrition')}</Text>
+            <Text style={styles.calendarSubtitle}>{t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()}</Text>
           </View>
           <View style={styles.weekIndicator}>
             <Text style={styles.weekIndicatorText}>W{getCurrentWeek()}</Text>
@@ -894,7 +896,7 @@ export default function DietPlanDisplay({
                 {/* Day Info */}
                 <View style={styles.dayInfo}>
                   <Text style={[styles.premiumDayName, (isToday || isSelected) && styles.premiumDayNameToday]}>
-                    {day.dayName.substring(0, 3)}
+                    {language === 'ur' ? translateDayName(day.dayName.substring(0, 3)) : day.dayName.substring(0, 3)}
                   </Text>
                   <Text style={[styles.premiumDayDate, (isToday || isSelected) && styles.premiumDayDateToday]}>
                     {formatDate(day.date)}
@@ -907,7 +909,7 @@ export default function DietPlanDisplay({
                     {day.totalCalories}
                   </Text>
                   <Text style={[styles.premiumCaloriesLabel, (isToday || isSelected) && styles.premiumCaloriesLabelToday]}>
-                    kcal
+                    {t('dashboard.stats.kcal')}
                   </Text>
                 </View>
                 
@@ -936,12 +938,12 @@ export default function DietPlanDisplay({
         <View style={styles.dietHeader}>
           <View style={styles.dietHeaderLeft}>
             <Text style={styles.dietTitle}>
-              {selectedDay && isCurrentDay(selectedDay) ? "Today's Meals" : 
-               selectedDay ? `${selectedDay.dayName}'s Meals` : 'Select a Day'}
+              {selectedDay && isCurrentDay(selectedDay) ? t('diet.today.meals') : 
+               selectedDay ? t('diet.day.meals').replace('{day}', language === 'ur' ? transliterateText(selectedDay.dayName) : selectedDay.dayName) : t('diet.select.day')}
             </Text>
             {selectedDay && (
               <Text style={styles.dietSubtitle}>
-                {selectedDay.totalCalories} kcal • {selectedDay.totalProtein}g protein
+                {selectedDay.totalCalories} {t('dashboard.stats.kcal')} • {selectedDay.totalProtein}g {t('diet.protein')}
               </Text>
             )}
           </View>
@@ -951,7 +953,7 @@ export default function DietPlanDisplay({
               <Text style={styles.nutritionProgressText}>
                 {selectedDay.totalCalories}
               </Text>
-              <Text style={styles.nutritionProgressLabel}>kcal</Text>
+              <Text style={styles.nutritionProgressLabel}>{t('dashboard.stats.kcal')}</Text>
             </View>
           )}
         </View>
@@ -974,11 +976,11 @@ export default function DietPlanDisplay({
                   <Text style={[
                     styles.mealTime,
                     completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealTimeCompleted
-                  ]}>☀️ Breakfast</Text>
+                  ]}>☀️ {t('diet.breakfast')}</Text>
                   <Text style={[
                     styles.mealCalories,
                     completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealCaloriesCompleted
-                  ]}>{selectedDay.meals.breakfast.calories} kcal</Text>
+                  ]}>{selectedDay.meals.breakfast.calories} {t('dashboard.stats.kcal')}</Text>
                 </View>
                 
                 <View style={styles.mealContent}>
@@ -990,7 +992,7 @@ export default function DietPlanDisplay({
                     <Text style={[
                       styles.mealName,
                       completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealNameCompleted
-                    ]}>{selectedDay.meals.breakfast.name}</Text>
+                    ]}>{language === 'ur' ? transliterateText(selectedDay.meals.breakfast.name) : selectedDay.meals.breakfast.name}</Text>
                     <Text style={[
                       styles.mealMacros,
                       completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealMacrosCompleted
@@ -1016,17 +1018,17 @@ export default function DietPlanDisplay({
                   
                   {/* Ingredients */}
                   <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    <Text style={styles.detailSectionTitle}>🥘 {t('diet.ingredients')}</Text>
                     {selectedDay.meals.breakfast.ingredients.map((ingredient, idx) => (
-                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                      <Text key={idx} style={styles.detailText}>• {language === 'ur' ? transliterateText(ingredient) : ingredient}</Text>
                     ))}
                   </View>
                   
                   {/* Instructions */}
                   {selectedDay.meals.breakfast.instructions && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
-                      <Text style={styles.detailText}>{selectedDay.meals.breakfast.instructions}</Text>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 {t('diet.instructions')}</Text>
+                      <Text style={styles.detailText}>{language === 'ur' ? transliterateText(selectedDay.meals.breakfast.instructions) : selectedDay.meals.breakfast.instructions}</Text>
                     </View>
                   )}
                   
@@ -1040,7 +1042,7 @@ export default function DietPlanDisplay({
                         setExpandedMealId(null); // Collapse after marking
                       }}
                     >
-                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                      <Text style={styles.markEatenButtonText}>{t('diet.mark.eaten')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1070,11 +1072,11 @@ export default function DietPlanDisplay({
                   <Text style={[
                     styles.mealTime,
                     completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealTimeCompleted
-                  ]}>🌞 Lunch</Text>
+                  ]}>🌞 {t('diet.lunch')}</Text>
                   <Text style={[
                     styles.mealCalories,
                     completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealCaloriesCompleted
-                  ]}>{selectedDay.meals.lunch.calories} kcal</Text>
+                  ]}>{selectedDay.meals.lunch.calories} {t('dashboard.stats.kcal')}</Text>
                 </View>
                 
                 <View style={styles.mealContent}>
@@ -1086,7 +1088,7 @@ export default function DietPlanDisplay({
                     <Text style={[
                       styles.mealName,
                       completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealNameCompleted
-                    ]}>{selectedDay.meals.lunch.name}</Text>
+                    ]}>{language === 'ur' ? transliterateText(selectedDay.meals.lunch.name) : selectedDay.meals.lunch.name}</Text>
                     <Text style={[
                       styles.mealMacros,
                       completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealMacrosCompleted
@@ -1112,17 +1114,17 @@ export default function DietPlanDisplay({
                   
                   {/* Ingredients */}
                   <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    <Text style={styles.detailSectionTitle}>🥘 {t('diet.ingredients')}</Text>
                     {selectedDay.meals.lunch.ingredients.map((ingredient, idx) => (
-                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                      <Text key={idx} style={styles.detailText}>• {language === 'ur' ? transliterateText(ingredient) : ingredient}</Text>
                     ))}
                   </View>
                   
                   {/* Instructions */}
                   {selectedDay.meals.lunch.instructions && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
-                      <Text style={styles.detailText}>{selectedDay.meals.lunch.instructions}</Text>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 {t('diet.instructions')}</Text>
+                      <Text style={styles.detailText}>{language === 'ur' ? transliterateText(selectedDay.meals.lunch.instructions) : selectedDay.meals.lunch.instructions}</Text>
                     </View>
                   )}
                   
@@ -1136,7 +1138,7 @@ export default function DietPlanDisplay({
                         setExpandedMealId(null);
                       }}
                     >
-                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                      <Text style={styles.markEatenButtonText}>{t('diet.mark.eaten')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1166,11 +1168,11 @@ export default function DietPlanDisplay({
                   <Text style={[
                     styles.mealTime,
                     completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealTimeCompleted
-                  ]}>🌙 Dinner</Text>
+                  ]}>🌙 {t('diet.dinner')}</Text>
                   <Text style={[
                     styles.mealCalories,
                     completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealCaloriesCompleted
-                  ]}>{selectedDay.meals.dinner.calories} kcal</Text>
+                  ]}>{selectedDay.meals.dinner.calories} {t('dashboard.stats.kcal')}</Text>
                 </View>
                 
                 <View style={styles.mealContent}>
@@ -1182,7 +1184,7 @@ export default function DietPlanDisplay({
                     <Text style={[
                       styles.mealName,
                       completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealNameCompleted
-                    ]}>{selectedDay.meals.dinner.name}</Text>
+                    ]}>{language === 'ur' ? transliterateText(selectedDay.meals.dinner.name) : selectedDay.meals.dinner.name}</Text>
                     <Text style={[
                       styles.mealMacros,
                       completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealMacrosCompleted
@@ -1208,17 +1210,17 @@ export default function DietPlanDisplay({
                   
                   {/* Ingredients */}
                   <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                    <Text style={styles.detailSectionTitle}>🥘 {t('diet.ingredients')}</Text>
                     {selectedDay.meals.dinner.ingredients.map((ingredient, idx) => (
-                      <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                      <Text key={idx} style={styles.detailText}>• {language === 'ur' ? transliterateText(ingredient) : ingredient}</Text>
                     ))}
                   </View>
                   
                   {/* Instructions */}
                   {selectedDay.meals.dinner.instructions && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
-                      <Text style={styles.detailText}>{selectedDay.meals.dinner.instructions}</Text>
+                      <Text style={styles.detailSectionTitle}>👨‍🍳 {t('diet.instructions')}</Text>
+                      <Text style={styles.detailText}>{language === 'ur' ? transliterateText(selectedDay.meals.dinner.instructions) : selectedDay.meals.dinner.instructions}</Text>
                     </View>
                   )}
                   
@@ -1232,7 +1234,7 @@ export default function DietPlanDisplay({
                         setExpandedMealId(null);
                       }}
                     >
-                      <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                      <Text style={styles.markEatenButtonText}>{t('diet.mark.eaten')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1270,11 +1272,11 @@ export default function DietPlanDisplay({
                     <Text style={[
                       styles.snackName,
                       completedMeals.has(snackId) && styles.snackNameCompleted
-                    ]}>🍎 Snack {index + 1}: {snack.name}</Text>
+                    ]}>🍎 {t('diet.snack')} {index + 1}: {language === 'ur' ? transliterateText(snack.name) : snack.name}</Text>
                     <Text style={[
                       styles.snackCalories,
                       completedMeals.has(snackId) && styles.snackCaloriesCompleted
-                    ]}>{snack.calories} kcal</Text>
+                    ]}>{snack.calories} {t('dashboard.stats.kcal')}</Text>
                   </View>
                   
                   <View style={styles.snackAction}>
@@ -1293,17 +1295,17 @@ export default function DietPlanDisplay({
                     
                     {/* Ingredients */}
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>🥘 Ingredients</Text>
+                      <Text style={styles.detailSectionTitle}>🥘 {t('diet.ingredients')}</Text>
                       {snack.ingredients.map((ingredient, idx) => (
-                        <Text key={idx} style={styles.detailText}>• {ingredient}</Text>
+                        <Text key={idx} style={styles.detailText}>• {language === 'ur' ? transliterateText(ingredient) : ingredient}</Text>
                       ))}
                     </View>
                     
                     {/* Instructions */}
                     {snack.instructions && (
                       <View style={styles.detailSection}>
-                        <Text style={styles.detailSectionTitle}>👨‍🍳 Instructions</Text>
-                        <Text style={styles.detailText}>{snack.instructions}</Text>
+                        <Text style={styles.detailSectionTitle}>👨‍🍳 {t('diet.instructions')}</Text>
+                        <Text style={styles.detailText}>{language === 'ur' ? transliterateText(snack.instructions) : snack.instructions}</Text>
                       </View>
                     )}
                     
@@ -1317,7 +1319,7 @@ export default function DietPlanDisplay({
                           setExpandedMealId(null);
                         }}
                       >
-                        <Text style={styles.markEatenButtonText}>Mark as Eaten ✓</Text>
+                        <Text style={styles.markEatenButtonText}>{t('diet.mark.eaten')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1335,13 +1337,13 @@ export default function DietPlanDisplay({
 
             {/* Water Intake Section */}
             <View style={styles.waterSection}>
-              <Text style={styles.waterTitle}>💧 Water Intake</Text>
-              <Text style={styles.waterTarget}>Target: {selectedDay.waterIntake}ml</Text>
+              <Text style={styles.waterTitle}>💧 {t('diet.water.intake')}</Text>
+              <Text style={styles.waterTarget}>{t('diet.water.target')} {selectedDay.waterIntake}ml</Text>
               
               <View style={styles.waterCompletionContainer}>
                 <View style={styles.waterStatusInfo}>
                   <Text style={styles.waterStatusText}>
-                    {waterCompleted[selectedDay.date] ? '✅ Completed' : '⏳ Due'}
+                    {waterCompleted[selectedDay.date] ? `✅ ${t('diet.water.completed')}` : `⏳ ${t('diet.water.due')}`}
                   </Text>
                   <Text style={styles.waterAmountText}>
                     {waterCompleted[selectedDay.date] 
@@ -1365,7 +1367,7 @@ export default function DietPlanDisplay({
                     waterCompleted[selectedDay.date] && styles.waterCompletionButtonTextCompleted,
                     !isCurrentDay(selectedDay) && styles.waterCompletionButtonTextDisabled
                   ]}>
-                    {waterCompleted[selectedDay.date] ? 'Done' : !isCurrentDay(selectedDay) ? 'Not Available' : 'Mark Done'}
+                    {waterCompleted[selectedDay.date] ? t('diet.water.done') : !isCurrentDay(selectedDay) ? t('diet.water.not.available') : t('diet.water.mark.done')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1375,7 +1377,7 @@ export default function DietPlanDisplay({
 
         {!selectedDay && (
           <View style={styles.noDaySelectedContainer}>
-            <Text style={styles.noDaySelectedText}>Please select a day from the calendar above</Text>
+            <Text style={styles.noDaySelectedText}>{t('diet.select.day.message')}</Text>
           </View>
         )}
       </View>

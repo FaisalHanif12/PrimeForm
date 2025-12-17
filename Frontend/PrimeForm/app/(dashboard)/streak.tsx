@@ -61,7 +61,7 @@ interface StreakData {
 
 export default function StreakScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
 
@@ -173,7 +173,7 @@ export default function StreakScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          showToast('error', 'Failed to logout. Please try again.');
+          showToast('error', t('streak.error.logout'));
         }
         break;
       default:
@@ -241,7 +241,7 @@ export default function StreakScreen() {
             styles.tabButtonText,
             selectedTab === tab && styles.tabButtonTextActive
           ]}>
-            {tab === 'streak' ? 'Maintain Streak' : 'History'}
+            {tab === 'streak' ? t('streak.tab.maintain') : t('streak.tab.history')}
           </Text>
         </TouchableOpacity>
       ))}
@@ -255,7 +255,7 @@ export default function StreakScreen() {
       <View style={styles.streakMaintenanceContainer}>
         {/* Streak Breakdown */}
         <Animated.View entering={FadeInUp.delay(400)} style={styles.streakBreakdownSection}>
-          <Text style={styles.sectionTitle}>Streak Breakdown</Text>
+          <Text style={styles.sectionTitle}>{t('streak.breakdown.title')}</Text>
 
           <View style={styles.breakdownCard}>
             <View style={styles.breakdownHeader}>
@@ -265,22 +265,22 @@ export default function StreakScreen() {
                 </View>
               </View>
               <View style={styles.breakdownContent}>
-                <Text style={styles.breakdownLabel}>Workout Streak</Text>
-                <Text style={styles.breakdownSubtext}>Consecutive workout days</Text>
+                <Text style={styles.breakdownLabel}>{t('streak.workout.title')}</Text>
+                <Text style={styles.breakdownSubtext}>{t('streak.workout.subtitle')}</Text>
               </View>
               <View style={styles.breakdownValueContainer}>
                 <Text style={styles.breakdownValue}>{streakData.currentWorkoutStreak}</Text>
-                <Text style={styles.breakdownDays}>days</Text>
+                <Text style={styles.breakdownDays}>{t('streak.days')}</Text>
               </View>
             </View>
             <View style={styles.breakdownDivider} />
             <View style={styles.breakdownStats}>
               <View style={styles.breakdownStat}>
-                <Text style={styles.breakdownStatLabel}>Best</Text>
+                <Text style={styles.breakdownStatLabel}>{t('streak.best')}</Text>
                 <Text style={styles.breakdownStatValue}>{streakData.longestWorkoutStreak}</Text>
               </View>
               <View style={styles.breakdownStat}>
-                <Text style={styles.breakdownStatLabel}>This Week</Text>
+                <Text style={styles.breakdownStatLabel}>{t('streak.thisWeek')}</Text>
                 <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
               </View>
             </View>
@@ -294,22 +294,22 @@ export default function StreakScreen() {
                 </View>
               </View>
               <View style={styles.breakdownContent}>
-                <Text style={styles.breakdownLabel}>Diet Streak</Text>
-                <Text style={styles.breakdownSubtext}>Consecutive nutrition days</Text>
+                <Text style={styles.breakdownLabel}>{t('streak.diet.title')}</Text>
+                <Text style={styles.breakdownSubtext}>{t('streak.diet.subtitle')}</Text>
               </View>
               <View style={styles.breakdownValueContainer}>
                 <Text style={styles.breakdownValue}>{streakData.currentDietStreak}</Text>
-                <Text style={styles.breakdownDays}>days</Text>
+                <Text style={styles.breakdownDays}>{t('streak.days')}</Text>
               </View>
             </View>
             <View style={styles.breakdownDivider} />
             <View style={styles.breakdownStats}>
               <View style={styles.breakdownStat}>
-                <Text style={styles.breakdownStatLabel}>Best</Text>
+                <Text style={styles.breakdownStatLabel}>{t('streak.best')}</Text>
                 <Text style={styles.breakdownStatValue}>{streakData.longestDietStreak}</Text>
               </View>
               <View style={styles.breakdownStat}>
-                <Text style={styles.breakdownStatLabel}>This Week</Text>
+                <Text style={styles.breakdownStatLabel}>{t('streak.thisWeek')}</Text>
                 <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
               </View>
             </View>
@@ -328,8 +328,8 @@ export default function StreakScreen() {
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
         <View style={styles.historyHeader}>
           <View>
-            <Text style={styles.sectionTitle}>Activity History</Text>
-            <Text style={styles.historySubtitle}>Last 30 days of activity</Text>
+            <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
+            <Text style={styles.historySubtitle}>{t('streak.history.subtitle')}</Text>
           </View>
         </View>
 
@@ -371,15 +371,15 @@ export default function StreakScreen() {
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
             <View style={[styles.legendIndicator, { backgroundColor: colors.primary }]} />
-            <Text style={styles.legendText}>Workout</Text>
+            <Text style={styles.legendText}>{t('streak.legend.workout')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendIndicator, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>Diet</Text>
+            <Text style={styles.legendText}>{t('streak.legend.diet')}</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendIndicator, { backgroundColor: colors.cardBorder }]} />
-            <Text style={styles.legendText}>Missed</Text>
+            <Text style={styles.legendText}>{t('streak.legend.missed')}</Text>
           </View>
         </View>
       </Animated.View>
@@ -399,7 +399,7 @@ export default function StreakScreen() {
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading your streak data...</Text>
+            <Text style={styles.loadingText}>{t('streak.loading')}</Text>
           </View>
           <BottomNavigation
             activeTab=""
@@ -427,8 +427,8 @@ export default function StreakScreen() {
         >
           {/* Hero Section */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
-            <Text style={styles.heroTitle}>Streak Tracker</Text>
-            <Text style={styles.heroSubtitle}>Track your consistency and maintain momentum</Text>
+            <Text style={styles.heroTitle}>{t('streak.title')}</Text>
+            <Text style={styles.heroSubtitle}>{t('streak.subtitle')}</Text>
           </Animated.View>
 
           {/* Tab Selector */}

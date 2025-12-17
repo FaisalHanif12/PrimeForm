@@ -75,7 +75,7 @@ const getExerciseVideo = (exerciseId: string): string => {
 export default function ExerciseDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { t } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const [selectedLevel, setSelectedLevel] = useState<DifficultyLevel>('medium');
@@ -128,7 +128,10 @@ export default function ExerciseDetailScreen() {
       }, 1000);
     } else {
       // Workout complete - show calories burned and navigate back
-      showToast('success', `🔥 Workout Complete! You burned ${currentLevel.calories} calories!`);
+      const completeMessage = language === 'ur' 
+        ? `🔥 ${t('exercise.workout.complete')}! ${t('exercise.workout.calories')}: ${currentLevel.calories}!`
+        : `🔥 Workout Complete! You burned ${currentLevel.calories} calories!`;
+      showToast('success', completeMessage);
       setTimeout(() => {
         router.back();
       }, 2000);
@@ -223,7 +226,7 @@ export default function ExerciseDetailScreen() {
               <View style={styles.workoutHeader}>
                 <View style={styles.workoutHeaderLeft}>
                   <Ionicons name="fitness" size={24} color={colors.primary} />
-                  <Text style={styles.workoutHeaderTitle}>Workout in Progress</Text>
+                  <Text style={styles.workoutHeaderTitle}>{t('exercise.detail.in.progress')}</Text>
             </View>
                 <TouchableOpacity onPress={handleStopWorkout} style={styles.stopButton}>
                   <Ionicons name="stop-circle-outline" size={24} color="#FF3B30" />
@@ -237,13 +240,13 @@ export default function ExerciseDetailScreen() {
                   style={styles.setProgressGradient}
                 >
                   <Text style={styles.setProgressLabel}>
-                    {isBreakTime ? 'Break Time' : `Set ${currentSet} of ${currentLevel.sets}`}
+                    {isBreakTime ? t('exercise.detail.break.time') : t('exercise.detail.set.of').replace('{current}', String(currentSet)).replace('{total}', String(currentLevel.sets))}
             </Text>
                   <Text style={styles.setProgressValue}>
-                    {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} reps`}
+                    {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} ${t('dashboard.stats.reps')}`}
             </Text>
                   <Text style={styles.setProgressSubtext}>
-                    {isBreakTime ? 'Rest and recover' : 'Complete this set'}
+                    {isBreakTime ? t('exercise.detail.rest.recover') : t('exercise.detail.complete.set')}
                   </Text>
 
                   {/* Progress Bar */}
@@ -256,7 +259,7 @@ export default function ExerciseDetailScreen() {
                     />
                   </View>
                   <Text style={styles.progressText}>
-                    {currentSet} / {currentLevel.sets} sets completed
+                    {currentSet} / {currentLevel.sets} {t('exercise.detail.sets.completed')}
                   </Text>
                 </LinearGradient>
           </View>
@@ -267,7 +270,7 @@ export default function ExerciseDetailScreen() {
             <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.selectorSection}>
             <View style={styles.selectorHeader}>
               <Ionicons name="speedometer-outline" size={22} color={colors.primary} />
-              <Text style={styles.selectorTitle}>Choose Your Level</Text>
+              <Text style={styles.selectorTitle}>{t('exercise.detail.choose.level')}</Text>
               <View style={styles.levelIndicators}>
                 <View style={[styles.levelDot, { backgroundColor: colors.primary }]} />
                 <View style={[styles.levelDot, { backgroundColor: colors.gold }]} />
@@ -290,8 +293,8 @@ export default function ExerciseDetailScreen() {
                     <Ionicons name={getLevelIcon(selectedLevel) as any} size={24} color={colors.primary} />
             </View>
                   <View style={styles.dropdownInfo}>
-                    <Text style={styles.dropdownLabel}>{currentLevel.title}</Text>
-                    <Text style={styles.dropdownSubtext}>{currentLevel.description}</Text>
+                    <Text style={styles.dropdownLabel}>{language === 'ur' ? transliterateText(currentLevel.title) : currentLevel.title}</Text>
+                    <Text style={styles.dropdownSubtext}>{language === 'ur' ? transliterateText(currentLevel.description) : currentLevel.description}</Text>
               </View>
               </View>
                 <Ionicons 
@@ -326,10 +329,10 @@ export default function ExerciseDetailScreen() {
                         colors={isSelected ? [levelColor + '25', levelColor + '15'] as [string, string] : [colors.background, colors.background] as [string, string]}
                         style={styles.dropdownOptionGradient}
                       >
-                        <View style={styles.optionLeft}>
+                          <View style={styles.optionLeft}>
                           <View style={[styles.optionDot, { backgroundColor: levelColor }]} />
                           <Text style={[styles.optionTitle, isSelected && { color: colors.white }]}>
-                            {level.title}
+                            {language === 'ur' ? transliterateText(level.title) : level.title}
                           </Text>
             </View>
                         {isSelected && (
@@ -354,7 +357,7 @@ export default function ExerciseDetailScreen() {
                       <Ionicons name="repeat" size={28} color={colors.primary} />
           </View>
                     <Text style={styles.detailValue}>{currentLevel.sets}</Text>
-                    <Text style={styles.detailLabel}>Sets</Text>
+                    <Text style={styles.detailLabel}>{t('exercise.detail.sets')}</Text>
           </View>
 
                   <View style={styles.detailDivider} />
@@ -364,7 +367,7 @@ export default function ExerciseDetailScreen() {
                       <Ionicons name="fitness" size={28} color={colors.gold} />
                 </View>
                     <Text style={styles.detailValue}>{currentLevel.repsPerSet}</Text>
-                    <Text style={styles.detailLabel}>Reps per Set</Text>
+                    <Text style={styles.detailLabel}>{t('exercise.detail.reps.per.set')}</Text>
             </View>
 
                   <View style={styles.detailDivider} />
@@ -374,7 +377,7 @@ export default function ExerciseDetailScreen() {
                       <Ionicons name="flame" size={28} color="#FF3B30" />
                 </View>
                     <Text style={styles.detailValue}>{currentLevel.calories}</Text>
-                    <Text style={styles.detailLabel}>Calories</Text>
+                    <Text style={styles.detailLabel}>{t('exercise.detail.calories')}</Text>
             </View>
               </View>
               </LinearGradient>
@@ -399,7 +402,7 @@ export default function ExerciseDetailScreen() {
                 style={styles.startButtonGradient}
               >
                 <Ionicons name="play-circle" size={28} color={colors.white} />
-                <Text style={styles.startButtonText}>Start Workout</Text>
+                <Text style={styles.startButtonText}>{t('exercise.detail.start')}</Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>
             </TouchableOpacity>
@@ -417,7 +420,7 @@ export default function ExerciseDetailScreen() {
                 style={styles.startButtonGradient}
               >
                 <Ionicons name="play-skip-forward" size={28} color={colors.white} />
-                <Text style={styles.startButtonText}>Skip Break</Text>
+                <Text style={styles.startButtonText}>{t('exercise.detail.skip.break')}</Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>
             </TouchableOpacity>
@@ -436,7 +439,7 @@ export default function ExerciseDetailScreen() {
               >
                 <Ionicons name="checkmark-circle" size={28} color={colors.white} />
                 <Text style={styles.startButtonText}>
-                  {currentSet === currentLevel.sets ? 'Finish Workout' : 'Complete Set'}
+                  {currentSet === currentLevel.sets ? t('exercise.detail.finish') : t('exercise.detail.complete.set.button')}
                 </Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>
@@ -462,7 +465,7 @@ export default function ExerciseDetailScreen() {
                 >
                   <Ionicons name="close" size={28} color={colors.white} />
                 </TouchableOpacity>
-                <Text style={styles.fullscreenTitle}>{exerciseName}</Text>
+                <Text style={styles.fullscreenTitle}>{language === 'ur' ? transliterateText(exerciseName) : exerciseName}</Text>
                 <View style={{ width: 44 }} />
             </View>
 
@@ -492,7 +495,7 @@ export default function ExerciseDetailScreen() {
                 <View style={styles.instructionsSection}>
                   <View style={styles.instructionHeader}>
                     <Ionicons name="school-outline" size={24} color={colors.primary} />
-                    <Text style={styles.instructionTitle}>How to Perform</Text>
+                    <Text style={styles.instructionTitle}>{t('exercise.detail.how.to.perform')}</Text>
                   </View>
 
                   <View style={styles.instructionsList}>
@@ -503,7 +506,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>1</Text>
               </View>
                           <Text style={styles.instructionText}>
-                            Start in a comfortable position with proper form
+                            {t('exercise.detail.instruction.easy.1')}
                           </Text>
               </View>
                         <View style={styles.instructionItem}>
@@ -511,7 +514,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>2</Text>
               </View>
                           <Text style={styles.instructionText}>
-                            Focus on controlled movements, not speed
+                            {t('exercise.detail.instruction.easy.2')}
                           </Text>
             </View>
                         <View style={styles.instructionItem}>
@@ -519,7 +522,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>3</Text>
                 </View>
                           <Text style={styles.instructionText}>
-                            Breathe steadily throughout the exercise
+                            {t('exercise.detail.instruction.easy.3')}
                           </Text>
             </View>
                         <View style={styles.instructionItem}>
@@ -527,7 +530,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>4</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Maintain proper posture and alignment
+                            {t('exercise.detail.instruction.easy.4')}
                           </Text>
                         </View>
                       </>
@@ -539,7 +542,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>1</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Begin with proper warm-up and positioning
+                            {t('exercise.detail.instruction.medium.1')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -547,7 +550,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>2</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Execute each rep with full range of motion
+                            {t('exercise.detail.instruction.medium.2')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -555,7 +558,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>3</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Keep core engaged throughout the movement
+                            {t('exercise.detail.instruction.medium.3')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -563,7 +566,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>4</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Control the tempo: 2 seconds down, 1 second up
+                            {t('exercise.detail.instruction.medium.4')}
                           </Text>
                         </View>
                       </>
@@ -575,7 +578,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>1</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Ensure complete warm-up and muscle activation
+                            {t('exercise.detail.instruction.hard.1')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -583,7 +586,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>2</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Focus on perfect form over quantity
+                            {t('exercise.detail.instruction.hard.2')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -591,7 +594,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>3</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Maintain maximum tension throughout the set
+                            {t('exercise.detail.instruction.hard.3')}
                           </Text>
                         </View>
                         <View style={styles.instructionItem}>
@@ -599,7 +602,7 @@ export default function ExerciseDetailScreen() {
                             <Text style={styles.instructionNumberText}>4</Text>
                           </View>
                           <Text style={styles.instructionText}>
-                            Use progressive overload techniques safely
+                            {t('exercise.detail.instruction.hard.4')}
                           </Text>
                         </View>
                       </>
@@ -612,7 +615,7 @@ export default function ExerciseDetailScreen() {
                   <View style={styles.fullscreenTracking}>
                     <View style={styles.trackingHeader}>
                       <Ionicons name="fitness" size={24} color={colors.primary} />
-                      <Text style={styles.trackingTitle}>Current Progress</Text>
+                      <Text style={styles.trackingTitle}>{t('exercise.detail.in.progress')}</Text>
                     </View>
 
                     <View style={styles.trackingCard}>
@@ -621,10 +624,10 @@ export default function ExerciseDetailScreen() {
                         style={styles.trackingGradient}
                       >
                         <Text style={styles.trackingLabel}>
-                          {isBreakTime ? 'Break Time' : `Set ${currentSet} of ${currentLevel.sets}`}
+                          {isBreakTime ? t('exercise.detail.break.time') : t('exercise.detail.set.of').replace('{current}', String(currentSet)).replace('{total}', String(currentLevel.sets))}
                         </Text>
                         <Text style={styles.trackingValue}>
-                          {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} reps`}
+                          {isBreakTime ? `${breakTimeRemaining}s` : `${currentLevel.repsPerSet} ${t('dashboard.stats.reps')}`}
                         </Text>
 
                         {/* Progress Bar */}
@@ -637,7 +640,7 @@ export default function ExerciseDetailScreen() {
                           />
                         </View>
                         <Text style={styles.trackingProgressText}>
-                          {currentSet} / {currentLevel.sets} sets completed
+                          {currentSet} / {currentLevel.sets} {t('exercise.detail.sets.completed')}
                         </Text>
                       </LinearGradient>
                     </View>

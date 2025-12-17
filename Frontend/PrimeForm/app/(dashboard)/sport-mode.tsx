@@ -18,15 +18,17 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
-import { sportCategories } from '../../src/data/sportExercises';
+import { sportCategories, getTranslatedSportName } from '../../src/data/sportExercises';
 import userProfileService from '../../src/services/userProfileService';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - spacing.xl * 3) / 2;
 
 export default function SportModePage() {
   const { user } = useAuthContext();
+  const { t, language } = useLanguage();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
@@ -92,8 +94,8 @@ export default function SportModePage() {
   // Load user info from cache or API
   const loadUserInfo = async () => {
     try {
-      const cachedData = userProfileService.getCachedData();
-      if (cachedData && cachedData.data) {
+      const cachedData = await userProfileService.getCachedData();
+      if (cachedData && cachedData.success && cachedData.data) {
         setUserInfo(cachedData.data);
       } else {
         // If no cache, fetch from API
@@ -144,8 +146,8 @@ export default function SportModePage() {
         showsVerticalScrollIndicator={false}
       >
         {/* Page Title */}
-        <Text style={styles.pageTitle}>Choose Your Sport</Text>
-        <Text style={styles.pageSubtitle}>Select a category to start training</Text>
+        <Text style={styles.pageTitle}>{t('sportMode.title')}</Text>
+        <Text style={styles.pageSubtitle}>{t('sportMode.subtitle')}</Text>
 
         {/* Categories Grid */}
         <View style={styles.categoriesContainer}>
@@ -174,9 +176,11 @@ export default function SportModePage() {
 
                     {/* Content */}
                     <View style={styles.cardContent}>
-                      <Text style={styles.cardTitle}>{category.name}</Text>
+                      <Text style={styles.cardTitle}>
+                        {getTranslatedSportName(category.id, t, language)}
+                      </Text>
                       <Text style={[styles.exerciseCount, { color: category.color }]}>
-                        {category.exercises.length} Exercises
+                        {category.exercises.length} {t('sportMode.exercises')}
                       </Text>
                     </View>
                   </View>

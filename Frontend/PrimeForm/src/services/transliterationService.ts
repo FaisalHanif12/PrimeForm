@@ -13,7 +13,12 @@ const englishToUrduMapping: Record<string, string> = {
   'p': 'پ', 'q': 'ق', 'r': 'ر', 's': 'س', 't': 'ت',
   'u': 'ؤ', 'v': 'و', 'w': 'و', 'x': 'ایکس', 'y': 'ی', 'z': 'ز',
   
-  // Letters (uppercase)
+  // Letters (uppercase) - same mapping as lowercase
+  'A': 'ا', 'B': 'ب', 'C': 'س', 'D': 'د', 'E': 'ے',
+  'F': 'ف', 'G': 'گ', 'H': 'ہ', 'I': 'ی', 'J': 'ج',
+  'K': 'ک', 'L': 'ل', 'M': 'م', 'N': 'ن', 'O': 'و',
+  'P': 'پ', 'Q': 'ق', 'R': 'ر', 'S': 'س', 'T': 'ت',
+  'U': 'ؤ', 'V': 'و', 'W': 'و', 'X': 'ایکس', 'Y': 'ی', 'Z': 'ز',
   
   // Numbers
   '0': '۰', '1': '۱', '2': '۲', '3': '۳', '4': '۴',
@@ -44,444 +49,23 @@ Object.entries(englishToUrduMapping).forEach(([english, urdu]) => {
   }
 });
 
-// Enhanced word mappings for common terms
-const englishToUrduWords: Record<string, string> = {
-  // Common names - Enhanced with more natural Urdu transliterations
-  'faisal': 'فیصل',
-  'ahmed': 'احمد',
-  'ali': 'علی',
-  'hassan': 'حسن',
-  'hussain': 'حسین',
-  'fatima': 'فاطمہ',
-  'aisha': 'عائشہ',
-  'sara': 'سارہ',
-  'zara': 'زارہ',
-  'omar': 'عمر',
-  'usman': 'عثمان',
-  'bilal': 'بلال',
-  'maryam': 'مریم',
-  
-  // Modern names with natural Urdu feel
-  'aleeza': 'علیزہ',
-  'aliza': 'علیزہ',
-  'alisha': 'علیشہ',
-  'alina': 'علینہ',
-  'amina': 'امینہ',
-  'amira': 'امیرہ',
-  'anaya': 'عنایہ',
-  'ariana': 'اریانہ',
-  'azra': 'ازرا',
-  'bushra': 'بشرٰی',
-  'dania': 'دانیہ',
-  'eliza': 'علیزہ',
-  'hania': 'ہانیہ',
-  'hira': 'حرا',
-  'iman': 'ایمان',
-  'iqra': 'اقرا',
-  'jannat': 'جنت',
-  'khadija': 'خدیجہ',
-  'layla': 'لیلیٰ',
-  'maham': 'مہم',
-  'nadia': 'نادیہ',
-  'noor': 'نور',
-  'rabia': 'رابعہ',
-  'saba': 'صبا',
-  'sadia': 'سعدیہ',
-  'sana': 'ثناء',
-  'sarah': 'سارہ',
-  'sumaya': 'سمایا',
-  'tahira': 'طاہرہ',
-  'umaira': 'عمیرہ',
-  'yusra': 'یسرا',
-  'zahra': 'زہرا',
-  'zoya': 'زویا',
-  
-  // Male names with natural Urdu feel
-  'ahmad': 'احمد',
-  'abdullah': 'عبداللہ',
-  'abdul': 'عبدال',
-  'adnan': 'عدنان',
-  'ahsan': 'احسن',
-  'amir': 'امیر',
-  'anas': 'انس',
-  'arham': 'ارحم',
-  'asad': 'اسد',
-  'ayman': 'ایمان',
-  'azlan': 'ازلان',
-  'danial': 'دانیال',
-  'ehtesham': 'احتشام',
-  'fahad': 'فہد',
-  'farhan': 'فرحان',
-  'ghulam': 'غلام',
-  'hamza': 'حمزہ',
-  'haris': 'حارث',
-  'ibrahim': 'ابراہیم',
-  'imran': 'عمران',
-  'iqbal': 'اقبال',
-  'irfan': 'عرفان',
-  'ismail': 'اسماعیل',
-  'junaid': 'جنید',
-  'kamran': 'کامران',
-  'kashif': 'کاشف',
-  'khalid': 'خالد',
-  'mahmood': 'محمود',
-  'mohammad': 'محمد',
-  'muhammad': 'محمد',
-  'murtaza': 'مرتضیٰ',
-  'musa': 'موسیٰ',
-  'nabeel': 'نبیل',
-  'nadeem': 'ندیم',
-  'najam': 'نجم',
-  'naseem': 'نسیم',
-  'naveed': 'نوید',
-  'nawaz': 'نواز',
-  'noman': 'نعمان',
-  'osama': 'اسامہ',
-  'qasim': 'قاسم',
-  'rafay': 'رفیع',
-  'rafi': 'رفیع',
-  'rahman': 'رحمان',
-  'raza': 'رضا',
-  'rizwan': 'رضوان',
-  'saad': 'سعد',
-  'sabir': 'صابر',
-  'saeed': 'سعید',
-  'saif': 'سیف',
-  'sajid': 'ساجد',
-  'saleem': 'سلیم',
-  'salman': 'سلمان',
-  'samad': 'صمد',
-  'sami': 'سامی',
-  'shahid': 'شاہد',
-  'shahzad': 'شہزاد',
-  'shoaib': 'شعیب',
-  'sohaib': 'صہیب',
-  'taha': 'طہٰ',
-  'tahir': 'طاہر',
-  'talha': 'طلحہ',
-  'tariq': 'طارق',
-  'waqas': 'وقاص',
-  'waseem': 'وسیم',
-  'yaseen': 'یٰسین',
-  'yousuf': 'یوسف',
-  'yusuf': 'یوسف',
-  'zain': 'زین',
-  'zainab': 'زینب',
-  'zubair': 'زبیر',
-  
-  // Additional Pakistani/Indian names - Male
-  'aadil': 'عادل',
-  'aamir': 'عامر',
-  'aashir': 'عاشر',
-  'abaan': 'آبان',
-  'abrar': 'ابرار',
-  'adil': 'عادل',
-  'afnan': 'افنان',
-  'ahil': 'اہل',
-  'aiman': 'ایمان',
-  'ajmal': 'اجمل',
-  'akbar': 'اکبر',
-  'akram': 'اکرم',
-  'alam': 'عالم',
-  'amjad': 'امجد',
-  'anwar': 'انور',
-  'arif': 'عارف',
-  'arshad': 'ارشاد',
-  'asadullah': 'اسداللہ',
-  'ashfaq': 'اشفاق',
-  'ashraf': 'اشرف',
-  'asif': 'عاصف',
-  'aslam': 'اسلم',
-  'ataullah': 'عطاءاللہ',
-  'azhar': 'اظہر',
-  'aziz': 'عزیز',
-  'badar': 'بدر',
-  'bashir': 'بشیر',
-  'basit': 'باسط',
-  'burhan': 'برہان',
-  'chaudhry': 'چودھری',
-  'dawood': 'داود',
-  'dilawar': 'دلاور',
-  'ehsan': 'احسان',
-  'faraz': 'فراز',
-  'farooq': 'فاروق',
-  'fazal': 'فضل',
-  'ghazi': 'غازی',
-  'habib': 'حبیب',
-  'hafiz': 'حافظ',
-  'haji': 'حاجی',
-  'hakim': 'حکیم',
-  'hamid': 'حامد',
-  'hanif': 'حنیف',
-  'idrees': 'ادریس',
-  'iftikhar': 'افتخار',
-  'ijaz': 'اعجاز',
-  'ikram': 'اکرام',
-  'imtiaz': 'امتیاز',
-  'irshad': 'ارشاد',
-  'ishaq': 'اسحاق',
-  'jabbar': 'جبار',
-  'jaffer': 'جعفر',
-  'jahan': 'جہان',
-  'jameel': 'جمیل',
-  'jawad': 'جواد',
-  'jawed': 'جواد',
-  'jibran': 'جبران',
-  'kabeer': 'کبیر',
-  'kaleem': 'کلیم',
-  'kamal': 'کمال',
-  'karim': 'کریم',
-  'khalil': 'خلیل',
-  'khurram': 'خرم',
-  'latif': 'لطیف',
-  'mahboob': 'محبوب',
-  'majid': 'ماجد',
-  'malik': 'مالک',
-  'manzoor': 'منظور',
-  'masood': 'مسعود',
-  'mazhar': 'مظہر',
-  'mehmood': 'محمود',
-  'mian': 'میان',
-  'mohsin': 'محسن',
-  'momin': 'مومن',
-  'mubashir': 'مبشر',
-  'mudassir': 'مدثر',
-  'mukhtar': 'مختار',
-  'mumtaz': 'ممتاز',
-  'munir': 'منیر',
-  'mushtaq': 'مشتاق',
-  'mustafa': 'مصطفیٰ',
-  'nazir': 'نذیر',
-  'noorullah': 'نوراللہ',
-  'noorul': 'نورال',
-  'nusrat': 'نصرت',
-  'parvez': 'پرویز',
-  'qaiser': 'قیصر',
-  'qamar': 'قمر',
-  'qazi': 'قاضی',
-  'qurban': 'قربان',
-  'rafiq': 'رفیق',
-  'rahim': 'رحیم',
-  'raja': 'راجہ',
-  'rajab': 'رجب',
-  'ramzan': 'رمضان',
-  'rasheed': 'رشید',
-  'rehan': 'ریحان',
-  'sadaqat': 'صداقت',
-  'sanaullah': 'ثناءاللہ',
-  'sardar': 'سردار',
-  'shabbir': 'شبیر',
-  'shadab': 'شاداب',
-  'shafiq': 'شفیق',
-  'shahbaz': 'شہباز',
-  'shaikh': 'شیخ',
-  'shakir': 'شاکر',
-  'shams': 'شمس',
-  'shaukat': 'شوکت',
-  'sohail': 'سہیل',
-  'subhan': 'سبحان',
-  'sufyan': 'سفیان',
-  'sultan': 'سلطان',
-  'taufeeq': 'توفیق',
-  'tayyab': 'طیب',
-  'ubaid': 'عبید',
-  'umar': 'عمر',
-  'usama': 'اسامہ',
-  'waheed': 'واحد',
-  'waqar': 'وقار',
-  'wasiq': 'واثق',
-  'zafar': 'ظفر',
-  'zahid': 'زاہد',
-  'zaki': 'ذکی',
-  'zaman': 'زمان',
-  'zulfiqar': 'ذوالفقار',
-  
-  // Common foods
-  'chicken': 'چکن',
-  'rice': 'چاول',
-  'bread': 'روٹی',
-  'milk': 'دودھ',
-  'tea': 'چائے',
-  'coffee': 'کافی',
-  'water': 'پانی',
-  'apple': 'سیب',
-  'banana': 'کیلا',
-  'orange': 'مالٹا',
-  'egg': 'انڈا',
-  'fish': 'مچھلی',
-  'meat': 'گوشت',
-  
-  // Common exercises
-  'pushups': 'پش اپس',
-  'running': 'دوڑنا',
-  'walking': 'چلنا',
-  'swimming': 'تیراکی',
-  'cycling': 'سائیکلنگ',
-  'yoga': 'یوگا',
-  'gym': 'جم',
-  'workout': 'ورکاؤٹ',
-  
-  // Common words
-  'home': 'گھر',
-  'work': 'کام',
-  'family': 'خاندان',
-  'friend': 'دوست',
-  'school': 'سکول',
-  'university': 'یونیورسٹی',
-  'hospital': 'ہسپتال',
-  'doctor': 'ڈاکٹر',
-  'teacher': 'استاد',
-  'student': 'طالب علم',
-  'book': 'کتاب',
-  'phone': 'فون',
-  'computer': 'کمپیوٹر',
-  'car': 'گاڑی',
-  'house': 'گھر',
-  'office': 'دفتر',
-  
-  // Groceries and common items
-  'groceries': 'گروسری',
-  'shopping': 'خریداری',
-  'market': 'بازار',
-  'store': 'دکان',
-  'restaurant': 'ریسٹورنٹ',
-  'hotel': 'ہوٹل',
-  'park': 'پارک',
-  'beach': 'بیچ',
-  'mountain': 'پہاڑ',
-  'river': 'دریا',
-};
+// Empty word mappings - using character-by-character transliteration only
+const englishToUrduWords: Record<string, string> = {};
 
 // Reverse word mapping
 const urduToEnglishWords: Record<string, string> = {};
-Object.entries(englishToUrduWords).forEach(([english, urdu]) => {
-  urduToEnglishWords[urdu] = english;
-});
 
 class TransliterationService {
   /**
-   * Transliterates text from English to Urdu using character mapping
+   * Transliterates text from English to Urdu using character-by-character mapping
    */
   private transliterateEnglishToUrdu(text: string): string {
     const words = text.split(' ');
     
     return words.map(word => {
-      const lowerWord = word.toLowerCase();
-      const cleanWord = lowerWord.replace(/[^a-zA-Z]/g, '');
-      
-      // Check if it's a complete word mapping
-      if (englishToUrduWords[cleanWord]) {
-        return englishToUrduWords[cleanWord];
-      }
-      
-      // Special handling for names - try to find close matches
-      const nameMatch = this.findClosestNameMatch(cleanWord);
-      if (nameMatch) {
-        return nameMatch;
-      }
-      
-      // Character-by-character transliteration with improved logic
+      // Use character-by-character transliteration directly
       return this.transliterateWordWithContext(word);
     }).join(' ');
-  }
-
-  /**
-   * Find closest name match for better Urdu transliteration
-   */
-  private findClosestNameMatch(word: string): string | null {
-    // Direct matches
-    if (englishToUrduWords[word]) {
-      return englishToUrduWords[word];
-    }
-    
-    // Try common name variations
-    const variations = this.getNameVariations(word);
-    for (const variation of variations) {
-      if (englishToUrduWords[variation]) {
-        return englishToUrduWords[variation];
-      }
-    }
-    
-    // Try partial matches for names
-    const partialMatches = Object.keys(englishToUrduWords).filter(key => 
-      key.startsWith(word.substring(0, 3)) || 
-      key.endsWith(word.substring(word.length - 3)) ||
-      key.includes(word.substring(1, word.length - 1))
-    );
-    
-    if (partialMatches.length > 0) {
-      // Return the closest match based on length similarity
-      const closest = partialMatches.reduce((prev, curr) => 
-        Math.abs(curr.length - word.length) < Math.abs(prev.length - word.length) ? curr : prev
-      );
-      return englishToUrduWords[closest];
-    }
-    
-    return null;
-  }
-
-  /**
-   * Generate common name variations for better matching
-   */
-  private getNameVariations(word: string): string[] {
-    const variations = [];
-    
-    // Common name patterns
-    if (word.endsWith('a')) {
-      variations.push(word.slice(0, -1) + 'ah'); // aleeza -> aleezah
-      variations.push(word.slice(0, -1) + 'a');  // aleeza -> aleeza
-    }
-    if (word.endsWith('h')) {
-      variations.push(word.slice(0, -1) + 'a');  // aleezah -> aleeza
-    }
-    if (word.endsWith('n')) {
-      variations.push(word.slice(0, -1) + 'an'); // adnan -> adnan
-    }
-    if (word.endsWith('m')) {
-      variations.push(word.slice(0, -1) + 'am'); // maham -> maham
-    }
-    
-    // Common letter substitutions
-    const letterSubs = {
-      'c': 'k',
-      'ph': 'f',
-      'z': 's',
-      'q': 'k'
-    };
-    
-    for (const [from, to] of Object.entries(letterSubs)) {
-      if (word.includes(from)) {
-        variations.push(word.replace(new RegExp(from, 'g'), to));
-      }
-    }
-    
-    // Handle common name prefixes and suffixes
-    if (word.startsWith('al')) {
-      variations.push('al' + word.slice(2)); // alisha -> alisha
-      variations.push('el' + word.slice(2)); // alisha -> elisha
-    }
-    if (word.startsWith('el')) {
-      variations.push('al' + word.slice(2)); // elisha -> alisha
-    }
-    if (word.startsWith('ad')) {
-      variations.push('ad' + word.slice(2)); // adnan -> adnan
-    }
-    if (word.startsWith('am')) {
-      variations.push('am' + word.slice(2)); // amina -> amina
-    }
-    
-    // Handle common name endings
-    if (word.endsWith('ia')) {
-      variations.push(word.slice(0, -2) + 'iya'); // maria -> mariya
-    }
-    if (word.endsWith('iya')) {
-      variations.push(word.slice(0, -3) + 'ia'); // mariya -> maria
-    }
-    if (word.endsWith('iya')) {
-      variations.push(word.slice(0, -3) + 'ia'); // mariya -> maria
-    }
-    
-    return variations;
   }
 
   /**
@@ -635,24 +219,32 @@ class TransliterationService {
    * Main transliteration function - handles bidirectional conversion
    */
   public transliterateText(text: string, targetLanguage: 'en' | 'ur'): string {
-    if (!text || text.trim() === '') {
-      return text;
+    // Handle non-string values (numbers, null, undefined)
+    if (text === null || text === undefined) {
+      return '';
+    }
+    
+    // Convert to string if it's not already
+    const textStr = String(text);
+    
+    if (!textStr || textStr.trim() === '') {
+      return textStr;
     }
 
     if (targetLanguage === 'ur') {
       // Convert to Urdu
-      if (this.containsEnglishText(text)) {
-        return this.transliterateEnglishToUrdu(text);
+      if (this.containsEnglishText(textStr)) {
+        return this.transliterateEnglishToUrdu(textStr);
       }
       // Already in Urdu or mixed, return as is
-      return text;
+      return textStr;
     } else {
       // Convert to English
-      if (this.containsUrduText(text)) {
-        return this.transliterateUrduToEnglish(text);
+      if (this.containsUrduText(textStr)) {
+        return this.transliterateUrduToEnglish(textStr);
       }
       // Already in English or mixed, return as is
-      return text;
+      return textStr;
     }
   }
 
@@ -666,11 +258,23 @@ class TransliterationService {
   /**
    * Transliterates numbers from English to Urdu numerals
    */
-  public transliterateNumbers(text: string, targetLanguage: 'en' | 'ur'): string {
+  public transliterateNumbers(text: string | number | null | undefined, targetLanguage: 'en' | 'ur'): string {
+    // Handle null, undefined, or empty values
+    if (text === null || text === undefined) {
+      return '';
+    }
+    
+    // Convert to string if it's a number
+    const textStr = String(text);
+    
+    if (!textStr || textStr.trim() === '') {
+      return textStr;
+    }
+    
     if (targetLanguage === 'ur') {
-      return text.replace(/[0-9]/g, (match) => englishToUrduMapping[match] || match);
+      return textStr.replace(/[0-9]/g, (match) => englishToUrduMapping[match] || match);
     } else {
-      return text.replace(/[۰-۹]/g, (match) => urduToEnglishMapping[match] || match);
+      return textStr.replace(/[۰-۹]/g, (match) => urduToEnglishMapping[match] || match);
     }
   }
 
