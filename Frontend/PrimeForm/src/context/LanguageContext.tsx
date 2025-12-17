@@ -1036,6 +1036,8 @@ const translations = {
     'notification.action.welcome': 'Welcome! Redirecting to dashboard...',
     'notification.action.diet.plan': 'Opening your new diet plan...',
     'notification.action.workout.plan': 'Opening your new workout plan...',
+    'notification.action.gym': 'Opening gym exercises...',
+    'notification.action.streak': 'Opening streak tracker...',
     'notification.action.general': 'Opening notification details...',
     'notification.action.unknown': 'Unknown notification type',
     // Logo/Brand
@@ -2045,6 +2047,13 @@ const translations = {
     'notification.bulk.mark.read': 'بڑی تعداد میں پڑھا ہوا نشان زد کریں',
     'notification.bulk.delete': 'بڑی تعداد میں حذف کریں',
     'notification.bulk.action.confirm': 'کیا آپ واقعی {count} اطلاعات کو {action} کرنا چاہتے ہیں؟',
+    'notification.action.welcome': 'خوش آمدید! ڈیش بورڈ پر منتقل ہو رہے ہیں...',
+    'notification.action.diet.plan': 'آپ کا نیا ڈائٹ پلان کھول رہے ہیں...',
+    'notification.action.workout.plan': 'آپ کا نیا ورکاؤٹ پلان کھول رہے ہیں...',
+    'notification.action.gym': 'جم کی ورزشیں کھول رہے ہیں...',
+    'notification.action.streak': 'اسٹریک ٹریکر کھول رہے ہیں...',
+    'notification.action.general': 'اطلاع کی تفصیلات کھول رہے ہیں...',
+    'notification.action.unknown': 'نامعلوم اطلاع کی قسم',
     'notification.no.selection': 'کوئی اطلاعات منتخب نہیں',
     'notification.retry': 'دوبارہ کوشش کریں',
     // Notification handler toast messages
@@ -2057,6 +2066,8 @@ const translations = {
     'notification.action.welcome': 'خوش آمدید! ڈیش بورڈ پر ری ڈائریکٹ ہو رہا ہے...',
     'notification.action.diet.plan': 'آپ کا نیا ڈائٹ پلان کھول رہا ہے...',
     'notification.action.workout.plan': 'آپ کا نیا ورک آؤٹ پلان کھول رہا ہے...',
+    'notification.action.gym': 'جم کی ورزشیں کھول رہا ہے...',
+    'notification.action.streak': 'اسٹریک ٹریکر کھول رہا ہے...',
     'notification.action.general': 'اطلاعات کی تفصیلات کھول رہا ہے...',
     'notification.action.unknown': 'نامعلوم اطلاع کی قسم',
     // Logo/Brand

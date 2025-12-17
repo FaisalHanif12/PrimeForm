@@ -3,6 +3,7 @@ import { Text, View, Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import pushNotificationService from '../services/pushNotificationService';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
@@ -31,6 +32,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
   const responseListener = useRef<Notifications.Subscription | null>(null);
   const { language, t } = useLanguage();
   const { showToast } = useToast();
+  const router = useRouter();
 
   const handleRegistrationError = (errorMessage: string) => {
     console.error('Push notification registration failed:', errorMessage);
@@ -122,32 +124,60 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         appLanguage: language
       });
       
-      // Handle different notification types with language awareness
-      if (data?.type) {
+      // Handle different notification types with language awareness and navigation
+      if (data?.type || data?.navigateTo) {
+        const navigateTo = data?.navigateTo || data?.actionType;
+        
+        // Navigate based on notification type
         switch (data.type) {
           case 'welcome':
             console.log(`📱 Welcome notification tapped (${notificationLanguage})`);
             showToast('success', t('notification.action.welcome'));
-            // Navigate to dashboard or welcome screen
+            router.push('/(dashboard)');
             break;
           case 'diet_plan_created':
-            console.log(`📱 Diet plan notification tapped (${notificationLanguage})`);
+          case 'diet_reminder':
+            console.log(`📱 Diet notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.diet.plan'));
-            // Navigate to diet plan screen
+            router.push('/(dashboard)/diet');
             break;
           case 'workout_plan_created':
-            console.log(`📱 Workout plan notification tapped (${notificationLanguage})`);
+          case 'workout_reminder':
+            console.log(`📱 Workout notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.workout.plan'));
-            // Navigate to workout plan screen
+            router.push('/(dashboard)/workout');
+            break;
+          case 'gym_reminder':
+            console.log(`📱 Gym notification tapped (${notificationLanguage})`);
+            showToast('info', t('notification.action.gym'));
+            router.push('/(dashboard)/gym');
+            break;
+          case 'streak_broken_reminder':
+            console.log(`📱 Streak notification tapped (${notificationLanguage})`);
+            showToast('info', t('notification.action.streak'));
+            router.push('/(dashboard)/streak');
             break;
           case 'general':
             console.log(`📱 General notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.general'));
-            // Navigate to notifications screen or relevant section
+            // Navigate to notifications screen or dashboard
+            router.push('/(dashboard)');
             break;
           default:
-            console.log(`📱 Unknown notification type tapped (${notificationLanguage})`);
-            showToast('warning', t('notification.action.unknown'));
+            // Try to navigate based on navigateTo field
+            if (navigateTo) {
+              console.log(`📱 Navigating to: ${navigateTo}`);
+              try {
+                router.push(`/(dashboard)/${navigateTo}` as any);
+              } catch (navError) {
+                console.error('Navigation error:', navError);
+                router.push('/(dashboard)');
+              }
+            } else {
+              console.log(`📱 Unknown notification type tapped (${notificationLanguage})`);
+              showToast('warning', t('notification.action.unknown'));
+              router.push('/(dashboard)');
+            }
         }
       }
     } catch (error) {

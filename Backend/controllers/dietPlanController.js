@@ -1,5 +1,6 @@
 const DietPlan = require('../models/DietPlan');
 const User = require('../models/User');
+const notificationService = require('../services/notificationService');
 
 // Create a new diet plan
 const createDietPlan = async (req, res) => {
@@ -149,6 +150,19 @@ const createDietPlan = async (req, res) => {
 
     const savedDietPlan = await dietPlan.save();
     console.log('✅ Diet plan created successfully:', savedDietPlan._id);
+
+    // Create in-app notification for diet plan creation
+    try {
+      await notificationService.createDietPlanNotification(userId, {
+        planId: savedDietPlan._id.toString(),
+        goal: savedDietPlan.goal,
+        duration: savedDietPlan.duration
+      });
+      console.log('✅ Diet plan notification created');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create diet plan notification:', notifError);
+      // Don't fail the request if notification creation fails
+    }
 
     res.status(201).json({
       success: true,
