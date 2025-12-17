@@ -390,9 +390,10 @@ export default function WorkoutPlanDisplay({
         return;
       }
       
-      // Only reload if it's been more than 5 seconds since last focus AND component is initialized
+      // ✅ OPTIMIZATION: Only reload if it's been more than 30 seconds since last focus
+      // Completion states don't change frequently, so we can extend the threshold
       // This prevents unnecessary reloads on quick navigation while still syncing after longer absences
-      if (isInitialized && now - lastFocusTime.current > 5000) {
+      if (isInitialized && now - lastFocusTime.current > 30000) {
         (async () => {
           await loadCompletionStates();
           updateProgress();

@@ -55,23 +55,23 @@ export default function ContactPage() {
 
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
-      showToast('error', 'Please enter your name');
+      showToast('error', t('contact.validation.name'));
       return false;
     }
     if (!formData.email.trim()) {
-      showToast('error', 'Please enter your email');
+      showToast('error', t('contact.validation.email'));
       return false;
     }
     if (!formData.email.includes('@')) {
-      showToast('error', 'Please enter a valid email address');
+      showToast('error', t('contact.validation.emailInvalid'));
       return false;
     }
     if (!formData.problem.trim()) {
-      showToast('error', 'Please describe your problem');
+      showToast('error', t('contact.validation.problem'));
       return false;
     }
     if (formData.problem.trim().length < 10) {
-      showToast('error', 'Please provide more details about your problem (at least 10 characters)');
+      showToast('error', t('contact.validation.problemMin'));
       return false;
     }
     return true;
@@ -91,13 +91,13 @@ export default function ContactPage() {
       });
 
       if (response && response.success) {
-        showToast('success', 'Message sent successfully! We\'ll get back to you soon.');
+        showToast('success', t('contact.success'));
         setFormData({ name: '', email: '', problem: '' });
       } else {
-        showToast('error', response?.message || 'Failed to send email. Please try again.');
+        showToast('error', response?.message || t('contact.error.send'));
       }
     } catch (error: any) {
-      showToast('error', error?.message || 'Failed to send message. Please try again later.');
+      showToast('error', error?.message || t('contact.error.message'));
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +150,7 @@ export default function ContactPage() {
           break;
       }
     } catch (error) {
-      showToast('error', 'Something went wrong. Please try again.');
+      showToast('error', t('contact.error.general'));
     }
   };
 
@@ -191,31 +191,31 @@ export default function ContactPage() {
         <View style={styles.formIconContainer}>
           <Ionicons name="mail" size={32} color={colors.gold} />
         </View>
-        <Text style={styles.formTitle}>Get in Touch</Text>
+        <Text style={styles.formTitle}>{t('contact.title')}</Text>
         <Text style={styles.formSubtitle}>
-          Have a question or need help? Send us a message and we'll get back to you as soon as possible.
+          {t('contact.subtitle')}
         </Text>
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Full Name *</Text>
+        <Text style={styles.inputLabel}>{t('contact.form.name')} *</Text>
         <TextInput
           style={styles.textInput}
           value={formData.name}
           onChangeText={(text) => handleInputChange('name', text)}
-          placeholder="Enter your full name"
+          placeholder={t('contact.form.name.placeholder')}
           placeholderTextColor={colors.mutedText}
           autoCapitalize="words"
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Email Address *</Text>
+        <Text style={styles.inputLabel}>{t('contact.form.email')} *</Text>
         <TextInput
           style={styles.textInput}
           value={formData.email}
           onChangeText={(text) => handleInputChange('email', text)}
-          placeholder="Enter your email address"
+          placeholder={t('contact.form.email.placeholder')}
           placeholderTextColor={colors.mutedText}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -223,19 +223,19 @@ export default function ContactPage() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.inputLabel}>Describe Your Problem *</Text>
+        <Text style={styles.inputLabel}>{t('contact.form.problem')} *</Text>
         <TextInput
           style={[styles.textInput, styles.textArea]}
           value={formData.problem}
           onChangeText={(text) => handleInputChange('problem', text)}
-          placeholder="Please describe your problem or question in detail..."
+          placeholder={t('contact.form.problem.placeholder')}
           placeholderTextColor={colors.mutedText}
           multiline
           numberOfLines={6}
           textAlignVertical="top"
         />
         <Text style={styles.characterCount}>
-          {formData.problem.length}/500 characters
+          {formData.problem.length}/500 {t('contact.form.characters')}
         </Text>
       </View>
 
@@ -251,12 +251,12 @@ export default function ContactPage() {
         {isSubmitting ? (
           <View style={styles.submitButtonContent}>
             <Ionicons name="hourglass-outline" size={20} color={colors.background} />
-            <Text style={styles.submitButtonText}>Sending...</Text>
+            <Text style={styles.submitButtonText}>{t('contact.form.sending')}</Text>
           </View>
         ) : (
           <View style={styles.submitButtonContent}>
             <Ionicons name="send" size={20} color={colors.background} />
-            <Text style={styles.submitButtonText}>Send Message</Text>
+            <Text style={styles.submitButtonText}>{t('contact.form.send')}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -288,7 +288,7 @@ export default function ContactPage() {
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
           userName={user?.fullName || t('common.user')}
-          userEmail={user?.email || 'user@primeform.com'}
+          userEmail={user?.email || 'user@purebody.com'}
           isGuest={!isAuthenticated}
           userInfo={null}
           badges={[]}

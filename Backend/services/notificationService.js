@@ -6,8 +6,8 @@ const pushNotificationService = require('./pushNotificationService');
 const notificationTranslations = {
   en: {
     welcome: {
-      title: 'Welcome to PrimeForm! 🎉',
-      message: (name) => `Hi ${name}! Welcome to PrimeForm - your AI-powered fitness companion. Start your journey by creating your personalized diet and workout plans.`
+      title: 'Welcome to Pure Body! 🎉',
+      message: (name) => `Hi ${name}! Welcome to Pure Body - your AI-powered fitness companion. Start your journey by creating your personalized diet and workout plans.`
     },
     diet_plan: {
       title: 'AI Diet Plan Created! 🥗',
@@ -19,7 +19,7 @@ const notificationTranslations = {
     },
     general: {
       title: 'Notification',
-      message: 'You have a new notification from PrimeForm.'
+      message: 'You have a new notification from Pure Body.'
     },
     profile_completion_badge: {
       title: 'Profile Completion Badge Earned! 🏆',

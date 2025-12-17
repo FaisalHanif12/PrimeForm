@@ -243,15 +243,25 @@ export default function DashboardScreen() {
     checkForNewDay();
   }, []);
 
-  // OPTIMIZATION: Only refresh on new day, use cached data otherwise
+  // ✅ OPTIMIZATION: Combined AppState listener - handles both data refresh AND auth check
+  // This prevents duplicate listeners and reduces API calls
   useEffect(() => {
     let isRefreshing = false; // Prevent concurrent refreshes
+    let lastActiveTime = 0; // Track last time app became active
 
     const handleAppStateChange = async (nextAppState: string) => {
       if (nextAppState === 'active' && !isRefreshing) {
+        const now = Date.now();
+        // ✅ CRITICAL: Debounce rapid app state changes (e.g., keyboard show/hide)
+        // Only process if it's been at least 1 second since last activation
+        if (now - lastActiveTime < 1000) {
+          return;
+        }
+        lastActiveTime = now;
         isRefreshing = true;
 
         try {
+          // ✅ CRITICAL: Combined logic - check auth AND refresh data
           // Only force refresh if it's a new day
           const today = new Date().toDateString();
           const lastCheckedDay = await AsyncStorage.getItem('last_checked_day');
@@ -259,13 +269,31 @@ export default function DashboardScreen() {
           if (lastCheckedDay !== today) {
             await AsyncStorage.setItem('last_checked_day', today);
             // Force refresh only on new day
-          await Promise.all([
+            await Promise.all([
               loadCompletionStates(true),
               loadDynamicData(true)
-          ]);
+            ]);
           } else {
             // Not a new day - just reload from local storage, no API call
             await loadCompletionStates();
+          }
+
+          // ✅ CRITICAL: Also handle auth check (merged from duplicate listener)
+          if (!isAuthenticated) {
+            // User is not authenticated, check if they have completed signup
+            const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
+            const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+
+            if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
+              // User has completed signup but token might be expired
+              // Try to refresh authentication (but don't redirect here - let app/index.tsx handle it)
+              try {
+                const { authService } = await import('../../src/services/authService');
+                await authService.isAuthenticated(); // Just check, don't redirect
+              } catch (error) {
+                // Auth check failed, but don't redirect here
+              }
+            }
           }
         } catch (error) {
           // Error refreshing data
@@ -275,13 +303,13 @@ export default function DashboardScreen() {
       }
     };
 
-    // Listen for app state changes
+    // ✅ CRITICAL: Single AppState listener (removed duplicate)
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
       subscription?.remove();
     };
-  }, []);
+  }, [isAuthenticated]); // Include isAuthenticated to handle auth state changes
 
   // Listen for meal completion events to update dashboard in real-time
   // OPTIMIZATION: Only update local completion states, do NOT reload full plans
@@ -409,7 +437,7 @@ export default function DashboardScreen() {
         quickActions: [],
         user: {
           fullName: isAuthenticated ? (user?.fullName || 'User') : (hasCompletedSignup ? 'User' : 'Guest'),
-          email: isAuthenticated ? (user?.email || 'user@example.com') : (hasCompletedSignup ? 'user@primeform.com' : 'guest@primeform.com'),
+          email: isAuthenticated ? (user?.email || 'user@example.com') : (hasCompletedSignup ? 'user@purebody.com' : 'guest@purebody.com'),
           isEmailVerified: isAuthenticated ? (user?.isEmailVerified || false) : hasCompletedSignup,
           memberSince: new Date().toISOString(),
           daysSinceJoining: 1,
@@ -991,48 +1019,8 @@ export default function DashboardScreen() {
     router.replace('/(dashboard)');
   };
 
-  // Handle when user returns from signup or app comes to foreground
-  useEffect(() => {
-    const handleAppStateChange = async (nextAppState: string) => {
-      if (nextAppState === 'active') {
-        // App came to foreground, check authentication status
-        if (!isAuthenticated) {
-          // User is not authenticated, check if they have completed signup
-          const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
-          const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
-
-          if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
-            // User has completed signup but token might be expired
-            // Try to refresh authentication
-            try {
-              const isStillValid = await authService.isAuthenticated();
-              if (!isStillValid) {
-                // Token is expired, user needs to login again
-                router.replace('/auth/login');
-                return;
-              }
-            } catch (error) {
-              router.replace('/auth/login');
-              return;
-            }
-          } else {
-            // User is not authenticated and has not completed signup
-            // Ensure no current session access
-            resetSignupStatus();
-          }
-        } else {
-          // User is authenticated, ensure they stay on dashboard
-          // Data will be refreshed by the optimized AppState listener
-        }
-      }
-    };
-
-    // Add AppState listener
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    // Cleanup subscription
-    return () => subscription?.remove();
-  }, [isAuthenticated]);
+  // ✅ REMOVED: Duplicate AppState listener - functionality merged into the single listener above
+  // This prevents duplicate API calls and reduces "too many requests" errors
 
   // Check for actual authentication status changes
   useEffect(() => {

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PrimeForm",
+    "name": "Pure Body",
     "slug": "primeform",
     "version": "1.0.0",
     "projectId": "ed01c701-6e7b-4790-9466-6305dabab35d",
@@ -22,7 +22,7 @@
       "icon": "./assets/images/PrimeIcon.png",
       "color": "#6366F1",
       "androidMode": "default",
-      "androidCollapsedTitle": "PrimeForm"
+      "androidCollapsedTitle": "Pure Body"
     },
     "android": {
       "adaptiveIcon": {

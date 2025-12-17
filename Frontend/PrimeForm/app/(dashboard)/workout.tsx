@@ -138,12 +138,14 @@ export default function WorkoutScreen() {
                 console.log('✅ Found workout plan in local storage, using it immediately');
                 setWorkoutPlan(plan);
                 setHasCheckedLocalStorage(true);
-                // PERFORMANCE: Only sync in background if cache might be stale (older than 5 minutes)
+                // ✅ OPTIMIZATION: Only sync in background if cache might be stale (older than 30 minutes)
+                // Diet/workout plans don't change frequently, so we can extend cache time
                 // This prevents unnecessary API calls when data is fresh
                 const planTimestamp = plan.updatedAt || plan.createdAt;
+                const CACHE_STALE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
                 const shouldSync = planTimestamp 
-                  ? (Date.now() - new Date(planTimestamp).getTime() > 5 * 60 * 1000)
-                  : true; // If no timestamp, sync once to be safe
+                  ? (Date.now() - new Date(planTimestamp).getTime() > CACHE_STALE_THRESHOLD)
+                  : false; // If no timestamp, assume cache is fresh (don't sync)
                 
                 if (shouldSync) {
                   // Only sync if cache might be stale

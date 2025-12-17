@@ -158,7 +158,8 @@ export default function GymScreen() {
   useEffect(() => {
     const loadUserInfo = async () => {
       try {
-        const cachedData = userProfileService.getCachedData();
+        // ✅ CRITICAL: getCachedData() is async, must await
+        const cachedData = await userProfileService.getCachedData();
         if (cachedData && cachedData.data) {
           setUserInfo(cachedData.data);
         } else {
@@ -182,10 +183,17 @@ export default function GymScreen() {
     checkPersonalizedWorkout();
   }, []);
 
-  // Re-check personalized workout when screen comes into focus
+  // ✅ OPTIMIZATION: Re-check personalized workout when screen comes into focus
+  // Only check if it's been more than 10 seconds since last check to prevent rapid successive calls
+  const lastCheckTime = React.useRef<number>(0);
   useFocusEffect(
     React.useCallback(() => {
-      checkPersonalizedWorkout();
+      const now = Date.now();
+      // Debounce rapid focus changes (e.g., keyboard show/hide)
+      if (now - lastCheckTime.current > 10000) {
+        checkPersonalizedWorkout();
+        lastCheckTime.current = now;
+      }
     }, [])
   );
 

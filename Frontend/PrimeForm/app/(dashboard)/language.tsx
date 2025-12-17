@@ -48,7 +48,7 @@ const languages: LanguageOption[] = [
 
 export default function LanguagePreferencesPage() {
   const router = useRouter();
-  const { language, changeLanguage } = useLanguage();
+  const { language, changeLanguage, t } = useLanguage();
   const { showToast } = useToast();
   const { user } = useAuthContext();
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -102,7 +102,7 @@ export default function LanguagePreferencesPage() {
           break;
       }
     } catch (error) {
-      showToast('error', 'Unable to complete that action. Please try again.');
+      showToast('error', t('language.preferences.actionFailed'));
     }
   };
 
@@ -128,9 +128,9 @@ export default function LanguagePreferencesPage() {
     try {
       await changeLanguage(lang);
       const languageName = languages.find(l => l.code === lang)?.name || lang.toUpperCase();
-      showToast('success', `Language changed to ${languageName}`);
+      showToast('success', `${t('language.preferences.changed')} ${languageName}`);
     } catch (error) {
-      showToast('error', 'Failed to change language. Please try again.');
+      showToast('error', t('language.preferences.changeFailed'));
     } finally {
       setTimeout(() => setIsChanging(false), 300);
     }
@@ -201,7 +201,7 @@ export default function LanguagePreferencesPage() {
         onClose={() => setSidebarVisible(false)}
         onMenuItemPress={handleSidebarMenuPress}
         userName={user?.fullName || 'Guest User'}
-        userEmail={user?.email || 'guest@primeform.com'}
+        userEmail={user?.email || 'guest@purebody.com'}
       />
 
       {/* Notification Modal */}
@@ -228,9 +228,9 @@ export default function LanguagePreferencesPage() {
       >
         {/* Hero Section */}
         <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>Language Preferences</Text>
+          <Text style={styles.heroTitle}>{t('language.preferences.title')}</Text>
           <Text style={styles.heroSubtitle}>
-            Choose your preferred language for the app interface
+            {t('language.preferences.subtitle')}
           </Text>
         </View>
 
@@ -239,15 +239,15 @@ export default function LanguagePreferencesPage() {
           <View style={styles.currentLanguageBadge}>
             <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
             <Text style={styles.currentLanguageText}>
-              Current: {languages.find(l => l.code === language)?.name}
+              {t('language.preferences.current')}: {languages.find(l => l.code === language)?.name}
             </Text>
           </View>
         </View>
 
         {/* Language Options */}
         <View style={styles.languagesSection}>
-          <Text style={styles.sectionTitle}>Available Languages</Text>
-          <Text style={styles.sectionSubtitle}>Select a language to change</Text>
+          <Text style={styles.sectionTitle}>{t('language.preferences.available')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('language.preferences.select')}</Text>
 
           {languages.map((lang) => {
             const isSelected = language === lang.code;
@@ -280,7 +280,7 @@ export default function LanguagePreferencesPage() {
                         </Text>
                         {isSelected && (
                           <View style={styles.activeBadge}>
-                            <Text style={styles.activeBadgeText}>Active</Text>
+                            <Text style={styles.activeBadgeText}>{t('language.preferences.active')}</Text>
                           </View>
                         )}
                       </View>

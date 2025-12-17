@@ -202,7 +202,7 @@ export default function SportModePage() {
         onClose={() => setSidebarVisible(false)}
         onMenuItemPress={handleSidebarMenuPress}
         userName={user?.fullName || 'User'}
-        userEmail={user?.email || 'user@primeform.com'}
+        userEmail={user?.email || 'user@purebody.com'}
         userInfo={userInfo}
       />
 

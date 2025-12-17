@@ -93,10 +93,17 @@ export default function PersonalizedWorkoutScreen() {
     checkTodayCompletion();
   }, []);
 
-  // Re-check completion status when screen comes into focus
+  // ✅ OPTIMIZATION: Re-check completion status when screen comes into focus
+  // Only check if it's been more than 10 seconds since last check to prevent rapid successive calls
+  const lastCompletionCheck = React.useRef<number>(0);
   useFocusEffect(
     React.useCallback(() => {
-      checkTodayCompletion();
+      const now = Date.now();
+      // Debounce rapid focus changes (e.g., keyboard show/hide)
+      if (now - lastCompletionCheck.current > 10000) {
+        checkTodayCompletion();
+        lastCompletionCheck.current = now;
+      }
     }, [])
   );
 

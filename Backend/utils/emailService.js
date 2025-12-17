@@ -24,18 +24,18 @@ const sendOTPEmail = async (email, otp, fullName, purpose = 'verification') => {
 
     const mailOptions = {
       from: {
-        name: 'PrimeForm',
+        name: 'Pure Body',
         address: process.env.GMAIL_USER
       },
       to: email,
-      subject: `PrimeForm - ${purposeText} Code`,
+      subject: `Pure Body - ${purposeText} Code`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>PrimeForm - ${purposeText}</title>
+          <title>Pure Body - ${purposeText}</title>
           <style>
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -128,7 +128,7 @@ const sendOTPEmail = async (email, otp, fullName, purpose = 'verification') => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🏃‍♂️ PrimeForm</h1>
+              <h1>🏃‍♂️ Pure Body</h1>
               <p>Your Fitness Journey Starts Here</p>
             </div>
             
@@ -149,13 +149,13 @@ const sendOTPEmail = async (email, otp, fullName, purpose = 'verification') => {
               </div>
               
               <p class="message">
-                Enter this code in the PrimeForm app to continue with your ${actionText}.
+                Enter this code in the Pure Body app to continue with your ${actionText}.
               </p>
             </div>
             
             <div class="footer">
               <p>
-                <strong class="logo">PrimeForm</strong><br>
+                <strong class="logo">Pure Body</strong><br>
                 Transform Your Body, Transform Your Life<br>
                 <em>This is an automated email. Please do not reply.</em>
               </p>
@@ -186,18 +186,18 @@ const sendWelcomeEmail = async (email, fullName) => {
 
     const mailOptions = {
       from: {
-        name: 'PrimeForm',
+        name: 'Pure Body',
         address: process.env.GMAIL_USER
       },
       to: email,
-      subject: 'Welcome to PrimeForm - Let\'s Start Your Fitness Journey!',
+      subject: 'Welcome to Pure Body - Let\'s Start Your Fitness Journey!',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to PrimeForm</title>
+          <title>Welcome to Pure Body</title>
           <style>
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -276,14 +276,14 @@ const sendWelcomeEmail = async (email, fullName) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to PrimeForm!</h1>
+              <h1>🎉 Welcome to Pure Body!</h1>
               <p>Get ready to transform your fitness journey</p>
             </div>
             
             <div class="content">
               <div class="welcome-message">
                 <h2>Hello ${fullName}!</h2>
-                <p>Congratulations on taking the first step towards a healthier, stronger you! We're thrilled to have you join the PrimeForm family.</p>
+                <p>Congratulations on taking the first step towards a healthier, stronger you! We're thrilled to have you join the Pure Body family.</p>
               </div>
               
               <div class="features">
@@ -332,7 +332,7 @@ const sendWelcomeEmail = async (email, fullName) => {
             
             <div class="footer">
               <p>
-                <strong>PrimeForm</strong><br>
+                <strong>Pure Body</strong><br>
                 Transform Your Body, Transform Your Life<br>
                 <em>This is an automated email. Please do not reply.</em>
               </p>
@@ -367,18 +367,18 @@ const sendContactEmail = async ({ fromName, fromEmail, problem }) => {
 
     const mailOptions = {
       from: {
-        name: 'PrimeForm Contact Form',
+        name: 'Pure Body Contact Form',
         address: process.env.GMAIL_USER
       },
       to: 'mehrfaisal111@gmail.com', // Your email address
-      subject: `PrimeForm Contact Form - ${fromName}`,
+      subject: `Pure Body Contact Form - ${fromName}`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>PrimeForm Contact Form</title>
+          <title>Pure Body Contact Form</title>
           <style>
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -464,7 +464,7 @@ const sendContactEmail = async ({ fromName, fromEmail, problem }) => {
           <div class="container">
             <div class="header">
               <h1>📧 New Contact Form Submission</h1>
-              <p>Someone has reached out through the PrimeForm app</p>
+              <p>Someone has reached out through the Pure Body app</p>
             </div>
             
             <div class="content">
@@ -487,9 +487,9 @@ const sendContactEmail = async ({ fromName, fromEmail, problem }) => {
             
             <div class="footer">
               <p>
-                <strong>PrimeForm</strong><br>
+                <strong>Pure Body</strong><br>
                 Contact Form Submission<br>
-                <em>This is an automated email from the PrimeForm app.</em>
+                <em>This is an automated email from the Pure Body app.</em>
               </p>
               <div class="timestamp">
                 Sent on: ${new Date().toLocaleString()}

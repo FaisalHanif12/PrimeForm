@@ -90,7 +90,7 @@ export default function AITrainerScreen() {
       // Check subscription (mock)
       const hasSubscription = true;
       if (!hasSubscription) {
-        showToast('warning', 'AI Trainer is available for Premium subscribers only.');
+        showToast('warning', t('aiTrainer.premiumOnly'));
         router.push('/(dashboard)/subscription');
         return;
       }
@@ -100,10 +100,13 @@ export default function AITrainerScreen() {
         setChatMessages(chatResponse.data);
       } else {
         // If no conversation exists, create a new one with welcome message
+        const welcomeText = user?.fullName 
+          ? t('aiTrainer.welcome').replace('{name}', user.fullName)
+          : t('aiTrainer.welcome.guest');
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
           type: 'ai',
-          message: `Hello ${user?.fullName || 'there'}! I'm your AI Trainer. I'm here to help you optimize your workouts, nutrition, and overall fitness journey. What would you like to know?`,
+          message: welcomeText,
           timestamp: new Date(),
           category: 'general'
         };
@@ -111,7 +114,7 @@ export default function AITrainerScreen() {
       }
 
     } catch (error) {
-      showToast('error', 'Failed to load chat history.');
+      showToast('error', t('aiTrainer.error.loadHistory'));
     } finally {
       setIsLoading(false);
     }
@@ -125,10 +128,10 @@ export default function AITrainerScreen() {
         setChatMessages(response.data);
         scrollToBottom();
       } else {
-        showToast('error', 'Failed to load conversation.');
+        showToast('error', t('aiTrainer.error.loadConversation'));
       }
     } catch (error) {
-      showToast('error', 'Failed to load conversation.');
+      showToast('error', t('aiTrainer.error.loadConversation'));
     } finally {
       setIsLoading(false);
     }
@@ -141,10 +144,13 @@ export default function AITrainerScreen() {
       const newConversationId = await aiTrainerService.createNewConversation();
       
       // Reset chat messages with welcome message
+      const welcomeText = user?.fullName 
+        ? t('aiTrainer.welcome').replace('{name}', user.fullName)
+        : t('aiTrainer.welcome.guest');
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         type: 'ai',
-        message: `Hello ${user?.fullName || 'there'}! I'm your AI Trainer. I'm here to help you optimize your workouts, nutrition, and overall fitness journey. What would you like to know?`,
+        message: welcomeText,
         timestamp: new Date(),
         category: 'general'
       };
@@ -152,10 +158,10 @@ export default function AITrainerScreen() {
       setChatMessages([welcomeMessage]);
       setCurrentMessage('');
       scrollToBottom();
-      showToast('success', 'New chat started');
+      showToast('success', t('aiTrainer.success.newChat'));
     } catch (error) {
       console.error('Error creating new chat:', error);
-      showToast('error', 'Failed to create new chat.');
+      showToast('error', t('aiTrainer.error.newChat'));
     } finally {
       setIsLoading(false);
     }
@@ -176,10 +182,7 @@ export default function AITrainerScreen() {
       const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
 
       if (currentCount >= 3) {
-        showToast(
-          'warning',
-          'You have reached today\'s limit of 3 messages to the AI Trainer. Please come back tomorrow.'
-        );
+        showToast('warning', t('aiTrainer.limit.reached'));
         return;
       }
 
@@ -225,7 +228,7 @@ export default function AITrainerScreen() {
         scrollToBottom();
       }
     } catch (error) {
-      showToast('error', 'Failed to send message. Please try again.');
+      showToast('error', t('aiTrainer.error.send'));
     } finally {
       setIsTyping(false);
     }
@@ -272,7 +275,7 @@ export default function AITrainerScreen() {
           await authService.logout();
           router.replace('/auth/login');
         } catch (error) {
-          showToast('error', 'Failed to logout.');
+          showToast('error', t('aiTrainer.error.logout'));
         }
         break;
     }
@@ -327,7 +330,7 @@ export default function AITrainerScreen() {
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Initializing AI Trainer...</Text>
+            <Text style={styles.loadingText}>{t('aiTrainer.loading')}</Text>
           </View>
         </SafeAreaView>
       </DecorativeBackground>
@@ -348,8 +351,8 @@ export default function AITrainerScreen() {
           <View style={styles.headerContainer}>
             <View style={styles.headerTitleRow}>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>AI Trainer</Text>
-                <Text style={styles.headerSubtitle}>Your Personal Fitness Coach</Text>
+                <Text style={styles.headerTitle}>{t('aiTrainer.title')}</Text>
+                <Text style={styles.headerSubtitle}>{t('aiTrainer.subtitle')}</Text>
               </View>
               <TouchableOpacity
                 style={styles.historyButton}
@@ -377,7 +380,7 @@ export default function AITrainerScreen() {
                 onPress={handleLoadMore}
                 activeOpacity={0.7}
               >
-                <Text style={styles.loadMoreText}>Load previous messages</Text>
+                <Text style={styles.loadMoreText}>{t('aiTrainer.loadMore')}</Text>
               </TouchableOpacity>
             )}
 
@@ -437,7 +440,7 @@ export default function AITrainerScreen() {
               <View style={styles.inputContainer}>
                 <TextInput
                   style={styles.messageInput}
-                  placeholder="Ask about your workout and diet..."
+                  placeholder={t('aiTrainer.placeholder')}
                   placeholderTextColor={colors.mutedText}
                   value={currentMessage}
                   onChangeText={setCurrentMessage}

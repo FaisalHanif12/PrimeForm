@@ -109,7 +109,7 @@ export default function OnboardingModal({
             style={[styles.modalContent, animatedContainerStyle]}
             entering={FadeInUp.delay(200)}
           >
-            {/* PrimeForm Logo */}
+            {/* Pure Body Logo */}
             <Animated.View style={[styles.logoContainer, animatedLogoStyle]}>
               <View style={styles.logoBackground}>
                 <Image 
@@ -123,7 +123,7 @@ export default function OnboardingModal({
 
             {/* Welcome Badge */}
             <View style={styles.welcomeBadge}>
-              <Text style={styles.welcomeText}>✨ Welcome to PrimeForm</Text>
+              <Text style={styles.welcomeText}>✨ Welcome to Pure Body</Text>
             </View>
 
             {/* Title */}

@@ -35,7 +35,7 @@ const translations = {
     'auth.login.noAccount': "Don't have an account? ",
 
     'auth.signup.title': 'Create Account',
-    'auth.signup.subtitle': 'Join Prime Form today',
+    'auth.signup.subtitle': 'Join Pure Body today',
     'auth.signup.name': 'Username',
     'auth.signup.email': 'Email',
     'auth.signup.password': 'Password',
@@ -81,17 +81,17 @@ const translations = {
     'sidebar.view.profile': 'View Full Profile',
     'sidebar.tapToChange': 'Tap to change',
     'sidebar.upgrade': 'UPGRADE',
-    'sidebar.appName': 'PrimeForm',
+    'sidebar.appName': 'Pure Body',
 
     // Common
-    'common.loading': 'Loading Prime Form...',
+    'common.loading': 'Loading Pure Body...',
     'common.error': 'Something went wrong',
     'common.retry': 'Retry',
     'common.cancel': 'Cancel',
     'common.save': 'Save',
 
     // Brand
-    'brand.primeform': 'PRIMEFORM',
+    'brand.primeform': 'PURE BODY',
 
     // Settings Page
     'settings.notification.preferences': 'Notification Preferences',
@@ -201,7 +201,7 @@ const translations = {
     'meal.fat': 'Fat',
 
     // App Branding
-    'app.name': 'Prime Form',
+    'app.name': 'Pure Body',
 
     // Gym Section
     'gym.title': 'Gym Exercises',
@@ -483,7 +483,7 @@ const translations = {
     'gender.other': 'Other',
 
     // Permission Modal
-    'permission.title': 'Welcome to AI PrimeForm! 🎉',
+    'permission.title': 'Welcome to AI Pure Body! 🎉',
     'permission.subtitle': 'To provide you with personalized AI diet and workout plans, we need to collect some information about you.',
     'permission.start': 'Start',
     'permission.cancel': 'Cancel',
@@ -516,6 +516,56 @@ const translations = {
     'location.home': 'Home',
     'location.gym': 'Gym',
     'location.both': 'Both',
+
+    // Language Preferences Page
+    'language.preferences.title': 'Language Preferences',
+    'language.preferences.subtitle': 'Choose your preferred language for the app interface',
+    'language.preferences.current': 'Current',
+    'language.preferences.available': 'Available Languages',
+    'language.preferences.select': 'Select a language to change',
+    'language.preferences.active': 'Active',
+    'language.preferences.changed': 'Language changed to',
+    'language.preferences.changeFailed': 'Failed to change language. Please try again.',
+    'language.preferences.actionFailed': 'Unable to complete that action. Please try again.',
+
+    // Contact Page
+    'contact.title': 'Get in Touch',
+    'contact.subtitle': 'Have a question or need help? Send us a message and we\'ll get back to you as soon as possible.',
+    'contact.form.name': 'Full Name',
+    'contact.form.name.placeholder': 'Enter your full name',
+    'contact.form.email': 'Email Address',
+    'contact.form.email.placeholder': 'Enter your email address',
+    'contact.form.problem': 'Describe Your Problem',
+    'contact.form.problem.placeholder': 'Please describe your problem or question in detail...',
+    'contact.form.characters': 'characters',
+    'contact.form.sending': 'Sending...',
+    'contact.form.send': 'Send Message',
+    'contact.validation.name': 'Please enter your name',
+    'contact.validation.email': 'Please enter your email',
+    'contact.validation.emailInvalid': 'Please enter a valid email address',
+    'contact.validation.problem': 'Please describe your problem',
+    'contact.validation.problemMin': 'Please provide more details about your problem (at least 10 characters)',
+    'contact.success': 'Message sent successfully! We\'ll get back to you soon.',
+    'contact.error.send': 'Failed to send email. Please try again.',
+    'contact.error.message': 'Failed to send message. Please try again later.',
+    'contact.error.general': 'Something went wrong. Please try again.',
+
+    // AI Trainer Page
+    'aiTrainer.title': 'AI Trainer',
+    'aiTrainer.subtitle': 'Your Personal Fitness Coach',
+    'aiTrainer.loading': 'Initializing AI Trainer...',
+    'aiTrainer.loadMore': 'Load previous messages',
+    'aiTrainer.placeholder': 'Ask about your workout and diet...',
+    'aiTrainer.welcome': 'Hello {name}! I\'m your AI Trainer. I\'m here to help you optimize your workouts, nutrition, and overall fitness journey. What would you like to know?',
+    'aiTrainer.welcome.guest': 'Hello there! I\'m your AI Trainer. I\'m here to help you optimize your workouts, nutrition, and overall fitness journey. What would you like to know?',
+    'aiTrainer.premiumOnly': 'AI Trainer is available for Premium subscribers only.',
+    'aiTrainer.error.loadHistory': 'Failed to load chat history.',
+    'aiTrainer.error.loadConversation': 'Failed to load conversation.',
+    'aiTrainer.success.newChat': 'New chat started',
+    'aiTrainer.error.newChat': 'Failed to create new chat.',
+    'aiTrainer.error.send': 'Failed to send message. Please try again.',
+    'aiTrainer.error.logout': 'Failed to logout.',
+    'aiTrainer.limit.reached': 'You have reached today\'s limit of 3 messages to the AI Trainer. Please come back tomorrow.',
   },
   ur: {
     // Auth screens
@@ -529,7 +579,7 @@ const translations = {
     'auth.login.noAccount': 'کیا آپ کا اکاؤنٹ نہیں ہے؟ ',
 
     'auth.signup.title': 'اکاؤنٹ بنائیں',
-    'auth.signup.subtitle': 'آج ہی پرائم فارم میں شامل ہوں',
+    'auth.signup.subtitle': 'آج ہی پیور باڈی میں شامل ہوں',
     'auth.signup.name': 'صارف نام',
     'auth.signup.email': 'ای میل',
     'auth.signup.password': 'پاس ورڈ',
@@ -575,17 +625,17 @@ const translations = {
     'sidebar.view.profile': 'مکمل پروفائل دیکھیں',
     'sidebar.tapToChange': 'تبدیل کرنے کے لیے ٹیپ کریں',
     'sidebar.upgrade': 'اپ گریڈ',
-    'sidebar.appName': 'پرائم فارم',
+    'sidebar.appName': 'پیور باڈی',
 
     // Common
-    'common.loading': 'پرائم فارم لوڈ ہو رہا ہے...',
+    'common.loading': 'پیور باڈی لوڈ ہو رہا ہے...',
     'common.error': 'کچھ غلط ہو گیا',
     'common.retry': 'دوبارہ کوشش',
     'common.cancel': 'منسوخ',
     'common.save': 'محفوظ',
 
     // Brand
-    'brand.primeform': 'پرائم فارم',
+    'brand.primeform': 'پیور باڈی',
 
     // Settings Page
     'settings.notification.preferences': 'نوٹیفیکیشن کی ترجیحات',
@@ -695,7 +745,7 @@ const translations = {
     'meal.fat': 'چربی',
 
     // App Branding
-    'app.name': 'پرائم فارم',
+    'app.name': 'پیور باڈی',
 
     // Onboarding
     'onboarding.title': 'کیا آپ اپنی AI ڈائٹ اور ورکاؤٹ پلان کو ذاتی بنانے کے لیے AI سے چلنے والے سوالات کے لیے تیار ہیں؟',
@@ -763,7 +813,7 @@ const translations = {
     'gender.other': 'دیگر',
 
     // Permission Modal
-    'permission.title': 'پرائم فارم میں خوش آمدید! 🎉',
+    'permission.title': 'پیور باڈی میں خوش آمدید! 🎉',
     'permission.subtitle': 'آپ کو صرف پروردہ خوراک اور ورکاؤٹ پلان کے لیے آپ کے لیے کچھ معلومات لےنا پڑے گی۔',
     'permission.start': 'شروع کریں',
     'permission.cancel': 'منسوخ',
@@ -1016,6 +1066,56 @@ const translations = {
     'location.home': 'Home',
     'location.gym': 'Gym',
     'location.both': 'Both',
+
+    // Language Preferences Page
+    'language.preferences.title': 'زبان کی ترجیحات',
+    'language.preferences.subtitle': 'ایپ انٹرفیس کے لیے اپنی پسندیدہ زبان منتخب کریں',
+    'language.preferences.current': 'موجودہ',
+    'language.preferences.available': 'دستیاب زبانیں',
+    'language.preferences.select': 'تبدیل کرنے کے لیے زبان منتخب کریں',
+    'language.preferences.active': 'فعال',
+    'language.preferences.changed': 'زبان تبدیل ہو گئی',
+    'language.preferences.changeFailed': 'زبان تبدیل کرنے میں ناکامی۔ برائے کرم دوبارہ کوشش کریں۔',
+    'language.preferences.actionFailed': 'اس عمل کو مکمل نہیں کر سکے۔ برائے کرم دوبارہ کوشش کریں۔',
+
+    // Contact Page
+    'contact.title': 'رابطہ کریں',
+    'contact.subtitle': 'کوئی سوال ہے یا مدد چاہیے؟ ہمیں پیغام بھیجیں اور ہم جلد از جلد آپ سے رابطہ کریں گے۔',
+    'contact.form.name': 'مکمل نام',
+    'contact.form.name.placeholder': 'اپنا مکمل نام درج کریں',
+    'contact.form.email': 'ای میل ایڈریس',
+    'contact.form.email.placeholder': 'اپنا ای میل ایڈریس درج کریں',
+    'contact.form.problem': 'اپنا مسئلہ بیان کریں',
+    'contact.form.problem.placeholder': 'برائے کرم اپنا مسئلہ یا سوال تفصیل سے بیان کریں...',
+    'contact.form.characters': 'حروف',
+    'contact.form.sending': 'بھیج رہے ہیں...',
+    'contact.form.send': 'پیغام بھیجیں',
+    'contact.validation.name': 'برائے کرم اپنا نام درج کریں',
+    'contact.validation.email': 'برائے کرم اپنا ای میل درج کریں',
+    'contact.validation.emailInvalid': 'برائے کرم صحیح ای میل ایڈریس درج کریں',
+    'contact.validation.problem': 'برائے کرم اپنا مسئلہ بیان کریں',
+    'contact.validation.problemMin': 'برائے کرم اپنے مسئلے کے بارے میں مزید تفصیلات فراہم کریں (کم از کم 10 حروف)',
+    'contact.success': 'پیغام کامیابی سے بھیج دیا گیا! ہم جلد از جلد آپ سے رابطہ کریں گے۔',
+    'contact.error.send': 'ای میل بھیجنے میں ناکامی۔ برائے کرم دوبارہ کوشش کریں۔',
+    'contact.error.message': 'پیغام بھیجنے میں ناکامی۔ برائے کرم بعد میں دوبارہ کوشش کریں۔',
+    'contact.error.general': 'کچھ غلط ہو گیا۔ برائے کرم دوبارہ کوشش کریں۔',
+
+    // AI Trainer Page
+    'aiTrainer.title': 'AI ٹرینر',
+    'aiTrainer.subtitle': 'آپ کا ذاتی فٹنس کوچ',
+    'aiTrainer.loading': 'AI ٹرینر شروع ہو رہا ہے...',
+    'aiTrainer.loadMore': 'پچھلے پیغامات لوڈ کریں',
+    'aiTrainer.placeholder': 'اپنے ورکاؤٹ اور ڈائٹ کے بارے میں پوچھیں...',
+    'aiTrainer.welcome': 'ہیلو {name}! میں آپ کا AI ٹرینر ہوں۔ میں یہاں آپ کی ورکاؤٹس، غذائیت اور مجموعی فٹنس سفر کو بہتر بنانے میں مدد کے لیے ہوں۔ آپ کیا جاننا چاہیں گے؟',
+    'aiTrainer.welcome.guest': 'ہیلو! میں آپ کا AI ٹرینر ہوں۔ میں یہاں آپ کی ورکاؤٹس، غذائیت اور مجموعی فٹنس سفر کو بہتر بنانے میں مدد کے لیے ہوں۔ آپ کیا جاننا چاہیں گے؟',
+    'aiTrainer.premiumOnly': 'AI ٹرینر صرف پریمیم صارفین کے لیے دستیاب ہے۔',
+    'aiTrainer.error.loadHistory': 'چیٹ ہسٹری لوڈ کرنے میں ناکامی۔',
+    'aiTrainer.error.loadConversation': 'بات چیت لوڈ کرنے میں ناکامی۔',
+    'aiTrainer.success.newChat': 'نیا چیٹ شروع ہو گیا',
+    'aiTrainer.error.newChat': 'نیا چیٹ بنانے میں ناکامی۔',
+    'aiTrainer.error.send': 'پیغام بھیجنے میں ناکامی۔ برائے کرم دوبارہ کوشش کریں۔',
+    'aiTrainer.error.logout': 'لاگ آؤٹ کرنے میں ناکامی۔',
+    'aiTrainer.limit.reached': 'آپ نے AI ٹرینر کو آج کی 3 پیغامات کی حد تک پہنچ گئے ہیں۔ برائے کرم کل واپس آئیں۔',
   },
 };
 

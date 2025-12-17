@@ -324,7 +324,7 @@ class NotificationService {
                 body: JSON.stringify({
                     userEmail,
                     type: 'welcome',
-                    title: 'Welcome to PrimeForm! 🎉',
+                    title: 'Welcome to Pure Body! 🎉',
                     message: 'Your account has been created successfully. Start your fitness journey today!',
                     priority: 'high',
                     metadata: { isWelcome: true }

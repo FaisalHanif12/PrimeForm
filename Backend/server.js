@@ -146,7 +146,7 @@ app.use((req, res, next) => {
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'PrimeForm API is running!',
+    message: 'Pure Body API is running!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
@@ -156,7 +156,7 @@ app.get('/health', (req, res) => {
 app.get('/api', (req, res) => {
   res.status(200).json({
     success: true,
-    message: '🏃‍♂️ PrimeForm API is running!',
+    message: '🏃‍♂️ Pure Body API is running!',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: {
@@ -187,7 +187,7 @@ app.use('/api/streak', streakRoutes);
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: '🏃‍♂️ Welcome to PrimeForm API!',
+    message: '🏃‍♂️ Welcome to Pure Body API!',
     version: '1.0.0',
     documentation: '/api/docs',
     health: '/health',
@@ -211,7 +211,7 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
 const server = app.listen(PORT, HOST, async () => {
   console.log('🚀 ================================');
-  console.log(`🏃‍♂️ PrimeForm API Server Running`);
+  console.log(`🏃‍♂️ Pure Body API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
   console.log(`🌐 Network: http://192.168.48.129:${PORT}`); // Current network IP

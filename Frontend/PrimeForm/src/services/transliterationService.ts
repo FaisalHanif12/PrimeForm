@@ -1,5 +1,5 @@
 /**
- * Transliteration Service for PrimeForm
+ * Transliteration Service for Pure Body
  * Handles dynamic content translation between English and Urdu
  * using character-by-character mapping
  */

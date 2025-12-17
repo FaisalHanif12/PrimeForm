@@ -401,25 +401,39 @@ export default function DietScreen() {
                 console.log('✅ Found diet plan in local storage, using it immediately');
                 setDietPlan(plan);
                 setHasCheckedLocalStorage(true);
-                // Still try to sync with database in background, but don't wait
-                aiDietService.loadDietPlanFromDatabase().then(async (dbPlan) => {
-                  if (dbPlan && dbPlan !== plan) {
-                    setDietPlan(dbPlan);
-                  } else if (!dbPlan) {
-                    // Database says no plan - clear local cache and state
-                    setDietPlan(null);
-                    const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
-                    const Storage = await import('../../src/utils/storage');
-                    const userId = await getCurrentUserId();
-                    if (userId) {
-                      const key = await getUserCacheKey('cached_diet_plan', userId);
-                      await Storage.default.removeItem(key);
+                setIsLoadingPlan(false);
+                setInitialLoadComplete(true);
+                
+                // ✅ OPTIMIZATION: Only sync in background if cache might be stale (older than 30 minutes)
+                // Diet plans don't change frequently, so we can extend cache time
+                // This prevents unnecessary API calls when data is fresh
+                const planTimestamp = plan.updatedAt || plan.createdAt;
+                const CACHE_STALE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+                const shouldSync = planTimestamp 
+                  ? (Date.now() - new Date(planTimestamp).getTime() > CACHE_STALE_THRESHOLD)
+                  : false; // If no timestamp, assume cache is fresh (don't sync)
+                
+                if (shouldSync) {
+                  // Only sync if cache might be stale
+                  aiDietService.loadDietPlanFromDatabase().then(async (dbPlan) => {
+                    if (dbPlan && dbPlan !== plan) {
+                      setDietPlan(dbPlan);
+                    } else if (!dbPlan) {
+                      // Database says no plan - clear local cache and state
+                      setDietPlan(null);
+                      const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+                      const Storage = await import('../../src/utils/storage');
+                      const userId = await getCurrentUserId();
+                      if (userId) {
+                        const key = await getUserCacheKey('cached_diet_plan', userId);
+                        await Storage.default.removeItem(key);
+                      }
+                      await Storage.default.removeItem('cached_diet_plan');
                     }
-                    await Storage.default.removeItem('cached_diet_plan');
-                  }
-                }).catch(() => {
-                  // Ignore background sync errors
-                });
+                  }).catch(() => {
+                    // Ignore background sync errors
+                  });
+                }
                 return;
               }
             }
@@ -774,7 +788,7 @@ export default function DietScreen() {
           onClose={() => setSidebarVisible(false)}
           onMenuItemPress={handleSidebarMenuPress}
           userName={user?.fullName || 'User'}
-          userEmail={user?.email || 'user@primeform.com'}
+          userEmail={user?.email || 'user@purebody.com'}
           userInfo={userInfo}
           badges={userInfo?.badges || []}
         />

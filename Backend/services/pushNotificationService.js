@@ -41,7 +41,7 @@ class PushNotificationService {
         return { success: false, reason: 'Invalid token' };
       }
 
-      // Construct the message with PrimeForm branding
+      // Construct the message with Pure Body branding
       const message = {
         to: pushToken,
         sound: 'default',
@@ -49,14 +49,14 @@ class PushNotificationService {
         body: notification.body,
         data: notification.data || {},
         badge: notification.badge || 1,
-        // PrimeForm branding
+        // Pure Body branding
         channelId: 'primeform-notifications',
         categoryId: 'primeform',
         // Custom icon and color for Android
         android: {
           channelId: 'primeform-notifications',
           icon: './assets/notification-icon.png',
-          color: '#6366F1', // PrimeForm primary color
+          color: '#6366F1', // Pure Body primary color
           sound: 'default',
           priority: 'high',
           vibrate: [0, 250, 250, 250]
