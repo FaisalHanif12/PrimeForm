@@ -61,7 +61,7 @@ interface ProgressCharts {
 
 export default function ProgressScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, transliterateNumbers } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const { unreadCount } = useNotifications();
@@ -133,7 +133,7 @@ export default function ProgressScreen() {
       }
 
     } catch (error) {
-      showToast('error', 'Failed to load progress data. Please try again.');
+      showToast('error', t('progress.error.load'));
     } finally {
       setIsLoading(false);
     }
@@ -295,7 +295,7 @@ export default function ProgressScreen() {
 
     const cards = [
       {
-        title: 'Calories',
+        title: t('progress.card.calories'),
         consumed: progressStats.caloriesConsumed,
         burned: progressStats.caloriesBurned,
         target: progressStats.targetCalories,
@@ -304,7 +304,7 @@ export default function ProgressScreen() {
         unit: 'kcal'
       },
       {
-        title: 'Water Intake',
+        title: t('progress.card.water'),
         consumed: progressStats.waterIntake,
         target: progressStats.targetWater,
         icon: '💧',
@@ -312,7 +312,7 @@ export default function ProgressScreen() {
         unit: 'L'
       },
       {
-        title: 'Workouts',
+        title: t('progress.card.workouts'),
         completed: progressStats.workoutsCompleted,
         total: progressStats.totalWorkouts,
         icon: '💪',
@@ -320,7 +320,7 @@ export default function ProgressScreen() {
         unit: 'sessions'
       },
       {
-        title: 'Meals',
+        title: t('progress.card.meals'),
         completed: progressStats.mealsCompleted,
         total: progressStats.totalMeals,
         icon: '🍽️',
@@ -331,7 +331,7 @@ export default function ProgressScreen() {
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.overviewSection}>
-        <Text style={styles.sectionTitle}>Overview</Text>
+        <Text style={styles.sectionTitle}>{t('progress.section.overview')}</Text>
         <View style={styles.cardsGrid}>
           {cards.map((card, index) => (
             <Animated.View
@@ -349,23 +349,23 @@ export default function ProgressScreen() {
                   // Calories card with consumed/burned
                   <>
                     <View style={styles.calorieRow}>
-                      <Text style={styles.calorieLabel}>Consumed</Text>
+                      <Text style={styles.calorieLabel}>{t('progress.label.consumed')}</Text>
                       <Text style={[styles.calorieValue, { color: colors.primary }]}>
-                        {card.consumed} {card.unit}
+                        {language === 'ur' ? transliterateNumbers(card.consumed) : card.consumed} {card.unit}
                       </Text>
                     </View>
                     <View style={styles.calorieRow}>
-                      <Text style={styles.calorieLabel}>Burned</Text>
+                      <Text style={styles.calorieLabel}>{t('progress.label.burned')}</Text>
                       <Text style={[styles.calorieValue, { color: colors.gold }]}>
-                        {card.burned} {card.unit}
+                        {language === 'ur' ? transliterateNumbers(card.burned) : card.burned} {card.unit}
                       </Text>
                     </View>
                     <View style={styles.calorieRow}>
-                      <Text style={styles.calorieLabel}>Net</Text>
+                      <Text style={styles.calorieLabel}>{t('progress.label.net')}</Text>
                       <Text style={[styles.calorieValue, {
                         color: (card.consumed - card.burned) > 0 ? colors.green : colors.error
                       }]}>
-                        {Math.abs(card.consumed - card.burned)} {card.unit}
+                        {language === 'ur' ? transliterateNumbers(Math.abs(card.consumed - card.burned)) : Math.abs(card.consumed - card.burned)} {card.unit}
                       </Text>
                     </View>
                   </>
@@ -387,7 +387,7 @@ export default function ProgressScreen() {
                       />
                     </View>
                     <Text style={styles.percentageText}>
-                      {Math.round((card.completed / card.total) * 100)}% Complete
+                      {Math.round((card.completed / card.total) * 100)}% {t('progress.label.complete')}
                     </Text>
                   </>
                 ) : (
@@ -410,7 +410,7 @@ export default function ProgressScreen() {
                     </View>
                     <Text style={styles.percentageText}>
                       {/* ✅ FIXED: Handle NaN values gracefully */}
-                      {Math.round(Math.min(((!isNaN(card.consumed!) && !isNaN(card.target!) && card.target! > 0) ? (card.consumed! / card.target!) * 100 : 0), 100))}% of Goal
+                      {Math.round(Math.min(((!isNaN(card.consumed!) && !isNaN(card.target!) && card.target! > 0) ? (card.consumed! / card.target!) * 100 : 0), 100))}% {t('progress.label.of.goal')}
                     </Text>
                   </>
                 )}
@@ -429,7 +429,7 @@ export default function ProgressScreen() {
     // This shows progress toward target, not distribution of consumed macros
     const macros = [
       { 
-        name: 'Protein', 
+        name: t('progress.macro.protein'), 
         value: progressStats.protein, 
         target: progressStats.targetProtein || 0,
         color: colors.primary, 
@@ -438,7 +438,7 @@ export default function ProgressScreen() {
           : 0
       },
       { 
-        name: 'Carbs', 
+        name: t('progress.macro.carbs'), 
         value: progressStats.carbs, 
         target: progressStats.targetCarbs || 0,
         color: colors.gold, 
@@ -447,7 +447,7 @@ export default function ProgressScreen() {
           : 0
       },
       { 
-        name: 'Fats', 
+        name: t('progress.macro.fats'), 
         value: progressStats.fats, 
         target: progressStats.targetFats || 0,
         color: colors.green, 
@@ -459,7 +459,7 @@ export default function ProgressScreen() {
 
     return (
       <Animated.View entering={FadeInUp.delay(600)} style={styles.macroSection}>
-        <Text style={styles.sectionTitle}>Macronutrients</Text>
+        <Text style={styles.sectionTitle}>{t('progress.section.macronutrients')}</Text>
         <View style={styles.macroCard}>
           <View style={styles.macroChart}>
             {macros.map((macro, index) => (
@@ -474,7 +474,7 @@ export default function ProgressScreen() {
                 </Text>
                 <Text style={styles.macroPercentage}>
                   {/* ✅ FIXED: Show percentage of target, handle NaN */}
-                  {isNaN(macro.percentage) ? 0 : macro.percentage.toFixed(1)}% of Target
+                  {isNaN(macro.percentage) ? 0 : macro.percentage.toFixed(1)}% {t('progress.macro.of.target')}
                 </Text>
                 <View style={styles.macroBar}>
                   <View
@@ -500,24 +500,24 @@ export default function ProgressScreen() {
 
     return (
       <Animated.View entering={FadeInUp.delay(650)} style={styles.chartsSection}>
-        <Text style={styles.sectionTitle}>Detailed Analytics</Text>
+        <Text style={styles.sectionTitle}>{t('progress.section.analytics')}</Text>
 
         <ProgressChart
-          title="Calories Trend"
+          title={t('progress.chart.calories')}
           data={chartData.calories}
           type="line"
           period={selectedPeriod}
         />
 
         <ProgressChart
-          title="Workout Performance"
+          title={t('progress.chart.workouts')}
           data={chartData.workouts}
           type="bar"
           period={selectedPeriod}
         />
 
         <ProgressChart
-          title="Water Hydration"
+          title={t('progress.chart.water')}
           data={chartData.water}
           type="bar"
           period={selectedPeriod}
@@ -531,21 +531,25 @@ export default function ProgressScreen() {
 
     return (
       <Animated.View entering={FadeInRight.delay(700)} style={styles.streakSection}>
-        <Text style={styles.sectionTitle}>Consistency</Text>
+        <Text style={styles.sectionTitle}>{t('progress.section.consistency')}</Text>
         <View style={styles.streakCard}>
           <View style={styles.streakItem}>
             <Text style={styles.streakIcon}>🔥</Text>
             <View style={styles.streakInfo}>
-              <Text style={styles.streakValue}>{progressStats.currentStreak}</Text>
-              <Text style={styles.streakLabel}>Current Streak</Text>
+              <Text style={styles.streakValue}>
+                {language === 'ur' ? transliterateNumbers(progressStats.currentStreak) : progressStats.currentStreak}
+              </Text>
+              <Text style={styles.streakLabel}>{t('progress.streak.current')}</Text>
             </View>
           </View>
           <View style={styles.streakDivider} />
           <View style={styles.streakItem}>
             <Text style={styles.streakIcon}>🏆</Text>
             <View style={styles.streakInfo}>
-              <Text style={styles.streakValue}>{progressStats.longestStreak}</Text>
-              <Text style={styles.streakLabel}>Best Streak</Text>
+              <Text style={styles.streakValue}>
+                {language === 'ur' ? transliterateNumbers(progressStats.longestStreak) : progressStats.longestStreak}
+              </Text>
+              <Text style={styles.streakLabel}>{t('progress.streak.best')}</Text>
             </View>
           </View>
         </View>
@@ -565,7 +569,7 @@ export default function ProgressScreen() {
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading your progress...</Text>
+            <Text style={styles.loadingText}>{t('progress.loading')}</Text>
           </View>
           <BottomNavigation
             activeTab="progress"
@@ -593,8 +597,8 @@ export default function ProgressScreen() {
         >
           {/* Hero Section */}
           <Animated.View entering={FadeInUp.delay(100)} style={styles.heroSection}>
-            <Text style={styles.heroTitle}>Your Progress</Text>
-            <Text style={styles.heroSubtitle}>Track your fitness journey</Text>
+            <Text style={styles.heroTitle}>{t('progress.hero.title')}</Text>
+            <Text style={styles.heroSubtitle}>{t('progress.hero.subtitle')}</Text>
           </Animated.View>
 
           {/* Period Selector (Daily / Weekly / Monthly) */}
@@ -616,7 +620,7 @@ export default function ProgressScreen() {
                       selectedPeriod === period && styles.periodButtonTextActive,
                     ]}
                   >
-                    {period.charAt(0).toUpperCase() + period.slice(1)}
+                    {t(`progress.period.${period}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -647,7 +651,7 @@ export default function ProgressScreen() {
               onPress={() => router.push('/(dashboard)/progress-details')}
             >
               <Text style={styles.moreDetailsIcon}>📊</Text>
-              <Text style={styles.moreDetailsText}>More Detailed Analytics</Text>
+              <Text style={styles.moreDetailsText}>{t('progress.button.more.details')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

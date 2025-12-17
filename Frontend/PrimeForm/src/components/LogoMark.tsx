@@ -9,13 +9,13 @@ type Props = {
 };
 
 export default function LogoMark({ subtitle }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <Animated.View entering={FadeIn} style={styles.container}>
       <Image source={require('../../assets/images/Primelogo1.png')} style={styles.icon} />
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText} numberOfLines={1}>PURE BODY</Text>
+        <Text style={styles.titleText} numberOfLines={1}>{t('brand.name')}</Text>
       </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </Animated.View>

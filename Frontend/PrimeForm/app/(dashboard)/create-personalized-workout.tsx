@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useToast } from '../../src/context/ToastContext';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -120,6 +121,7 @@ export default function CreatePersonalizedWorkoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
+  const { t, language, transliterateText } = useLanguage();
   const [selectedExercises, setSelectedExercises] = useState<typeof ALL_EXERCISES>([]);
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [isAddingToExisting, setIsAddingToExisting] = useState(false);
@@ -131,15 +133,52 @@ export default function CreatePersonalizedWorkoutScreen() {
 
   const loadExistingWorkout = async () => {
     try {
-      const savedWorkout = await AsyncStorage.getItem('personalizedWorkout');
+      // ✅ CRITICAL: Use user-specific cache key (same as personalized-workout.tsx)
+      const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      const workoutKey = userId
+        ? await getUserCacheKey('personalizedWorkout', userId)
+        : 'personalizedWorkout';
+      
+      const savedWorkout = await AsyncStorage.getItem(workoutKey);
       if (savedWorkout) {
         const existing = JSON.parse(savedWorkout);
-        setSelectedExercises(existing);
-        setIsAddingToExisting(true);
+        if (existing && existing.length > 0) {
+          setSelectedExercises(existing);
+          setIsAddingToExisting(true);
+        }
+      } else {
+        // Fallback: check legacy global key for migration
+        const legacy = await AsyncStorage.getItem('personalizedWorkout');
+        if (legacy) {
+          const existing = JSON.parse(legacy);
+          if (existing && existing.length > 0) {
+            setSelectedExercises(existing);
+            setIsAddingToExisting(true);
+            // Migrate to user-specific key
+            if (userId) {
+              await AsyncStorage.setItem(workoutKey, legacy);
+              await AsyncStorage.removeItem('personalizedWorkout');
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading existing workout:', error);
     }
+  };
+
+  // Categories with translation support
+  const getCategoryDisplayName = (category: string): string => {
+    if (category === 'All') {
+      return language === 'ur' ? t('personalized.create.filter.all') : category;
+    }
+    const categoryKey = category.toLowerCase().replace(' ', '_');
+    const translationKey = `gym.category.${categoryKey}`;
+    const translated = t(translationKey);
+    // If translation exists and is different from key, use it; otherwise use original
+    return translated !== translationKey ? translated : category;
   };
 
   const categories = ['All', 'Chest', 'Back', 'Arms', 'Legs', 'Abs', 'Full Body'];
@@ -154,9 +193,16 @@ export default function CreatePersonalizedWorkoutScreen() {
     : availableExercises.filter(ex => ex.category === filterCategory);
 
   const handleToggleExercise = (exercise: typeof ALL_EXERCISES[0]) => {
-    // Only allow adding exercises (not removing when in add mode)
+    // Check if exercise is already selected
+    const isAlreadySelected = selectedExercises.find(selected => selected.id === exercise.id);
+    if (isAlreadySelected) {
+      // Don't allow removing when in add mode - just ignore
+      return;
+    }
+    
+    // Only allow adding exercises up to 8 total
     if (selectedExercises.length >= 8) {
-      showToast('warning', 'You can select maximum 8 exercises');
+      showToast('warning', t('personalized.create.max.exercises'));
       return;
     }
     setSelectedExercises([...selectedExercises, exercise]);
@@ -164,7 +210,7 @@ export default function CreatePersonalizedWorkoutScreen() {
 
   const handleSaveWorkout = async () => {
     if (selectedExercises.length === 0) {
-      showToast('warning', 'Please select at least one exercise');
+      showToast('warning', t('personalized.create.min.exercises'));
       return;
     }
 
@@ -174,7 +220,7 @@ export default function CreatePersonalizedWorkoutScreen() {
       const userId = await getCurrentUserId();
       
       if (!userId) {
-        showToast('error', 'User not authenticated. Please login again.');
+        showToast('error', t('personalized.create.auth.error'));
         return;
       }
 
@@ -184,11 +230,11 @@ export default function CreatePersonalizedWorkoutScreen() {
       // Also clear old global key if it exists (migration)
       await AsyncStorage.removeItem('personalizedWorkout');
       
-      showToast('success', `Your personalized workout with ${selectedExercises.length} exercises is ready!`);
+      showToast('success', t('personalized.create.save.success').replace('{count}', String(selectedExercises.length)));
       // Navigate to the personalized workout screen instead of going back
       router.replace('/(dashboard)/personalized-workout');
     } catch (error) {
-      showToast('error', 'Failed to save workout. Please try again.');
+      showToast('error', t('personalized.create.save.error'));
     }
   };
 
@@ -214,10 +260,10 @@ export default function CreatePersonalizedWorkoutScreen() {
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>
-              {isAddingToExisting ? 'Add More Exercises' : 'Create Your Workout'}
+              {isAddingToExisting ? t('personalized.create.add.more') : t('personalized.create.title')}
             </Text>
             <Text style={styles.headerSubtitle}>
-              {selectedExercises.length}/8 selected
+              {selectedExercises.length}/8 {t('personalized.create.selected')}
             </Text>
           </View>
           <View style={styles.selectionBadge}>
@@ -246,7 +292,7 @@ export default function CreatePersonalizedWorkoutScreen() {
                     styles.filterChipText,
                     filterCategory === category && styles.filterChipTextActive
                   ]}>
-                    {category}
+                    {getCategoryDisplayName(category)}
                   </Text>
                 </TouchableOpacity>
               </Animated.View>
@@ -263,11 +309,11 @@ export default function CreatePersonalizedWorkoutScreen() {
           {filteredExercises.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
-              <Text style={styles.emptyStateText}>All exercises selected!</Text>
+              <Text style={styles.emptyStateText}>{t('personalized.create.empty.all.selected')}</Text>
               <Text style={styles.emptyStateSubtext}>
                 {isAddingToExisting 
-                  ? "You've selected all available exercises. Remove some to add different ones."
-                  : "You can now save your workout!"}
+                  ? t('personalized.create.empty.add.more.text')
+                  : t('personalized.create.empty.save.text')}
               </Text>
             </View>
           ) : (
@@ -299,11 +345,13 @@ export default function CreatePersonalizedWorkoutScreen() {
                       {/* Middle - Exercise Info */}
                       <View style={styles.exerciseInfo}>
                         <Text style={styles.exerciseName} numberOfLines={1}>
-                          {exercise.name}
+                          {language === 'ur' ? transliterateText(exercise.name) : exercise.name}
                         </Text>
                         <View style={styles.exerciseMeta}>
                           <View style={styles.categoryTag}>
-                            <Text style={styles.categoryTagText}>{exercise.category}</Text>
+                            <Text style={styles.categoryTagText}>
+                              {getCategoryDisplayName(exercise.category)}
+                            </Text>
                           </View>
                           <View style={[
                             styles.difficultyDot,
@@ -345,7 +393,7 @@ export default function CreatePersonalizedWorkoutScreen() {
               >
                 <Ionicons name="checkmark-circle" size={28} color={colors.white} />
                 <Text style={styles.saveButtonText}>
-                  Save My Workout ({selectedExercises.length})
+                  {t('personalized.create.save.button')} ({selectedExercises.length})
                 </Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>

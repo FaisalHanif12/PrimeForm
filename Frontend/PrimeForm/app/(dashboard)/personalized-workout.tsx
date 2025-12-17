@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserCacheKey, getCurrentUserId } from '../../src/utils/cacheKeys';
 import { useToast } from '../../src/context/ToastContext';
 import ExerciseAnimation from '../../src/components/ExerciseAnimation';
+import { useLanguage } from '../../src/context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -79,6 +80,7 @@ export default function PersonalizedWorkoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { showToast } = useToast();
+  const { t, language, transliterateText } = useLanguage();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [completedExercises, setCompletedExercises] = useState<number[]>([]);
@@ -162,7 +164,7 @@ export default function PersonalizedWorkoutScreen() {
 
   const handleStartWorkout = () => {
     if (todayCompleted) {
-      showToast('info', "You've already completed today's workout! Come back tomorrow.");
+      showToast('info', t('personalized.workout.already.complete'));
       return;
     }
     setIsWorkoutStarted(true);
@@ -195,24 +197,24 @@ export default function PersonalizedWorkoutScreen() {
       await AsyncStorage.setItem(completionKey, today);
       setTodayCompleted(true);
       setIsWorkoutStarted(false);
-      showToast('success', `🎉 Workout Complete! You burned ${totalCalories} calories!`);
+      showToast('success', t('personalized.workout.complete.success').replace('{calories}', String(totalCalories)));
       
       setTimeout(() => {
         router.back();
       }, 2500);
     } catch (error) {
-      showToast('error', 'Failed to save completion');
+      showToast('error', t('personalized.workout.complete.error'));
     }
   };
 
   const handleDeleteWorkout = () => {
     Alert.alert(
-      'Delete Workout',
-      'Are you sure you want to delete your personalized workout? You will need to create a new one.',
+      t('personalized.workout.delete.title'),
+      t('personalized.workout.delete.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: language === 'ur' ? 'حذف' : 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -220,10 +222,10 @@ export default function PersonalizedWorkoutScreen() {
               const { workoutKey, completionKey } = await getStorageKeys();
               await AsyncStorage.removeItem(workoutKey);
               await AsyncStorage.removeItem(completionKey);
-              showToast('success', 'Workout deleted');
+              showToast('success', t('personalized.workout.delete.success'));
               router.back();
             } catch (error) {
-              showToast('error', 'Failed to delete workout');
+              showToast('error', t('personalized.workout.delete.error'));
             }
           },
         },
@@ -246,10 +248,10 @@ export default function PersonalizedWorkoutScreen() {
     try {
       const { workoutKey } = await getStorageKeys();
       await AsyncStorage.setItem(workoutKey, JSON.stringify(exercises));
-      showToast('success', 'Exercise order saved!');
+      showToast('success', t('personalized.workout.order.saved'));
       setIsReorderMode(false);
     } catch (error) {
-      showToast('error', 'Failed to save order');
+      showToast('error', t('personalized.workout.order.error'));
     }
   };
 
@@ -269,7 +271,7 @@ export default function PersonalizedWorkoutScreen() {
         const { workoutKey, completionKey } = await getStorageKeys();
         await AsyncStorage.removeItem(workoutKey);
         await AsyncStorage.removeItem(completionKey);
-        showToast('success', 'Workout deleted');
+        showToast('success', t('personalized.workout.delete.success'));
         setShowDeleteModal(false);
         router.back();
       } else {
@@ -277,12 +279,12 @@ export default function PersonalizedWorkoutScreen() {
         setExercises(newExercises);
         const { workoutKey } = await getStorageKeys();
         await AsyncStorage.setItem(workoutKey, JSON.stringify(newExercises));
-        showToast('success', 'Exercise removed');
+        showToast('success', t('personalized.workout.remove.success'));
         setShowDeleteModal(false);
         setExerciseToDelete(null);
       }
     } catch (error) {
-      showToast('error', 'Failed to remove exercise');
+      showToast('error', t('personalized.workout.remove.error'));
       setShowDeleteModal(false);
     }
   };
@@ -307,8 +309,8 @@ export default function PersonalizedWorkoutScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.white} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>My Daily Workout</Text>
-            <Text style={styles.headerSubtitle}>{exercises.length} exercises</Text>
+            <Text style={styles.headerTitle}>{t('personalized.workout.title')}</Text>
+            <Text style={styles.headerSubtitle}>{exercises.length} {t('personalized.workout.exercises')}</Text>
           </View>
           <View style={styles.headerRight}>
             {!isWorkoutStarted && !todayCompleted && (
@@ -360,12 +362,12 @@ export default function PersonalizedWorkoutScreen() {
                     color={todayCompleted ? colors.primary : colors.white} 
                   />
                   <Text style={styles.statusTitle}>
-                    {todayCompleted ? "Today's Workout Complete!" : "Ready to Start?"}
+                    {todayCompleted ? t('personalized.workout.status.complete') : t('personalized.workout.status.ready')}
                   </Text>
                   <Text style={styles.statusSubtitle}>
                     {todayCompleted 
-                      ? "Great job! Come back tomorrow for your next workout." 
-                      : "Complete all exercises to finish your daily goal."}
+                      ? t('personalized.workout.status.complete.subtitle')
+                      : t('personalized.workout.status.ready.subtitle')}
                   </Text>
                 </LinearGradient>
               </Animated.View>
@@ -373,10 +375,10 @@ export default function PersonalizedWorkoutScreen() {
               {/* Exercises List */}
               <View style={styles.exercisesList}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Your Exercises</Text>
+                  <Text style={styles.sectionTitle}>{t('personalized.workout.section.exercises')}</Text>
                   {isReorderMode && (
                     <TouchableOpacity onPress={handleSaveOrder} style={styles.saveOrderButton}>
-                      <Text style={styles.saveOrderText}>Save Order</Text>
+                      <Text style={styles.saveOrderText}>{t('personalized.workout.save.order')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -424,12 +426,16 @@ export default function PersonalizedWorkoutScreen() {
                         />
                       </View>
                       <View style={styles.exerciseItemInfo}>
-                        <Text style={styles.exerciseItemName}>{exercise.name}</Text>
+                        <Text style={styles.exerciseItemName}>
+                          {language === 'ur' ? transliterateText(exercise.name) : exercise.name}
+                        </Text>
                         <View style={styles.exerciseItemMeta}>
-                          <Text style={styles.exerciseItemCategory}>{exercise.category}</Text>
+                          <Text style={styles.exerciseItemCategory}>
+                            {language === 'ur' ? transliterateText(exercise.category) : exercise.category}
+                          </Text>
                           <View style={styles.calorieTag}>
                             <Ionicons name="flame" size={12} color={colors.primary} />
-                            <Text style={styles.calorieText}>{exercise.calories || 60} cal</Text>
+                            <Text style={styles.calorieText}>{exercise.calories || 60} {t('dashboard.stats.kcal')}</Text>
                           </View>
                         </View>
                       </View>
@@ -458,7 +464,7 @@ export default function PersonalizedWorkoutScreen() {
               <Animated.View entering={FadeInUp.springify()} style={styles.progressSection}>
                 <View style={styles.progressHeader}>
                   <Text style={styles.progressText}>
-                    Exercise {currentExerciseIndex + 1} of {exercises.length}
+                    {t('personalized.workout.exercise.of').replace('{current}', String(currentExerciseIndex + 1)).replace('{total}', String(exercises.length))}
                   </Text>
                   <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
                 </View>
@@ -485,14 +491,18 @@ export default function PersonalizedWorkoutScreen() {
 
                     {/* Exercise Info */}
                     <View style={styles.currentExerciseInfo}>
-                      <Text style={styles.currentExerciseName}>{currentExercise.name}</Text>
+                      <Text style={styles.currentExerciseName}>
+                        {language === 'ur' ? transliterateText(currentExercise.name) : currentExercise.name}
+                      </Text>
                       <View style={styles.currentExerciseTags}>
                         <View style={styles.currentExerciseTag}>
-                          <Text style={styles.currentExerciseTagText}>{currentExercise.category}</Text>
+                          <Text style={styles.currentExerciseTagText}>
+                            {language === 'ur' ? transliterateText(currentExercise.category) : currentExercise.category}
+                          </Text>
                         </View>
                         <View style={styles.currentCalorieTag}>
                           <Ionicons name="flame" size={16} color={colors.primary} />
-                          <Text style={styles.currentCalorieText}>{currentExercise.calories || 60} cal</Text>
+                          <Text style={styles.currentCalorieText}>{currentExercise.calories || 60} {t('dashboard.stats.kcal')}</Text>
                         </View>
                       </View>
                     </View>
@@ -502,7 +512,7 @@ export default function PersonalizedWorkoutScreen() {
 
               {/* Completed Exercises Tracker */}
               <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.completedSection}>
-                <Text style={styles.completedTitle}>Completed Exercises</Text>
+                <Text style={styles.completedTitle}>{t('personalized.workout.completed.title')}</Text>
                 <View style={styles.completedGrid}>
                   {exercises.map((exercise, index) => {
                     const isCompleted = completedExercises.includes(index);
@@ -559,7 +569,7 @@ export default function PersonalizedWorkoutScreen() {
                   color={colors.white} 
                 />
                 <Text style={styles.actionButtonText}>
-                  {todayCompleted ? "Completed Today" : "Start Workout"}
+                  {todayCompleted ? t('personalized.workout.completed.today') : t('personalized.workout.start.button')}
                 </Text>
                 {!todayCompleted && <Ionicons name="arrow-forward" size={24} color={colors.white} />}
               </LinearGradient>
@@ -579,8 +589,8 @@ export default function PersonalizedWorkoutScreen() {
                 <Ionicons name="checkmark-circle" size={28} color={colors.white} />
                 <Text style={styles.actionButtonText}>
                   {currentExerciseIndex === exercises.length - 1 
-                    ? "Finish Workout" 
-                    : "Complete Exercise"}
+                    ? t('personalized.workout.finish')
+                    : t('personalized.workout.complete.exercise')}
                 </Text>
                 <Ionicons name="arrow-forward" size={24} color={colors.white} />
               </LinearGradient>
@@ -608,12 +618,12 @@ export default function PersonalizedWorkoutScreen() {
               </View>
 
               {/* Title */}
-              <Text style={styles.modalTitle}>Remove Exercise</Text>
+              <Text style={styles.modalTitle}>{t('personalized.workout.remove.title')}</Text>
 
               {/* Message */}
               <Text style={styles.modalMessage}>
                 {exerciseToDelete !== null && 
-                  `Are you sure you want to remove "${exercises[exerciseToDelete]?.name}" from your workout?`
+                  t('personalized.workout.remove.message').replace('{name}', language === 'ur' ? transliterateText(exercises[exerciseToDelete]?.name || '') : exercises[exerciseToDelete]?.name || '')
                 }
               </Text>
 
@@ -624,7 +634,7 @@ export default function PersonalizedWorkoutScreen() {
                   onPress={cancelDelete}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.modalCancelText}>Cancel</Text>
+                  <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -636,7 +646,7 @@ export default function PersonalizedWorkoutScreen() {
                     colors={['#FF3B30', '#FF3B30DD'] as [string, string]}
                     style={styles.modalDeleteGradient}
                   >
-                    <Text style={styles.modalDeleteText}>Remove</Text>
+                    <Text style={styles.modalDeleteText}>{language === 'ur' ? 'ہٹائیں' : 'Remove'}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>

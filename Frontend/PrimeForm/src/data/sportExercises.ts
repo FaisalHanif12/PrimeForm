@@ -294,3 +294,23 @@ export const getExercise = (categoryId: string, exerciseId: string): SportExerci
   return category?.exercises.find(ex => ex.id === exerciseId);
 };
 
+/**
+ * Get translated sport name (static translation, not transliteration)
+ */
+export const getTranslatedSportName = (sportId: string, t: (key: string) => string, language: 'en' | 'ur'): string => {
+  const translationKey = `sport.${sportId}`;
+  const translated = t(translationKey);
+  // If translation exists and is different from key, use it; otherwise use original
+  return translated !== translationKey ? translated : sportCategories.find(cat => cat.id === sportId)?.name || sportId;
+};
+
+/**
+ * Get translated exercise name (static translation, not transliteration)
+ */
+export const getTranslatedExerciseName = (exerciseId: string, t: (key: string) => string, language: 'en' | 'ur'): string => {
+  const translationKey = `exercise.${exerciseId}`;
+  const translated = t(translationKey);
+  // If translation exists and is different from key, use it; otherwise use original
+  return translated !== translationKey ? translated : exerciseId;
+};
+

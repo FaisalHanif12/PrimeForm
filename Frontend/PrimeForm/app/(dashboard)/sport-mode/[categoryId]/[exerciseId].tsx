@@ -7,15 +7,16 @@ import {
   Dimensions,
   StatusBar,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../../../../src/theme/colors';
-import { getExercise, getSportCategory } from '../../../../src/data/sportExercises';
+import { getExercise, getSportCategory, getTranslatedExerciseName } from '../../../../src/data/sportExercises';
 import ExerciseAnimation from '../../../../src/components/ExerciseAnimation';
+import { useLanguage } from '../../../../src/context/LanguageContext';
+import ExerciseCompleteModal from '../../../../src/components/ExerciseCompleteModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -23,10 +24,12 @@ export default function ExercisePlayerPage() {
   const { categoryId, exerciseId } = useLocalSearchParams<{ categoryId: string; exerciseId: string }>();
   const exercise = getExercise(categoryId, exerciseId);
   const category = getSportCategory(categoryId);
+  const { t, language, transliterateText } = useLanguage();
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSet, setCurrentSet] = useState(0);
   const [completedSets, setCompletedSets] = useState<number[]>([]);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const handleBack = () => {
     router.back();
@@ -50,21 +53,7 @@ export default function ExercisePlayerPage() {
       if (newCompletedSets.length === exercise.sets) {
         // Exercise complete!
         setTimeout(() => {
-          Alert.alert(
-            '🎉 Exercise Complete!',
-            `Amazing work! You've completed all ${exercise.sets} sets of ${exercise.name}.\n\n${exercise.reps} reps × ${exercise.sets} sets = ${exercise.reps * exercise.sets} total reps!`,
-            [
-              {
-                text: 'Done',
-                style: 'default',
-                onPress: () => {
-                  // Navigate back to exercises list
-                  router.back();
-                }
-              }
-            ],
-            { cancelable: false }
-          );
+          setShowCompleteModal(true);
         }, 500);
       }
     }
@@ -92,7 +81,7 @@ export default function ExercisePlayerPage() {
   if (!exercise || !category) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Exercise not found</Text>
+        <Text style={styles.errorText}>{t('sportMode.exercise.notFound')}</Text>
       </View>
     );
   }
@@ -110,10 +99,15 @@ export default function ExercisePlayerPage() {
           <Ionicons name="chevron-back" size={26} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{exercise.name}</Text>
+          <Text style={styles.headerTitle}>
+            {getTranslatedExerciseName(exercise.id, t, language)}
+          </Text>
           <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(exercise.difficulty) + '20' }]}>
             <Text style={[styles.difficultyText, { color: getDifficultyColor(exercise.difficulty) }]}>
-              {exercise.difficulty}
+              {exercise.difficulty === 'Beginner' ? t('sportMode.difficulty.beginner') :
+               exercise.difficulty === 'Intermediate' ? t('sportMode.difficulty.intermediate') :
+               exercise.difficulty === 'Advanced' ? t('sportMode.difficulty.advanced') :
+               exercise.difficulty}
             </Text>
           </View>
         </View>
@@ -146,13 +140,13 @@ export default function ExercisePlayerPage() {
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
               <Ionicons name="repeat-outline" size={20} color={colors.mutedText} />
-              <Text style={styles.infoLabel}>Reps per set</Text>
+              <Text style={styles.infoLabel}>{t('sportMode.exercise.repsPerSet')}</Text>
               <Text style={styles.infoValue}>{exercise.reps}</Text>
             </View>
             <View style={styles.infoDivider} />
             <View style={styles.infoItem}>
               <Ionicons name="layers-outline" size={20} color={colors.mutedText} />
-              <Text style={styles.infoLabel}>Total sets</Text>
+              <Text style={styles.infoLabel}>{t('sportMode.exercise.totalSets')}</Text>
               <Text style={styles.infoValue}>{exercise.sets}</Text>
             </View>
           </View>
@@ -161,8 +155,8 @@ export default function ExercisePlayerPage() {
         {/* Sets Tracking Section */}
         {isPlaying && (
           <Animated.View entering={FadeInDown.delay(300).duration(600)} style={styles.setsSection}>
-            <Text style={styles.setsTitle}>Complete Your Sets</Text>
-            <Text style={styles.setsSubtitle}>Tap each set when you finish {exercise.reps} reps</Text>
+            <Text style={styles.setsTitle}>{t('sportMode.exercise.completeSets')}</Text>
+            <Text style={styles.setsSubtitle}>{t('sportMode.exercise.completeSetsSubtitle')} {exercise.reps} {t('sportMode.stats.reps')}</Text>
             
             <View style={styles.setsGrid}>
               {Array.from({ length: exercise.sets }).map((_, index) => {
@@ -187,10 +181,10 @@ export default function ExercisePlayerPage() {
                       </View>
                     )}
                     <Text style={[styles.setLabel, isCompleted && { color: colors.white }]}>
-                      {isCompleted ? 'Completed' : `Set ${setNumber}`}
+                      {isCompleted ? t('sportMode.exercise.completed') : `${t('sportMode.exercise.set')} ${setNumber}`}
                     </Text>
                     <Text style={[styles.setReps, isCompleted && { color: colors.white + 'CC' }]}>
-                      {exercise.reps} reps
+                      {exercise.reps} {t('sportMode.stats.reps')}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -207,7 +201,7 @@ export default function ExercisePlayerPage() {
               onPress={handleStart}
             >
               <Ionicons name="play" size={28} color={colors.white} />
-              <Text style={styles.primaryButtonText}>Start Exercise</Text>
+              <Text style={styles.primaryButtonText}>{t('sportMode.exercise.start')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -215,11 +209,24 @@ export default function ExercisePlayerPage() {
               onPress={handleReset}
             >
               <Ionicons name="refresh" size={24} color={colors.white} />
-              <Text style={styles.resetButtonText}>Reset</Text>
+              <Text style={styles.resetButtonText}>{t('sportMode.exercise.reset')}</Text>
             </TouchableOpacity>
           )}
         </Animated.View>
       </ScrollView>
+
+      {/* Exercise Complete Modal */}
+      <ExerciseCompleteModal
+        visible={showCompleteModal}
+        exerciseName={getTranslatedExerciseName(exercise.id, t, language)}
+        sets={exercise.sets}
+        reps={exercise.reps}
+        totalReps={exercise.reps * exercise.sets}
+        onClose={() => {
+          setShowCompleteModal(false);
+          router.back();
+        }}
+      />
     </View>
   );
 }

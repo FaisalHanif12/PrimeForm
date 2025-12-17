@@ -18,6 +18,7 @@ import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
 import DecorativeBackground from './DecorativeBackground';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -36,6 +37,7 @@ export default function WorkoutPlanDisplay({
   onGenerateNew,
   isGeneratingNew = false
 }: WorkoutPlanDisplayProps) {
+  const { t, language, transliterateText, translateDayName } = useLanguage();
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
@@ -616,11 +618,11 @@ export default function WorkoutPlanDisplay({
           <View style={styles.heroContent}>
             {/* Goal Badge */}
             <View style={styles.goalBadge}>
-              <Text style={styles.goalBadgeText}>🎯 {workoutPlan.goal}</Text>
+              <Text style={styles.goalBadgeText}>🎯 {language === 'ur' ? transliterateText(workoutPlan.goal) : workoutPlan.goal}</Text>
             </View>
 
             {/* Main Title */}
-            <Text style={styles.heroSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()} • {workoutPlan.duration}</Text>
+            <Text style={styles.heroSubtitle}>{t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()} • {language === 'ur' ? transliterateText(workoutPlan.duration) : workoutPlan.duration}</Text>
 
             {/* Progress Circle */}
             <View style={styles.progressCircleContainer}>
@@ -629,7 +631,7 @@ export default function WorkoutPlanDisplay({
                 <View style={styles.progressCircleBackground} />
                 <View style={styles.progressCircleInner}>
                   <Text style={styles.progressCircleText}>{progressPercentage}%</Text>
-                  <Text style={styles.progressCircleLabel}>Complete</Text>
+                  <Text style={styles.progressCircleLabel}>{t('diet.complete')}</Text>
                 </View>
               </View>
             </View>
@@ -640,7 +642,7 @@ export default function WorkoutPlanDisplay({
                 <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
               </View>
               <Text style={styles.progressBarText}>
-                Week {getCurrentWeek()} of {getTotalWeeks()} • {progressPercentage}% Complete
+                {t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()} • {progressPercentage}% {t('diet.complete')}
               </Text>
             </View>
           </View>
@@ -651,8 +653,8 @@ export default function WorkoutPlanDisplay({
       <View style={styles.premiumCalendarSection}>
         <View style={styles.calendarHeader}>
           <View style={styles.calendarHeaderLeft}>
-            <Text style={styles.calendarTitle}>This Week's Plan</Text>
-            <Text style={styles.calendarSubtitle}>Week {getCurrentWeek()} of {getTotalWeeks()}</Text>
+            <Text style={styles.calendarTitle}>{t('workout.week.plan')}</Text>
+            <Text style={styles.calendarSubtitle}>{t('diet.week.of')} {getCurrentWeek()} {t('diet.week.of')} {getTotalWeeks()}</Text>
           </View>
           <View style={styles.weekIndicator}>
             <Text style={styles.weekIndicatorText}>W{getCurrentWeek()}</Text>
@@ -711,7 +713,7 @@ export default function WorkoutPlanDisplay({
                 {/* Day Info */}
                 <View style={styles.dayInfo}>
                   <Text style={[styles.premiumDayName, isToday && styles.premiumDayNameToday]}>
-                    {day.dayName.substring(0, 3)}
+                    {language === 'ur' ? translateDayName(day.dayName.substring(0, 3)) : day.dayName.substring(0, 3)}
                   </Text>
                   <Text style={[styles.premiumDayDate, isToday && styles.premiumDayDateToday]}>
                     {formatDate(day.date)}
@@ -726,16 +728,16 @@ export default function WorkoutPlanDisplay({
                         {day.exercises.length}
                       </Text>
                       <Text style={[styles.premiumExerciseLabel, isToday && styles.premiumExerciseLabelToday]}>
-                        exercises
+                        {t('workout.exercises')}
                       </Text>
                     </>
                   ) : (
                     <>
                       <Text style={[styles.premiumExerciseCount, isToday && styles.premiumExerciseCountToday]}>
-                        Rest
+                        {t('workout.rest')}
                       </Text>
                       <Text style={[styles.premiumExerciseLabel, isToday && styles.premiumExerciseLabelToday]}>
-                        day
+                        {t('workout.rest.day')}
                       </Text>
                     </>
                   )}
@@ -760,13 +762,13 @@ export default function WorkoutPlanDisplay({
         <View style={styles.workoutHeader}>
           <View style={styles.workoutHeaderLeft}>
             <Text style={styles.workoutTitle}>
-              {selectedDay?.isRestDay ? 'Active Recovery' :
-                selectedDay && isCurrentDay(selectedDay) ? "Today's Workout" :
-                  selectedDay ? `${selectedDay.dayName}'s Workout` : 'Select a Day'}
+              {selectedDay?.isRestDay ? t('workout.active.recovery') :
+                selectedDay && isCurrentDay(selectedDay) ? t('workout.today.workout') :
+                  selectedDay ? t('workout.day.workout').replace('{day}', language === 'ur' ? transliterateText(selectedDay.dayName) : selectedDay.dayName) : t('workout.select.day')}
             </Text>
             {selectedDay && !selectedDay.isRestDay && (
               <Text style={styles.workoutSubtitle}>
-                {selectedDay.exercises.length} exercises • {selectedDay.totalCalories} kcal
+                {selectedDay.exercises.length} {t('workout.exercises')} • {selectedDay.totalCalories} {t('dashboard.stats.kcal')}
               </Text>
             )}
           </View>
@@ -779,7 +781,7 @@ export default function WorkoutPlanDisplay({
                   return exerciseCompletionService.isExerciseCompleted(exerciseId);
                 }).length}/{selectedDay.exercises.length}
               </Text>
-              <Text style={styles.workoutProgressLabel}>Complete</Text>
+              <Text style={styles.workoutProgressLabel}>{t('workout.complete')}</Text>
             </View>
           )}
         </View>
@@ -823,10 +825,10 @@ export default function WorkoutPlanDisplay({
                       <View style={styles.modernExerciseHeader}>
                         <View style={styles.modernExerciseInfo}>
                           <Text style={[styles.modernExerciseName, isCompleted && styles.modernExerciseNameCompleted]}>
-                            {exercise.name}
+                            {language === 'ur' ? transliterateText(exercise.name) : exercise.name}
                           </Text>
                           <Text style={[styles.modernExerciseStats, isCompleted && styles.modernExerciseStatsCompleted]}>
-                            {exercise.sets} sets × {exercise.reps} reps
+                            {exercise.sets} {t('dashboard.stats.sets')} × {exercise.reps} {t('dashboard.stats.reps')}
                           </Text>
                         </View>
 
@@ -844,11 +846,11 @@ export default function WorkoutPlanDisplay({
                                 handleExercisePress(exercise);
                               }}
                             >
-                              <Text style={styles.modernStartButtonText}>START</Text>
+                              <Text style={styles.modernStartButtonText}>{t('workout.start')}</Text>
                             </TouchableOpacity>
                           ) : (
                             <View style={styles.modernViewButton}>
-                              <Text style={styles.modernViewButtonText}>VIEW</Text>
+                              <Text style={styles.modernViewButtonText}>{t('workout.view')}</Text>
                             </View>
                           )}
                         </View>
@@ -858,15 +860,15 @@ export default function WorkoutPlanDisplay({
                       <View style={styles.modernExerciseDetails}>
                         <View style={styles.modernDetailItem}>
                           <Text style={styles.modernDetailIcon}>⏱️</Text>
-                          <Text style={styles.modernDetailText}>{exercise.rest} rest</Text>
+                          <Text style={styles.modernDetailText}>{exercise.rest} {t('workout.rest')}</Text>
                         </View>
                         <View style={styles.modernDetailItem}>
                           <Text style={styles.modernDetailIcon}>🎯</Text>
-                          <Text style={styles.modernDetailText}>{exercise.targetMuscles.slice(0, 2).join(', ')}</Text>
+                          <Text style={styles.modernDetailText}>{language === 'ur' ? transliterateText(exercise.targetMuscles.slice(0, 2).join(', ')) : exercise.targetMuscles.slice(0, 2).join(', ')}</Text>
                         </View>
                         <View style={styles.modernDetailItem}>
                           <Text style={styles.modernDetailIcon}>🔥</Text>
-                          <Text style={styles.modernDetailText}>{exercise.caloriesBurned} kcal</Text>
+                          <Text style={styles.modernDetailText}>{exercise.caloriesBurned} {t('dashboard.stats.kcal')}</Text>
                         </View>
                       </View>
                     </View>
@@ -883,8 +885,8 @@ export default function WorkoutPlanDisplay({
             ) : (
               <View style={styles.emptyExercisesCard}>
                 <Text style={styles.emptyExercisesIcon}>💪</Text>
-                <Text style={styles.emptyExercisesTitle}>No exercises planned</Text>
-                <Text style={styles.emptyExercisesText}>This day doesn't have any exercises scheduled</Text>
+                <Text style={styles.emptyExercisesTitle}>{t('workout.no.exercises')}</Text>
+                <Text style={styles.emptyExercisesText}>{t('workout.no.exercises.text')}</Text>
               </View>
             )}
           </ScrollView>
@@ -899,23 +901,23 @@ export default function WorkoutPlanDisplay({
             <View style={styles.restDayContainer}>
               <Text style={styles.restDayIcon}>🏃‍♂️</Text>
               <Text style={styles.restDayTitle}>
-                {selectedDay && isCurrentDay(selectedDay) ? 'Today is the Rest Day' : 'Active Recovery Day'}
+                {selectedDay && isCurrentDay(selectedDay) ? t('workout.today.rest.day') : t('workout.active.recovery.day')}
               </Text>
               <Text style={styles.restDayText}>
-                Keep moving with light activities! Try a gentle jog, yoga session, or stretching routine to help your muscles recover while staying active.
+                {t('workout.rest.day.description')}
               </Text>
               <View style={styles.recoveryActivities}>
                 <View style={styles.activityItem}>
                   <Text style={styles.activityIcon}>🧘‍♂️</Text>
-                  <Text style={styles.activityText}>Yoga (15-20 min)</Text>
+                  <Text style={styles.activityText}>{t('workout.activity.yoga')}</Text>
                 </View>
                 <View style={styles.activityItem}>
                   <Text style={styles.activityIcon}>🚶‍♂️</Text>
-                  <Text style={styles.activityText}>Light Walk (20-30 min)</Text>
+                  <Text style={styles.activityText}>{t('workout.activity.walk')}</Text>
                 </View>
                 <View style={styles.activityItem}>
                   <Text style={styles.activityIcon}>🏃‍♂️</Text>
-                  <Text style={styles.activityText}>Easy Jog (15-25 min)</Text>
+                  <Text style={styles.activityText}>{t('workout.activity.jog')}</Text>
                 </View>
               </View>
             </View>
@@ -924,7 +926,7 @@ export default function WorkoutPlanDisplay({
 
         {!selectedDay && (
           <View style={styles.noDaySelectedContainer}>
-            <Text style={styles.noDaySelectedText}>Please select a day from the calendar above</Text>
+            <Text style={styles.noDaySelectedText}>{t('workout.select.day.message')}</Text>
           </View>
         )}
 

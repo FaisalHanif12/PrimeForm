@@ -926,9 +926,9 @@ export default function DashboardScreen() {
 
     return [
       { label: t('dashboard.stats.calories'), value: remainingCalories.toLocaleString(), icon: 'flame' as const, color: colors.gold },
-      { label: t('dashboard.stats.water'), value: waterCompleted ? 'Done' : 'Due', icon: 'water' as const, color: waterCompleted ? colors.green : colors.blue },
+      { label: t('dashboard.stats.water'), value: waterCompleted ? t('dashboard.stats.water.done') : t('dashboard.stats.water.due'), icon: 'water' as const, color: waterCompleted ? colors.green : colors.blue },
       { label: t('dashboard.stats.workouts'), value: (todayWorkouts.length - completedWorkouts).toString(), icon: 'barbell' as const, color: colors.green },
-      { label: 'Meals Remaining', value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
+      { label: t('dashboard.stats.mealsRemaining'), value: remainingMeals.toString(), icon: 'restaurant' as const, color: colors.purple },
     ];
   }, [todayMeals, completedMeals, todayWorkouts, completedExercises, waterCompleted, t]);
 
@@ -1137,7 +1137,7 @@ export default function DashboardScreen() {
             {/* Today's Meal Plan */}
             {!isAuthenticated ? (
               <MealPlanCard
-                title="Today's AI Meal Plan"
+                title={t('dashboard.meal.plan')}
                 meals={mockMeals}
                 totalCalories={mockMeals.reduce((sum, meal) => sum + meal.calories, 0)}
                 onPress={() => handleFeatureAccess('AI Diet')}
@@ -1146,11 +1146,11 @@ export default function DashboardScreen() {
             ) : isLoadingPlans ? (
               <View style={styles.loadingCard}>
                 <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={styles.loadingCardText}>Loading your meal plan...</Text>
+                <Text style={styles.loadingCardText}>{t('dashboard.loading.mealPlan')}</Text>
               </View>
             ) : todayMeals.length > 0 ? (
               <MealPlanCard
-                title="Today's AI Meal Plan"
+                title={t('dashboard.meal.plan')}
                 meals={todayMeals}
                 totalCalories={todayMeals.reduce((sum, meal) => sum + meal.calories, 0)}
                 completedMeals={completedMeals}
@@ -1159,15 +1159,15 @@ export default function DashboardScreen() {
               />
             ) : (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>No Meal Plan Today</Text>
-                <Text style={styles.emptyCardText}>Generate a diet plan to see today's meals</Text>
+                <Text style={styles.emptyCardTitle}>{t('dashboard.empty.mealPlan.title')}</Text>
+                <Text style={styles.emptyCardText}>{t('dashboard.empty.mealPlan.text')}</Text>
               </View>
             )}
 
             {/* Today's Workout Plan */}
             {!isAuthenticated ? (
               <WorkoutPlanCard
-                title="Today's AI Workout Plan"
+                title={t('dashboard.workout.plan')}
                 workouts={mockWorkouts}
                 completedExercises={completedExercises}
                 onPress={() => handleFeatureAccess('AI Workout')}
@@ -1176,11 +1176,11 @@ export default function DashboardScreen() {
             ) : isLoadingPlans ? (
               <View style={styles.loadingCard}>
                 <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={styles.loadingCardText}>Loading your workout plan...</Text>
+                <Text style={styles.loadingCardText}>{t('dashboard.loading.workoutPlan')}</Text>
               </View>
             ) : (
               <WorkoutPlanCard
-                title="Today's AI Workout Plan"
+                title={t('dashboard.workout.plan')}
                 workouts={todayWorkouts}
                 completedExercises={completedExercises}
                 onPress={() => handleFeatureAccess('AI Workout')}
@@ -1190,8 +1190,8 @@ export default function DashboardScreen() {
 
             {/* Water Intake Section - Status Only */}
             <View style={styles.waterSection}>
-              <Text style={styles.waterTitle}>💧 Water Intake</Text>
-              <Text style={styles.waterTarget}>Target: {targetWater}ml</Text>
+              <Text style={styles.waterTitle}>💧 {t('dashboard.water.intake')}</Text>
+              <Text style={styles.waterTarget}>{t('dashboard.water.target')} {targetWater}ml</Text>
 
               <View style={styles.waterStatusOnlyContainer}>
                 <View style={styles.waterStatusInfo}>

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
+import { useLanguage } from '../context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -35,6 +36,7 @@ export default function ExerciseDetailScreen({
   canComplete = true,
   selectedDay,
 }: ExerciseDetailScreenProps) {
+  const { t, language, transliterateText } = useLanguage();
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const [isCompleting, setIsCompleting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -93,9 +95,9 @@ export default function ExerciseDetailScreen({
     
     if (completedSets.size !== exercise.sets) {
       Alert.alert(
-        'Complete All Sets',
-        `Please complete all ${exercise.sets} sets before marking this exercise as complete.`,
-        [{ text: 'OK' }]
+        t('exercise.detail.modal.complete.all.sets.title'),
+        t('exercise.detail.modal.complete.all.sets.message').replace('{sets}', String(exercise.sets)),
+        [{ text: t('common.ok') }]
       );
       return;
     }
@@ -123,7 +125,7 @@ export default function ExerciseDetailScreen({
       
     } catch (error) {
       console.error('❌ Error completing exercise:', error);
-      Alert.alert('Error', 'Failed to complete exercise. Please try again.');
+      Alert.alert(t('exercise.detail.modal.error.title'), t('exercise.detail.modal.error.message'));
       setIsCompleting(false);
     }
   };
@@ -157,7 +159,7 @@ export default function ExerciseDetailScreen({
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Exercise Details</Text>
+            <Text style={styles.headerTitle}>{t('exercise.detail.modal.title')}</Text>
             <View style={styles.placeholder} />
           </View>
 
@@ -170,9 +172,9 @@ export default function ExerciseDetailScreen({
                   <Text style={styles.exerciseEmoji}>{exercise.emoji}</Text>
                 </View>
                 <View style={styles.exerciseInfo}>
-                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <Text style={styles.exerciseName}>{language === 'ur' ? transliterateText(exercise.name) : exercise.name}</Text>
                   <Text style={styles.exerciseStats}>
-                    {exercise.sets} sets × {exercise.reps} reps
+                    {exercise.sets} {t('dashboard.stats.sets')} × {exercise.reps} {t('dashboard.stats.reps')}
                   </Text>
                 </View>
                 {isCompleted && (
@@ -184,16 +186,16 @@ export default function ExerciseDetailScreen({
 
               <View style={styles.exerciseDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Rest Time</Text>
+                  <Text style={styles.detailLabel}>{t('exercise.detail.modal.rest.time')}</Text>
                   <Text style={styles.detailValue}>{exercise.rest}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Target Muscles</Text>
-                  <Text style={styles.detailValue}>{exercise.targetMuscles.join(', ')}</Text>
+                  <Text style={styles.detailLabel}>{t('exercise.detail.modal.target.muscles')}</Text>
+                  <Text style={styles.detailValue}>{language === 'ur' ? transliterateText(exercise.targetMuscles.join(', ')) : exercise.targetMuscles.join(', ')}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Calories Burned</Text>
-                  <Text style={styles.detailValue}>{exercise.caloriesBurned} kcal</Text>
+                  <Text style={styles.detailLabel}>{t('exercise.detail.modal.calories.burned')}</Text>
+                  <Text style={styles.detailValue}>{exercise.caloriesBurned} {t('dashboard.stats.kcal')}</Text>
                 </View>
               </View>
             </View>
@@ -201,7 +203,7 @@ export default function ExerciseDetailScreen({
             {/* Progress Card - Always show, but only interactive when canComplete */}
             {!isCompleted && (
               <View style={styles.progressCard}>
-                <Text style={styles.sectionTitle}>Progress</Text>
+                <Text style={styles.sectionTitle}>{t('exercise.detail.modal.progress')}</Text>
                 <View style={styles.progressBar}>
                   <View 
                     style={[
@@ -211,7 +213,7 @@ export default function ExerciseDetailScreen({
                   />
                 </View>
                 <Text style={styles.progressText}>
-                  {completedSets.size} of {exercise.sets} sets completed ({Math.round(completionPercentage)}%)
+                  {completedSets.size} {t('diet.week.of')} {exercise.sets} {t('exercise.detail.modal.sets.completed.text')} ({Math.round(completionPercentage)}%)
                 </Text>
               </View>
             )}
@@ -220,7 +222,7 @@ export default function ExerciseDetailScreen({
             {!isCompleted && (
               <View style={styles.setTracker}>
                 <Text style={styles.sectionTitle}>
-                  {canComplete ? 'Track Your Sets' : 'Sets Overview'}
+                  {canComplete ? t('exercise.detail.modal.track.sets') : t('exercise.detail.modal.sets.overview')}
                 </Text>
                 <View style={styles.setsGrid}>
                   {Array.from({ length: exercise.sets }, (_, index) => {
@@ -251,7 +253,7 @@ export default function ExerciseDetailScreen({
                           isSetCompleted && styles.setRepsTextCompleted,
                           !canComplete && styles.setRepsTextDisabled,
                         ]}>
-                          {exercise.reps} reps
+                          {exercise.reps} {t('dashboard.stats.reps')}
                         </Text>
                         {isSetCompleted && (
                           <Text style={styles.setCheckmark}>✓</Text>
@@ -262,7 +264,7 @@ export default function ExerciseDetailScreen({
                 </View>
                 {!canComplete && (
                   <Text style={styles.viewOnlyNote}>
-                    View only - Complete today's exercises to track progress
+                    {t('exercise.detail.modal.view.only.note')}
                   </Text>
                 )}
               </View>
@@ -270,19 +272,19 @@ export default function ExerciseDetailScreen({
 
             {/* Exercise Tips */}
             <View style={styles.tipsSection}>
-              <Text style={styles.sectionTitle}>💡 Exercise Tips</Text>
+              <Text style={styles.sectionTitle}>💡 {t('exercise.detail.modal.tips.title')}</Text>
               <View style={styles.tipCard}>
                 <Text style={styles.tipText}>
-                  • Focus on proper form over speed
+                  • {t('exercise.detail.modal.tip.form')}
                 </Text>
                 <Text style={styles.tipText}>
-                  • Breathe steadily throughout the movement
+                  • {t('exercise.detail.modal.tip.breathe')}
                 </Text>
                 <Text style={styles.tipText}>
-                  • Take the full rest time between sets
+                  • {t('exercise.detail.modal.tip.rest')}
                 </Text>
                 <Text style={styles.tipText}>
-                  • Stop if you feel any pain or discomfort
+                  • {t('exercise.detail.modal.tip.pain')}
                 </Text>
               </View>
             </View>
@@ -307,10 +309,10 @@ export default function ExerciseDetailScreen({
                   isCompleting && styles.completeButtonTextDisabled,
                 ]}>
                   {isCompleting 
-                    ? 'Completing...' 
+                    ? t('exercise.detail.modal.completing')
                     : allSetsCompleted 
-                      ? 'Complete Exercise ✓' 
-                      : `Complete ${completedSets.size}/${exercise.sets} sets`
+                      ? t('exercise.detail.modal.complete.exercise')
+                      : t('exercise.detail.modal.complete.sets').replace('{completed}', String(completedSets.size)).replace('{total}', String(exercise.sets))
                   }
                 </Text>
               </TouchableOpacity>

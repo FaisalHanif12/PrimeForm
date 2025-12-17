@@ -283,7 +283,7 @@ class AITrainerService {
   }
 
   // Send message to AI trainer
-  async sendMessage(message: string): Promise<AITrainerServiceResponse<{
+  async sendMessage(message: string, language: 'en' | 'ur' = 'en'): Promise<AITrainerServiceResponse<{
     message: string;
     category: 'workout' | 'diet' | 'motivation' | 'general';
   }>> {
@@ -308,7 +308,7 @@ class AITrainerService {
       const dietPlan = await aiDietService.loadDietPlanFromDatabase();
 
       // Create context-aware prompt
-      const contextPrompt = this.buildContextualPrompt(message, userProfile.data, workoutPlan, dietPlan);
+      const contextPrompt = this.buildContextualPrompt(message, userProfile.data, workoutPlan, dietPlan, language);
 
       // Call OpenRouter API
       const response = await fetch(OPENROUTER_API_URL, {
@@ -392,7 +392,7 @@ class AITrainerService {
   }
 
   // Build contextual prompt for AI
-  private buildContextualPrompt(userMessage: string, userProfile: any, workoutPlan: any, dietPlan: any): string {
+  private buildContextualPrompt(userMessage: string, userProfile: any, workoutPlan: any, dietPlan: any, language: 'en' | 'ur' = 'en'): string {
     const context = [];
     
     // Add comprehensive user profile context
@@ -630,11 +630,21 @@ class AITrainerService {
    - Use clear, easy-to-understand language
    - Include specific examples when helpful
 
+${language === 'ur' ? `\n**CRITICAL LANGUAGE INSTRUCTION:**
+- The user's preferred language is Urdu (اردو)
+- You MUST respond ENTIRELY in Urdu language
+- Use proper Urdu script (اردو) for all your responses
+- Translate all technical terms naturally into Urdu
+- Maintain the same professional and encouraging tone in Urdu
+- If you need to use English technical terms, provide Urdu transliteration alongside
+- Example: Instead of "push-ups", use "پش اپس" or explain in Urdu
+- All your responses should be in fluent, natural Urdu` : ''}
+
 ${context.length > 0 ? `\n**USER'S CURRENT SITUATION:**\n${context.join('\n\n')}\n` : ''}
 
 **USER'S QUESTION:** ${userMessage}
 
-**YOUR RESPONSE (consider all context above):**`;
+**YOUR RESPONSE (consider all context above${language === 'ur' ? ' and respond in Urdu' : ''}):**`;
 
     return systemPrompt;
   }

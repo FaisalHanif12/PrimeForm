@@ -9,6 +9,7 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { useToast } from '../../src/context/ToastContext';
 import userProfileService from '../../src/services/userProfileService';
 import aiDietService from '../../src/services/aiDietService';
+import transliterationService from '../../src/services/transliterationService';
 import DashboardHeader from '../../src/components/DashboardHeader';
 import BottomNavigation from '../../src/components/BottomNavigation';
 import Sidebar from '../../src/components/Sidebar';
@@ -26,7 +27,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function DietScreen() {
   const { user } = useAuthContext();
-  const { t, language } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const router = useRouter();
   const { unreadCount } = useNotifications();
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -511,7 +512,7 @@ export default function DietScreen() {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.loadingText}>Loading your diet plan...</Text>
+          <Text style={styles.loadingText}>{t('diet.loading')}</Text>
         </View>
       );
     }
@@ -623,7 +624,7 @@ export default function DietScreen() {
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Unable to Load Diet Plan</Text>
+          <Text style={styles.errorTitle}>{t('diet.error.title')}</Text>
           <Text style={styles.errorMessage}>{loadError}</Text>
           <TouchableOpacity
             style={styles.retryButton}
@@ -634,7 +635,7 @@ export default function DietScreen() {
               setIsLoadingPlan(false);
             }}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('diet.error.retry')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -703,7 +704,7 @@ export default function DietScreen() {
             disabled={isGenerating}
           >
             <Text style={styles.confirmGenerateButtonText}>
-              {isGenerating ? 'Generating Diet Plan...' : t('profile.summary.confirm.generate')}
+              {isGenerating ? t('diet.generating') : t('profile.summary.confirm.generate')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -721,13 +722,13 @@ export default function DietScreen() {
 
           <Text style={styles.startCardTitle}>
             {language === 'ur'
-              ? 'چلیں آپ کے لئے ذاتی diet پلان بنائیں؟'
-              : 'Let’s create your personal diet plan.'}
+              ? transliterateText('Let\'s create your personal diet plan.')
+              : 'Let\'s create your personal diet plan.'}
           </Text>
 
           <Text style={styles.startCardSubtitle}>
             {language === 'ur'
-              ? 'چند مختصر سوالات، پھر AI آپ کے لئے موزوں meal plan تیار کرے گا۔'
+              ? transliterateText('Answer a few quick questions and AI will build a meal plan for you.')
               : 'Answer a few quick questions and AI will build a meal plan for you.'}
           </Text>
 
@@ -814,8 +815,8 @@ export default function DietScreen() {
         {/* Beautiful Loading Modal */}
         <LoadingModal
           visible={isGenerating}
-          title="Creating Your Diet Plan"
-          subtitle="Analyzing your profile and generating personalized meals"
+          title={language === 'ur' ? transliterateText('Creating Your Diet Plan') : 'Creating Your Diet Plan'}
+          subtitle={language === 'ur' ? transliterateText('Analyzing your profile and generating personalized meals') : 'Analyzing your profile and generating personalized meals'}
           type="diet"
         />
       </SafeAreaView>

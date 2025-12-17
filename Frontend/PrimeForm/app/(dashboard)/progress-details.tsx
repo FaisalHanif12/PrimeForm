@@ -49,7 +49,7 @@ interface ProgressCharts {
 export default function ProgressDetailsScreen() {
   const router = useRouter();
   const { user } = useAuthContext();
-  const { t } = useLanguage();
+  const { t, language, transliterateNumbers } = useLanguage();
   const { showToast } = useToast();
   const { unreadCount } = useNotifications();
 
@@ -625,11 +625,11 @@ export default function ProgressDetailsScreen() {
   const currentPeriodLabel =
     mode === 'weekly'
       ? selectedWeek
-        ? `Week ${selectedWeek}`
-        : 'Week'
+        ? `${t('progress.details.timeline.week')} ${language === 'ur' ? transliterateNumbers(selectedWeek) : selectedWeek}`
+        : t('progress.details.timeline.week')
       : selectedMonth
-        ? `Month ${selectedMonth}`
-        : 'Month';
+        ? `${t('progress.details.timeline.month')} ${language === 'ur' ? transliterateNumbers(selectedMonth) : selectedMonth}`
+        : t('progress.details.timeline.month');
 
   const overallCompletion = useMemo(() => {
     if (!stats) return 0;
@@ -754,9 +754,9 @@ export default function ProgressDetailsScreen() {
         >
           {/* Hero Section */}
           <View style={styles.heroSection}>
-            <Text style={styles.heroTitle}>Detailed Progress</Text>
+            <Text style={styles.heroTitle}>{t('progress.details.hero.title')}</Text>
             <Text style={styles.heroSubtitle}>
-              Explore your weekly and monthly analytics
+              {t('progress.details.hero.subtitle')}
             </Text>
           </View>
 
@@ -778,7 +778,7 @@ export default function ProgressDetailsScreen() {
                     mode === value && styles.modeButtonTextActive,
                   ]}
                 >
-                  {value === 'weekly' ? 'Weekly' : 'Monthly'}
+                  {t(`progress.details.mode.${value}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -788,7 +788,7 @@ export default function ProgressDetailsScreen() {
           <View style={styles.timelineSection}>
             <View style={styles.timelineHeader}>
               <Text style={styles.timelineTitle}>
-                {mode === 'weekly' ? 'Select Week' : 'Select Month'}
+                {mode === 'weekly' ? t('progress.details.timeline.select.week') : t('progress.details.timeline.select.month')}
               </Text>
               <Text style={styles.timelineSubtitle}>{currentPeriodLabel}</Text>
             </View>
@@ -796,7 +796,9 @@ export default function ProgressDetailsScreen() {
             {isLoading && (mode === 'weekly' ? availableWeeks.length === 0 : availableMonths.length === 0) ? (
               <View style={styles.timelineLoading}>
                 <ActivityIndicator color={colors.primary} size="small" />
-                <Text style={styles.timelineLoadingText}>Loading {mode === 'weekly' ? 'weeks' : 'months'}...</Text>
+                <Text style={styles.timelineLoadingText}>
+                  {mode === 'weekly' ? t('progress.details.loading.weeks') : t('progress.details.loading.months')}
+                </Text>
               </View>
             ) : (
               <ScrollView
@@ -810,7 +812,7 @@ export default function ProgressDetailsScreen() {
                 {(mode === 'weekly' ? availableWeeks : availableMonths).length === 0 ? (
                   <View style={styles.timelineEmpty}>
                     <Text style={styles.timelineEmptyText}>
-                      No {mode === 'weekly' ? 'weeks' : 'months'} available yet
+                      {mode === 'weekly' ? t('progress.details.empty.weeks') : t('progress.details.empty.months')}
                     </Text>
                   </View>
                 ) : (
@@ -838,9 +840,9 @@ export default function ProgressDetailsScreen() {
                         }
                         activeOpacity={0.9}
                       >
-                        {isCurrent && <Text style={styles.timelineNowBadge}>NOW</Text>}
+                        {isCurrent && <Text style={styles.timelineNowBadge}>{t('progress.details.timeline.now')}</Text>}
                         <Text style={styles.timelineValue}>
-                          {mode === 'weekly' ? `W${value}` : `M${value}`}
+                          {mode === 'weekly' ? `${t('progress.details.timeline.week').charAt(0).toUpperCase()}${language === 'ur' ? transliterateNumbers(value) : value}` : `${t('progress.details.timeline.month').charAt(0).toUpperCase()}${language === 'ur' ? transliterateNumbers(value) : value}`}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -852,7 +854,9 @@ export default function ProgressDetailsScreen() {
 
           {/* Summary card */}
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>{currentPeriodLabel} Summary</Text>
+            <Text style={styles.summaryTitle}>
+              {t('progress.details.summary.title').replace('{period}', currentPeriodLabel)}
+            </Text>
             {isLoading || !stats ? (
               <View style={styles.summaryLoading}>
                 <ActivityIndicator color={colors.primary} />
@@ -865,12 +869,12 @@ export default function ProgressDetailsScreen() {
                   <View style={styles.metricRow}>
                     {/* Calories */}
                     <View style={styles.metricCard}>
-                      <Text style={styles.metricLabel}>Calories</Text>
+                      <Text style={styles.metricLabel}>{t('progress.details.metric.calories')}</Text>
                       <Text style={styles.metricValue}>
-                        {Math.round(stats.caloriesConsumed)}/{Math.round(stats.targetCalories)} kcal
+                        {language === 'ur' ? transliterateNumbers(Math.round(stats.caloriesConsumed)) : Math.round(stats.caloriesConsumed)}/{language === 'ur' ? transliterateNumbers(Math.round(stats.targetCalories)) : Math.round(stats.targetCalories)} {t('dashboard.stats.kcal')}
                       </Text>
                       <Text style={styles.metricSubLabel}>
-                        {metricPercentages.calories}% of target
+                        {metricPercentages.calories}% {t('progress.details.metric.of.target')}
                       </Text>
                       <View style={styles.metricBar}>
                         <View
@@ -884,12 +888,12 @@ export default function ProgressDetailsScreen() {
 
                     {/* Water */}
                     <View style={styles.metricCard}>
-                      <Text style={styles.metricLabel}>Water</Text>
+                      <Text style={styles.metricLabel}>{t('progress.details.metric.water')}</Text>
                       <Text style={styles.metricValue}>
-                        {stats.waterIntake.toFixed(1)}/{stats.targetWater.toFixed(1)} L
+                        {language === 'ur' ? transliterateNumbers(parseFloat(stats.waterIntake.toFixed(1))) : stats.waterIntake.toFixed(1)}/{language === 'ur' ? transliterateNumbers(parseFloat(stats.targetWater.toFixed(1))) : stats.targetWater.toFixed(1)} L
                       </Text>
                       <Text style={styles.metricSubLabel}>
-                        {metricPercentages.water}% of target
+                        {metricPercentages.water}% {t('progress.details.metric.of.target')}
                       </Text>
                       <View style={styles.metricBar}>
                         <View
@@ -906,12 +910,12 @@ export default function ProgressDetailsScreen() {
                   <View style={styles.metricRow}>
                     {/* Workouts */}
                     <View style={styles.metricCard}>
-                      <Text style={styles.metricLabel}>Workouts</Text>
+                      <Text style={styles.metricLabel}>{t('progress.details.metric.workouts')}</Text>
                       <Text style={styles.metricValue}>
-                        {stats.workoutsCompleted}/{stats.totalWorkouts}
+                        {language === 'ur' ? transliterateNumbers(stats.workoutsCompleted) : stats.workoutsCompleted}/{language === 'ur' ? transliterateNumbers(stats.totalWorkouts) : stats.totalWorkouts}
                       </Text>
                       <Text style={styles.metricSubLabel}>
-                        {metricPercentages.workouts}% complete
+                        {metricPercentages.workouts}% {t('progress.details.metric.complete')}
                       </Text>
                       <View style={styles.metricBar}>
                         <View
@@ -925,12 +929,12 @@ export default function ProgressDetailsScreen() {
 
                     {/* Meals */}
                     <View style={styles.metricCard}>
-                      <Text style={styles.metricLabel}>Meals</Text>
+                      <Text style={styles.metricLabel}>{t('progress.details.metric.meals')}</Text>
                       <Text style={styles.metricValue}>
-                        {stats.mealsCompleted}/{stats.totalMeals}
+                        {language === 'ur' ? transliterateNumbers(stats.mealsCompleted) : stats.mealsCompleted}/{language === 'ur' ? transliterateNumbers(stats.totalMeals) : stats.totalMeals}
                       </Text>
                       <Text style={styles.metricSubLabel}>
-                        {metricPercentages.meals}% complete
+                        {metricPercentages.meals}% {t('progress.details.metric.complete')}
                       </Text>
                       <View style={styles.metricBar}>
                         <View
@@ -955,7 +959,7 @@ export default function ProgressDetailsScreen() {
                     />
                   </View>
                   <Text style={styles.summaryProgressText}>
-                    Overall completion {overallCompletion}%
+                    {t('progress.details.summary.overall')} {overallCompletion}%
                   </Text>
                 </View>
               </>
@@ -976,24 +980,24 @@ export default function ProgressDetailsScreen() {
             {isLoadingCharts ? (
               <View style={styles.chartsLoading}>
                 <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={styles.chartsLoadingText}>Loading charts...</Text>
+                <Text style={styles.chartsLoadingText}>{t('progress.details.loading.charts')}</Text>
               </View>
             ) : charts ? (
               <>
                 <ProgressChart
-                  title="Calories Trend"
+                  title={t('progress.chart.calories')}
                   data={charts.calories}
                   type="line"
                   period={mode}
                 />
                 <ProgressChart
-                  title="Workout Performance"
+                  title={t('progress.chart.workouts')}
                   data={charts.workouts}
                   type="bar"
                   period={mode}
                 />
                 <ProgressChart
-                  title="Water Hydration"
+                  title={t('progress.chart.water')}
                   data={charts.water}
                   type="bar"
                   period={mode}
@@ -1002,7 +1006,7 @@ export default function ProgressDetailsScreen() {
             ) : (
               <View style={styles.chartsPlaceholder}>
                 <Text style={styles.chartsPlaceholderText}>
-                  Charts will load when you select a period
+                  {t('progress.details.charts.placeholder')}
                 </Text>
               </View>
             )}

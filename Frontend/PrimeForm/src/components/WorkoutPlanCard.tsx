@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
+import { useLanguage } from '../context/LanguageContext';
 
 interface WorkoutPlanCardProps {
   title: string;
@@ -20,6 +21,7 @@ export default function WorkoutPlanCard({
   onPress, 
   delay = 0 
 }: WorkoutPlanCardProps) {
+  const { t, language, transliterateText } = useLanguage();
   const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
   
   // Get today's date for completion checking (use local timezone to avoid UTC offset)
@@ -41,7 +43,7 @@ export default function WorkoutPlanCard({
             <Text style={styles.title}>{title}</Text>
             <View style={styles.calorieContainer}>
               <Text style={styles.calorieCount}>{totalCalories}</Text>
-              <Text style={styles.calorieLabel}>kcal</Text>
+              <Text style={styles.calorieLabel}>{t('dashboard.stats.kcal')}</Text>
             </View>
           </View>
           
@@ -62,16 +64,22 @@ export default function WorkoutPlanCard({
                       <Text style={[
                         styles.workoutName,
                         isCompleted && styles.workoutNameCompleted
-                      ]}>{workout.name}</Text>
+                      ]}>
+                        {language === 'ur' ? transliterateText(workout.name) : workout.name}
+                      </Text>
                       <View style={styles.workoutDetails}>
                         <Text style={[
                           styles.workoutCalories,
                           isCompleted && styles.workoutCaloriesCompleted
-                        ]}>{workout.caloriesBurned} kcal</Text>
+                        ]}>
+                          {workout.caloriesBurned} {t('dashboard.stats.kcal')}
+                        </Text>
                         <Text style={[
                           styles.workoutWeight,
                           isCompleted && styles.workoutWeightCompleted
-                        ]}>{workout.sets} sets × {workout.reps} reps</Text>
+                        ]}>
+                          {workout.sets} {t('dashboard.stats.sets')} × {workout.reps} {t('dashboard.stats.reps')}
+                        </Text>
                       </View>
                     </View>
                     
@@ -86,14 +94,14 @@ export default function WorkoutPlanCard({
             </View>
           ) : (
             <View style={styles.emptyWorkoutContainer}>
-              <Text style={styles.emptyWorkoutTitle}>No Workout Today</Text>
-              <Text style={styles.emptyWorkoutText}>Rest day or no workout plan generated</Text>
+              <Text style={styles.emptyWorkoutTitle}>{t('workout.page.comingSoon')}</Text>
+              <Text style={styles.emptyWorkoutText}>{t('workout.page.comingSoonDesc')}</Text>
             </View>
           )}
           
           {onPress && (
             <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
-              <Text style={styles.viewAllText}>View Full AI Workout Plan</Text>
+              <Text style={styles.viewAllText}>{t('dashboard.view.full.workout')}</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
           )}

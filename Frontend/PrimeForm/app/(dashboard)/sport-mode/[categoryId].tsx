@@ -12,13 +12,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../../src/theme/colors';
-import { getSportCategory } from '../../../src/data/sportExercises';
+import { getSportCategory, getTranslatedSportName, getTranslatedExerciseName } from '../../../src/data/sportExercises';
+import { useLanguage } from '../../../src/context/LanguageContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function SportCategoryPage() {
   const { categoryId } = useLocalSearchParams<{ categoryId: string }>();
   const category = getSportCategory(categoryId);
+  const { t, language, transliterateText } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -31,7 +33,7 @@ export default function SportCategoryPage() {
   if (!category) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Category not found</Text>
+        <Text style={styles.errorText}>{t('sportMode.category.notFound')}</Text>
       </View>
     );
   }
@@ -59,7 +61,9 @@ export default function SportCategoryPage() {
         <View style={styles.headerContent}>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerIcon}>{category.icon}</Text>
-            <Text style={styles.headerTitle}>{category.name}</Text>
+            <Text style={styles.headerTitle}>
+              {getTranslatedSportName(category.id, t, language)}
+            </Text>
           </View>
         </View>
         <View style={styles.headerSpacer} />
@@ -74,9 +78,9 @@ export default function SportCategoryPage() {
         <View style={styles.exerciseList}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Training Exercises</Text>
+              <Text style={styles.sectionTitle}>{t('sportMode.category.exercises')}</Text>
               <Text style={styles.sectionSubtitle}>
-                {category.exercises.length} exercises · Tap to start
+                {category.exercises.length} {t('sportMode.category.exercisesCount')}
               </Text>
             </View>
           </View>
@@ -108,40 +112,43 @@ export default function SportCategoryPage() {
                   <View style={styles.middleSection}>
                     <View style={styles.titleRow}>
                       <Text style={styles.exerciseName} numberOfLines={1}>
-                        {exercise.name}
+                        {getTranslatedExerciseName(exercise.id, t, language)}
                       </Text>
                       <View style={[styles.difficultyBadge, { 
                         backgroundColor: getDifficultyColor(exercise.difficulty) + '20',
                       }]}>
                         <Text style={[styles.difficultyText, { color: getDifficultyColor(exercise.difficulty) }]}>
-                          {exercise.difficulty}
+                          {exercise.difficulty === 'Beginner' ? t('sportMode.difficulty.beginner') :
+                           exercise.difficulty === 'Intermediate' ? t('sportMode.difficulty.intermediate') :
+                           exercise.difficulty === 'Advanced' ? t('sportMode.difficulty.advanced') :
+                           exercise.difficulty}
                         </Text>
                       </View>
                     </View>
 
                     <Text style={styles.exerciseDescription} numberOfLines={2}>
-                      {exercise.description}
+                      {language === 'ur' ? transliterateText(exercise.description) : exercise.description}
                     </Text>
 
                     {/* Stats */}
                     <View style={styles.statsRow}>
                       <View style={styles.statItem}>
                         <Ionicons name="time-outline" size={14} color={colors.mutedText} />
-                        <Text style={styles.statText}>{Math.floor(exercise.duration / 60)} min</Text>
+                        <Text style={styles.statText}>{Math.floor(exercise.duration / 60)} {t('sportMode.stats.min')}</Text>
                       </View>
 
                       <View style={styles.statDivider} />
 
                       <View style={styles.statItem}>
                         <Ionicons name="repeat-outline" size={14} color={colors.mutedText} />
-                        <Text style={styles.statText}>{exercise.reps} reps</Text>
+                        <Text style={styles.statText}>{exercise.reps} {t('sportMode.stats.reps')}</Text>
                       </View>
 
                       <View style={styles.statDivider} />
 
                       <View style={styles.statItem}>
                         <Ionicons name="layers-outline" size={14} color={colors.mutedText} />
-                        <Text style={styles.statText}>{exercise.sets} sets</Text>
+                        <Text style={styles.statText}>{exercise.sets} {t('sportMode.stats.sets')}</Text>
                       </View>
                     </View>
                   </View>

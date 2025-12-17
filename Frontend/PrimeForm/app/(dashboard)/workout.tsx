@@ -26,7 +26,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function WorkoutScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
   const { unreadCount } = useNotifications();
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
@@ -531,7 +531,7 @@ export default function WorkoutScreen() {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.loadingText}>Loading your workout plan...</Text>
+          <Text style={styles.loadingText}>{t('workout.loading')}</Text>
         </View>
       );
     }
@@ -558,7 +558,7 @@ export default function WorkoutScreen() {
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Unable to Load Workout Plan</Text>
+          <Text style={styles.errorTitle}>{t('workout.error.title')}</Text>
           <Text style={styles.errorMessage}>{loadError}</Text>
           <TouchableOpacity
             style={styles.retryButton}
@@ -591,7 +591,7 @@ export default function WorkoutScreen() {
               }
             }}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>{t('workout.error.retry')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -669,7 +669,7 @@ export default function WorkoutScreen() {
               <View style={styles.loadingButtonContent}>
                 <ActivityIndicator color={colors.white} size="small" />
                 <Text style={styles.confirmGenerateButtonText}>
-                  {generationProgress || 'Creating your plan...'}
+                  {generationProgress || t('workout.creating')}
                 </Text>
               </View>
             ) : (
@@ -690,13 +690,13 @@ export default function WorkoutScreen() {
 
           <Text style={styles.startCardTitle}>
             {language === 'ur'
-              ? 'چلیں آپ کے لئے ذاتی workout بنائیں؟'
-              : 'Let’s build your personal workout plan.'}
+              ? transliterateText('Let\'s build your personal workout plan.')
+              : 'Let\'s build your personal workout plan.'}
           </Text>
 
           <Text style={styles.startCardSubtitle}>
             {language === 'ur'
-              ? 'صرف چند آسان سوالات، پھر AI آپ کے لئے مکمل پلان تیار کرے گا۔'
+              ? transliterateText('Answer a few quick questions and AI will design a plan just for you.')
               : 'Answer a few quick questions and AI will design a plan just for you.'}
           </Text>
 
@@ -774,8 +774,8 @@ export default function WorkoutScreen() {
         {/* Beautiful Loading Modal */}
         <LoadingModal
           visible={isGeneratingPlan}
-          title="Creating Your Workout Plan"
-          subtitle="Analyzing your profile and generating personalized exercises"
+          title={language === 'ur' ? transliterateText('Creating Your Workout Plan') : 'Creating Your Workout Plan'}
+          subtitle={language === 'ur' ? transliterateText('Analyzing your profile and generating personalized exercises') : 'Analyzing your profile and generating personalized exercises'}
           type="workout"
         />
 
@@ -783,13 +783,13 @@ export default function WorkoutScreen() {
         {showGenerationModal && (
           <View style={styles.generationModalOverlay}>
             <View style={styles.generationModal}>
-              <Text style={styles.generationModalTitle}>Generating Your Plan</Text>
+              <Text style={styles.generationModalTitle}>{language === 'ur' ? transliterateText('Generating Your Plan') : 'Generating Your Plan'}</Text>
               <Text style={styles.generationModalSubtitle}>
-                AI is creating your personalized workout plan...
+                {language === 'ur' ? transliterateText('AI is creating your personalized workout plan...') : 'AI is creating your personalized workout plan...'}
               </Text>
               <View style={styles.timerContainer}>
                 <Text style={styles.timerText}>{generationTimer}</Text>
-                <Text style={styles.timerLabel}>seconds remaining</Text>
+                <Text style={styles.timerLabel}>{language === 'ur' ? transliterateText('seconds remaining') : 'seconds remaining'}</Text>
               </View>
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${((6 - generationTimer) / 6) * 100}%` }]} />

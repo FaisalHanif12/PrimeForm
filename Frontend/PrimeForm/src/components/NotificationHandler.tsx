@@ -29,7 +29,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { showToast } = useToast();
 
   const handleRegistrationError = (errorMessage: string) => {
@@ -37,9 +37,9 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
     
     // Check if running in Expo Go and provide specific guidance
     if (errorMessage.includes('Must use physical device') || Constants.appOwnership === 'expo') {
-      showToast('warning', 'Push notifications require a development build. Please use EAS Build or a physical device with a development build.');
+      showToast('warning', t('notification.push.require.device'));
     } else {
-      showToast('error', `Notification setup failed: ${errorMessage}`);
+      showToast('error', t('notification.push.setup.failed'));
     }
   };
 
@@ -47,7 +47,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
     // Check if running in Expo Go and show warning
     if (Constants.appOwnership === 'expo') {
       console.warn('⚠️ Running in Expo Go - Push notifications will not work');
-      showToast('warning', 'Push notifications are not available in Expo Go. Use a development build for full functionality.');
+      showToast('warning', t('notification.push.expo.go'));
       return;
     }
     
@@ -56,12 +56,12 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         setExpoPushToken(token);
         if (token) {
           console.log('✅ Push notification token registered:', token);
-          showToast('success', 'Push notifications enabled successfully');
+          showToast('success', t('notification.push.enabled'));
         }
       })
       .catch((error: any) => {
         console.error('❌ Failed to register for push notifications:', error);
-        showToast('error', 'Failed to setup push notifications');
+        showToast('error', t('notification.push.setup.failed'));
       });
 
     // Listener for notifications received while app is in foreground
@@ -80,7 +80,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         }
       } catch (error) {
         console.error('❌ Error handling received notification:', error);
-        showToast('error', 'Error processing notification');
+        showToast('error', t('notification.error.processing'));
       }
     });
 
@@ -94,7 +94,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         handleNotificationResponse(response);
       } catch (error) {
         console.error('❌ Error handling notification response:', error);
-        showToast('error', 'Error handling notification tap');
+        showToast('error', t('notification.error.handling'));
       }
     });
 
@@ -127,32 +127,32 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         switch (data.type) {
           case 'welcome':
             console.log(`📱 Welcome notification tapped (${notificationLanguage})`);
-            showToast('success', 'Welcome! Redirecting to dashboard...');
+            showToast('success', t('notification.action.welcome'));
             // Navigate to dashboard or welcome screen
             break;
           case 'diet_plan_created':
             console.log(`📱 Diet plan notification tapped (${notificationLanguage})`);
-            showToast('info', 'Opening your new diet plan...');
+            showToast('info', t('notification.action.diet.plan'));
             // Navigate to diet plan screen
             break;
           case 'workout_plan_created':
             console.log(`📱 Workout plan notification tapped (${notificationLanguage})`);
-            showToast('info', 'Opening your new workout plan...');
+            showToast('info', t('notification.action.workout.plan'));
             // Navigate to workout plan screen
             break;
           case 'general':
             console.log(`📱 General notification tapped (${notificationLanguage})`);
-            showToast('info', 'Opening notification details...');
+            showToast('info', t('notification.action.general'));
             // Navigate to notifications screen or relevant section
             break;
           default:
             console.log(`📱 Unknown notification type tapped (${notificationLanguage})`);
-            showToast('warning', 'Unknown notification type');
+            showToast('warning', t('notification.action.unknown'));
         }
       }
     } catch (error) {
       console.error('❌ Error in handleNotificationResponse:', error);
-      showToast('error', 'Failed to handle notification');
+      showToast('error', t('notification.error.handling'));
     }
   };
 
