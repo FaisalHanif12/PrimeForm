@@ -45,9 +45,13 @@ class PushNotificationService {
       const message = {
         to: pushToken,
         sound: 'default',
-        title: notification.title,
-        body: notification.body,
-        data: notification.data || {},
+        title: notification.title || 'Pure Body',
+        body: notification.body || 'You have a new notification',
+        data: {
+          ...notification.data,
+          appName: 'Pure Body',
+          appIcon: 'primeform-logo'
+        },
         badge: notification.badge || 1,
         // Pure Body branding
         channelId: 'primeform-notifications',
@@ -55,17 +59,18 @@ class PushNotificationService {
         // Custom icon and color for Android
         android: {
           channelId: 'primeform-notifications',
-          icon: './assets/notification-icon.png',
           color: '#6366F1', // Pure Body primary color
           sound: 'default',
           priority: 'high',
-          vibrate: [0, 250, 250, 250]
+          vibrate: [0, 250, 250, 250],
+          // Note: Icon paths are configured in app.json, not here
         },
         // iOS specific settings
         ios: {
           sound: 'default',
           badge: notification.badge || 1,
-          _displayInForeground: true
+          _displayInForeground: true,
+          categoryId: 'primeform'
         }
       };
 

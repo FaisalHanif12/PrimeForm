@@ -21,6 +21,10 @@ const dietPlanRoutes = require('./routes/dietPlanRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const aiTrainerRoutes = require('./routes/aiTrainerRoutes');
 const streakRoutes = require('./routes/streakRoutes');
+const dailyReminderRoutes = require('./routes/dailyReminderRoutes');
+
+// Import daily reminder service for cron job
+const dailyReminderService = require('./services/dailyReminderService');
 
 // Import utilities
 const { testEmailConfiguration } = require('./utils/emailService');
@@ -182,6 +186,7 @@ app.use('/api/diet-plans', dietPlanRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/ai-trainer', aiTrainerRoutes);
 app.use('/api/streak', streakRoutes);
+app.use('/api/reminders', dailyReminderRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -236,6 +241,79 @@ const server = app.listen(PORT, HOST, async () => {
   }
 
   console.log('🚀 ================================');
+
+  // ✅ Setup daily reminder cron jobs (FREE - No external service needed)
+  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true') {
+    const cron = require('node-cron');
+    const timezone = process.env.TIMEZONE || "Asia/Karachi";
+    
+    // Schedule 2 notifications at 9:00 AM (Diet & Workout reminders)
+    cron.schedule('0 9 * * *', async () => {
+      console.log('📱 [CRON] Running 9 AM reminder job (Diet & Workout)...');
+      try {
+        const users = await require('./models/User').find({
+          pushToken: { $exists: true, $ne: null }
+        }).select('_id');
+        
+        console.log(`📱 Sending 9 AM reminders to ${users.length} users`);
+        
+        for (const user of users) {
+          try {
+            // Send diet reminder
+            await dailyReminderService.sendDietReminder(user._id.toString());
+            // Send workout reminder
+            await dailyReminderService.sendWorkoutReminder(user._id.toString());
+          } catch (error) {
+            console.error(`❌ Error sending 9 AM reminders to user ${user._id}:`, error.message);
+          }
+        }
+        
+        console.log('✅ [CRON] 9 AM reminders (Diet & Workout) sent successfully');
+      } catch (error) {
+        console.error('❌ [CRON] Error in 9 AM reminder job:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: timezone
+    });
+    
+    // Schedule 2 notifications at 6:00 PM (Gym & Streak reminders)
+    cron.schedule('0 18 * * *', async () => {
+      console.log('📱 [CRON] Running 6 PM reminder job (Gym & Streak)...');
+      try {
+        const users = await require('./models/User').find({
+          pushToken: { $exists: true, $ne: null }
+        }).select('_id');
+        
+        console.log(`📱 Sending 6 PM reminders to ${users.length} users`);
+        
+        for (const user of users) {
+          try {
+            // Send gym reminder
+            await dailyReminderService.sendGymReminder(user._id.toString());
+            // Send streak reminder
+            await dailyReminderService.sendStreakBrokenReminder(user._id.toString());
+          } catch (error) {
+            console.error(`❌ Error sending 6 PM reminders to user ${user._id}:`, error.message);
+          }
+        }
+        
+        console.log('✅ [CRON] 6 PM reminders (Gym & Streak) sent successfully');
+      } catch (error) {
+        console.error('❌ [CRON] Error in 6 PM reminder job:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: timezone
+    });
+    
+    console.log('⏰ [CRON] Daily reminder jobs scheduled:');
+    console.log('   - 9:00 AM: Diet & Workout reminders');
+    console.log('   - 6:00 PM: Gym & Streak reminders');
+    console.log(`   - Timezone: ${timezone}`);
+  } else {
+    console.log('ℹ️  [CRON] Daily reminders disabled (set ENABLE_CRON=true to enable)');
+  }
 });
 
 // Handle unhandled promise rejections

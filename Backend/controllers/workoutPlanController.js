@@ -1,5 +1,6 @@
 const WorkoutPlan = require('../models/WorkoutPlan');
 const User = require('../models/User');
+const notificationService = require('../services/notificationService');
 
 // Create or update workout plan
 const createWorkoutPlan = async (req, res) => {
@@ -49,6 +50,19 @@ const createWorkoutPlan = async (req, res) => {
     });
 
     await workoutPlan.save();
+
+    // Create in-app notification for workout plan creation
+    try {
+      await notificationService.createWorkoutPlanNotification(userId, {
+        planId: workoutPlan._id.toString(),
+        goal: workoutPlan.goal,
+        duration: workoutPlan.duration
+      });
+      console.log('✅ Workout plan notification created');
+    } catch (notifError) {
+      console.error('⚠️ Failed to create workout plan notification:', notifError);
+      // Don't fail the request if notification creation fails
+    }
 
     res.status(201).json({
       success: true,
