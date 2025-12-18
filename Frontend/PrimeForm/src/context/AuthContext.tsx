@@ -194,29 +194,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Check if it's a 401 error
         if (profileError?.statusCode === 401 || profileError?.message?.includes('401') || profileError?.message?.includes('expired')) {
           await authService.clearToken();
-          if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
-          }
+
           setUser(null);
         } else {
           // Other errors - still clear token to be safe
           await authService.clearToken();
-          if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
-          }
+          // ✅ CRITICAL: Profile cache is PRESERVED even on errors
+          // Profile data persists in storage with user-specific key
           setUser(null);
         }
       }
     } catch (error) {
       setUser(null);
-      // Only clear token if there's an error, but preserve user history
+      // Only clear token if there's an error, but preserve user data
       try {
         await authService.clearToken();
-        const userId = await getCurrentUserId();
-        if (userId) {
-          const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-          await AsyncStorage.removeItem(cacheKey);
-        }
+    
       } catch (clearError) {
         // Ignore clear errors
       }
@@ -237,20 +230,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await authService.logout();
       setUser(null);
-      // ✅ CRITICAL: Clear cached profile on logout (account-specific)
-      const userId = await getCurrentUserId();
-      if (userId) {
-        const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-        await AsyncStorage.removeItem(cacheKey);
-      }
+      // ✅ CRITICAL: Profile cache is PRESERVED on logout (like all other user data)
+      // Profile data persists in storage with user-specific key: user_<userId>_cached_user_profile
+      // This allows faster loading when user logs back in
+      // Only in-memory state is cleared via userProfileService.resetInMemoryState()
+      // No need to clear storage - it's preserved in clearUserCache() preservedKeyFragments
     } catch (error) {
       // Clear local state even if API call fails
       setUser(null);
-      const userId = await getCurrentUserId();
-      if (userId) {
-        const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-        await AsyncStorage.removeItem(cacheKey);
-      }
+      // Profile cache still preserved in storage
     }
   };
 

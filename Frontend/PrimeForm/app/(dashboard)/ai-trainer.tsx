@@ -178,11 +178,19 @@ export default function AITrainerScreen() {
 
     // Daily usage limit: max 3 messages per user per day
     try {
+      // ✅ CRITICAL: Use user ID from cacheKeys for account-specific usage tracking
+      const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        showToast('warning', t('aiTrainer.error.notAuthenticated'));
+        return;
+      }
+
       const today = new Date();
       const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
-      // Use email as stable identifier for per-user limit; fall back to generic key if not available
-      const userId = user?.email || 'guest';
-      const usageKey = `ai_trainer_usage_${userId}_${dateKey}`;
+      // ✅ CRITICAL: Use user-specific key for usage tracking (preserved across logout/login)
+      const usageKey = await getUserCacheKey(`ai_trainer_usage_${dateKey}`, userId);
 
       const rawUsage = await Storage.getItem(usageKey);
       const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
@@ -199,9 +207,17 @@ export default function AITrainerScreen() {
       // If something goes wrong with the limit check, still allow the message
     }
 
-    // Ensure we have a current conversation
-    const currentConversationId = await Storage.getItem('ai_trainer_current_conversation_id');
-    if (!currentConversationId) {
+    // ✅ CRITICAL: Ensure we have a current conversation (using user-specific key)
+    const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const currentConversationIdKey = await getUserCacheKey('ai_trainer_current_conversation_id', userId);
+      const currentConversationId = await Storage.getItem(currentConversationIdKey);
+      if (!currentConversationId) {
+        await aiTrainerService.createNewConversation();
+      }
+    } else {
+      // No user ID, create new conversation anyway
       await aiTrainerService.createNewConversation();
     }
 
