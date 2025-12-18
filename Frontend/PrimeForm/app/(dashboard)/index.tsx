@@ -128,6 +128,21 @@ export default function DashboardScreen() {
   // Define this BEFORE the useEffect that uses it
   const loadCompletionStates = useCallback(async (forceRefresh = false) => {
     try {
+      // ✅ CRITICAL: Ensure completion services are initialized before loading data
+      try {
+        const { default: mealCompletionService } = await import('../../src/services/mealCompletionService');
+        await mealCompletionService.ensureInitialized();
+      } catch (error) {
+        console.warn('⚠️ Error ensuring meal completion service initialized:', error);
+      }
+
+      try {
+        const { default: exerciseCompletionService } = await import('../../src/services/exerciseCompletionService');
+        await exerciseCompletionService.ensureInitialized();
+      } catch (error) {
+        console.warn('⚠️ Error ensuring exercise completion service initialized:', error);
+      }
+
       // OPTIMIZATION: Load from local storage first - no API call needed
       let localMeals = new Set<string>();
       let localExercises = new Set<string>();
@@ -280,19 +295,15 @@ export default function DashboardScreen() {
 
           // ✅ CRITICAL: Also handle auth check (merged from duplicate listener)
           if (!isAuthenticated) {
-            // User is not authenticated, check if they have completed signup
-            const signupCompleted = await AsyncStorage.getItem('primeform_signup_completed');
+            // User is not authenticated, check if they have ever signed up
             const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
 
-            if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
-              // User has completed signup but token might be expired
-              // Try to refresh authentication (but don't redirect here - let app/index.tsx handle it)
-              try {
-                const { authService } = await import('../../src/services/authService');
-                await authService.isAuthenticated(); // Just check, don't redirect
-              } catch (error) {
-                // Auth check failed, but don't redirect here
-              }
+            // ✅ CRITICAL: If user has signed up but is not authenticated, redirect to login
+            // This prevents guest mode from appearing when app becomes active after token expiration
+            if (hasEverSignedUp === 'true') {
+              // User has signed up but token expired - redirect to login immediately
+              router.replace('/auth/login');
+              return;
             }
           }
         } catch (error) {
@@ -359,10 +370,21 @@ export default function DashboardScreen() {
   useEffect(() => {
     const checkAppState = async () => {
       try {
+        // ✅ CRITICAL: First check if user has ever signed up
+        // If they have, and they're not authenticated, redirect to login immediately
+        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+        
+        // ✅ CRITICAL: If user has signed up but is not authenticated, redirect to login
+        // This prevents any possibility of showing guest mode to users who have signed up
+        if (hasEverSignedUp === 'true' && !isAuthenticated) {
+          // User has signed up but token expired - redirect to login
+          router.replace('/auth/login');
+          return;
+        }
+
         // Check if this is the first time the app has ever been launched
         const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
         const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
-        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
 
         // CRITICAL: Language modal should ONLY show for first-time guest users
         // According to workflow Phase 4: After sign-up, language modal NEVER appears again
@@ -390,26 +412,27 @@ export default function DashboardScreen() {
           await AsyncStorage.setItem('primeform_signup_completed', 'true');
           await AsyncStorage.setItem('primeform_has_ever_signed_up', 'true');
         } else if (signupCompleted === 'true' || hasEverSignedUp === 'true') {
-          // User has completed signup but might not be authenticated
-          // This could happen if token expired but user hasn't logged out
-          setHasCompletedSignup(true);
-
-          // Try to refresh authentication status
-          try {
-            const isStillAuth = await authService.isAuthenticated();
-            if (!isStillAuth) {
-              // Token is truly expired, user needs to login again
-              // Don't redirect here, let the main app logic handle it
-            }
-          } catch (error) {
-            // Auth refresh failed, but user has completed signup
+          // ✅ CRITICAL: User has completed signup but is not authenticated
+          // This means token expired - redirect to login to prevent guest mode
+          if (hasEverSignedUp === 'true') {
+            router.replace('/auth/login');
+            return;
           }
+          setHasCompletedSignup(true);
         } else {
           // If not authenticated and no signup completion, ensure no access
           setHasCompletedSignup(false);
         }
       } catch (error) {
-        // Failed to check app state
+        // Failed to check app state - check hasEverSignedUp as fallback
+        try {
+          const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+          if (hasEverSignedUp === 'true' && !isAuthenticated) {
+            router.replace('/auth/login');
+          }
+        } catch (fallbackError) {
+          // Ignore fallback errors
+        }
       }
     };
     checkAppState();

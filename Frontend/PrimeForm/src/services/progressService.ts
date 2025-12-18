@@ -158,8 +158,17 @@ class ProgressService {
         }
       }
 
-      // Always initialize services first
+      // ✅ CRITICAL: Always initialize services first and ensure they're ready
       await this.initialize();
+      
+      // ✅ CRITICAL: Ensure completion services are initialized before reading data
+      try {
+        await exerciseCompletionService.ensureInitialized();
+        await mealCompletionService.ensureInitialized();
+      } catch (error) {
+        console.warn('⚠️ Error ensuring completion services initialized:', error);
+        // Continue anyway - services will have empty data if not initialized
+      }
 
       // Calculate from local data directly - this ensures accuracy
       const localStats = await this.calculateRealTimeStats(period, selectedWeek, selectedMonth, forceRefresh);
@@ -196,7 +205,11 @@ class ProgressService {
         ? await aiDietService.refreshDietPlanFromDatabase()
         : await aiDietService.loadDietPlanFromDatabase();
 
-      // Get completion data from services (already initialized)
+      // ✅ CRITICAL: Ensure services are initialized before reading data
+      await exerciseCompletionService.ensureInitialized();
+      await mealCompletionService.ensureInitialized();
+      
+      // Get completion data from services (guaranteed to be initialized)
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
       const mealCompletionData = mealCompletionService.getCompletionData();
       
@@ -979,6 +992,10 @@ class ProgressService {
       const dietPlan = forceRefresh
         ? await aiDietService.refreshDietPlanFromDatabase()
         : await aiDietService.loadDietPlanFromDatabase();
+      
+      // ✅ CRITICAL: Ensure services are initialized before reading data
+      await exerciseCompletionService.ensureInitialized();
+      await mealCompletionService.ensureInitialized();
       
       const exerciseCompletionData = exerciseCompletionService.getCompletionData();
       const mealCompletionData = mealCompletionService.getCompletionData();

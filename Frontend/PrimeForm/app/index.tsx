@@ -26,11 +26,12 @@ export default function Index() {
         hasCheckedRef.current = true;
         lastAuthStateRef.current = isAuthenticated;
 
-        // ✅ CRITICAL: First check if user has ever signed up (this flag should NEVER be cleared)
+        // ✅ CRITICAL: ALWAYS check if user has ever signed up FIRST (this flag should NEVER be cleared)
+        // This is the PRIMARY gate - if user has signed up, they MUST go to login if not authenticated
         const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
         
         // ✅ CRITICAL: If user has ever signed up, they should NEVER see guest mode
-        // Always redirect to login if not authenticated
+        // Always redirect to login if not authenticated - NO EXCEPTIONS
         if (hasEverSignedUp === 'true') {
           // Ensure language modal never shows for users who have ever signed up
           await AsyncStorage.setItem('primeform_device_language_selected', 'true');
@@ -41,55 +42,28 @@ export default function Index() {
             router.replace('/(dashboard)');
             return;
           } else {
-            // User has signed up before but is not authenticated
-            // Check if token exists but might be invalid
+            // ✅ CRITICAL: User has signed up before but is not authenticated
+            // This means token expired or was cleared - ALWAYS redirect to login
+            // Do NOT check token again, just redirect immediately to prevent any guest mode access
             try {
               const { authService } = await import('../src/services/authService');
+              // Clear any stale token to ensure clean state
               const tokenExists = await authService.getToken();
-              
               if (tokenExists) {
-                // Token exists but user is not authenticated - might be expired
-                // Try to validate by checking profile
-                try {
-                  const profileResponse = await authService.getProfile();
-                  
-                  // ✅ CRITICAL: Check if token expired (401 response)
-                  if (profileResponse.tokenExpired || profileResponse.statusCode === 401) {
-                    // Token is expired - clear it and redirect to login
-                    await authService.clearToken();
-                    router.replace('/auth/login');
-                    return;
-                  }
-                  
-                  if (profileResponse.success && profileResponse.data?.user) {
-                    // Token is valid, user should be authenticated
-                    router.replace('/(dashboard)');
-                    return;
-                  } else {
-                    // Token is invalid/expired - clear it and redirect to login
-                    await authService.clearToken();
-                    router.replace('/auth/login');
-                    return;
-                  }
-                } catch (profileError: any) {
-                  // Profile check failed - token might be invalid
-                  await authService.clearToken();
-                  router.replace('/auth/login');
-                  return;
-                }
-              } else {
-                // No token exists - user needs to login
-                router.replace('/auth/login');
-                return;
+                // Token exists but user is not authenticated - it's expired/invalid
+                // Clear it to ensure clean state
+                await authService.clearToken();
               }
             } catch (error) {
-              // Error checking token - redirect to login to be safe
-              router.replace('/auth/login');
-              return;
+              // Error checking token - continue to redirect anyway
             }
+            // ✅ CRITICAL: ALWAYS redirect to login - never allow guest mode for users who have signed up
+            router.replace('/auth/login');
+            return;
           }
         }
 
+        // ✅ CRITICAL: Only reach here if user has NEVER signed up
         // User has NEVER signed up - check if this is first launch
         const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
         
@@ -105,31 +79,41 @@ export default function Index() {
         // This is a returning guest user - redirect to dashboard
         router.replace('/(dashboard)');
       } catch (error) {
-        // Fallback: Check if user has ever signed up
+        // ✅ CRITICAL: Fallback - ALWAYS check if user has ever signed up first
         try {
           const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
           if (hasEverSignedUp === 'true') {
-            // User has signed up before - redirect to login
+            // User has signed up before - ALWAYS redirect to login, never guest mode
             router.replace('/auth/login');
           } else {
             // Guest user - redirect to dashboard
             router.replace('/(dashboard)');
           }
         } catch (fallbackError) {
-          // Ultimate fallback - dashboard for guest mode
-          router.replace('/(dashboard)');
+          // Ultimate fallback - check one more time for has_ever_signed_up
+          try {
+            const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+            if (hasEverSignedUp === 'true') {
+              router.replace('/auth/login');
+            } else {
+              router.replace('/(dashboard)');
+            }
+          } catch (finalError) {
+            // Last resort - if we can't check, assume guest mode (but this should never happen)
+            router.replace('/(dashboard)');
+          }
         }
       } finally {
         setIsCheckingUserState(false);
       }
     };
 
-    // ✅ CRITICAL: Only run when loading completes (not on every auth state change)
-    // This prevents infinite loops while still responding to initial auth check
+    // ✅ CRITICAL: Run when loading completes OR when auth state changes
+    // This ensures we catch token expiration immediately
     if (!isLoading) {
       checkUserState();
     }
-  }, [isLoading, isAuthenticated]); // ✅ Added isAuthenticated back to respond to auth state changes
+  }, [isLoading, isAuthenticated]); // ✅ Respond to both loading and auth state changes
 
   // Show loading while checking user state
   if (isLoading || isCheckingUserState) {

@@ -285,13 +285,23 @@ export default function WorkoutPlanDisplay({
   };
 
   useEffect(() => {
-    // Initialize completion service and load states
+    // ✅ CRITICAL: Initialize completion service and load states with retry logic
     const initializeCompletion = async () => {
       try {
-        await exerciseCompletionService.initialize();
+        // ✅ CRITICAL: Ensure service is initialized (with retry if needed)
+        await exerciseCompletionService.ensureInitialized();
         await loadCompletionStates();
         setIsInitialized(true);
       } catch (error) {
+        console.error('❌ Error initializing completion in WorkoutPlanDisplay:', error);
+        // Retry once after delay
+        try {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await exerciseCompletionService.initialize();
+          await loadCompletionStates();
+        } catch (retryError) {
+          console.error('❌ Retry failed in WorkoutPlanDisplay:', retryError);
+        }
         setIsInitialized(true);
       }
     };
@@ -406,6 +416,9 @@ export default function WorkoutPlanDisplay({
 
   const loadCompletionStates = async () => {
     try {
+      // ✅ CRITICAL: Ensure service is initialized before reading data
+      await exerciseCompletionService.ensureInitialized();
+      
       // Get completion data from the service
       const completionData = exerciseCompletionService.getCompletionData();
       
@@ -413,7 +426,10 @@ export default function WorkoutPlanDisplay({
       setCompletedExercises(new Set(completionData.completedExercises));
       setCompletedDays(new Set(completionData.completedDays));
     } catch (error) {
-      // Ignore errors
+      console.error('❌ Error loading completion states in WorkoutPlanDisplay:', error);
+      // Ignore errors but ensure we have empty sets
+      setCompletedExercises(new Set());
+      setCompletedDays(new Set());
     }
   };
 
@@ -764,7 +780,8 @@ export default function WorkoutPlanDisplay({
               <Text style={styles.workoutProgressText}>
                 {selectedDay.exercises.filter(exercise => {
                   const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${selectedDay.exercises.indexOf(exercise)}`;
-                  return exerciseCompletionService.isExerciseCompleted(exerciseId);
+                  // ✅ CRITICAL: Use local state instead of service directly (ensures data is loaded)
+                  return completedExercises.has(exerciseId);
                 }).length}/{selectedDay.exercises.length}
               </Text>
               <Text style={styles.workoutProgressLabel}>{t('workout.complete')}</Text>
@@ -777,7 +794,8 @@ export default function WorkoutPlanDisplay({
             {selectedDay.exercises && selectedDay.exercises.length > 0 ? (
               selectedDay.exercises.map((exercise, index) => {
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
-                const isCompleted = exerciseCompletionService.isExerciseCompleted(exerciseId);
+                // ✅ CRITICAL: Use local state instead of service directly (ensures data is loaded)
+                const isCompleted = completedExercises.has(exerciseId);
                 const dayStatus = getDayStatus(selectedDay, 0);
                 const isToday = selectedDay && selectedDay.date ? isCurrentDay(selectedDay) : false;
                 const canComplete = isToday && dayStatus === 'in_progress';

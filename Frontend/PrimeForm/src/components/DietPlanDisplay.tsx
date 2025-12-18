@@ -285,8 +285,19 @@ export default function DietPlanDisplay({
 
   useEffect(() => {
     const initializeComponent = async () => {
-      // Initialize meal completion service
-      await mealCompletionService.initialize();
+      // ✅ CRITICAL: Initialize meal completion service with retry logic
+      try {
+        await mealCompletionService.ensureInitialized();
+      } catch (error) {
+        console.error('❌ Error initializing meal completion in DietPlanDisplay:', error);
+        // Retry once after delay
+        try {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await mealCompletionService.initialize();
+        } catch (retryError) {
+          console.error('❌ Retry failed in DietPlanDisplay:', retryError);
+        }
+      }
       
       // ✅ Load completion states from prop data + local storage (NO API CALL)
       loadCompletionStatesFromProp();

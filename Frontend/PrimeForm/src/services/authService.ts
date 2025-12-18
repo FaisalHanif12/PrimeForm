@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
-import { extractUserIdFromToken, setCurrentUserId, clearCurrentUserId, clearUserCache, validateCacheOnLogin, cleanupOrphanedCache } from '../utils/cacheKeys';
+import { extractUserIdFromToken, setCurrentUserId, clearCurrentUserId, clearUserCache, validateCacheOnLogin, cleanupOrphanedCache, getCurrentUserId } from '../utils/cacheKeys';
 
 interface LoginResponse {
   success: boolean;
@@ -252,23 +252,55 @@ class AuthService {
         // Store new token and extract user ID
         await this.storeToken(response.token);
         
+        // ✅ CRITICAL: Verify user ID is set before initializing services
+        // Add small delay to ensure AsyncStorage write completes
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Double-check user ID is set
+        const verifyUserId = await getCurrentUserId();
+        if (!verifyUserId && newUserId) {
+          // Retry setting user ID if it wasn't set
+          await setCurrentUserId(newUserId);
+        }
+        
         // Validate and clean cache for the new user
         if (newUserId) {
           await validateCacheOnLogin(newUserId);
           
-          // Reinitialize completion services for new user
+          // ✅ CRITICAL: Reinitialize completion services with guaranteed initialization
+          // Ensure services are fully initialized before proceeding
           try {
             const { default: mealCompletionService } = await import('./mealCompletionService');
             await mealCompletionService.reinitialize();
+            // ✅ CRITICAL: Verify initialization succeeded by checking if data loaded
+            const mealData = mealCompletionService.getCompletionData();
+            console.log('✅ Meal completion service initialized with', mealData.completedMeals.length, 'meals');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ Error initializing meal completion service:', error);
+            // Retry initialization once
+            try {
+              const { default: mealCompletionService } = await import('./mealCompletionService');
+              await mealCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ Retry failed for meal completion service:', retryError);
+            }
           }
 
           try {
             const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
             await exerciseCompletionService.reinitialize();
+            // ✅ CRITICAL: Verify initialization succeeded by checking if data loaded
+            const exerciseData = exerciseCompletionService.getCompletionData();
+            console.log('✅ Exercise completion service initialized with', exerciseData.completedExercises.length, 'exercises');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ Error initializing exercise completion service:', error);
+            // Retry initialization once
+            try {
+              const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+              await exerciseCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ Retry failed for exercise completion service:', retryError);
+            }
           }
 
           // ✅ CRITICAL: Reinitialize user profile service to load correct user's cached profile
@@ -335,23 +367,55 @@ class AuthService {
         // Store new token and extract user ID
         await this.storeToken(response.token);
         
+        // ✅ CRITICAL: Verify user ID is set before initializing services
+        // Add small delay to ensure AsyncStorage write completes
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Double-check user ID is set
+        const verifyUserId = await getCurrentUserId();
+        if (!verifyUserId && newUserId) {
+          // Retry setting user ID if it wasn't set
+          await setCurrentUserId(newUserId);
+        }
+        
         // Validate and clean cache for the new user
         if (newUserId) {
           await validateCacheOnLogin(newUserId);
           
-          // Reinitialize completion services for new user
+          // ✅ CRITICAL: Reinitialize completion services with guaranteed initialization
+          // Ensure services are fully initialized before proceeding
           try {
             const { default: mealCompletionService } = await import('./mealCompletionService');
             await mealCompletionService.reinitialize();
+            // ✅ CRITICAL: Verify initialization succeeded by checking if data loaded
+            const mealData = mealCompletionService.getCompletionData();
+            console.log('✅ Meal completion service initialized with', mealData.completedMeals.length, 'meals');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ Error initializing meal completion service:', error);
+            // Retry initialization once
+            try {
+              const { default: mealCompletionService } = await import('./mealCompletionService');
+              await mealCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ Retry failed for meal completion service:', retryError);
+            }
           }
 
           try {
             const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
             await exerciseCompletionService.reinitialize();
+            // ✅ CRITICAL: Verify initialization succeeded by checking if data loaded
+            const exerciseData = exerciseCompletionService.getCompletionData();
+            console.log('✅ Exercise completion service initialized with', exerciseData.completedExercises.length, 'exercises');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ Error initializing exercise completion service:', error);
+            // Retry initialization once
+            try {
+              const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+              await exerciseCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ Retry failed for exercise completion service:', retryError);
+            }
           }
         }
 

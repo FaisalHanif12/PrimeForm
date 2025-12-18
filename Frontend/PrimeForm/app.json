@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Pure Body",
-    "slug": "primeform",
+    "slug": "purebody",
     "version": "1.0.0",
     "orientation": "portrait",
     "developmentClient": {
@@ -10,7 +10,7 @@
     "icon": "assets/images/PrimeIcon.png",
     "scheme": "purebody",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.maherfaisal.purebody",
@@ -58,7 +58,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "419c933c-e08b-41db-acaf-1edd5f8f8442"
+        "projectId": "8fd8d9d9-0e37-4002-b75e-545f7a2fc230"
       }
     }
   }
