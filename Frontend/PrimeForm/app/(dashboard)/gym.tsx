@@ -235,7 +235,6 @@ export default function GymScreen() {
       const savedExercises = await AsyncStorage.getItem(personalizedWorkoutKey);
       setHasPersonalizedWorkout(!!savedExercises);
     } catch (error) {
-      console.error('Error checking personalized workout:', error);
       setHasPersonalizedWorkout(false);
     }
   };
@@ -259,8 +258,6 @@ export default function GymScreen() {
       router.push('/(dashboard)/workout');
     } else if (tab === 'progress') {
       router.push('/(dashboard)/progress');
-    } else {
-      console.log('Feature coming soon:', tab);
     }
   };
 

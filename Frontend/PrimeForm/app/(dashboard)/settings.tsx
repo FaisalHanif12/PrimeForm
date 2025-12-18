@@ -21,6 +21,8 @@ import Sidebar from '../../src/components/Sidebar';
 import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { api } from '../../src/config/api';
+import Storage from '../../src/utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -151,24 +153,90 @@ export default function SettingsPage() {
 
   const loadNotificationSettings = async () => {
     try {
-      // In a real app, you would load these from AsyncStorage or your backend
-      // For now, we'll use the default values
+      // First try to load from AsyncStorage
+      const storedSettings = await Storage.getItem('notificationSettings');
+      if (storedSettings) {
+        const parsedSettings = JSON.parse(storedSettings);
+        setNotificationSettings(parsedSettings);
+      }
+
+      // Then try to sync with backend
+      try {
+        const response = await api.get('/user-profile/notification-settings');
+        if (response.success && response.data) {
+          const backendSettings = {
+            pushNotifications: response.data.pushNotifications ?? true,
+            workoutReminders: response.data.workoutReminders ?? true,
+            dietReminders: response.data.dietReminders ?? true,
+          };
+          setNotificationSettings(backendSettings);
+          // Save to AsyncStorage for offline access
+          await Storage.setItem('notificationSettings', JSON.stringify(backendSettings));
+        }
+      } catch (error) {
+        // If backend fails, use stored settings or defaults
+        if (!storedSettings) {
+          // No stored settings, use defaults (all ON)
+          const defaultSettings = {
+            pushNotifications: true,
+            workoutReminders: true,
+            dietReminders: true,
+          };
+          setNotificationSettings(defaultSettings);
+        }
+      }
     } catch (error) {
-      // Failed to load notification settings
+      // Failed to load notification settings, use defaults
+      const defaultSettings = {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true,
+      };
+      setNotificationSettings(defaultSettings);
     }
   };
 
   const saveNotificationSettings = async (settings: NotificationSettings) => {
     try {
-      // In a real app, you would save these to AsyncStorage or your backend
-      showToast('success', 'Notification settings saved successfully!');
+      // Save to AsyncStorage first for immediate persistence
+      await Storage.setItem('notificationSettings', JSON.stringify(settings));
+
+      // Then sync with backend
+      try {
+        const response = await api.put('/user-profile/notification-settings', settings);
+        if (response.success) {
+          showToast('success', 'Notification settings saved successfully!');
+        } else {
+          showToast('error', 'Failed to save notification settings');
+        }
+      } catch (error: any) {
+        // Even if backend fails, settings are saved locally
+        showToast('success', 'Notification settings saved locally!');
+      }
     } catch (error) {
       showToast('error', 'Failed to save notification settings');
     }
   };
 
   const handleNotificationToggle = (key: keyof NotificationSettings, value: boolean) => {
-    const newSettings = { ...notificationSettings, [key]: value };
+    let newSettings: NotificationSettings;
+
+    // If pushNotifications is turned OFF, automatically turn off all other notifications
+    if (key === 'pushNotifications' && !value) {
+      newSettings = {
+        pushNotifications: false,
+        workoutReminders: false,
+        dietReminders: false,
+      };
+    } else {
+      newSettings = { ...notificationSettings, [key]: value };
+      
+      // If pushNotifications is OFF, don't allow enabling other notifications
+      if (!notificationSettings.pushNotifications && key !== 'pushNotifications') {
+        return; // Don't allow toggling if push notifications are disabled
+      }
+    }
+
     setNotificationSettings(newSettings);
     saveNotificationSettings(newSettings);
   };

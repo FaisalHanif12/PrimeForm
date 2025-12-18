@@ -280,7 +280,6 @@ class AuthService {
             userProfileService.getUserProfile(false).catch(() => {
               // Ignore errors - profile will load when needed
             });
-            console.log('✅ User profile service reinitialized for new user');
           } catch (error) {
             // Ignore if service not available
           }
@@ -303,7 +302,6 @@ class AuthService {
         message: response.message || 'Login failed. Please try again.',
       };
     } catch (error) {
-      console.error('Login service error:', error);
       if (error instanceof Error) {
         return {
           success: false,

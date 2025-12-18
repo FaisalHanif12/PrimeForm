@@ -150,13 +150,11 @@ export default function DietScreen() {
             } else {
               // Plan still exists in database (deletion might have failed)
               // Try to delete it again
-              console.warn('⚠️ Plan still exists after deletion, attempting to delete again...');
               try {
                 await aiDietService.clearDietPlanFromDatabase();
                 setDietPlan(null);
                 setLoadError(null);
               } catch (deleteError) {
-                console.error('❌ Failed to delete plan on retry:', deleteError);
                 // Still set to null to show generation screen
                 setDietPlan(null);
                 setLoadError(null);
@@ -166,7 +164,6 @@ export default function DietScreen() {
             }
           } catch (error) {
             // On error, assume plan is deleted and show generation screen
-            console.warn('⚠️ Error checking database after deletion:', error);
             setDietPlan(null);
             setLoadError(null);
             setHasCheckedLocalStorage(true);
@@ -379,7 +376,6 @@ export default function DietScreen() {
           // No plan found in database - confirmed deleted
           setDietPlan(null);
           setJustDeleted(false); // Reset flag
-          console.log('ℹ️ No diet plan found - confirmed deleted');
         }
         return;
       }
@@ -399,7 +395,6 @@ export default function DietScreen() {
               const plan = JSON.parse(cachedPlan);
               // Validate cached data belongs to current user
               if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                console.log('✅ Found diet plan in local storage, using it immediately');
                 setDietPlan(plan);
                 setHasCheckedLocalStorage(true);
                 setIsLoadingPlan(false);
@@ -440,11 +435,8 @@ export default function DietScreen() {
             }
           }
         } catch (localError) {
-          console.warn('Could not check local storage:', localError);
+          // Ignore local storage errors
         }
-      } else {
-        // If justDeleted is true, skip cache entirely and go straight to database
-        console.log('⚠️ Skipping cache check - plan was just deleted');
       }
       
       setHasCheckedLocalStorage(true);
@@ -453,12 +445,8 @@ export default function DietScreen() {
       const dietPlanFromDB = await aiDietService.loadDietPlanFromDatabase(false);
       if (dietPlanFromDB) {
         setDietPlan(dietPlanFromDB);
-      } else {
-        // No plan found - this is OK, user needs to generate one
-        console.log('ℹ️ No diet plan found - user needs to generate one');
       }
     } catch (error) {
-      console.error('❌ Error loading diet plan:', error);
       
       // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
       // BUT only if we didn't just delete
@@ -475,7 +463,6 @@ export default function DietScreen() {
               const plan = JSON.parse(cachedPlan);
               // Validate cached data belongs to current user
               if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                console.log('✅ Fallback: Found diet plan in local storage after error');
                 setDietPlan(plan);
                 setLoadError(null); // Clear error since we found plan locally
                 return;
@@ -483,7 +470,7 @@ export default function DietScreen() {
             }
           }
         } catch (localError) {
-          console.warn('Could not check local storage on error:', localError);
+          // Ignore local storage errors
         }
       }
       
@@ -572,8 +559,6 @@ export default function DietScreen() {
               
               showToast('success', 'Diet plan deleted successfully. You can now generate a new one.');
             } catch (error) {
-              console.error('Error clearing diet plan:', error);
-              
               // Even if there's an error, clear local state to ensure navigation works
               setJustDeleted(true); // Still set flag to prevent cache reload
               setDietPlan(null);
@@ -607,7 +592,7 @@ export default function DietScreen() {
                 await Storage.default.removeItem('water_intake');
                 await Storage.default.removeItem('water_completed');
               } catch (cacheError) {
-                console.error('Error clearing cache fallback:', cacheError);
+                // Ignore cache clearing errors
               }
               
               showToast('info', 'Diet plan cleared. You can now generate a new one.');

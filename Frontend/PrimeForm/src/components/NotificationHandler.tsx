@@ -35,8 +35,6 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
   const router = useRouter();
 
   const handleRegistrationError = (errorMessage: string) => {
-    console.error('Push notification registration failed:', errorMessage);
-    
     // Check if running in Expo Go and provide specific guidance
     if (errorMessage.includes('Must use physical device') || Constants.appOwnership === 'expo') {
       showToast('warning', t('notification.push.require.device'));
@@ -48,7 +46,6 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
   useEffect(() => {
     // Check if running in Expo Go and show warning
     if (Constants.appOwnership === 'expo') {
-      console.warn('⚠️ Running in Expo Go - Push notifications will not work');
       showToast('warning', t('notification.push.expo.go'));
       return;
     }
@@ -57,21 +54,17 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
       .then(token => {
         setExpoPushToken(token);
         if (token) {
-          console.log('✅ Push notification token registered:', token);
           showToast('success', t('notification.push.enabled'));
         }
       })
       .catch((error: any) => {
-        console.error('❌ Failed to register for push notifications:', error);
         showToast('error', t('notification.push.setup.failed'));
       });
 
     // Listener for notifications received while app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       try {
-        console.log('📱 Notification received:', notification);
         const notificationLanguage = notification.request.content.data?.language;
-        console.log(`📱 Notification language: ${notificationLanguage}, App language: ${language}`);
         setNotification(notification);
         
         // Show a toast for the received notification
@@ -81,7 +74,6 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
           showToast('info', `${title}: ${body}`);
         }
       } catch (error) {
-        console.error('❌ Error handling received notification:', error);
         showToast('error', t('notification.error.processing'));
       }
     });
@@ -89,13 +81,9 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
     // Listener for when user taps on notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       try {
-        console.log('📱 Notification response:', response);
-        const notificationLanguage = response.notification.request.content.data?.language;
-        console.log(`📱 Notification tap - Language: ${notificationLanguage}, App language: ${language}`);
         // Handle notification tap here
         handleNotificationResponse(response);
       } catch (error) {
-        console.error('❌ Error handling notification response:', error);
         showToast('error', t('notification.error.handling'));
       }
     });
@@ -118,12 +106,6 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
       const { data } = notification.request.content;
       const notificationLanguage = data?.language || 'en';
       
-      console.log('🔔 Handling notification response:', {
-        type: data?.type,
-        notificationLanguage,
-        appLanguage: language
-      });
-      
       // Handle different notification types with language awareness and navigation
       if (data?.type || data?.navigateTo) {
         const navigateTo = data?.navigateTo || data?.actionType;
@@ -131,34 +113,28 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
         // Navigate based on notification type
         switch (data.type) {
           case 'welcome':
-            console.log(`📱 Welcome notification tapped (${notificationLanguage})`);
             showToast('success', t('notification.action.welcome'));
             router.push('/(dashboard)');
             break;
           case 'diet_plan_created':
           case 'diet_reminder':
-            console.log(`📱 Diet notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.diet.plan'));
             router.push('/(dashboard)/diet');
             break;
           case 'workout_plan_created':
           case 'workout_reminder':
-            console.log(`📱 Workout notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.workout.plan'));
             router.push('/(dashboard)/workout');
             break;
           case 'gym_reminder':
-            console.log(`📱 Gym notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.gym'));
             router.push('/(dashboard)/gym');
             break;
           case 'streak_broken_reminder':
-            console.log(`📱 Streak notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.streak'));
             router.push('/(dashboard)/streak');
             break;
           case 'general':
-            console.log(`📱 General notification tapped (${notificationLanguage})`);
             showToast('info', t('notification.action.general'));
             // Navigate to notifications screen or dashboard
             router.push('/(dashboard)');
@@ -166,22 +142,18 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
           default:
             // Try to navigate based on navigateTo field
             if (navigateTo) {
-              console.log(`📱 Navigating to: ${navigateTo}`);
               try {
                 router.push(`/(dashboard)/${navigateTo}` as any);
               } catch (navError) {
-                console.error('Navigation error:', navError);
                 router.push('/(dashboard)');
               }
             } else {
-              console.log(`📱 Unknown notification type tapped (${notificationLanguage})`);
               showToast('warning', t('notification.action.unknown'));
               router.push('/(dashboard)');
             }
         }
       }
     } catch (error) {
-      console.error('❌ Error in handleNotificationResponse:', error);
       showToast('error', t('notification.error.handling'));
     }
   };
@@ -229,14 +201,11 @@ async function registerForPushNotificationsAsync(handleRegistrationError?: (erro
         projectId,
       })).data;
       
-      console.log('📱 Expo Push Token:', pushTokenString);
-      
       // Save token to server via push notification service
       await pushNotificationService.savePushTokenToServer(pushTokenString);
       
       return pushTokenString;
     } catch (error: any) {
-      console.error('❌ Error getting push token:', error);
       if (error.message && error.message.includes('Invalid uuid')) {
         handleRegistrationError?.('Invalid project ID format. Please check your app.json configuration.');
       } else {

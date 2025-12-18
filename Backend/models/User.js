@@ -90,6 +90,22 @@ const userSchema = new mongoose.Schema({
     default: null
   },
   
+  // Notification preferences (default: all enabled)
+  notificationSettings: {
+    pushNotifications: {
+      type: Boolean,
+      default: true
+    },
+    workoutReminders: {
+      type: Boolean,
+      default: true
+    },
+    dietReminders: {
+      type: Boolean,
+      default: true
+    }
+  },
+  
   // Authentication tracking
   lastLogin: Date,
   loginAttempts: {

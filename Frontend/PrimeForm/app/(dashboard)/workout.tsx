@@ -135,7 +135,6 @@ export default function WorkoutScreen() {
               const plan = JSON.parse(cachedPlan);
               // Validate cached data belongs to current user
               if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                console.log('✅ Found workout plan in local storage, using it immediately');
                 setWorkoutPlan(plan);
                 setHasCheckedLocalStorage(true);
                 // ✅ OPTIMIZATION: Only sync in background if cache might be stale (older than 30 minutes)
@@ -164,7 +163,7 @@ export default function WorkoutScreen() {
             }
           }
         } catch (localError) {
-          console.warn('Could not check local storage:', localError);
+          // Ignore local storage errors
         }
         
         setHasCheckedLocalStorage(true);
@@ -173,11 +172,8 @@ export default function WorkoutScreen() {
         const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
         if (plan) {
           setWorkoutPlan(plan);
-        } else {
-          console.log('ℹ️ No workout plan found - user needs to generate one');
         }
       } catch (error) {
-        console.error('❌ Error loading workout plan:', error);
         
         // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
         try {
@@ -192,7 +188,6 @@ export default function WorkoutScreen() {
               const plan = JSON.parse(cachedPlan);
               // Validate cached data belongs to current user
               if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                console.log('✅ Fallback: Found workout plan in local storage after error');
                 setWorkoutPlan(plan);
                 setLoadError(null); // Clear error since we found plan locally
                 setIsLoadingPlan(false);
@@ -202,7 +197,7 @@ export default function WorkoutScreen() {
             }
           }
         } catch (localError) {
-          console.warn('Could not check local storage on error:', localError);
+          // Ignore local storage errors
         }
         
         // Only set error if we truly have no plan
@@ -514,7 +509,6 @@ export default function WorkoutScreen() {
       setIsLoadingPlan(false);
       showToast('success', 'Workout plan deleted successfully. You can now generate a new one.');
     } catch (error) {
-      console.error('Error clearing workout plan:', error);
       // Even if there's an error, clear local state
       setWorkoutPlan(null);
       setHasCheckedLocalStorage(false);

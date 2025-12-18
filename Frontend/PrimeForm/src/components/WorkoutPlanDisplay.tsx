@@ -292,7 +292,6 @@ export default function WorkoutPlanDisplay({
         await loadCompletionStates();
         setIsInitialized(true);
       } catch (error) {
-        console.error('Error initializing completion service:', error);
         setIsInitialized(true);
       }
     };
@@ -414,9 +413,7 @@ export default function WorkoutPlanDisplay({
       setCompletedExercises(new Set(completionData.completedExercises));
       setCompletedDays(new Set(completionData.completedDays));
     } catch (error) {
-      if (__DEV__) {
-        console.error('❌ Error loading completion states:', error);
-      }
+      // Ignore errors
     }
   };
 
@@ -513,9 +510,6 @@ export default function WorkoutPlanDisplay({
 
   const handleExerciseComplete = async (exercise: WorkoutExercise) => {
     if (!selectedDay || !selectedDay.date) {
-      if (__DEV__) {
-        console.warn('Cannot complete exercise: selectedDay or selectedDay.date is null');
-      }
       return;
     }
 
@@ -564,15 +558,9 @@ export default function WorkoutPlanDisplay({
           exerciseId,
           date: selectedDay.date
         });
-      } else {
-        if (__DEV__) {
-          console.error('❌ WorkoutPlanDisplay: Failed to complete exercise');
-        }
       }
     } catch (error) {
-      if (__DEV__) {
-        console.error('❌ WorkoutPlanDisplay: Error completing exercise:', error);
-      }
+      // Ignore errors
     }
   };
 
@@ -587,9 +575,7 @@ export default function WorkoutPlanDisplay({
         workoutPlan: workoutPlan
       });
     } catch (error) {
-      if (__DEV__) {
-        console.warn('Failed to sync workout progress:', error);
-      }
+      // Ignore errors
     }
   };
 

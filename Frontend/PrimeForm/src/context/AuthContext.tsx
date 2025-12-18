@@ -151,7 +151,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             const { default: userProfileService } = await import('../services/userProfileService');
             // Initialize cache (loads from storage if available)
             await userProfileService.getCachedData();
-            console.log('✅ User profile service initialized on app start');
           } catch (error) {
             // Ignore if service not available
           }
