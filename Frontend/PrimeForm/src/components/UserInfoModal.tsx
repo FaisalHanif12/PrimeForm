@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
     maxHeight: screenHeight * 0.95,
   },
   modalContent: {
-    backgroundColor: 'rgba(19, 25, 34, 0.95)',
+    backgroundColor: colors.background,
     borderRadius: 28,
     padding: spacing.xl + 12,
     borderWidth: 1,

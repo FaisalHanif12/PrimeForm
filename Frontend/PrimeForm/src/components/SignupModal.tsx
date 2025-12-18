@@ -9,6 +9,7 @@ import Animated, {
   withSpring, 
   withTiming 
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -52,9 +53,9 @@ export default function SignupModal({
       title: 'Unlock Premium Features',
       description: `Sign up to access `,
       benefits: [
-        { icon: '✨', text: 'AI-powered personalized plans' },
-        { icon: '📊', text: 'Progress tracking & analytics' },
-        { icon: '🎯', text: 'Custom workout & diet plans' }
+        { iconName: 'sparkles-outline', text: 'AI-powered personalized plans' },
+        { iconName: 'bar-chart-outline', text: 'Progress tracking & analytics' },
+        { iconName: 'navigate-circle-outline', text: 'Custom workout & diet plans' }
       ],
       signupButton: 'Sign Up',
       closeButton: '×'
@@ -63,9 +64,9 @@ export default function SignupModal({
       title: 'پریمیم فیچرز کو انلاک کریں',
       description: `  رسائی حاصل کرنے کے لیے سائن اپ کریں`,
       benefits: [
-        { icon: '✨', text: 'AI سے چلنے والے ذاتی پلانز' },
-        { icon: '📊', text: 'پیش رفت کی نگرانی اور تجزیہ' },
-        { icon: '🎯', text: 'کسٹم ورکاؤٹ اور ڈائٹ پلانز' }
+        { iconName: 'sparkles-outline', text: 'AI سے چلنے والے ذاتی پلانز' },
+        { iconName: 'bar-chart-outline', text: 'پیش رفت کی نگرانی اور تجزیہ' },
+        { iconName: 'locate-outline', text: 'کسٹم ورکاؤٹ اور ڈائٹ پلانز' }
       ],
       signupButton: 'رجسٹر کریں',
       closeButton: '×'
@@ -121,7 +122,11 @@ export default function SignupModal({
                 {currentContent.benefits.map((benefit, index) => (
                   <View key={index} style={styles.benefitItem}>
                     <View style={styles.benefitIcon}>
-                      <Text style={styles.benefitIconText}>{benefit.icon}</Text>
+                      <Ionicons 
+                        name={benefit.iconName as any} 
+                        size={20} 
+                        color="#F59E0B" 
+                      />
                     </View>
                     <Text style={[styles.benefitText, language === 'ur' && styles.benefitTextUrdu]}>
                       {benefit.text}
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
     maxWidth: Math.min(screenWidth - 40, 380),
   },
   modalContent: {
-    backgroundColor: 'rgba(26, 31, 46, 0.95)',
+    backgroundColor: colors.background,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -276,9 +281,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-  },
-  benefitIconText: {
-    fontSize: 18,
   },
   benefitText: {
     color: colors.white,

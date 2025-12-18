@@ -1962,29 +1962,51 @@ class ProgressService {
     return 3000; // 3L default
   }
 
+  // Clear progress data for current user only
+  // ✅ CRITICAL: This method clears progress data for the CURRENT user only
+  // It should only be called when user explicitly wants to reset their progress
   async clearProgressData(): Promise<void> {
     try {
-      await exerciseCompletionService.clearCompletionData();
-      await mealCompletionService.resetCompletionData();
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot clear progress data');
+        return;
+      }
+
+      // ✅ CRITICAL: Only clear current user's completion data from storage
+      // Use the service methods that properly handle user-specific keys
+      try {
+        await exerciseCompletionService.clearCompletionData();
+      } catch (error) {
+        console.warn('⚠️ Error clearing exercise completion data:', error);
+      }
+
+      try {
+        await mealCompletionService.resetCompletionData();
+      } catch (error) {
+        console.warn('⚠️ Error clearing meal completion data:', error);
+      }
       
       // Clear water data with user-specific keys
-      const userId = await getCurrentUserId();
-      if (userId) {
-        const [waterIntakeKey, waterCompletedKey] = await Promise.all([
-          getUserCacheKey('water_intake', userId),
-          getUserCacheKey('water_completed', userId),
-        ]);
-        await Promise.all([
-          Storage.removeItem(waterIntakeKey),
-          Storage.removeItem(waterCompletedKey),
-          // Also clear old global keys for migration
-          Storage.removeItem('water_intake'),
-          Storage.removeItem('water_completed'),
-        ]);
-      }
+      const [waterIntakeKey, waterCompletedKey] = await Promise.all([
+        getUserCacheKey('water_intake', userId),
+        getUserCacheKey('water_completed', userId),
+      ]);
+      await Promise.all([
+        Storage.removeItem(waterIntakeKey),
+        Storage.removeItem(waterCompletedKey),
+        // Also clear old global keys for migration (if they exist)
+        Storage.removeItem('water_intake'),
+        Storage.removeItem('water_completed'),
+      ]);
+
+      // Clear progress cache for current user
+      await this.clearUserCaches(userId);
+      
       await Storage.removeItem('last_progress_cleanup');
+      console.log('✅ Progress data cleared for user:', userId);
     } catch (error) {
-      // Error clearing progress data
+      console.error('❌ Error clearing progress data:', error);
     }
   }
 }

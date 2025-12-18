@@ -17,6 +17,8 @@ class MealCompletionService {
     completedDays: [],
     lastUpdated: new Date().toISOString(),
   };
+  // ✅ CRITICAL: Track current user ID to ensure data integrity across account switches
+  private currentUserId: string | null = null;
 
   static getInstance(): MealCompletionService {
     if (!MealCompletionService.instance) {
@@ -36,8 +38,19 @@ class MealCompletionService {
         // No user ID, initialize with empty data
         this.completionData.completedMeals = [];
         this.completionData.completedDays = [];
+        this.currentUserId = null;
         return;
       }
+
+      // ✅ CRITICAL: If user ID changed, reset in-memory state first
+      if (this.currentUserId && this.currentUserId !== userId) {
+        console.log('⚠️ User ID changed, resetting in-memory state before loading new user data');
+        this.completionData.completedMeals = [];
+        this.completionData.completedDays = [];
+      }
+
+      // Update tracked user ID
+      this.currentUserId = userId;
 
       const [mealsKey, daysKey] = await Promise.all([
         getUserCacheKey('completed_meals', userId),
@@ -53,7 +66,7 @@ class MealCompletionService {
       this.completionData.completedDays = daysData ? JSON.parse(daysData) : [];
       this.completionData.lastUpdated = new Date().toISOString();
 
-      console.log('✅ Meal completion data loaded:', {
+      console.log('✅ Meal completion data loaded for user:', userId, {
         meals: this.completionData.completedMeals.length,
         days: this.completionData.completedDays.length,
       });
@@ -208,6 +221,20 @@ class MealCompletionService {
         return;
       }
 
+      // ✅ CRITICAL: Validate user ID matches before saving (prevents data leakage)
+      if (this.currentUserId && this.currentUserId !== userId) {
+        console.error('❌ CRITICAL: User ID mismatch! Current:', this.currentUserId, 'Expected:', userId);
+        console.error('❌ Aborting save to prevent data leakage. Reinitializing service...');
+        // Reinitialize to load correct user's data
+        await this.initialize();
+        return;
+      }
+
+      // Update tracked user ID if not set
+      if (!this.currentUserId) {
+        this.currentUserId = userId;
+      }
+
       const [mealsKey, daysKey] = await Promise.all([
         getUserCacheKey('completed_meals', userId),
         getUserCacheKey('completed_diet_days', userId),
@@ -217,7 +244,7 @@ class MealCompletionService {
         Storage.setItem(mealsKey, JSON.stringify(this.completionData.completedMeals)),
         Storage.setItem(daysKey, JSON.stringify(this.completionData.completedDays)),
       ]);
-      console.log('💾 Meal completion data saved to storage');
+      console.log('💾 Meal completion data saved to storage for user:', userId);
     } catch (error) {
       console.error('❌ Error saving meal completion data to storage:', error);
     }
@@ -232,6 +259,18 @@ class MealCompletionService {
     };
     await this.saveToStorage();
     console.log('🔄 Meal completion data reset');
+  }
+
+  // Reset only in-memory state (does NOT clear storage)
+  // Used during logout to clear current session data without deleting user's progress
+  resetInMemoryState(): void {
+    this.completionData = {
+      completedMeals: [],
+      completedDays: [],
+      lastUpdated: new Date().toISOString(),
+    };
+    this.currentUserId = null; // Clear tracked user ID
+    console.log('🔄 Meal completion service in-memory state reset (storage preserved)');
   }
 
   // Reinitialize for new user (clears in-memory data and reloads from storage)

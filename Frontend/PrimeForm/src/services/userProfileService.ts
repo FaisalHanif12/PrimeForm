@@ -51,17 +51,38 @@ class UserProfileService {
   private pendingCall: Promise<any> | null = null;
   private hasInitialized = false;
   private baseStorageKey = 'cached_user_profile';
+  // ✅ CRITICAL: Track current user ID to ensure data integrity across account switches
+  private currentUserId: string | null = null;
 
   // Initialize: Load from AsyncStorage on service creation
   private async initializeCache() {
-    if (this.hasInitialized) return;
+    if (this.hasInitialized) {
+      // ✅ CRITICAL: Re-check user ID on each initialization to handle account switches
+      const userId = await getCurrentUserId();
+      if (this.currentUserId && this.currentUserId !== userId) {
+        // User ID changed, reset cache
+        this.cache = null;
+        this.hasInitialized = false;
+      } else {
+        return; // Same user, skip re-initialization
+      }
+    }
     
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
+        this.currentUserId = null;
         this.hasInitialized = true;
         return; // No user ID, skip cache initialization
       }
+
+      // ✅ CRITICAL: If user ID changed, reset in-memory state first
+      if (this.currentUserId && this.currentUserId !== userId) {
+        this.cache = null;
+      }
+
+      // Update tracked user ID
+      this.currentUserId = userId;
 
       const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
       const stored = await Storage.getItem(storageKey);
@@ -79,7 +100,19 @@ class UserProfileService {
     }
   }
 
+  // Reset only in-memory state (does NOT clear storage)
+  // Used during logout to clear current session data without deleting user's cached profile
+  resetInMemoryState(): void {
+    this.cache = null;
+    this.hasInitialized = false;
+    this.isLoading = false;
+    this.pendingCall = null;
+    this.currentUserId = null; // Clear tracked user ID
+  }
+
   // Clear cache when user changes (called from auth service)
+  // ✅ NOTE: This method is kept for explicit cache clearing if needed
+  // For logout, use resetInMemoryState() instead to preserve cached profile
   async clearCache() {
     this.cache = null;
     this.hasInitialized = false;
@@ -94,7 +127,6 @@ class UserProfileService {
       }
       // Also clear old global key for migration
       await Storage.removeItem(this.baseStorageKey);
-      console.log('✅ User Profile Service cache cleared');
     } catch (error) {
       // Ignore storage errors
     }
@@ -105,11 +137,44 @@ class UserProfileService {
     // Initialize cache from AsyncStorage if not already done
     await this.initializeCache();
 
+    // ✅ CRITICAL: Validate current user ID matches cached user ID
+    const userId = await getCurrentUserId();
+    if (userId && this.currentUserId && this.currentUserId !== userId) {
+      // User ID changed, reset and reinitialize
+      this.cache = null;
+      this.hasInitialized = false;
+      await this.initializeCache();
+    }
+
+    // Helper function to extract profile data from cache (handles both old and new formats)
+    const extractProfileData = (cachedData: any): UserProfile | null => {
+      if (!cachedData) return null;
+      // If cached data is a response object (old format), extract the data field
+      if (cachedData && typeof cachedData === 'object' && 'success' in cachedData && 'data' in cachedData) {
+        return cachedData.data;
+      }
+      // Otherwise, it's already the profile data (new format)
+      return cachedData;
+    };
+
     // PERFORMANCE: Check AsyncStorage first (instant, no API call)
     if (!forceRefresh) {
-      // Check in-memory cache first (fastest)
-      if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-        return this.cache.data;
+      // Check in-memory cache first (fastest) - validate user ID matches
+      if (this.cache && this.cache.userId === userId && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+        // Extract profile data (handles both formats for backward compatibility)
+        const profileData = extractProfileData(this.cache.data);
+        // Validate cached data belongs to current user
+        if (profileData && validateCachedData(profileData, userId)) {
+          // ✅ CRITICAL: Return consistent response format
+          return {
+            success: true,
+            data: profileData,
+            message: 'Profile loaded from cache'
+          };
+        } else {
+          // Invalid cache, clear it
+          this.cache = null;
+        }
       }
 
       // Check AsyncStorage (instant, no network)
@@ -120,11 +185,18 @@ class UserProfileService {
           const stored = await Storage.getItem(storageKey);
           if (stored) {
             const parsed = JSON.parse(stored);
+            // Extract profile data (handles both formats for backward compatibility)
+            const profileData = extractProfileData(parsed.data);
             // Validate that cached data belongs to current user
-            if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
-              // Restore to memory cache
-              this.cache = { ...parsed, userId };
-              return parsed.data;
+            if (profileData && validateCachedData(profileData, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
+              // Restore to memory cache (normalize to new format - store just profile data)
+              this.cache = { data: profileData, timestamp: parsed.timestamp, userId };
+              // ✅ CRITICAL: Return consistent response format
+              return {
+                success: true,
+                data: profileData,
+                message: 'Profile loaded from storage'
+              };
             }
           }
         }
@@ -149,7 +221,27 @@ class UserProfileService {
       // Cache the successful result in both memory and AsyncStorage
       const userId = await getCurrentUserId();
       if (userId) {
-        const cacheEntry = { data: result, timestamp: Date.now(), userId };
+        // ✅ CRITICAL: Validate user ID matches before saving (prevents data leakage)
+        if (this.currentUserId && this.currentUserId !== userId) {
+          console.error('❌ CRITICAL: User ID mismatch in profile service! Current:', this.currentUserId, 'Expected:', userId);
+          console.error('❌ Aborting save to prevent data leakage. Reinitializing service...');
+          // Reinitialize to load correct user's data
+          this.cache = null;
+          this.hasInitialized = false;
+          await this.initializeCache();
+          return result; // Return result but don't cache it
+        }
+
+        // Update tracked user ID if not set
+        if (!this.currentUserId) {
+          this.currentUserId = userId;
+        }
+
+        // ✅ CRITICAL: Store only the profile data (not the response object) for consistency
+        // Extract profile data from response object if needed
+        const profileData = (result && typeof result === 'object' && 'data' in result) ? result.data : result;
+        
+        const cacheEntry = { data: profileData, timestamp: Date.now(), userId };
         this.cache = cacheEntry;
         
         // Persist to AsyncStorage with user-specific key (non-blocking)
@@ -201,6 +293,9 @@ class UserProfileService {
 
   // Get cached data without API call (synchronous check of memory only)
   async getCachedData(): Promise<{ success: boolean; data: UserProfile | null; message: string } | null> {
+    // ✅ CRITICAL: Initialize cache first to ensure we load from storage if needed
+    await this.initializeCache();
+    
     const userId = await getCurrentUserId();
     if (!userId) {
       // No user ID, clear any cached data
@@ -208,11 +303,36 @@ class UserProfileService {
       return null;
     }
     
+    // ✅ CRITICAL: Validate current user ID matches cached user ID
+    if (this.currentUserId && this.currentUserId !== userId) {
+      // User ID changed, reset and reload
+      this.cache = null;
+      this.hasInitialized = false;
+      await this.initializeCache();
+    }
+    
+    // Helper function to extract profile data from cache (handles both old and new formats)
+    const extractProfileData = (cachedData: any): UserProfile | null => {
+      if (!cachedData) return null;
+      // If cached data is a response object (old format), extract the data field
+      if (cachedData && typeof cachedData === 'object' && 'success' in cachedData && 'data' in cachedData) {
+        return cachedData.data;
+      }
+      // Otherwise, it's already the profile data (new format)
+      return cachedData;
+    };
+    
     // Check memory cache - must match current user ID
     if (this.cache && this.cache.userId === userId && Date.now() - this.cache.timestamp < this.cacheTimeout) {
+      // Extract profile data (handles both formats)
+      const profileData = extractProfileData(this.cache.data);
       // Validate cached data belongs to current user
-      if (validateCachedData(this.cache.data, userId)) {
-        return this.cache.data;
+      if (profileData && validateCachedData(profileData, userId)) {
+        return {
+          success: true,
+          data: profileData,
+          message: 'Profile loaded from cache'
+        };
       } else {
         // Cached data doesn't belong to current user, clear it
         this.cache = null;
@@ -230,11 +350,21 @@ class UserProfileService {
       const stored = await Storage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
+        // Extract profile data (handles both formats)
+        const profileData = extractProfileData(parsed.data);
         // Validate cached data belongs to current user
-        if (validateCachedData(parsed.data, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
-          // Restore to memory cache
-          this.cache = { ...parsed, userId };
-          return parsed.data;
+        if (profileData && validateCachedData(profileData, userId) && Date.now() - parsed.timestamp < this.cacheTimeout) {
+          // Restore to memory cache (normalize to new format - store just profile data)
+          this.cache = { data: profileData, timestamp: parsed.timestamp, userId };
+          // Update tracked user ID
+          if (!this.currentUserId) {
+            this.currentUserId = userId;
+          }
+          return {
+            success: true,
+            data: profileData,
+            message: 'Profile loaded from storage'
+          };
         }
       }
     } catch (error) {
@@ -325,7 +455,9 @@ class UserProfileService {
         await this.clearCache();
         const userId = await getCurrentUserId();
         if (userId) {
-          const cacheEntry = { data: response, timestamp: Date.now(), userId };
+          // ✅ CRITICAL: Store only the profile data (not the response object) for consistency
+          const profileData = (response && typeof response === 'object' && 'data' in response) ? response.data : response;
+          const cacheEntry = { data: profileData, timestamp: Date.now(), userId };
           this.cache = cacheEntry;
           const storageKey = await getUserCacheKey(this.baseStorageKey, userId);
           Storage.setItem(storageKey, JSON.stringify(cacheEntry)).catch(() => {});
