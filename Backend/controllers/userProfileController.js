@@ -375,3 +375,97 @@ exports.getUserBadges = async (req, res) => {
     });
   }
 };
+
+// Get notification settings
+exports.getNotificationSettings = async (req, res) => {
+  try {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+    
+    const user = await User.findById(userId).select('notificationSettings');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Return default values if notificationSettings is not set
+    const settings = user.notificationSettings || {
+      pushNotifications: true,
+      workoutReminders: true,
+      dietReminders: true
+    };
+    
+    res.status(200).json({
+      success: true,
+      data: settings,
+      message: 'Notification settings retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting notification settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};
+
+// Update notification settings
+exports.updateNotificationSettings = async (req, res) => {
+  try {
+    const userId = req.user._id ? req.user._id.toString() : req.user.id;
+    const { pushNotifications, workoutReminders, dietReminders } = req.body;
+    
+    // Validate input
+    const updates = {};
+    if (typeof pushNotifications === 'boolean') {
+      updates['notificationSettings.pushNotifications'] = pushNotifications;
+    }
+    if (typeof workoutReminders === 'boolean') {
+      updates['notificationSettings.workoutReminders'] = workoutReminders;
+    }
+    if (typeof dietReminders === 'boolean') {
+      updates['notificationSettings.dietReminders'] = dietReminders;
+    }
+    
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one notification setting must be provided'
+      });
+    }
+    
+    // Update user notification settings
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('notificationSettings');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: user.notificationSettings || {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true
+      },
+      message: 'Notification settings updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating notification settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
+    });
+  }
+};

@@ -101,6 +101,7 @@ export function getUserCacheKeyPatterns(userId: string): string[] {
     `user_${userId}_ai_trainer_chat`,
     `user_${userId}_ai_trainer_conversations`,
     `user_${userId}_ai_trainer_current_conversation_id`,
+    `user_${userId}_ai_trainer_usage_`, // Usage tracking (with date suffix)
     `user_${userId}_last_checked_day`,
     `user_${userId}_personalizedWorkout`,
     `user_${userId}_lastWorkoutCompletion`,
@@ -139,6 +140,7 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
       '_ai_trainer_chat',
       '_ai_trainer_conversations',
       '_ai_trainer_current_conversation_id',
+      '_ai_trainer_usage_', // Usage tracking (preserve per account)
       // User Profile Data (preserve cached profile per account)
       '_cached_user_profile',
     ];

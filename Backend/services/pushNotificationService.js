@@ -54,11 +54,11 @@ class PushNotificationService {
         },
         badge: notification.badge || 1,
         // Pure Body branding
-        channelId: 'primeform-notifications',
-        categoryId: 'primeform',
+        channelId: 'purebody-notifications',
+        categoryId: 'purebody',
         // Custom icon and color for Android
         android: {
-          channelId: 'primeform-notifications',
+          channelId: 'purebody-notifications',
           color: '#6366F1', // Pure Body primary color
           sound: 'default',
           priority: 'high',
@@ -70,7 +70,7 @@ class PushNotificationService {
           sound: 'default',
           badge: notification.badge || 1,
           _displayInForeground: true,
-          categoryId: 'primeform'
+          categoryId: 'purebody'
         }
       };
 

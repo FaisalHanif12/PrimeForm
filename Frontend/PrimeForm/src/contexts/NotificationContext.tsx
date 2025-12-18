@@ -185,7 +185,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
     } catch (err) {
       // Silently fail for background updates
-      console.error('Error fetching unread count:', err);
     }
   };
 
@@ -194,12 +193,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     if (isAuthenticated && user) {
       fetchNotifications();
       // Initialize push notifications
-      pushNotificationService.initialize().then(token => {
-        if (token) {
-          console.log('✅ Push notifications initialized for user:', user.email);
-        } else {
-          console.log('❌ Failed to initialize push notifications');
-        }
+      pushNotificationService.initialize().then(() => {
+        // Push notifications initialized
       });
     } else {
       // Clear notifications when user logs out

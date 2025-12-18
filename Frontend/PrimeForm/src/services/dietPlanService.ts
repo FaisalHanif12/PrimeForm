@@ -47,31 +47,9 @@ class DietPlanService {
   // Create or update diet plan
   async createDietPlan(dietPlan: DietPlan): Promise<DietPlanResponse> {
     try {
-      console.log('💾 Saving diet plan to database...');
-      console.log('📦 Diet Plan Data Structure:', {
-        goal: dietPlan.goal,
-        duration: dietPlan.duration,
-        country: dietPlan.country,
-        startDate: dietPlan.startDate,
-        endDate: dietPlan.endDate,
-        totalWeeks: dietPlan.totalWeeks,
-        weeklyPlanLength: dietPlan.weeklyPlan?.length,
-        firstDayMeals: dietPlan.weeklyPlan?.[0]?.meals ? Object.keys(dietPlan.weeklyPlan[0].meals) : 'undefined'
-      });
-      
       const response = await api.post('/diet-plans', dietPlan);
-      
-      console.log('✅ Diet plan saved to database');
       return response;
     } catch (error) {
-      console.error('❌ Error saving diet plan to database:', error);
-      console.error('❌ Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        status: (error as any)?.response?.status,
-        statusText: (error as any)?.response?.statusText,
-        data: (error as any)?.response?.data
-      });
       throw error;
     }
   }
@@ -79,18 +57,9 @@ class DietPlanService {
   // Get active diet plan for user
   async getActiveDietPlan(): Promise<DietPlanResponse> {
     try {
-      console.log('📱 Loading diet plan from database...');
       const response = await api.get('/diet-plans/active');
-      
-      if (response.success && response.data) {
-        console.log('✅ Diet plan loaded from database');
-      } else {
-        console.log('ℹ️ No active diet plan found');
-      }
-      
       return response;
     } catch (error) {
-      console.error('❌ Error loading diet plan from database:', error);
       throw error;
     }
   }
@@ -101,7 +70,6 @@ class DietPlanService {
       const response = await api.get(`/diet-plans?page=${page}&limit=${limit}`);
       return response;
     } catch (error) {
-      console.error('❌ Error loading diet plans:', error);
       throw error;
     }
   }
@@ -109,13 +77,9 @@ class DietPlanService {
   // Mark meal as completed
   async markMealCompleted(mealId: string, day: number, week: number, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'): Promise<DietPlanResponse> {
     try {
-      console.log(`✅ Marking meal ${mealId} as completed (Day ${day}, Week ${week}, Type: ${mealType})`);
       const response = await api.post('/diet-plans/meal/complete', { mealId, day, week, mealType });
-      
-      console.log('✅ Meal marked as completed in database');
       return response;
     } catch (error) {
-      console.error('❌ Error marking meal completed:', error);
       throw error;
     }
   }
@@ -123,13 +87,9 @@ class DietPlanService {
   // Mark day as completed
   async markDayCompleted(day: number, week: number): Promise<DietPlanResponse> {
     try {
-      console.log(`✅ Marking day ${day} as completed (Week ${week})`);
       const response = await api.post('/diet-plans/day/complete', { day, week });
-      
-      console.log('✅ Day marked as completed in database');
       return response;
     } catch (error) {
-      console.error('❌ Error marking day completed:', error);
       throw error;
     }
   }
@@ -137,13 +97,9 @@ class DietPlanService {
   // Log water intake
   async logWaterIntake(day: number, week: number, amount: number): Promise<DietPlanResponse> {
     try {
-      console.log(`💧 Logging water intake: ${amount}ml (Day ${day}, Week ${week})`);
       const response = await api.post('/diet-plans/water/log', { day, week, amount });
-      
-      console.log('✅ Water intake logged in database');
       return response;
     } catch (error) {
-      console.error('❌ Error logging water intake:', error);
       throw error;
     }
   }
@@ -154,7 +110,6 @@ class DietPlanService {
       const response = await api.get('/diet-plans/stats');
       return response;
     } catch (error) {
-      console.error('❌ Error loading diet stats:', error);
       throw error;
     }
   }
@@ -162,13 +117,9 @@ class DietPlanService {
   // Delete diet plan
   async deleteDietPlan(planId: string): Promise<DietPlanResponse> {
     try {
-      console.log(`🗑️ Deleting diet plan ${planId}`);
       const response = await api.delete(`/diet-plans/${planId}`);
-      
-      console.log('✅ Diet plan deleted from database');
       return response;
     } catch (error) {
-      console.error('❌ Error deleting diet plan:', error);
       throw error;
     }
   }
@@ -176,21 +127,17 @@ class DietPlanService {
   // Clear all diet plans (for testing)
   async clearAllDietPlans(): Promise<void> {
     try {
-      console.log('🗑️ Clearing all diet plans...');
-      
       // First, try to get and delete the active plan directly (most common case)
       try {
         const activePlanResponse = await this.getActiveDietPlan();
         if (activePlanResponse.success && activePlanResponse.data) {
           const planId = activePlanResponse.data._id || activePlanResponse.data.id;
           if (planId) {
-            console.log(`🗑️ Deleting active diet plan: ${planId}`);
             await this.deleteDietPlan(planId);
-            console.log('✅ Active diet plan deleted');
           }
         }
       } catch (activeError) {
-        console.warn('⚠️ Could not delete active plan (may not exist):', activeError);
+        // Ignore if active plan doesn't exist
       }
       
       // Then, try to get and delete all plans (including inactive ones)
@@ -208,23 +155,16 @@ class DietPlanService {
                 try {
                   await this.deleteDietPlan(planId);
                 } catch (deleteError) {
-                  console.warn(`⚠️ Failed to delete plan ${planId}:`, deleteError);
                   // Continue with other plans even if one fails
                 }
               }
             }
-            console.log('✅ All diet plans cleared');
-          } else {
-            console.log('ℹ️ No additional diet plans found to clear');
           }
-        } else {
-          console.log('ℹ️ No additional diet plans found to clear');
         }
       } catch (allPlansError) {
-        console.warn('⚠️ Could not get all plans:', allPlansError);
+        // Ignore errors
       }
     } catch (error) {
-      console.error('❌ Error clearing diet plans:', error);
       // Don't throw - allow deletion to continue even if API call fails
       // This ensures local cache can still be cleared
     }
@@ -233,16 +173,12 @@ class DietPlanService {
   // Sync diet plan duration with workout plan
   async syncWithWorkoutPlan(workoutDuration: string, workoutGoal: string): Promise<DietPlanResponse> {
     try {
-      console.log(`🔄 Syncing diet plan with workout: ${workoutDuration}, ${workoutGoal}`);
       const response = await api.post('/diet-plans/sync-workout', { 
         workoutDuration, 
         workoutGoal 
       });
-      
-      console.log('✅ Diet plan synced with workout plan');
       return response;
     } catch (error) {
-      console.error('❌ Error syncing diet plan with workout:', error);
       throw error;
     }
   }

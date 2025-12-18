@@ -73,6 +73,25 @@ class DailyReminderService {
         return { success: false, reason: 'No push token' };
       }
 
+      // Check user notification preferences
+      const notificationSettings = user.notificationSettings || {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true
+      };
+
+      // If push notifications are disabled, don't send any notification
+      if (!notificationSettings.pushNotifications) {
+        console.log(`Push notifications disabled for user ${userId}, skipping diet reminder`);
+        return { success: false, reason: 'Push notifications disabled' };
+      }
+
+      // If diet reminders are disabled, don't send diet notification
+      if (!notificationSettings.dietReminders) {
+        console.log(`Diet reminders disabled for user ${userId}, skipping diet reminder`);
+        return { success: false, reason: 'Diet reminders disabled' };
+      }
+
       // Check if user has an active diet plan
       const dietPlan = await DietPlan.getActiveDietPlan(userId);
       if (!dietPlan) {
@@ -109,6 +128,25 @@ class DailyReminderService {
       if (!user || !user.pushToken) {
         console.log(`No push token found for user ${userId}`);
         return { success: false, reason: 'No push token' };
+      }
+
+      // Check user notification preferences
+      const notificationSettings = user.notificationSettings || {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true
+      };
+
+      // If push notifications are disabled, don't send any notification
+      if (!notificationSettings.pushNotifications) {
+        console.log(`Push notifications disabled for user ${userId}, skipping workout reminder`);
+        return { success: false, reason: 'Push notifications disabled' };
+      }
+
+      // If workout reminders are disabled, don't send workout notification
+      if (!notificationSettings.workoutReminders) {
+        console.log(`Workout reminders disabled for user ${userId}, skipping workout reminder`);
+        return { success: false, reason: 'Workout reminders disabled' };
       }
 
       // Check if user has an active workout plan
@@ -149,6 +187,25 @@ class DailyReminderService {
         return { success: false, reason: 'No push token' };
       }
 
+      // Check user notification preferences
+      const notificationSettings = user.notificationSettings || {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true
+      };
+
+      // If push notifications are disabled, don't send any notification
+      if (!notificationSettings.pushNotifications) {
+        console.log(`Push notifications disabled for user ${userId}, skipping gym reminder`);
+        return { success: false, reason: 'Push notifications disabled' };
+      }
+
+      // Gym reminders are considered workout-related, so check workoutReminders
+      if (!notificationSettings.workoutReminders) {
+        console.log(`Workout reminders disabled for user ${userId}, skipping gym reminder`);
+        return { success: false, reason: 'Workout reminders disabled' };
+      }
+
       const userLanguage = await getUserLanguage(userId);
       const reminder = getTranslatedReminder('gym', userLanguage);
 
@@ -178,6 +235,19 @@ class DailyReminderService {
       if (!user || !user.pushToken) {
         console.log(`No push token found for user ${userId}`);
         return { success: false, reason: 'No push token' };
+      }
+
+      // Check user notification preferences
+      const notificationSettings = user.notificationSettings || {
+        pushNotifications: true,
+        workoutReminders: true,
+        dietReminders: true
+      };
+
+      // If push notifications are disabled, don't send any notification
+      if (!notificationSettings.pushNotifications) {
+        console.log(`Push notifications disabled for user ${userId}, skipping streak reminder`);
+        return { success: false, reason: 'Push notifications disabled' };
       }
 
       const userLanguage = await getUserLanguage(userId);

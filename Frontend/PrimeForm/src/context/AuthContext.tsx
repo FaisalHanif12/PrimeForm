@@ -103,12 +103,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (response.tokenExpired || response.statusCode === 401 || !response.success) {
           // Token is invalid/expired - clear it and cache
           // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - preserve user history
+          // This ensures users who have signed up are redirected to login, not guest mode
           await authService.clearToken();
           if (userId) {
             await AsyncStorage.removeItem(cacheKey);
           }
           setUser(null);
           setIsLoading(false);
+          // ✅ CRITICAL: Don't return here - let the component handle navigation
+          // The app/index.tsx will check primeform_has_ever_signed_up and redirect to login
           return;
         }
         
@@ -131,18 +134,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           // ✅ CRITICAL: Initialize completion services for logged-in user
           // This ensures completion data is loaded when app starts with existing session
+          // Add small delay to ensure user ID is set
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
           try {
             const { default: mealCompletionService } = await import('../services/mealCompletionService');
             await mealCompletionService.initialize();
+            // ✅ CRITICAL: Verify initialization succeeded
+            const mealData = mealCompletionService.getCompletionData();
+            console.log('✅ AuthContext: Meal completion service initialized with', mealData.completedMeals.length, 'meals');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ AuthContext: Error initializing meal completion service:', error);
+            // Retry once
+            try {
+              const { default: mealCompletionService } = await import('../services/mealCompletionService');
+              await mealCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ AuthContext: Retry failed for meal completion service:', retryError);
+            }
           }
 
           try {
             const { default: exerciseCompletionService } = await import('../services/exerciseCompletionService');
             await exerciseCompletionService.initialize();
+            // ✅ CRITICAL: Verify initialization succeeded
+            const exerciseData = exerciseCompletionService.getCompletionData();
+            console.log('✅ AuthContext: Exercise completion service initialized with', exerciseData.completedExercises.length, 'exercises');
           } catch (error) {
-            // Ignore if service not available
+            console.error('❌ AuthContext: Error initializing exercise completion service:', error);
+            // Retry once
+            try {
+              const { default: exerciseCompletionService } = await import('../services/exerciseCompletionService');
+              await exerciseCompletionService.initialize();
+            } catch (retryError) {
+              console.error('❌ AuthContext: Retry failed for exercise completion service:', retryError);
+            }
           }
 
           // ✅ CRITICAL: Initialize user profile service to load cached profile data
@@ -151,7 +177,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             const { default: userProfileService } = await import('../services/userProfileService');
             // Initialize cache (loads from storage if available)
             await userProfileService.getCachedData();
-            console.log('✅ User profile service initialized on app start');
           } catch (error) {
             // Ignore if service not available
           }
@@ -169,29 +194,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Check if it's a 401 error
         if (profileError?.statusCode === 401 || profileError?.message?.includes('401') || profileError?.message?.includes('expired')) {
           await authService.clearToken();
-          if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
-          }
+
           setUser(null);
         } else {
           // Other errors - still clear token to be safe
           await authService.clearToken();
-          if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
-          }
+          // ✅ CRITICAL: Profile cache is PRESERVED even on errors
+          // Profile data persists in storage with user-specific key
           setUser(null);
         }
       }
     } catch (error) {
       setUser(null);
-      // Only clear token if there's an error, but preserve user history
+      // Only clear token if there's an error, but preserve user data
       try {
         await authService.clearToken();
-        const userId = await getCurrentUserId();
-        if (userId) {
-          const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-          await AsyncStorage.removeItem(cacheKey);
-        }
+    
       } catch (clearError) {
         // Ignore clear errors
       }
@@ -212,20 +230,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await authService.logout();
       setUser(null);
-      // ✅ CRITICAL: Clear cached profile on logout (account-specific)
-      const userId = await getCurrentUserId();
-      if (userId) {
-        const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-        await AsyncStorage.removeItem(cacheKey);
-      }
+      // ✅ CRITICAL: Profile cache is PRESERVED on logout (like all other user data)
+      // Profile data persists in storage with user-specific key: user_<userId>_cached_user_profile
+      // This allows faster loading when user logs back in
+      // Only in-memory state is cleared via userProfileService.resetInMemoryState()
+      // No need to clear storage - it's preserved in clearUserCache() preservedKeyFragments
     } catch (error) {
       // Clear local state even if API call fails
       setUser(null);
-      const userId = await getCurrentUserId();
-      if (userId) {
-        const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
-        await AsyncStorage.removeItem(cacheKey);
-      }
+      // Profile cache still preserved in storage
     }
   };
 

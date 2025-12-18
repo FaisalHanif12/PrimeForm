@@ -285,8 +285,19 @@ export default function DietPlanDisplay({
 
   useEffect(() => {
     const initializeComponent = async () => {
-      // Initialize meal completion service
-      await mealCompletionService.initialize();
+      // ✅ CRITICAL: Initialize meal completion service with retry logic
+      try {
+        await mealCompletionService.ensureInitialized();
+      } catch (error) {
+        console.error('❌ Error initializing meal completion in DietPlanDisplay:', error);
+        // Retry once after delay
+        try {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await mealCompletionService.initialize();
+        } catch (retryError) {
+          console.error('❌ Retry failed in DietPlanDisplay:', retryError);
+        }
+      }
       
       // ✅ Load completion states from prop data + local storage (NO API CALL)
       loadCompletionStatesFromProp();
@@ -300,9 +311,6 @@ export default function DietPlanDisplay({
         // Fallback to first day of current week if today's data not found
         const currentWeekDays = getCurrentWeekDays();
         if (currentWeekDays.length > 0) {
-          if (__DEV__) {
-            console.warn('Today\'s day data not found, using first day of week as fallback');
-          }
           setSelectedDay(currentWeekDays[0]);
         }
       }
@@ -375,9 +383,7 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (error) {
-        if (__DEV__) {
-          console.warn('Could not load water data from local storage:', error);
-        }
+        // Ignore errors
       }
     };
 
@@ -435,9 +441,7 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (storageError) {
-        if (__DEV__) {
-          console.warn('Could not load from local storage:', storageError);
-        }
+        // Ignore errors
       }
   };
 
@@ -529,14 +533,9 @@ export default function DietPlanDisplay({
           setWaterCompleted(JSON.parse(cachedWaterCompleted));
         }
       } catch (storageError) {
-        if (__DEV__) {
-          console.warn('Could not load from local storage:', storageError);
-        }
+        // Ignore errors
       }
     } catch (error) {
-      if (__DEV__) {
-        console.warn('Could not load completion states from prop:', error);
-      }
       // Fallback to local storage only
       await loadCompletionStatesFromLocalStorage();
     }
@@ -616,17 +615,11 @@ export default function DietPlanDisplay({
 
   const handleMealComplete = async (meal: DietMeal, mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
     if (!selectedDay || !selectedDay.date) {
-      if (__DEV__) {
-        console.warn('Cannot complete meal: selectedDay or selectedDay.date is null');
-      }
       return;
     }
     
     // Only allow completion on current day
     if (!isCurrentDay(selectedDay)) {
-      if (__DEV__) {
-        console.warn('Cannot complete meal: only current day meals can be completed');
-      }
       return;
     }
     
@@ -718,9 +711,7 @@ export default function DietPlanDisplay({
         progressPercentage: getProgressPercentage()
       });
     } catch (error) {
-      if (__DEV__) {
-        console.warn('Failed to sync diet progress:', error);
-      }
+      // Ignore errors
     }
   };
 
@@ -744,9 +735,6 @@ export default function DietPlanDisplay({
     
     // ✅ CRITICAL: Only allow water intake completion on current day
     if (!isCurrentDay(selectedDay)) {
-      if (__DEV__) {
-        console.warn('Cannot complete water intake: only current day water intake can be completed');
-      }
       return;
     }
     
@@ -784,10 +772,6 @@ export default function DietPlanDisplay({
       // Sync with progress service
       await syncProgressData();
     } catch (error) {
-      if (__DEV__) {
-        console.error('Error toggling water completion:', error);
-      }
-      
       // Revert UI changes if backend failed
       setWaterCompleted(waterCompleted);
       setWaterIntake(waterIntake);

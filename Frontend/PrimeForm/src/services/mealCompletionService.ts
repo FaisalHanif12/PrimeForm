@@ -32,10 +32,20 @@ class MealCompletionService {
     try {
       console.log('🔄 Initializing meal completion service...');
       
-      // Load from AsyncStorage with user-specific keys
-      const userId = await getCurrentUserId();
+      // ✅ CRITICAL: Retry logic to ensure user ID is available
+      let userId = await getCurrentUserId();
+      let retries = 3;
+      
+      // If no user ID, wait a bit and retry (user ID might be setting)
+      while (!userId && retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        userId = await getCurrentUserId();
+        retries--;
+      }
+      
       if (!userId) {
-        // No user ID, initialize with empty data
+        // No user ID after retries, initialize with empty data
+        console.warn('⚠️ No user ID available after retries, initializing with empty data');
         this.completionData.completedMeals = [];
         this.completionData.completedDays = [];
         this.currentUserId = null;
@@ -72,11 +82,28 @@ class MealCompletionService {
       });
     } catch (error) {
       console.error('❌ Error initializing meal completion service:', error);
+      // ✅ CRITICAL: Ensure we have empty data structure even on error
+      this.completionData.completedMeals = [];
+      this.completionData.completedDays = [];
+    }
+  }
+  
+  // ✅ CRITICAL: Ensure initialized before reading data
+  async ensureInitialized(): Promise<void> {
+    if (!this.currentUserId) {
+      await this.initialize();
     }
   }
 
   // Get completion data
+  // ✅ CRITICAL: Returns current in-memory data (call ensureInitialized() first if needed)
   getCompletionData(): MealCompletionData {
+    return { ...this.completionData };
+  }
+  
+  // ✅ CRITICAL: Get completion data with automatic initialization
+  async getCompletionDataSafe(): Promise<MealCompletionData> {
+    await this.ensureInitialized();
     return { ...this.completionData };
   }
 

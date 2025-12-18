@@ -27,4 +27,10 @@ router.get('/badges', userProfileController.getUserBadges);
 // Save push notification token
 router.post('/push-token', userProfileController.savePushToken);
 
+// Get notification settings
+router.get('/notification-settings', userProfileController.getNotificationSettings);
+
+// Update notification settings
+router.put('/notification-settings', userProfileController.updateNotificationSettings);
+
 module.exports = router;
