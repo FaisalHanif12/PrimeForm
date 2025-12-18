@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Pure Body",
+    "name": "PureBody",
     "slug": "purebody",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "developmentClient": {
       "silentLaunch": true
@@ -11,6 +11,11 @@
     "scheme": "purebody",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "assets/images/PrimeIcon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0F1A"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.maherfaisal.purebody",
@@ -22,12 +27,12 @@
       "icon": "./assets/images/PrimeIcon.png",
       "color": "#6366F1",
       "androidMode": "default",
-      "androidCollapsedTitle": "Pure Body"
+      "androidCollapsedTitle": "PureBody"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "assets/images/PrimeIcon.png",
-        "backgroundColor": "#1a1a2e"
+        "backgroundColor": "#0A0F1A"
       },
       "edgeToEdgeEnabled": true,
       "notification": {
@@ -60,6 +65,13 @@
       "eas": {
         "projectId": "8fd8d9d9-0e37-4002-b75e-545f7a2fc230"
       }
+    },
+    "owner": "maherfaisal",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8fd8d9d9-0e37-4002-b75e-545f7a2fc230"
     }
   }
 }

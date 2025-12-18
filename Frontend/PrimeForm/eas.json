@@ -1,1 +1,52 @@
-{  "cli": {  "version": ">= 5.2.0",  "appVersionSource": "remote"  },  "build": {  "development": {  "developmentClient": true,  "distribution": "internal",  "ios": {  "resourceClass": "m-medium"  },  "android": {  "buildType": "apk",  "gradleCommand": ":app:assembleDebug",  "image": "latest"  }  },  "preview": {  "distribution": "internal",  "ios": {  "resourceClass": "m-medium"  },  "android": {  "buildType": "apk",  "gradleCommand": ":app:assembleRelease",  "image": "latest",  "env": {  "GRADLE_OPTS": "-Xmx4096m"  }  }  },  "production": {  "ios": {  "resourceClass": "m-medium"  },  "android": {  "buildType": "app-bundle",  "image": "latest",  "env": {  "GRADLE_OPTS": "-Xmx4096m"  }  }  }  },  "submit": {  "production": {}  } }
+{
+  "cli": {
+    "version": ">= 5.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug",
+        "image": "latest",
+        "env": {
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx6144m -Dkotlin.daemon.jvm.options=-Xmx2048m -Dandroid.experimental.art-profile-r8-rewriting=false"
+        }
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest",
+        "env": {
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx6144m -Dkotlin.daemon.jvm.options=-Xmx2048m -Dandroid.experimental.art-profile-r8-rewriting=false"
+        }
+      }
+    },
+    "production": {
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "image": "latest",
+        "env": {
+          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx6144m -Dkotlin.daemon.jvm.options=-Xmx2048m -Dandroid.experimental.art-profile-r8-rewriting=false"
+        }
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

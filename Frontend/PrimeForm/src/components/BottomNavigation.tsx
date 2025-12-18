@@ -27,6 +27,11 @@ const tabs: Tab[] = [
   { key: 'progress', label: 'Progress', icon: 'trending-up' },
 ];
 
+// Fixed height for consistent rendering across all devices
+const NAVIGATION_HEIGHT = 70;
+const ICON_SIZE = 22;
+const LABEL_FONT_SIZE = 10;
+
 export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
@@ -43,19 +48,22 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     });
   }, [activeTab]);
 
-  // Indicator is removed, but shared values kept if needed later
+  // Calculate bottom padding: safe area + margin
+  const bottomPadding = Math.max(insets.bottom, spacing.xs) + spacing.md;
 
   return (
     <View
-      style={[styles.container, {
-        paddingBottom: Math.max(insets.bottom, spacing.xs),
-        marginBottom: spacing.md, // Add visible margin from bottom edge
-      }]}
+      style={[
+        styles.container,
+        {
+          paddingBottom: bottomPadding,
+          height: NAVIGATION_HEIGHT + bottomPadding,
+        }
+      ]}
       onLayout={({ nativeEvent }) => {
         containerWidth.value = nativeEvent.layout.width;
       }}
     >
-
       {/* Tab buttons */}
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
@@ -66,13 +74,18 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
             onPress={() => onTabPress(tab.key)}
             activeOpacity={0.7}
           >
-            <View style={[styles.tabContent, isActive && styles.activeTabContent]}>
+            <View style={styles.tabContent}>
               <Ionicons
                 name={tab.icon}
-                size={22}
+                size={ICON_SIZE}
                 color={isActive ? colors.gold : colors.mutedText}
               />
-              <Text style={[styles.tabLabel, isActive && styles.activeTabLabel]}>
+              <Text 
+                style={[styles.tabLabel, isActive && styles.activeTabLabel]}
+                numberOfLines={1}
+                adjustsFontSizeToFit={false}
+                allowFontScaling={false}
+              >
                 {t(`nav.${tab.key}`)}
               </Text>
             </View>
@@ -87,33 +100,39 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
+    left: spacing.lg,
+    right: spacing.lg,
     flexDirection: 'row',
-    backgroundColor: colors.surface, // Dark gray-blue for card backgrounds
+    backgroundColor: colors.surface,
     borderRadius: 20,
-    marginHorizontal: spacing.lg,
-    paddingTop: spacing.md, // More top padding to center content exactly
+    paddingTop: spacing.md,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)', // Slightly more visible border
-    alignSelf: 'stretch',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    minHeight: NAVIGATION_HEIGHT,
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+    ...Platform.select({
+      android: {
+        // Ensure consistent rendering on Android
+        overflow: 'hidden',
+      },
+    }),
   },
-  // Removed indicator styling
   tab: {
     flex: 1,
     zIndex: 1,
-    justifyContent: 'center', // Center content vertically
-    alignItems: 'center', // Center content horizontally
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: NAVIGATION_HEIGHT,
   },
   tabContent: {
     alignItems: 'center',
-    justifyContent: 'center', // Center content vertically
+    justifyContent: 'center',
+    width: '100%',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     borderRadius: 16,
@@ -123,10 +142,13 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     color: colors.mutedText,
-    fontSize: 10,
+    fontSize: LABEL_FONT_SIZE,
     fontFamily: fonts.body,
     fontWeight: '500',
     marginTop: 2,
+    textAlign: 'center',
+    includeFontPadding: false, // Android specific - removes extra padding
+    textAlignVertical: 'center', // Android specific - ensures vertical centering
   },
   activeTabLabel: {
     color: colors.primary,
