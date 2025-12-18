@@ -52,9 +52,12 @@ export default function SettingsPage() {
     dietReminders: true,
   });
 
+  // Software update state - Set available: true when a new version is released
+  // For first version (1.0), keep available: false
+  // When you release version 1.1 or higher, set available: true and update version number
   const [softwareUpdate, setSoftwareUpdate] = useState<SoftwareUpdate>({
     version: '1.0',
-    available: true,
+    available: false, // No update available for first version - button will be disabled
     size: '15.2 MB',
     releaseDate: '2024-01-15',
     description: 'Bug fixes and performance improvements'

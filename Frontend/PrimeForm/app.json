@@ -8,11 +8,12 @@
       "silentLaunch": true
     },
     "icon": "assets/images/PrimeIcon.png",
-    "scheme": "primeform",
+    "scheme": "purebody",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.maherfaisal.purebody",
       "entitlements": {
         "aps-environment": "development"
       }
@@ -33,7 +34,7 @@
         "icon": "./assets/images/PrimeIcon.png",
         "color": "#6366F1"
       },
-      "package": "com.maherfaisal.primeform"
+      "package": "com.maherfaisal.purebody"
     },
     "web": {
       "bundler": "metro",
@@ -47,7 +48,7 @@
         {
           "icon": "./assets/images/PrimeIcon.png",
           "color": "#6366F1",
-          "defaultChannel": "primeform-notifications"
+          "defaultChannel": "purebody-notifications"
         }
       ]
     ],
