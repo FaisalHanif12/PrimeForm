@@ -3,7 +3,6 @@
     "name": "Pure Body",
     "slug": "primeform",
     "version": "1.0.0",
-    "projectId": "ed01c701-6e7b-4790-9466-6305dabab35d",
     "orientation": "portrait",
     "developmentClient": {
       "silentLaunch": true
@@ -11,7 +10,7 @@
     "icon": "assets/images/PrimeIcon.png",
     "scheme": "primeform",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "entitlements": {
@@ -31,9 +30,10 @@
       },
       "edgeToEdgeEnabled": true,
       "notification": {
-        "icon": "./assets/images/notification-icon.png",
+        "icon": "./assets/images/PrimeIcon.png",
         "color": "#6366F1"
-      }
+      },
+      "package": "com.maherfaisal.primeform"
     },
     "web": {
       "bundler": "metro",
@@ -57,9 +57,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "ed01c701-6e7b-4790-9466-6305dabab35d"
+        "projectId": "419c933c-e08b-41db-acaf-1edd5f8f8442"
       }
-    },
-    "owner": "mehrfaisal111"
+    }
   }
 }

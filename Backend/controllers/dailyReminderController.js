@@ -1,5 +1,5 @@
 const dailyReminderService = require('../services/dailyReminderService');
-const asyncHandler = require('../middleware/asyncHandler');
+const { asyncHandler } = require('../middleware/errorMiddleware');
 const pushNotificationService = require('../services/pushNotificationService');
 const User = require('../models/User');
 

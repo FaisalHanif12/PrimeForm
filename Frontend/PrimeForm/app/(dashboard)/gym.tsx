@@ -161,7 +161,7 @@ export default function GymScreen() {
       try {
         // ✅ CRITICAL: getCachedData() is async, must await
         const cachedData = await userProfileService.getCachedData();
-        if (cachedData && cachedData.data) {
+        if (cachedData && cachedData.success && cachedData.data) {
           setUserInfo(cachedData.data);
         } else {
           const response = await userProfileService.getUserProfile();
@@ -178,6 +178,28 @@ export default function GymScreen() {
       loadUserInfo();
     }
   }, []);
+
+  // ✅ CRITICAL: Reload user info when profile page opens (in case it wasn't loaded on mount)
+  useEffect(() => {
+    if (showProfilePage && !userInfo) {
+      const loadUserInfo = async () => {
+        try {
+          const cachedData = await userProfileService.getCachedData();
+          if (cachedData && cachedData.success && cachedData.data) {
+            setUserInfo(cachedData.data);
+          } else {
+            const response = await userProfileService.getUserProfile();
+            if (response.success && response.data) {
+              setUserInfo(response.data);
+            }
+          }
+        } catch (error) {
+          // Failed to load user info
+        }
+      };
+      loadUserInfo();
+    }
+  }, [showProfilePage]);
 
   // Check if user has personalized workout
   useEffect(() => {

@@ -17,6 +17,8 @@ class ExerciseCompletionService {
     completedDays: [],
     lastUpdated: new Date().toISOString(),
   };
+  // ✅ CRITICAL: Track current user ID to ensure data integrity across account switches
+  private currentUserId: string | null = null;
 
   static getInstance(): ExerciseCompletionService {
     if (!ExerciseCompletionService.instance) {
@@ -36,8 +38,19 @@ class ExerciseCompletionService {
         // No user ID, initialize with empty data
         this.completionData.completedExercises = [];
         this.completionData.completedDays = [];
+        this.currentUserId = null;
         return;
       }
+
+      // ✅ CRITICAL: If user ID changed, reset in-memory state first
+      if (this.currentUserId && this.currentUserId !== userId) {
+        console.log('⚠️ User ID changed, resetting in-memory state before loading new user data');
+        this.completionData.completedExercises = [];
+        this.completionData.completedDays = [];
+      }
+
+      // Update tracked user ID
+      this.currentUserId = userId;
 
       const [exercisesKey, daysKey] = await Promise.all([
         getUserCacheKey('completed_exercises', userId),
@@ -53,7 +66,7 @@ class ExerciseCompletionService {
       this.completionData.completedDays = daysData ? JSON.parse(daysData) : [];
       this.completionData.lastUpdated = new Date().toISOString();
 
-      console.log('✅ Completion data loaded:', {
+      console.log('✅ Completion data loaded for user:', userId, {
         exercises: this.completionData.completedExercises.length,
         days: this.completionData.completedDays.length,
       });
@@ -207,6 +220,20 @@ class ExerciseCompletionService {
         return;
       }
 
+      // ✅ CRITICAL: Validate user ID matches before saving (prevents data leakage)
+      if (this.currentUserId && this.currentUserId !== userId) {
+        console.error('❌ CRITICAL: User ID mismatch! Current:', this.currentUserId, 'Expected:', userId);
+        console.error('❌ Aborting save to prevent data leakage. Reinitializing service...');
+        // Reinitialize to load correct user's data
+        await this.initialize();
+        return;
+      }
+
+      // Update tracked user ID if not set
+      if (!this.currentUserId) {
+        this.currentUserId = userId;
+      }
+
       const [exercisesKey, daysKey] = await Promise.all([
         getUserCacheKey('completed_exercises', userId),
         getUserCacheKey('completed_workout_days', userId),
@@ -216,7 +243,7 @@ class ExerciseCompletionService {
         Storage.setItem(exercisesKey, JSON.stringify(this.completionData.completedExercises)),
         Storage.setItem(daysKey, JSON.stringify(this.completionData.completedDays)),
       ]);
-      console.log('💾 Completion data saved to storage');
+      console.log('💾 Completion data saved to storage for user:', userId);
     } catch (error) {
       console.error('❌ Error saving completion data to storage:', error);
       throw error;
@@ -254,6 +281,18 @@ class ExerciseCompletionService {
     } catch (error) {
       console.error('❌ Error clearing completion data:', error);
     }
+  }
+
+  // Reset only in-memory state (does NOT clear storage)
+  // Used during logout to clear current session data without deleting user's progress
+  resetInMemoryState(): void {
+    this.completionData = {
+      completedExercises: [],
+      completedDays: [],
+      lastUpdated: new Date().toISOString(),
+    };
+    this.currentUserId = null; // Clear tracked user ID
+    console.log('🔄 Exercise completion service in-memory state reset (storage preserved)');
   }
 
   // Reinitialize for new user (clears in-memory data and reloads from storage)

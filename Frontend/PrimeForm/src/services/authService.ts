@@ -81,7 +81,18 @@ class AuthService {
       const data = await response.json();
 
       if (!response.ok) {
-        console.log('API Error Response:', data);
+        // ✅ CRITICAL: Handle 401 Unauthorized (expired/invalid token)
+        if (response.status === 401) {
+          // Clear token immediately when we get 401
+          await this.clearToken();
+          // Return error with a flag to indicate token expired
+          return {
+            ...data,
+            tokenExpired: true,
+            statusCode: 401
+          };
+        }
+        
         // Return the error data instead of throwing
         return data;
       }
@@ -113,9 +124,6 @@ class AuthService {
     const userId = extractUserIdFromToken(token);
     if (userId) {
       await setCurrentUserId(userId);
-      console.log('✅ User ID stored for cache management:', userId);
-    } else {
-      console.warn('⚠️ Could not extract user ID from token');
     }
   }
 
@@ -150,14 +158,20 @@ class AuthService {
       await AsyncStorage.removeItem('primeform_user_info_completed');
       await AsyncStorage.removeItem('primeform_user_info_cancelled');
       await AsyncStorage.removeItem('primeform_permission_modal_seen');
+      
+      // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - this is a permanent record
+      // that ensures users who have signed up never see guest mode again on this device.
+      // This flag should ONLY be set when user signs up and NEVER cleared, even on logout.
+      // Only clear session-specific flags like 'primeform_signup_completed'
+      await AsyncStorage.removeItem('primeform_signup_completed');
 
-      // Clear user profile service cache
+      // ✅ CRITICAL: Reset user profile service in-memory state only (preserve cached profile)
+      // Profile cache should persist across logout/login for faster loading
       try {
         const { default: userProfileService } = await import('./userProfileService');
-        userProfileService.clearCache();
-        console.log('✅ User profile service cache cleared');
+        userProfileService.resetInMemoryState();
       } catch (error) {
-        console.log('User profile service not available for cache clearing');
+        // Ignore if service not available
       }
 
       // Clear AI services cache (both in-memory and persistent)
@@ -186,29 +200,32 @@ class AuthService {
         } else {
           progressService.invalidateCaches(); // Clear all if no user ID
         }
-        console.log('✅ Progress service cache cleared');
       } catch (error) {
         // Ignore if service not available
       }
 
-      // Clear completion services (reset in-memory data)
+      // ✅ CRITICAL: DO NOT clear completion data from storage during logout
+      // Completion data (meals, exercises, water intake) is user-specific and should persist
+      // across logout/login cycles. Only reset in-memory state, storage is preserved.
+      // The completion services will reload the correct user's data on next login via reinitialize()
       try {
         const { default: mealCompletionService } = await import('./mealCompletionService');
-        await mealCompletionService.resetCompletionData();
+        // Only reset in-memory state, DO NOT clear storage
+        mealCompletionService.resetInMemoryState();
       } catch (error) {
         // Ignore if service not available
       }
 
       try {
         const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
-        await exerciseCompletionService.clearCompletionData();
+        // Only reset in-memory state, DO NOT clear storage
+        exerciseCompletionService.resetInMemoryState();
       } catch (error) {
         // Ignore if service not available
       }
 
-      console.log('✅ All user data cleared successfully');
     } catch (error) {
-      console.error('Error clearing user data:', error);
+      // Error clearing user data - silently fail
     }
   }
 
@@ -219,8 +236,6 @@ class AuthService {
         email,
         password,
       });
-
-      console.log('Login API Response:', response);
 
       if (response.success && response.token) {
         // Extract user ID from token first (before clearing)
@@ -252,6 +267,20 @@ class AuthService {
           try {
             const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
             await exerciseCompletionService.reinitialize();
+          } catch (error) {
+            // Ignore if service not available
+          }
+
+          // ✅ CRITICAL: Reinitialize user profile service to load correct user's cached profile
+          try {
+            const { default: userProfileService } = await import('./userProfileService');
+            // Reset in-memory state and reload from storage for new user
+            userProfileService.resetInMemoryState();
+            // Force reinitialize cache to load new user's profile (non-blocking)
+            userProfileService.getUserProfile(false).catch(() => {
+              // Ignore errors - profile will load when needed
+            });
+            console.log('✅ User profile service reinitialized for new user');
           } catch (error) {
             // Ignore if service not available
           }
@@ -368,14 +397,8 @@ class AuthService {
       // Import notification service dynamically to avoid circular dependencies
       const { default: notificationService } = await import('./notificationService');
 
-      const result = await notificationService.sendWelcomeNotification(userEmail);
-      if (result.success) {
-        console.log('✅ Welcome notification sent for new user:', userEmail);
-      } else {
-        console.log('❌ Failed to send welcome notification:', result.error);
-      }
+      await notificationService.sendWelcomeNotification(userEmail);
     } catch (error) {
-      console.error('Error sending welcome notification:', error);
       // Don't fail signup if notification fails
     }
   }
@@ -486,7 +509,6 @@ class AuthService {
       await this.apiCall('/auth/logout', 'POST');
     } catch (error) {
       // Continue with logout even if API call fails
-      console.warn('Logout API call failed:', error);
     } finally {
       await this.clearAllUserData();
     }

@@ -10,7 +10,6 @@ export async function getCurrentUserId(): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(CURRENT_USER_ID_KEY);
   } catch (error) {
-    console.error('Error getting current user ID:', error);
     return null;
   }
 }
@@ -22,7 +21,7 @@ export async function setCurrentUserId(userId: string): Promise<void> {
   try {
     await AsyncStorage.setItem(CURRENT_USER_ID_KEY, userId);
   } catch (error) {
-    console.error('Error setting current user ID:', error);
+    // Error setting current user ID - silently fail
   }
 }
 
@@ -33,7 +32,7 @@ export async function clearCurrentUserId(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CURRENT_USER_ID_KEY);
   } catch (error) {
-    console.error('Error clearing current user ID:', error);
+    // Error clearing current user ID - silently fail
   }
 }
 
@@ -57,7 +56,6 @@ export function extractUserIdFromToken(token: string): string | null {
     // Return the user ID (stored as 'id' in the token)
     return decodedPayload.id || null;
   } catch (error) {
-    console.error('Error extracting user ID from token:', error);
     return null;
   }
 }
@@ -118,29 +116,36 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
     const currentUserId = userId || await getCurrentUserId();
     
     if (!currentUserId) {
-      console.log('No user ID provided, skipping cache clear');
       return;
     }
 
     const cacheKeys = getUserCacheKeyPatterns(currentUserId);
     
-    // ✅ CRITICAL: Preserve per-account progress data (do NOT delete these keys)
-    // We want meal/workout completion and water intake to persist across logout/login
+    // ✅ CRITICAL: Preserve ALL per-account user data (do NOT delete these keys)
+    // All user-specific data should persist across logout/login cycles
     // while still being fully account-specific via user-prefixed keys.
-    const progressKeyFragments = [
+    const preservedKeyFragments = [
+      // Progress & Completion Data
       '_completed_meals',
       '_completed_exercises',
       '_completed_diet_days',
       '_completed_workout_days',
       '_water_intake',
-    '_water_completed',
-    // Keep personalized workout plan + its completion date per account as well
-    '_personalizedWorkout',
-    '_lastWorkoutCompletion',
+      '_water_completed',
+      // Personalized Workout Data
+      '_personalizedWorkout',
+      '_lastWorkoutCompletion',
+      // AI Trainer Chat History (preserve conversations per account)
+      '_ai_trainer_chat',
+      '_ai_trainer_conversations',
+      '_ai_trainer_current_conversation_id',
+      // User Profile Data (preserve cached profile per account)
+      '_cached_user_profile',
     ];
 
+    // Filter out preserved keys - these should NOT be deleted on logout
     const filteredUserCacheKeys = cacheKeys.filter(key =>
-      !progressKeyFragments.some(fragment => key.includes(fragment))
+      !preservedKeyFragments.some(fragment => key.includes(fragment))
     );
     
     // Also clear old global cache keys (for migration)
@@ -165,9 +170,8 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
     const allKeysToRemove = [...filteredUserCacheKeys, ...oldGlobalKeys];
     
     await AsyncStorage.multiRemove(allKeysToRemove);
-    console.log(`✅ Cleared ${allKeysToRemove.length} cache keys for user ${currentUserId}`);
   } catch (error) {
-    console.error('Error clearing user cache:', error);
+    // Error clearing user cache - silently fail
   }
 }
 
@@ -232,10 +236,9 @@ export async function cleanupOrphanedCache(currentUserId: string): Promise<void>
 
     if (keysToRemove.length > 0) {
       await AsyncStorage.multiRemove(keysToRemove);
-      console.log(`🧹 Cleaned up ${keysToRemove.length} legacy global cache keys (kept per-user caches) for user ${currentUserId}`);
     }
   } catch (error) {
-    console.error('Error cleaning up orphaned cache:', error);
+    // Error cleaning up orphaned cache - silently fail
   }
 }
 
@@ -262,20 +265,16 @@ export async function validateCacheOnLogin(currentUserId: string): Promise<void>
             if (parsed.userId !== currentUserId) {
               // Data doesn't belong to current user, remove it
               await AsyncStorage.removeItem(key);
-              console.log(`⚠️ Removed invalid cache key: ${key}`);
             }
           }
         }
       } catch (error) {
         // If data is corrupted, remove it
         await AsyncStorage.removeItem(key);
-        console.log(`⚠️ Removed corrupted cache key: ${key}`);
       }
     }
-    
-    console.log(`✅ Cache validation complete for user ${currentUserId}`);
   } catch (error) {
-    console.error('Error validating cache on login:', error);
+    // Error validating cache on login - silently fail
   }
 }
 
