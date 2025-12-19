@@ -29,6 +29,8 @@ import { useToast } from '../../src/context/ToastContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 import { getUserCacheKey, getCurrentUserId } from '../../src/utils/cacheKeys';
+import { getTimeBasedGreeting } from '../../src/utils/greetingUtils';
+import { BottomBanner } from '../../src/ads/BottomBanner';
 
 
 interface DashboardData {
@@ -1146,7 +1148,9 @@ export default function DashboardScreen() {
           >
             {/* Welcome Message */}
             <Animated.View entering={FadeInUp.delay(100)} style={styles.welcomeSection}>
-              <Text style={styles.greetingText}>{t('dashboard.greeting')}, {transliterateName((user?.fullName || dashboardData.user.fullName).split(' ')[0])} 💪</Text>
+              <Text style={styles.greetingText}>
+                {getTimeBasedGreeting(language)}, {transliterateName((user?.fullName || dashboardData?.user?.fullName || 'Guest').split(' ')[0])} 💪
+              </Text>
               <Text style={styles.motivationText}>{t('dashboard.subtitle')}</Text>
             </Animated.View>
 
@@ -1243,6 +1247,11 @@ export default function DashboardScreen() {
               <Text style={styles.waterNoteText}>
                 Manage water intake in your diet plan
               </Text>
+            </View>
+
+            {/* Banner Ad - Below Water Intake Section */}
+            <View style={styles.bannerAdContainer}>
+              <BottomBanner />
             </View>
 
             {/* Extra spacing for bottom navigation */}
@@ -1556,5 +1565,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginTop: spacing.md,
     textAlign: 'center',
+  },
+  bannerAdContainer: {
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50, // Reserve space for banner ad
   },
 });

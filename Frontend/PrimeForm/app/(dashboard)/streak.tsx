@@ -281,7 +281,9 @@ export default function StreakScreen() {
               </View>
               <View style={styles.breakdownStat}>
                 <Text style={styles.breakdownStatLabel}>{t('streak.thisWeek')}</Text>
-                <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
+                <Text style={styles.breakdownStatValue}>
+                  {streakData.weeklyWorkoutCount !== undefined ? streakData.weeklyWorkoutCount : Math.floor((streakData.weeklyConsistency / 100) * 7)}/7
+                </Text>
               </View>
             </View>
           </View>
@@ -310,7 +312,9 @@ export default function StreakScreen() {
               </View>
               <View style={styles.breakdownStat}>
                 <Text style={styles.breakdownStatLabel}>{t('streak.thisWeek')}</Text>
-                <Text style={styles.breakdownStatValue}>{Math.floor((streakData.weeklyConsistency / 100) * 7)}/7</Text>
+                <Text style={styles.breakdownStatValue}>
+                  {streakData.weeklyDietCount !== undefined ? streakData.weeklyDietCount : Math.floor((streakData.weeklyConsistency / 100) * 7)}/7
+                </Text>
               </View>
             </View>
           </View>
@@ -322,7 +326,8 @@ export default function StreakScreen() {
   const renderHistory = () => {
     if (!streakData) return null;
 
-    const last30Days = streakData.streakHistory.slice(-30);
+    // History is already last 30 days from service
+    const last30Days = streakData.streakHistory;
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>

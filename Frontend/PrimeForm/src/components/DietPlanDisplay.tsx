@@ -16,6 +16,9 @@ import mealCompletionService from '../services/mealCompletionService';
 import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 import aiDietService from '../services/aiDietService';
 import { useLanguage } from '../context/LanguageContext';
+import { showRewardedAd } from '../ads/showRewarded';
+import { AdUnits } from '../ads/adUnits';
+import Storage from '../utils/storage';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -625,6 +628,71 @@ export default function DietPlanDisplay({
     
     const mealId = `${selectedDay.date}-${mealType}-${meal.name}`;
     const week = Math.ceil(selectedDay.day / 7);
+
+    // ✅ CRITICAL: Check if this is breakfast and if ad needs to be shown
+    // Only show ad for breakfast, once per day per user
+    if (mealType === 'breakfast') {
+      try {
+        // Get user ID for user-specific ad tracking (preserved across login/logout)
+        const userId = await getCurrentUserId();
+        
+        if (userId) {
+          const today = new Date();
+          const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+          
+          // ✅ CRITICAL: Use user-specific key for ad tracking (data isolation per account)
+          const adWatchedKey = await getUserCacheKey(`diet_breakfast_ad_watched_${dateKey}`, userId);
+          const hasWatchedAdToday = await Storage.getItem(adWatchedKey) === 'true';
+
+          // If ad not watched today, show rewarded ad first
+          if (!hasWatchedAdToday) {
+            // Show rewarded ad before marking breakfast as complete
+            showRewardedAd(AdUnits.rewardedDiet, {
+              onEarned: async () => {
+                // ✅ CRITICAL: Mark ad as watched for today (user-specific, preserved across login/logout)
+                await Storage.setItem(adWatchedKey, 'true');
+                // Proceed with marking breakfast as complete after ad is watched
+                await proceedWithMealCompletion(meal, mealType, mealId, week);
+              },
+              onError: (error) => {
+                console.error('Rewarded ad error:', error);
+                // If ad fails, still allow meal completion (graceful degradation)
+                proceedWithMealCompletion(meal, mealType, mealId, week);
+              },
+              onClosed: () => {
+                // Ad was closed without watching - don't mark meal as complete
+                // User can try again by clicking mark as eaten button
+              }
+            });
+            return; // Exit early, meal will be marked complete after ad is watched
+          }
+        }
+      } catch (error) {
+        console.error('Error checking breakfast ad status:', error);
+        // If error, proceed with meal completion (graceful degradation)
+      }
+    }
+
+    // Not breakfast OR ad already watched today, proceed directly
+    await proceedWithMealCompletion(meal, mealType, mealId, week);
+  };
+
+  // Separate function to handle the actual meal completion logic (prevents race conditions)
+  const proceedWithMealCompletion = async (
+    meal: DietMeal, 
+    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack',
+    mealId: string,
+    week: number
+  ) => {
+    if (!selectedDay || !selectedDay.date) {
+      return;
+    }
+
+    // ✅ CRITICAL: Prevent duplicate completion (race condition protection)
+    if (completedMeals.has(mealId)) {
+      console.log('⚠️ Meal already completed, skipping');
+      return;
+    }
     
     // Update UI immediately for better UX
     const newCompletedMeals = new Set([...completedMeals, mealId]);

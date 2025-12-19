@@ -28,7 +28,8 @@ const tabs: Tab[] = [
 ];
 
 // Fixed height for consistent rendering across all devices
-const NAVIGATION_HEIGHT = 70;
+const NAVIGATION_HEIGHT = 90; // iOS height
+const NAVIGATION_HEIGHT_ANDROID = 90; // Android height - taller for premium feel
 const ICON_SIZE = 22;
 const LABEL_FONT_SIZE = 10;
 
@@ -48,16 +49,27 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     });
   }, [activeTab]);
 
-  // Calculate bottom padding: safe area + margin
-  const bottomPadding = Math.max(insets.bottom, spacing.xs) + spacing.md;
+  // Platform-aware positioning and padding
+  // iOS: Use paddingBottom to respect home indicator (keeps content spacing)
+  // Android: NO paddingBottom - use bottom offset for positioning, taller bar for premium feel
+  const isIOS = Platform.OS === 'ios';
+  const bottomPadding = isIOS 
+    ? Math.max(insets.bottom, spacing.xs) + spacing.md
+    : 0; // No bottom padding on Android - we use bottom offset for positioning
+  
+  const bottomOffset = isIOS ? 0 : insets.bottom;
+  const containerHeight = isIOS 
+    ? NAVIGATION_HEIGHT + bottomPadding 
+    : NAVIGATION_HEIGHT_ANDROID; // On Android, use taller height for premium feel (no padding)
 
   return (
     <View
       style={[
         styles.container,
         {
+          bottom: bottomOffset,
           paddingBottom: bottomPadding,
-          height: NAVIGATION_HEIGHT + bottomPadding,
+          height: containerHeight,
         }
       ]}
       onLayout={({ nativeEvent }) => {
@@ -99,25 +111,28 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 0,
+    // bottom is set dynamically in component (0 for iOS, insets.bottom for Android)
     left: spacing.lg,
     right: spacing.lg,
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 20,
-    paddingTop: spacing.md,
     paddingHorizontal: spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
-    minHeight: NAVIGATION_HEIGHT,
     elevation: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     ...Platform.select({
+      ios: {
+        paddingTop: spacing.md,
+        minHeight: NAVIGATION_HEIGHT,
+      },
       android: {
-        // Ensure consistent rendering on Android
+        // On Android, use taller explicit height for premium feel - tabs will center perfectly
+        height: NAVIGATION_HEIGHT_ANDROID,
         overflow: 'hidden',
       },
     }),
@@ -127,7 +142,15 @@ const styles = StyleSheet.create({
     zIndex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: NAVIGATION_HEIGHT,
+    ...Platform.select({
+      ios: {
+        minHeight: NAVIGATION_HEIGHT,
+      },
+      android: {
+        // On Android, use taller explicit height to ensure perfect centering in premium bar
+        height: NAVIGATION_HEIGHT_ANDROID,
+      },
+    }),
   },
   tabContent: {
     alignItems: 'center',

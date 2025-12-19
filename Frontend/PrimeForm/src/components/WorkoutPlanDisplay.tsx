@@ -14,11 +14,15 @@ import { WorkoutPlan, WorkoutDay, WorkoutExercise } from '../services/aiWorkoutS
 import aiWorkoutService from '../services/aiWorkoutService';
 import workoutPlanService from '../services/workoutPlanService';
 import exerciseCompletionService from '../services/exerciseCompletionService';
+import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 import DailyProgressCard from './DailyProgressCard';
 import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
 import DecorativeBackground from './DecorativeBackground';
 import { useLanguage } from '../context/LanguageContext';
+import { showRewardedAd } from '../ads/showRewarded';
+import { AdUnits } from '../ads/adUnits';
+import Storage from '../utils/storage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,18 +50,86 @@ export default function WorkoutPlanDisplay({
   const [progressPercentage, setProgressPercentage] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Handle exercise completion - simplified flow
+  // Handle exercise completion - with rewarded ad for first exercise
   const handleExerciseModalComplete = async () => {
-    if (selectedExercise && selectedDay) {
-      
-      // Mark exercise as complete
-      await handleExerciseComplete(selectedExercise);
-      await loadCompletionStates();
-      
-      // Close detail modal and return to workout plan
+    if (!selectedExercise || !selectedDay) {
+      return;
+    }
+
+    // ✅ CRITICAL: Check if this is the FIRST exercise of the day (index 0)
+    const exerciseIndex = selectedDay.exercises.findIndex(ex => ex.name === selectedExercise.name);
+    const isFirstExercise = exerciseIndex === 0;
+
+    // Only show ad for first exercise, once per day per user
+    if (isFirstExercise) {
+      try {
+        // Get user ID for user-specific ad tracking (preserved across login/logout)
+        const userId = await getCurrentUserId();
+        
+        if (userId) {
+          const today = new Date();
+          const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+          
+          // ✅ CRITICAL: Use user-specific key for ad tracking (data isolation per account)
+          const adWatchedKey = await getUserCacheKey(`workout_first_exercise_ad_watched_${dateKey}`, userId);
+          const hasWatchedAdToday = await Storage.getItem(adWatchedKey) === 'true';
+
+          // If ad not watched today, show rewarded ad first
+          if (!hasWatchedAdToday) {
+            // Show rewarded ad before marking first exercise as complete
+            showRewardedAd(AdUnits.rewardedWorkout, {
+              onEarned: async () => {
+                // ✅ CRITICAL: Mark ad as watched for today (user-specific, preserved across login/logout)
+                await Storage.setItem(adWatchedKey, 'true');
+                // Proceed with marking exercise as complete after ad is watched
+                await proceedWithExerciseCompletion();
+              },
+              onError: (error) => {
+                console.error('Rewarded ad error:', error);
+                // If ad fails, still allow exercise completion (graceful degradation)
+                proceedWithExerciseCompletion();
+              },
+              onClosed: () => {
+                // Ad was closed without watching - don't mark exercise as complete
+                // User can try again by clicking complete exercise button
+              }
+            });
+            return; // Exit early, exercise will be marked complete after ad is watched
+          }
+        }
+      } catch (error) {
+        console.error('Error checking first exercise ad status:', error);
+        // If error, proceed with exercise completion (graceful degradation)
+      }
+    }
+
+    // Not first exercise OR ad already watched today, proceed directly
+    await proceedWithExerciseCompletion();
+  };
+
+  // Separate function to handle the actual exercise completion logic (prevents race conditions)
+  const proceedWithExerciseCompletion = async () => {
+    if (!selectedExercise || !selectedDay) {
+      return;
+    }
+
+    // ✅ CRITICAL: Prevent duplicate completion (race condition protection)
+    const exerciseId = `${selectedDay.date}-${selectedExercise.name}`;
+    if (completedExercises.has(exerciseId)) {
+      console.log('⚠️ Exercise already completed, skipping');
+      // Still close modal even if already completed
       setExerciseModalVisible(false);
       setSelectedExercise(null);
+      return;
     }
+
+    // Mark exercise as complete
+    await handleExerciseComplete(selectedExercise);
+    await loadCompletionStates();
+    
+    // Close detail modal and return to workout plan
+    setExerciseModalVisible(false);
+    setSelectedExercise(null);
   };
 
   // Safety checks for workout plan structure
