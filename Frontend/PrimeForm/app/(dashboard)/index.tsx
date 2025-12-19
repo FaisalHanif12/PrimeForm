@@ -30,6 +30,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNotifications } from '../../src/contexts/NotificationContext';
 import { getUserCacheKey, getCurrentUserId } from '../../src/utils/cacheKeys';
 import { getTimeBasedGreeting } from '../../src/utils/greetingUtils';
+import { BottomBanner } from '../../src/ads/BottomBanner';
 
 
 interface DashboardData {
@@ -1248,6 +1249,11 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
+            {/* Banner Ad - Below Water Intake Section */}
+            <View style={styles.bannerAdContainer}>
+              <BottomBanner />
+            </View>
+
             {/* Extra spacing for bottom navigation */}
             <View style={styles.bottomSpacing} />
           </ScrollView>
@@ -1559,5 +1565,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginTop: spacing.md,
     textAlign: 'center',
+  },
+  bannerAdContainer: {
+    marginBottom: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50, // Reserve space for banner ad
   },
 });

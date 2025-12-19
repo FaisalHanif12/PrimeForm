@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { colors } from '../src/theme/colors';
 import { AuthProvider } from '../src/context/AuthContext';
@@ -7,6 +8,28 @@ import { NotificationProvider } from '../src/contexts/NotificationContext';
 import NotificationHandler from '../src/components/NotificationHandler';
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Safely initialize AdMob only if native module is available
+    // This prevents errors in Expo Go (where native modules aren't available)
+    const initializeAds = async () => {
+      try {
+        // Dynamically import to avoid errors if module doesn't exist
+        const mobileAds = require('react-native-google-mobile-ads').default;
+        await mobileAds().initialize();
+        console.log('✅ AdMob initialized successfully');
+      } catch (error: any) {
+        // Silently handle errors - expected in Expo Go or if module not available
+        if (error?.message?.includes('TurboModuleRegistry') || 
+            error?.message?.includes('RNGoogleMobileAdsModule')) {
+          console.log('ℹ️ AdMob not available (expected in Expo Go - requires EAS build)');
+        } else {
+          console.warn('⚠️ AdMob initialization error:', error?.message || error);
+        }
+      }
+    };
+
+    initializeAds();
+  }, []);
   return (
     <LanguageProvider>
       <ToastProvider>

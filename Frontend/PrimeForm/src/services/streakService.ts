@@ -33,6 +33,10 @@ interface StreakData {
     category: 'workout' | 'diet' | 'overall';
     title: string;
   }>;
+  // Weekly counts for UI display
+  weeklyWorkoutCount?: number;
+  weeklyDietCount?: number;
+  weeklyOverallCount?: number;
 }
 
 interface StreakServiceResponse<T> {
@@ -43,7 +47,6 @@ interface StreakServiceResponse<T> {
 
 class StreakService {
 
-  // Get comprehensive streak data (with optional API call)
   async getStreakData(useLocalOnly = false): Promise<StreakServiceResponse<StreakData>> {
     try {
       // If useLocalOnly is true, skip API call and calculate from local data
@@ -66,7 +69,6 @@ class StreakService {
         // Backend not available, calculate from local data
       }
 
-      // Calculate from local data as fallback
       const localStreakData = await this.calculateLocalStreakData();
       return {
         success: true,
@@ -104,7 +106,10 @@ class StreakService {
           totalActiveDays: 0,
           streakHistory: [],
           achievements: [],
-          milestones: []
+          milestones: [],
+          weeklyWorkoutCount: 0,
+          weeklyDietCount: 0,
+          weeklyOverallCount: 0
         };
       }
 
@@ -179,8 +184,10 @@ class StreakService {
       const longestDietStreak = this.calculateLongestStreak(Array.isArray(dietDaysList) ? dietDaysList : []);
       const longestOverallStreak = this.calculateLongestOverallStreak(streakHistory);
 
-      // Calculate consistency percentages
-      const weeklyConsistency = this.calculateWeeklyConsistency(streakHistory);
+      // Calculate consistency percentages (returns object with workout, diet, overall)
+      const weeklyConsistencyData = this.calculateWeeklyConsistency(streakHistory);
+      // Convert to percentage for backward compatibility (using overall)
+      const weeklyConsistency = Math.round((weeklyConsistencyData.overall / 7) * 100);
       const monthlyConsistency = this.calculateMonthlyConsistency(streakHistory);
 
       // Generate achievements
@@ -212,7 +219,11 @@ class StreakService {
         totalActiveDays: streakHistory.filter(day => day.overallCompleted).length,
         streakHistory,
         achievements,
-        milestones
+        milestones,
+        // Add weekly counts for UI display
+        weeklyWorkoutCount: weeklyConsistencyData.workout,
+        weeklyDietCount: weeklyConsistencyData.diet,
+        weeklyOverallCount: weeklyConsistencyData.overall
       };
 
     } catch (error) {
@@ -231,7 +242,10 @@ class StreakService {
         totalActiveDays: 0,
         streakHistory: [],
         achievements: [],
-        milestones: []
+        milestones: [],
+        weeklyWorkoutCount: 0,
+        weeklyDietCount: 0,
+        weeklyOverallCount: 0
       };
     }
   }
@@ -245,19 +259,31 @@ class StreakService {
   }> {
     const history = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     // Ensure we have arrays (safety check)
     const workoutDaysArray = Array.isArray(workoutDays) ? workoutDays : [];
     const dietDaysArray = Array.isArray(dietDays) ? dietDays : [];
     
-    // Generate last 90 days
-    for (let i = 89; i >= 0; i--) {
+    // Convert to Sets for faster lookup
+    const workoutDaysSet = new Set(workoutDaysArray);
+    const dietDaysSet = new Set(dietDaysArray);
+    
+    // Generate last 30 days (for history view)
+    for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
+      date.setHours(0, 0, 0, 0);
       
-      const workoutCompleted = workoutDaysArray.includes(dateString);
-      const dietCompleted = dietDaysArray.includes(dateString);
+      // Format date consistently (YYYY-MM-DD)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      // Check if day is completed (use Set for O(1) lookup)
+      const workoutCompleted = workoutDaysSet.has(dateString);
+      const dietCompleted = dietDaysSet.has(dateString);
       const overallCompleted = workoutCompleted && dietCompleted;
       
       history.push({
@@ -402,15 +428,56 @@ class StreakService {
   }
 
   // Calculate weekly consistency percentage
+  // Returns separate counts for workout and diet, and overall
   private calculateWeeklyConsistency(history: Array<{
     date: string;
     workoutCompleted: boolean;
     dietCompleted: boolean;
     overallCompleted: boolean;
-  }>): number {
-    const lastWeek = history.slice(-7);
-    const completedDays = lastWeek.filter(day => day.overallCompleted).length;
-    return Math.round((completedDays / 7) * 100);
+  }>): { workout: number; diet: number; overall: number } {
+    // Get current week (last 7 days including today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Helper function to format date consistently (local time, not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    // Get last 7 days (including today) - use local time format
+    const last7Days: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = formatLocalDate(date);
+      last7Days.push(dateStr);
+    }
+    
+    // Filter history to only include last 7 days
+    const lastWeek = history.filter(day => last7Days.includes(day.date));
+    
+    // Count completed days for each type
+    const workoutCompleted = lastWeek.filter(day => day.workoutCompleted).length;
+    const dietCompleted = lastWeek.filter(day => day.dietCompleted).length;
+    const overallCompleted = lastWeek.filter(day => day.overallCompleted).length;
+    
+    console.log('📊 StreakService: Weekly consistency calculation:', {
+      last7Days,
+      historyLength: history.length,
+      lastWeekLength: lastWeek.length,
+      workoutCompleted,
+      dietCompleted,
+      overallCompleted
+    });
+    
+    return {
+      workout: workoutCompleted,
+      diet: dietCompleted,
+      overall: overallCompleted
+    };
   }
 
   // Calculate monthly consistency percentage
@@ -582,8 +649,7 @@ class StreakService {
 
     if (!workoutPlan || !workoutPlan.weeklyPlan || !Array.isArray(workoutPlan.weeklyPlan)) {
       console.log('⚠️ StreakService: Invalid workout plan, using date-based approach');
-      // Fallback: if no plan, just use dates that have any completed exercises
-      // This is less accurate but better than nothing
+    
       dateToExercises.forEach((exercises, date) => {
         if (exercises.size > 0) {
           completedDays.push(date);
@@ -613,9 +679,6 @@ class StreakService {
         const day = String(dayDate.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        // Get the weekly plan day
-        // Workout plan: Monday=0, Tuesday=1, ..., Sunday=6
-        // dayDate.getDay(): Sunday=0, Monday=1, ..., Saturday=6
         const dayOfWeekJS = dayDate.getDay();
         const planIndex = dayOfWeekJS === 0 ? 6 : dayOfWeekJS - 1;
         const planDay = workoutPlan.weeklyPlan[planIndex];
@@ -713,10 +776,7 @@ class StreakService {
         const month = String(dayDate.getMonth() + 1).padStart(2, '0');
         const day = String(dayDate.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
-        
-        // Get the weekly plan day
-        // Diet plan: Sunday=0, Monday=1, ..., Saturday=6
-        // dayDate.getDay(): Sunday=0, Monday=1, ..., Saturday=6
+           
         const planIndex = dayDate.getDay();
         const planDay = dietPlan.weeklyPlan[planIndex];
         
@@ -755,11 +815,19 @@ class StreakService {
 
   // Update streak data when activities are completed
   async updateStreakData(type: 'workout' | 'diet', completed: boolean): Promise<void> {
-    // This method is kept for backward compatibility but is no longer used
-    // Streak calculation now happens in calculateLocalStreakData using 50% threshold
+    
     try {
+      const { getCurrentUserId, getUserCacheKey } = await import('../utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot update streak data');
+        return;
+      }
+      
       const today = new Date().toISOString().split('T')[0];
-      const storageKey = type === 'workout' ? 'completed_workout_days' : 'completed_diet_days';
+      const baseKey = type === 'workout' ? 'completed_workout_days' : 'completed_diet_days';
+      const storageKey = await getUserCacheKey(baseKey, userId);
       
       const completedDays = await Storage.getItem(storageKey) || '[]';
       const daysList = JSON.parse(completedDays);
@@ -767,19 +835,36 @@ class StreakService {
       if (completed && !daysList.includes(today)) {
         daysList.push(today);
         await Storage.setItem(storageKey, JSON.stringify(daysList));
-        console.log(`✅ ${type} streak updated for ${today}`);
+        console.log(`✅ ${type} streak updated for ${today} (user: ${userId})`);
       }
     } catch (error) {
       console.error(`❌ Error updating ${type} streak:`, error);
     }
   }
 
-  // Clear all streak data
+  // Clear all streak data (user-specific)
   async clearStreakData(): Promise<void> {
     try {
-      await Storage.removeItem('completed_workout_days');
-      await Storage.removeItem('completed_diet_days');
-      console.log('🗑️ Streak data cleared');
+      // ✅ CRITICAL: Use user-specific cache keys
+      const { getCurrentUserId, getUserCacheKey } = await import('../utils/cacheKeys');
+      const userId = await getCurrentUserId();
+      
+      if (!userId) {
+        console.warn('⚠️ No user ID, cannot clear streak data');
+        return;
+      }
+      
+      const [workoutKey, dietKey] = await Promise.all([
+        getUserCacheKey('completed_workout_days', userId),
+        getUserCacheKey('completed_diet_days', userId)
+      ]);
+      
+      await Promise.all([
+        Storage.removeItem(workoutKey),
+        Storage.removeItem(dietKey)
+      ]);
+      
+      console.log(`🗑️ Streak data cleared for user: ${userId}`);
     } catch (error) {
       console.error('❌ Error clearing streak data:', error);
     }

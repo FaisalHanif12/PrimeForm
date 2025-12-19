@@ -30,6 +30,8 @@ import NotificationModal from '../../src/components/NotificationModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import ChatHistoryModal from '../../src/components/ChatHistoryModal';
 import aiTrainerService from '../../src/services/aiTrainerService';
+import { showRewardedAd } from '../../src/ads/showRewarded';
+import { AdUnits } from '../../src/ads/adUnits';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -176,9 +178,73 @@ export default function AITrainerScreen() {
   const handleSendMessage = async () => {
     if (!currentMessage.trim()) return;
 
+    // Get user ID for tracking
+    const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+    const userId = await getCurrentUserId();
+    
+    if (!userId) {
+      showToast('warning', t('aiTrainer.error.notAuthenticated'));
+      return;
+    }
+
+    const today = new Date();
+    const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+    // ✅ CRITICAL: Check daily message limit FIRST (before showing ad)
     // Daily usage limit: max 3 messages per user per day
     try {
-      // ✅ CRITICAL: Use user ID from cacheKeys for account-specific usage tracking
+      const usageKey = await getUserCacheKey(`ai_trainer_usage_${dateKey}`, userId);
+      const rawUsage = await Storage.getItem(usageKey);
+      const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
+
+      if (currentCount >= 3) {
+        showToast('warning', t('aiTrainer.limit.reached'));
+        return; // Stop here if limit reached
+      }
+    } catch (error) {
+      console.error('Error checking AI Trainer daily limit:', error);
+      // If something goes wrong with the limit check, still allow the message
+    }
+
+    // Check if user has already watched rewarded ad today (once per day)
+    const adWatchedKey = await getUserCacheKey(`ai_trainer_ad_watched_${dateKey}`, userId);
+    const hasWatchedAdToday = await Storage.getItem(adWatchedKey) === 'true';
+
+    // If ad not watched today, show rewarded ad first
+    if (!hasWatchedAdToday) {
+      // Show rewarded ad
+      showRewardedAd(AdUnits.rewardedTrainer, {
+        onEarned: async () => {
+          // Mark ad as watched for today
+          await Storage.setItem(adWatchedKey, 'true');
+          // Proceed with sending message after ad is watched
+          await proceedWithSendingMessage();
+        },
+        onError: (error) => {
+          console.error('Rewarded ad error:', error);
+          // If ad fails, still allow sending message (graceful degradation)
+          showToast('warning', 'Ad could not be loaded. Proceeding with message...');
+          proceedWithSendingMessage();
+        },
+        onClosed: () => {
+          // Ad was closed without watching - don't send message
+          // User can try again by clicking send button
+        }
+      });
+      return; // Exit early, message will be sent after ad is watched
+    }
+
+    // Ad already watched today, proceed directly
+    await proceedWithSendingMessage();
+  };
+
+  // Separate function to handle the actual message sending logic
+  const proceedWithSendingMessage = async () => {
+    if (!currentMessage.trim()) return;
+
+    // ✅ CRITICAL: Increment usage count BEFORE sending message to prevent race conditions
+    // Note: Limit check is already done in handleSendMessage before showing ad
+    try {
       const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
       const userId = await getCurrentUserId();
       
@@ -195,6 +261,7 @@ export default function AITrainerScreen() {
       const rawUsage = await Storage.getItem(usageKey);
       const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
 
+      // Double-check limit (defensive programming - should never reach here if limit already hit)
       if (currentCount >= 3) {
         showToast('warning', t('aiTrainer.limit.reached'));
         return;
@@ -203,8 +270,8 @@ export default function AITrainerScreen() {
       // Increment and persist usage before sending to avoid race conditions
       await Storage.setItem(usageKey, String(currentCount + 1));
     } catch (error) {
-      console.error('Error checking AI Trainer daily limit:', error);
-      // If something goes wrong with the limit check, still allow the message
+      console.error('Error incrementing AI Trainer usage count:', error);
+      // If something goes wrong, still try to send the message
     }
 
     // ✅ CRITICAL: Ensure we have a current conversation (using user-specific key)
@@ -313,7 +380,7 @@ export default function AITrainerScreen() {
   const loadUserInfo = async () => {
     try {
       // First try cache
-      const cachedData = userProfileService.getCachedData();
+      const cachedData = await userProfileService.getCachedData();
       if (cachedData && cachedData.data) {
         setUserInfo(cachedData.data);
         return;

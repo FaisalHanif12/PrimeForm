@@ -15,10 +15,10 @@ const getApiConfig = (): ApiConfig => {
      * Use the SAME IP that Metro is using (shown in the Expo terminal as
      * "exp://192.168.xxx.xxx:8081"). This is the IP your phone can reach.
      *
-     * Right now Metro is running on: http://192.168.254.70:8081
+     * Right now Metro is running on: http://192.168.48.129:8081
      * So we use that base IP with the backend port 5001.
      */
-    const baseURL = 'http://192.168.254.70:5001/api';
+    const baseURL = 'http://192.168.48.129:5001/api';
 
     console.log('🔍 API URL (development):', baseURL);
 

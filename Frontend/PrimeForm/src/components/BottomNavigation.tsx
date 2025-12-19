@@ -28,7 +28,7 @@ const tabs: Tab[] = [
 ];
 
 // Fixed height for consistent rendering across all devices
-const NAVIGATION_HEIGHT = 70; // iOS height
+const NAVIGATION_HEIGHT = 90; // iOS height
 const NAVIGATION_HEIGHT_ANDROID = 90; // Android height - taller for premium feel
 const ICON_SIZE = 22;
 const LABEL_FONT_SIZE = 10;

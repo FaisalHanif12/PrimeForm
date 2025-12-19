@@ -1,4 +1,9 @@
 {
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-9758721846971674~7209304892",
+    "ios_app_id": "ca-app-pub-9758721846971674~6271627747",
+    "user_tracking_usage_description": "We use this to support the app and show relevant ads."
+  },
   "expo": {
     "name": "PureBody",
     "slug": "purebody",
@@ -55,7 +60,8 @@
           "color": "#6366F1",
           "defaultChannel": "purebody-notifications"
         }
-      ]
+      ],
+      "react-native-google-mobile-ads"
     ],
     "experiments": {
       "typedRoutes": true
