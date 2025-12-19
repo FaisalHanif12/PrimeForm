@@ -15,9 +15,19 @@ try {
   };
 }
 
+// ✅ PRODUCTION READY: Only use test ads in development or if explicitly set to test mode
+// In production builds (EAS production), __DEV__ is false, so production ads will be used
+// Test ads are only used if:
+// 1. Running in development mode (__DEV__ === true), OR
+// 2. EXPO_PUBLIC_ADS_MODE environment variable is explicitly set to "test"
+// 
+// IMPORTANT: For production builds, ensure EXPO_PUBLIC_ADS_MODE is NOT set to "test"
+// Production ad unit IDs are configured below and will be used automatically in production
 const useTestAds =
   __DEV__ || process.env.EXPO_PUBLIC_ADS_MODE === "test";
 
+// ✅ PRODUCTION AD UNIT IDs - These will be used in production builds
+// App ID: ca-app-pub-9758721846971674 (configured in app.json)
 const PROD = {
   android: {
     banner: "ca-app-pub-9758721846971674/1086556155",
@@ -38,6 +48,10 @@ const TEST = {
   rewarded: TestIds?.REWARDED || "ca-app-pub-3940256099942544/5224354917",
 };
 
+// ✅ PRODUCTION READY: Exports ad unit IDs based on environment
+// - In production builds: Uses PROD ad unit IDs (real ads, will generate revenue)
+// - In development: Uses TEST ad unit IDs (Google's test ads, no revenue)
+// - Platform-specific: Different ad units for Android and iOS
 export const AdUnits = {
   banner: useTestAds
     ? TEST.banner
