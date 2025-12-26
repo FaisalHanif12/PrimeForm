@@ -5,6 +5,7 @@ import Animated, { FadeInLeft, FadeOutLeft, FadeIn, FadeOut } from 'react-native
 import { router } from 'expo-router';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('screen');
 
@@ -42,6 +43,7 @@ interface Props {
 
 export default function Sidebar({ visible, onClose, onMenuItemPress, userName, userEmail, userInfo, isGuest = false, badges }: Props) {
   const { t, language, transliterateName } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   // Menu items with translations
   const menuItems: MenuItem[] = [
@@ -136,7 +138,10 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           <ScrollView
             style={styles.menuContainer}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.menuContent}
+            contentContainerStyle={[
+              styles.menuContent,
+              { paddingBottom: spacing.xl + Math.max(insets.bottom, 20) + 80 } // Extra padding for footer + safe area
+            ]}
           >
             {menuItems
               .filter(item => !isGuest || item.action !== 'logout')
@@ -169,7 +174,10 @@ export default function Sidebar({ visible, onClose, onMenuItemPress, userName, u
           </ScrollView>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View style={[
+            styles.footer,
+            { paddingBottom: Math.max(insets.bottom, 20) + spacing.lg } // Use safe area insets
+          ]}>
             <TouchableOpacity
               style={styles.logoutButton}
               onPress={() => handleMenuPress('logout')}
@@ -262,7 +270,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   menuContent: {
-    paddingBottom: spacing.xl,
+    // paddingBottom is now set dynamically with safe area insets in the component
   },
   menuItem: {
     flexDirection: 'row',
@@ -422,7 +430,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.cardBorder,
     backgroundColor: colors.background,
-    paddingBottom: Platform.OS === 'ios' ? spacing.xl + 20 : spacing.xl + 10, // Ensure coverage of bottom area
+    // paddingBottom is now set dynamically with safe area insets
   },
   logoutButton: {
     flexDirection: 'row',
