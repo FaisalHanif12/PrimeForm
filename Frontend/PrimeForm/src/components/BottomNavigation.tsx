@@ -60,11 +60,11 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     ? Math.max(insets.bottom - 8, spacing.xs) // Reduce padding slightly for perfect fit
     : spacing.sm; // Fixed padding for Android
   
-  // Fixed bottom offset for Android - no insets calculation
+  // Fixed bottom offset for Android - match the working position from diet page
   // This ensures consistent positioning across all pages
   const bottomOffset = isIOS 
     ? spacing.xs // Very small offset to prevent cutoff on iOS
-    : spacing.md; // Fixed offset for Android - consistent positioning
+    : spacing.xl; // Increased offset for Android - more space from bottom
     
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 
