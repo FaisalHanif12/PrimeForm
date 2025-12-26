@@ -144,7 +144,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    zIndex: 9999,
+    zIndex: 999999, // ✅ CRITICAL: Extremely high z-index to appear above ALL modals including NotificationModal
+    elevation: 999999, // ✅ For Android
     paddingHorizontal: spacing.md,
   },
   topContainer: {

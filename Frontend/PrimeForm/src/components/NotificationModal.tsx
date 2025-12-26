@@ -250,8 +250,9 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.container}>
         {/* Header */}
@@ -367,6 +368,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    zIndex: 10000, // ✅ High z-index for modal content
   },
   header: {
     flexDirection: 'row',
