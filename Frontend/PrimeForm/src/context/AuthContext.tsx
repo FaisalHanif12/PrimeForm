@@ -24,10 +24,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// ✅ CRITICAL: Cache profile data to avoid unnecessary API calls
-// Using account-specific cache keys via getUserCacheKey utility
 const PROFILE_CACHE_BASE_KEY = 'cached_user_profile';
-const PROFILE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours cache - fitness app, not banking!
+// No expiry time needed - cache is valid forever until user logs out
 
 interface CachedProfile {
   user: User;
@@ -57,24 +55,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      // ✅ FITNESS APP: Token exists - user stays logged in!
-      // We trust the token and use cache aggressively - only validate on explicit 401
+      // ✅ FITNESS APP: Token exists = user is logged in! No questions asked.
+      // Stay logged in until user explicitly logs out or gets 401
       setHasToken(true);
 
-      // ✅ CRITICAL: Get user ID for account-specific cache
+      // Get user ID for account-specific cache
       const userId = await getCurrentUserId();
       const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
 
-      // ✅ FITNESS APP: Check cache FIRST and trust it - no need to validate constantly
-      // This prevents logout on network issues, backend restarts, or hot reloads
+      // ✅ FITNESS APP: Check cache FIRST - if profile exists, use it forever!
+      // No expiry check - cached profile is always valid until user logs out
       try {
         const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
         if (cachedProfileJson) {
           const cachedProfile: CachedProfile = JSON.parse(cachedProfileJson);
-          const cacheAge = Date.now() - cachedProfile.timestamp;
           
-          // ✅ FITNESS APP: Use cached profile for 24 hours - no need for frequent revalidation
-          if (cacheAge < PROFILE_CACHE_EXPIRY_MS && cachedProfile.user) {
+          // ✅ FITNESS APP: Cache always valid - no time check!
+          // User stays logged in with cached profile forever
+          if (cachedProfile.user) {
             setUser(cachedProfile.user);
             
             // Initialize completion services
@@ -93,23 +91,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             }
             
             setIsLoading(false);
-            return; // ✅ EXIT EARLY - User stays logged in with cache!
+            return; // ✅ User stays logged in forever with cached profile!
           }
         }
       } catch (cacheError) {
-        // Cache read failed - but still don't logout! Just skip to profile fetch
+        // Cache read failed - but still don't logout! Just try to fetch profile
         console.warn('⚠️ AuthContext: Cache read failed, will try to fetch profile');
       }
 
-      // ✅ FITNESS APP: Cache miss or expired - try to fetch profile (optional, not required!)
-      // If this fails for ANY reason except 401, user stays logged in
+      // ✅ FITNESS APP: No cached profile - try to fetch (optional)
+      // This only runs on first login or if cache was cleared
+      // If fetch fails for any reason except 401, user STILL stays logged in with token
       try {
         const response = await authService.getProfile();
         
-        // ✅ FITNESS APP: ONLY logout on explicit 401 (token expired/invalid)
-        // Network errors, backend down, or any other error = user stays logged in
+        // ✅ FITNESS APP: ONLY logout on explicit 401 (token truly expired/invalid)
+        // Everything else = user stays logged in
         if (response.tokenExpired || response.statusCode === 401) {
-          // Token is definitely invalid - only NOW do we logout
+          // Token is definitely invalid - this is the ONLY case we logout
           console.warn('🔒 AuthContext: Token expired (401) - logging out');
           setHasToken(false);
           await authService.clearToken();
