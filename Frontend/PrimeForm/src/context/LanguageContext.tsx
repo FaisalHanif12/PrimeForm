@@ -68,6 +68,8 @@ const translations = {
     'dashboard.loading.workoutPlan': 'Loading your workout plan...',
     'dashboard.empty.mealPlan.title': 'No Meal Plan Today',
     'dashboard.empty.mealPlan.text': 'Generate a diet plan to see today\'s meals',
+    'dashboard.empty.workoutPlan.title': 'No Workout Plan Today',
+    'dashboard.empty.workoutPlan.text': 'Generate a workout plan to see today\'s workouts',
 
     // Navigation
     'nav.home': 'Home',
@@ -1089,6 +1091,8 @@ const translations = {
     'dashboard.loading.workoutPlan': 'آپ کا ورکاؤٹ پلان لوڈ ہو رہا ہے...',
     'dashboard.empty.mealPlan.title': 'آج کوئی کھانے کا پلان نہیں',
     'dashboard.empty.mealPlan.text': 'آج کے کھانے دیکھنے کے لیے ڈائٹ پلان بنائیں',
+    'dashboard.empty.workoutPlan.title': 'آج کوئی ورکاؤٹ پلان نہیں',
+    'dashboard.empty.workoutPlan.text': 'آج کی ورکاؤٹ دیکھنے کے لیے ورکاؤٹ پلان بنائیں',
 
     // Navigation
     'nav.home': 'ہوم',

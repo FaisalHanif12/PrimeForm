@@ -94,8 +94,8 @@ export default function WorkoutPlanCard({
             </View>
           ) : (
             <View style={styles.emptyWorkoutContainer}>
-              <Text style={styles.emptyWorkoutTitle}>{t('workout.page.comingSoon')}</Text>
-              <Text style={styles.emptyWorkoutText}>{t('workout.page.comingSoonDesc')}</Text>
+              <Text style={styles.emptyWorkoutTitle}>{t('dashboard.empty.workoutPlan.title')}</Text>
+              <Text style={styles.emptyWorkoutText}>{t('dashboard.empty.workoutPlan.text')}</Text>
             </View>
           )}
           
