@@ -198,31 +198,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       } catch (profileError: any) {
         // Profile fetch failed - token might be invalid
-        // Check if it's a 401 error
+        // Check if it's a 401 error (token expired/invalid)
         if (profileError?.statusCode === 401 || profileError?.message?.includes('401') || profileError?.message?.includes('expired')) {
-          setHasToken(false); // Token is invalid
+          // Token is definitely invalid - clear everything
+          setHasToken(false);
           await authService.clearToken();
-
           setUser(null);
         } else {
-          // Other errors - still clear token to be safe
-          setHasToken(false); // Token is invalid
-          await authService.clearToken();
-          // ✅ CRITICAL: Profile cache is PRESERVED even on errors
-          // Profile data persists in storage with user-specific key
+          // ✅ CRITICAL: Network or other errors - DO NOT clear token
+          // Keep user authenticated if token exists, just couldn't validate due to network/backend issue
+          // This prevents logout on hot reload, backend restart, or temporary network issues
+          console.warn('⚠️ AuthContext: Profile fetch failed but keeping token (not a 401):', profileError?.message);
+          // Token still exists, keep hasToken true
+          // But user data is unavailable, so set to null (will be refetched on next attempt)
           setUser(null);
         }
       }
     } catch (error) {
-      setHasToken(false); // Clear token state on error
+      // ✅ CRITICAL: Top-level error handler - DO NOT clear token on general errors
+      // This prevents logout on hot reload or temporary issues
+      console.warn('⚠️ AuthContext: Auth check failed, but keeping token if it exists:', error);
+      // Keep hasToken state as-is (don't force to false)
+      // Only set user to null since we couldn't fetch/validate
       setUser(null);
-      // Only clear token if there's an error, but preserve user data
-      try {
-        await authService.clearToken();
-    
-      } catch (clearError) {
-        // Ignore clear errors
-      }
+      // DO NOT clear token - it might still be valid
     } finally {
       setIsLoading(false);
     }
