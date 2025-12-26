@@ -1176,7 +1176,7 @@ export default function DashboardScreen() {
                 <ActivityIndicator color={colors.primary} size="large" />
                 <Text style={styles.loadingCardText}>{t('dashboard.loading.mealPlan')}</Text>
               </View>
-            ) : todayMeals.length > 0 ? (
+            ) : (
               <MealPlanCard
                 title={t('dashboard.meal.plan')}
                 meals={todayMeals}
@@ -1185,11 +1185,6 @@ export default function DashboardScreen() {
                 onPress={() => handleFeatureAccess('AI Diet')}
                 delay={300}
               />
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>{t('dashboard.empty.mealPlan.title')}</Text>
-                <Text style={styles.emptyCardText}>{t('dashboard.empty.mealPlan.text')}</Text>
-              </View>
             )}
 
             {/* Today's Workout Plan */}
