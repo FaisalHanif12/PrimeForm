@@ -94,41 +94,48 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
               </View>
             </View>
             
-            <View style={styles.mealList}>
-              {meals.map((meal, index) => {
-                const isCompleted = isMealCompleted(meal);
-                return (
-                <View key={index} style={[
-                  styles.mealItem,
-                  isCompleted && styles.mealItemCompleted
-                ]}>
-                  <View style={styles.mealIcon}>
-                    <Ionicons name="restaurant" size={16} color={colors.mutedText} />
-                  </View>
-                  
-                  <View style={styles.mealContent}>
-                    <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>
-                      {language === 'ur' ? transliterateText(meal.name) : meal.name}
-                    </Text>
-                    <View style={styles.mealDetails}>
-                      <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>
-                        {meal.calories} {t('dashboard.stats.kcal')}
-                      </Text>
-                      <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>
-                        {language === 'ur' ? transliterateText(meal.weight) : meal.weight}
-                      </Text>
+            {meals.length > 0 ? (
+              <View style={styles.mealList}>
+                {meals.map((meal, index) => {
+                  const isCompleted = isMealCompleted(meal);
+                  return (
+                  <View key={index} style={[
+                    styles.mealItem,
+                    isCompleted && styles.mealItemCompleted
+                  ]}>
+                    <View style={styles.mealIcon}>
+                      <Ionicons name="restaurant" size={16} color={colors.mutedText} />
                     </View>
-                  </View>
-                  
-                  {isCompleted && (
-                    <View style={styles.completedBadge}>
-                      <Text style={styles.completedIcon}>✓</Text>
+                    
+                    <View style={styles.mealContent}>
+                      <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>
+                        {language === 'ur' ? transliterateText(meal.name) : meal.name}
+                      </Text>
+                      <View style={styles.mealDetails}>
+                        <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>
+                          {meal.calories} {t('dashboard.stats.kcal')}
+                        </Text>
+                        <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>
+                          {language === 'ur' ? transliterateText(meal.weight) : meal.weight}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                </View>
-                );
-              })}
-            </View>
+                    
+                    {isCompleted && (
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedIcon}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyMealContainer}>
+                <Text style={styles.emptyMealTitle}>{t('dashboard.empty.mealPlan.title')}</Text>
+                <Text style={styles.emptyMealText}>{t('dashboard.empty.mealPlan.text')}</Text>
+              </View>
+            )}
             
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
@@ -267,6 +274,23 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  emptyMealContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyMealTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+  },
+  emptyMealText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
 });
 
