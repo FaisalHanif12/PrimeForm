@@ -200,14 +200,10 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     });
   };
 
-  // Clear error and refresh notifications when modal opens
+  // Clear error when modal opens
   useEffect(() => {
-    if (visible) {
-      if (error) {
-        clearError();
-      }
-      // ✅ Auto-refresh notifications when modal opens to catch any new notifications
-      refreshNotifications();
+    if (visible && error) {
+      clearError();
     }
   }, [visible]);
 

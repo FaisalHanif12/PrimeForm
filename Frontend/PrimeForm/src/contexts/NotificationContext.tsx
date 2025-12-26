@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import notificationService from '../services/notificationService';
 import pushNotificationService from '../services/pushNotificationService';
 import { useAuthContext } from '../context/AuthContext';
@@ -75,9 +76,42 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   };
 
-  // Refresh notifications (force reload)
+  // Refresh notifications (force reload) with rate limiting - once per day
   const refreshNotifications = async () => {
-    await fetchNotifications({ page: 1, limit: 20, includeRead: true });
+    if (!isAuthenticated) return;
+    
+    try {
+      // Check rate limit - only allow one fetch per day
+      const RATE_LIMIT_KEY = 'notification_refresh_last_fetch_date';
+      const lastFetchDateStr = await AsyncStorage.getItem(RATE_LIMIT_KEY);
+      
+      if (lastFetchDateStr) {
+        const lastFetchDate = new Date(lastFetchDateStr);
+        const today = new Date();
+        
+        // Reset time to midnight for accurate day comparison
+        lastFetchDate.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        
+        // Check if same day
+        if (lastFetchDate.getTime() === today.getTime()) {
+          // Already fetched today - show message and return
+          showToast('info', 'You can only refresh notifications once per day. Please try again tomorrow.');
+          return;
+        }
+      }
+      
+      // Rate limit passed - proceed with fetch
+      await fetchNotifications({ page: 1, limit: 20, includeRead: true });
+      
+      // Store today's date as last fetch date
+      const todayStr = new Date().toISOString();
+      await AsyncStorage.setItem(RATE_LIMIT_KEY, todayStr);
+      
+      showToast('success', 'Notifications refreshed');
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to refresh notifications');
+    }
   };
 
   // Mark a specific notification as read
