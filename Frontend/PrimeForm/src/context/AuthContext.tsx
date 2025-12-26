@@ -37,6 +37,7 @@ interface CachedProfile {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasToken, setHasToken] = useState(false); // Track if token exists separately
 
   const checkAuthStatus = async () => {
     try {
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (!token) {
         // No token exists - user is not authenticated
+        setHasToken(false); // Update token state
         const userId = await getCurrentUserId();
         if (userId) {
           const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
@@ -54,6 +56,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         setIsLoading(false);
         return;
       }
+
+      // Token exists - set flag immediately so isAuthenticated is true during validation
+      setHasToken(true);
 
       // ✅ CRITICAL: Get user ID for account-specific cache
       const userId = await getCurrentUserId();
@@ -102,6 +107,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // ✅ CRITICAL: Check if token expired (401 response)
         if (response.tokenExpired || response.statusCode === 401 || !response.success) {
           // Token is invalid/expired - clear it and cache
+          setHasToken(false); // Token is invalid
           // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - preserve user history
           // This ensures users who have signed up are redirected to login, not guest mode
           await authService.clearToken();
@@ -182,6 +188,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         } else {
           // Token is invalid/expired - clear it and cache
+          setHasToken(false); // Token is invalid
           // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - preserve user history
           await authService.clearToken();
           if (userId) {
@@ -193,11 +200,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Profile fetch failed - token might be invalid
         // Check if it's a 401 error
         if (profileError?.statusCode === 401 || profileError?.message?.includes('401') || profileError?.message?.includes('expired')) {
+          setHasToken(false); // Token is invalid
           await authService.clearToken();
 
           setUser(null);
         } else {
           // Other errors - still clear token to be safe
+          setHasToken(false); // Token is invalid
           await authService.clearToken();
           // ✅ CRITICAL: Profile cache is PRESERVED even on errors
           // Profile data persists in storage with user-specific key
@@ -205,6 +214,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
     } catch (error) {
+      setHasToken(false); // Clear token state on error
       setUser(null);
       // Only clear token if there's an error, but preserve user data
       try {
@@ -229,6 +239,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const logout = async () => {
     try {
       await authService.logout();
+      setHasToken(false); // Clear token state
       setUser(null);
       // ✅ CRITICAL: Profile cache is PRESERVED on logout (like all other user data)
       // Profile data persists in storage with user-specific key: user_<userId>_cached_user_profile
@@ -237,6 +248,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // No need to clear storage - it's preserved in clearUserCache() preservedKeyFragments
     } catch (error) {
       // Clear local state even if API call fails
+      setHasToken(false); // Clear token state
       setUser(null);
       // Profile cache still preserved in storage
     }
@@ -245,7 +257,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const value: AuthContextType = {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user || hasToken, // Authenticated if user exists OR token exists
     login,
     logout,
     checkAuthStatus,

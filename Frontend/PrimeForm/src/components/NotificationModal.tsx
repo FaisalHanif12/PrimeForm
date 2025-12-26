@@ -17,6 +17,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { colors } from '../theme/colors';
 import CustomAlert from './CustomAlert';
+import ToastNotification from './ToastNotification';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,6 +47,30 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  
+  // ✅ Local toast state for modal-specific toasts
+  const [modalToast, setModalToast] = useState<{
+    visible: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    message: string;
+  }>({
+    visible: false,
+    type: 'success',
+    message: '',
+  });
+
+  // ✅ Show toast inside modal
+  const showModalToast = (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
+    setModalToast({
+      visible: true,
+      type,
+      message,
+    });
+  };
+
+  const hideModalToast = () => {
+    setModalToast(prev => ({ ...prev, visible: false }));
+  };
   
   // Custom alert state
   const [alertConfig, setAlertConfig] = useState<{
@@ -92,7 +117,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle mark all as read
   const handleMarkAllAsRead = () => {
     if (unreadCount === 0) {
-      showToast('info', t('notification.mark.all.read.success'));
+      showModalToast('info', t('notification.mark.all.read.success'));
       return;
     }
 
@@ -106,6 +131,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
           text: t('notification.mark.all.read'), 
           onPress: () => {
             markAllAsRead();
+            showModalToast('success', t('notification.mark.all.read.success'));
             setAlertConfig(prev => ({ ...prev, visible: false }));
           }
         }
@@ -126,6 +152,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
           style: 'destructive', 
           onPress: () => {
             deleteNotification(notificationId);
+            showModalToast('success', 'Notification deleted');
             setAlertConfig(prev => ({ ...prev, visible: false }));
           }
         }
@@ -136,7 +163,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   // Handle bulk actions
   const handleBulkAction = (action: 'markAsRead' | 'delete') => {
     if (selectedNotifications.length === 0) {
-      showToast('info', t('notification.no.selection'));
+      showModalToast('info', t('notification.no.selection'));
       return;
     }
 
@@ -157,10 +184,12 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
               for (const id of selectedNotifications) {
                 await markAsRead(id);
               }
+              showModalToast('success', `${selectedNotifications.length} notifications marked as read`);
             } else {
               for (const id of selectedNotifications) {
                 await deleteNotification(id);
               }
+              showModalToast('success', `${selectedNotifications.length} notifications deleted`);
             }
             setSelectedNotifications([]);
             setSelectionMode(false);
@@ -250,8 +279,9 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.container}>
         {/* Header */}
@@ -358,6 +388,16 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
           buttons={alertConfig.buttons}
           onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
         />
+
+        {/* ✅ Toast Notification inside Modal */}
+        <ToastNotification
+          visible={modalToast.visible}
+          type={modalToast.type}
+          message={modalToast.message}
+          position="top"
+          duration={3000}
+          onHide={hideModalToast}
+        />
       </View>
     </Modal>
   );
@@ -367,6 +407,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    zIndex: 10000, // ✅ High z-index for modal content
   },
   header: {
     flexDirection: 'row',
