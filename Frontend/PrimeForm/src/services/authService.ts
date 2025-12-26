@@ -1,6 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
-import { extractUserIdFromToken, setCurrentUserId, clearCurrentUserId, clearUserCache, validateCacheOnLogin, cleanupOrphanedCache, getCurrentUserId } from '../utils/cacheKeys';
+import { 
+  extractUserIdFromToken, 
+  setCurrentUserId, 
+  clearCurrentUserId, 
+  clearUserCache, 
+  validateCacheOnLogin, 
+  cleanupOrphanedCache, 
+  getCurrentUserId,
+  migrateGuestDataToUser 
+} from '../utils/cacheKeys';
 
 interface LoginResponse {
   success: boolean;
@@ -241,8 +250,40 @@ class AuthService {
         // Extract user ID from token first (before clearing)
         const newUserId = extractUserIdFromToken(response.token);
         
-        // Clear any existing user data before storing new token
-        await this.clearAllUserData();
+        // ✅ CRITICAL: Get current ID before clearing (might be guest/device ID)
+        const previousId = await getCurrentUserId();
+        
+        // ✅ CRITICAL FIX: Only clear data if switching to a DIFFERENT user account
+        // If logging back into the SAME account, preserve all completion data
+        const isSameUser = previousId === newUserId;
+        const isPreviousGuest = previousId?.startsWith('device_');
+        
+        if (!isSameUser) {
+          // Different user - clear previous user's data from memory (storage is preserved)
+          console.log(`🔄 Switching accounts from ${previousId} to ${newUserId}`);
+          
+          // Only clear non-persistent data (session data, not completion history)
+          await this.clearToken(); // Clear old token only
+          
+          // Reset in-memory state of services (storage data remains intact)
+          try {
+            const { default: mealCompletionService } = await import('./mealCompletionService');
+            mealCompletionService.resetInMemoryState();
+          } catch (error) {
+            // Service might not be loaded yet
+          }
+          
+          try {
+            const { default: exerciseCompletionService } = await import('./exerciseCompletionService');
+            exerciseCompletionService.resetInMemoryState();
+          } catch (error) {
+            // Service might not be loaded yet
+          }
+        } else {
+          // Same user logging back in - just clear the token
+          console.log(`✅ Same user logging back in: ${newUserId}`);
+          await this.clearToken();
+        }
         
         // Clean up any orphaned cache from other users
         if (newUserId) {
@@ -261,6 +302,12 @@ class AuthService {
         if (!verifyUserId && newUserId) {
           // Retry setting user ID if it wasn't set
           await setCurrentUserId(newUserId);
+        }
+        
+        // ✅ CRITICAL: Migrate guest data to real user if applicable
+        if (newUserId && previousId && previousId.startsWith('device_')) {
+          console.log(`🔄 Migrating guest data from ${previousId} to ${newUserId}`);
+          await migrateGuestDataToUser(previousId, newUserId);
         }
         
         // Validate and clean cache for the new user
@@ -356,8 +403,15 @@ class AuthService {
         // Extract user ID from token first (before clearing)
         const newUserId = extractUserIdFromToken(response.token);
         
-        // Clear any existing user data before storing new token
-        await this.clearAllUserData();
+        // ✅ CRITICAL: Get current ID before clearing (might be guest/device ID)
+        const previousId = await getCurrentUserId();
+        
+        // ✅ Signup is always a NEW user, so we can safely clear previous session data
+        // But we still need to preserve guest data for migration
+        console.log(`🆕 New user signup: ${newUserId}`);
+        
+        // Only clear token, not completion data (in case of guest → real user migration)
+        await this.clearToken();
         
         // Clean up any orphaned cache from other users
         if (newUserId) {
@@ -376,6 +430,12 @@ class AuthService {
         if (!verifyUserId && newUserId) {
           // Retry setting user ID if it wasn't set
           await setCurrentUserId(newUserId);
+        }
+        
+        // ✅ CRITICAL: Migrate guest data to real user if applicable
+        if (newUserId && previousId && previousId.startsWith('device_')) {
+          console.log(`🔄 Migrating guest data from ${previousId} to ${newUserId}`);
+          await migrateGuestDataToUser(previousId, newUserId);
         }
         
         // Validate and clean cache for the new user

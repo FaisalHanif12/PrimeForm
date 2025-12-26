@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, RefreshControl, Alert, AppState, ActivityIndicator, DeviceEventEmitter, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, Dimensions, RefreshControl, Alert, AppState, ActivityIndicator, DeviceEventEmitter, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -1117,8 +1117,8 @@ export default function DashboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      <DecorativeBackground>
+    <DecorativeBackground>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         <View style={styles.mainContainer}>
           {/* Header */}
           <DashboardHeader
@@ -1176,7 +1176,7 @@ export default function DashboardScreen() {
                 <ActivityIndicator color={colors.primary} size="large" />
                 <Text style={styles.loadingCardText}>{t('dashboard.loading.mealPlan')}</Text>
               </View>
-            ) : todayMeals.length > 0 ? (
+            ) : (
               <MealPlanCard
                 title={t('dashboard.meal.plan')}
                 meals={todayMeals}
@@ -1185,11 +1185,6 @@ export default function DashboardScreen() {
                 onPress={() => handleFeatureAccess('AI Diet')}
                 delay={300}
               />
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.emptyCardTitle}>{t('dashboard.empty.mealPlan.title')}</Text>
-                <Text style={styles.emptyCardText}>{t('dashboard.empty.mealPlan.text')}</Text>
-              </View>
             )}
 
             {/* Today's Workout Plan */}
@@ -1322,14 +1317,15 @@ export default function DashboardScreen() {
           onClose={handleSignupModalClose}
           featureName={currentFeature}
         />
-      </DecorativeBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DecorativeBackground>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   mainContainer: {
     flex: 1,

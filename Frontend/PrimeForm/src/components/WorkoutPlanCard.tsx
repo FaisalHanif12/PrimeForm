@@ -21,8 +21,7 @@ export default function WorkoutPlanCard({
   onPress, 
   delay = 0 
 }: WorkoutPlanCardProps) {
-  const { t, language, transliterateText } = useLanguage();
-  const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
+  const { t, language, transliterateText, transliterateNumbers } = useLanguage();
   
   // Get today's date for completion checking (use local timezone to avoid UTC offset)
   const todayDate = new Date();
@@ -31,6 +30,21 @@ export default function WorkoutPlanCard({
   const month = String(todayDate.getMonth() + 1).padStart(2, '0');
   const day = String(todayDate.getDate()).padStart(2, '0');
   const today = `${year}-${month}-${day}`;
+  
+  // Calculate total calories (target)
+  const totalCalories = workouts.reduce((sum, workout) => sum + (workout.caloriesBurned || 0), 0);
+  
+  // ✅ Calculate burned calories from completed exercises (real-time)
+  const burnedCalories = React.useMemo(() => {
+    let burned = 0;
+    workouts.forEach(workout => {
+      const exerciseId = `${today}-${workout.name}`;
+      if (completedExercises.has(exerciseId)) {
+        burned += workout.caloriesBurned || 0;
+      }
+    });
+    return burned;
+  }, [workouts, completedExercises, today]);
 
   return (
     <Animated.View 
@@ -42,7 +56,11 @@ export default function WorkoutPlanCard({
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <View style={styles.calorieContainer}>
-              <Text style={styles.calorieCount}>{totalCalories}</Text>
+              <Text style={styles.calorieCount}>
+                {language === 'ur' ? transliterateNumbers(burnedCalories) : burnedCalories}
+                <Text style={styles.calorieSeparator}>/</Text>
+                {language === 'ur' ? transliterateNumbers(totalCalories) : totalCalories}
+              </Text>
               <Text style={styles.calorieLabel}>{t('dashboard.stats.kcal')}</Text>
             </View>
           </View>
@@ -94,8 +112,8 @@ export default function WorkoutPlanCard({
             </View>
           ) : (
             <View style={styles.emptyWorkoutContainer}>
-              <Text style={styles.emptyWorkoutTitle}>{t('workout.page.comingSoon')}</Text>
-              <Text style={styles.emptyWorkoutText}>{t('workout.page.comingSoonDesc')}</Text>
+              <Text style={styles.emptyWorkoutTitle}>{t('dashboard.empty.workoutPlan.title')}</Text>
+              <Text style={styles.emptyWorkoutText}>{t('dashboard.empty.workoutPlan.text')}</Text>
             </View>
           )}
           
@@ -146,6 +164,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+  calorieSeparator: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontWeight: '500',
   },
   calorieLabel: {
     color: colors.mutedText,

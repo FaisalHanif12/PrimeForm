@@ -24,10 +24,8 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// ✅ CRITICAL: Cache profile data to avoid unnecessary API calls
-// Using account-specific cache keys via getUserCacheKey utility
 const PROFILE_CACHE_BASE_KEY = 'cached_user_profile';
-const PROFILE_CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes cache expiry
+// No expiry time needed - cache is valid forever until user logs out
 
 interface CachedProfile {
   user: User;
@@ -57,27 +55,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return;
       }
 
-      // Token exists - set flag immediately so isAuthenticated is true during validation
+      // ✅ FITNESS APP: Token exists = user is logged in! No questions asked.
+      // Stay logged in until user explicitly logs out or gets 401
       setHasToken(true);
 
-      // ✅ CRITICAL: Get user ID for account-specific cache
+      // Get user ID for account-specific cache
       const userId = await getCurrentUserId();
       const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
 
-      // Token exists - validate it by fetching profile
-      // ✅ CRITICAL: Check cache first before making API call
+      // ✅ FITNESS APP: Check cache FIRST - if profile exists, use it forever!
+      // No expiry check - cached profile is always valid until user logs out
       try {
         const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
         if (cachedProfileJson) {
           const cachedProfile: CachedProfile = JSON.parse(cachedProfileJson);
-          const cacheAge = Date.now() - cachedProfile.timestamp;
           
-          // Use cached profile if it's still fresh (less than 5 minutes old)
-          if (cacheAge < PROFILE_CACHE_EXPIRY_MS && cachedProfile.user) {
+          // ✅ FITNESS APP: Cache always valid - no time check!
+          // User stays logged in with cached profile forever
+          if (cachedProfile.user) {
             setUser(cachedProfile.user);
             
-            // ✅ CRITICAL: Initialize completion services when using cached profile
-            // This ensures completion data is loaded when app starts with cached session
+            // Initialize completion services
             try {
               const { default: mealCompletionService } = await import('../services/mealCompletionService');
               await mealCompletionService.initialize();
@@ -93,39 +91,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             }
             
             setIsLoading(false);
-            return; // Exit early - no API call needed
+            return; // ✅ User stays logged in forever with cached profile!
           }
         }
       } catch (cacheError) {
-        // Cache read failed, proceed to API call
+        // Cache read failed - but still don't logout! Just try to fetch profile
+        console.warn('⚠️ AuthContext: Cache read failed, will try to fetch profile');
       }
 
-      // Cache miss or expired - fetch from API to validate token
+      // ✅ FITNESS APP: No cached profile - try to fetch (optional)
+      // This only runs on first login or if cache was cleared
+      // If fetch fails for any reason except 401, user STILL stays logged in with token
       try {
         const response = await authService.getProfile();
         
-        // ✅ CRITICAL: Check if token expired (401 response)
-        if (response.tokenExpired || response.statusCode === 401 || !response.success) {
-          // Token is invalid/expired - clear it and cache
-          setHasToken(false); // Token is invalid
-          // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - preserve user history
-          // This ensures users who have signed up are redirected to login, not guest mode
+        // ✅ FITNESS APP: ONLY logout on explicit 401 (token truly expired/invalid)
+        // Everything else = user stays logged in
+        if (response.tokenExpired || response.statusCode === 401) {
+          // Token is definitely invalid - this is the ONLY case we logout
+          console.warn('🔒 AuthContext: Token expired (401) - logging out');
+          setHasToken(false);
           await authService.clearToken();
           if (userId) {
             await AsyncStorage.removeItem(cacheKey);
           }
           setUser(null);
           setIsLoading(false);
-          // ✅ CRITICAL: Don't return here - let the component handle navigation
-          // The app/index.tsx will check primeform_has_ever_signed_up and redirect to login
           return;
         }
         
+        // ✅ FITNESS APP: Profile fetch succeeded - update cache
         if (response.success && response.data?.user) {
           const userData = response.data.user;
           setUser(userData);
           
-          // ✅ CRITICAL: Cache the profile data with account-specific key
+          // Cache the fresh profile data
           try {
             const cacheData: CachedProfile = {
               user: userData,
@@ -135,7 +135,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
             }
           } catch (cacheError) {
-            // Cache write failed, but user data is still set
+            // Cache write failed, but user is still logged in
           }
 
           // ✅ CRITICAL: Initialize completion services for logged-in user
@@ -187,42 +187,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             // Ignore if service not available
           }
         } else {
-          // Token is invalid/expired - clear it and cache
-          setHasToken(false); // Token is invalid
-          // ✅ CRITICAL: DO NOT clear 'primeform_has_ever_signed_up' - preserve user history
+          // ✅ FITNESS APP: Profile fetch returned unexpected response
+          // But NOT a 401, so DON'T logout - just log warning
+          console.warn('⚠️ AuthContext: Profile fetch returned non-success, but keeping user logged in');
+          // Keep hasToken true, keep user logged in
+          // They can still use the app even if profile fetch fails
+        }
+      } catch (profileError: any) {
+        // ✅ FITNESS APP: Profile fetch threw error - check if it's 401
+        if (profileError?.statusCode === 401 || profileError?.message?.includes('401')) {
+          // Explicit 401 - token is invalid
+          console.warn('🔒 AuthContext: 401 error - logging out');
+          setHasToken(false);
           await authService.clearToken();
           if (userId) {
             await AsyncStorage.removeItem(cacheKey);
           }
           setUser(null);
-        }
-      } catch (profileError: any) {
-        // Profile fetch failed - token might be invalid
-        // Check if it's a 401 error
-        if (profileError?.statusCode === 401 || profileError?.message?.includes('401') || profileError?.message?.includes('expired')) {
-          setHasToken(false); // Token is invalid
-          await authService.clearToken();
-
-          setUser(null);
         } else {
-          // Other errors - still clear token to be safe
-          setHasToken(false); // Token is invalid
-          await authService.clearToken();
-          // ✅ CRITICAL: Profile cache is PRESERVED even on errors
-          // Profile data persists in storage with user-specific key
-          setUser(null);
+          // ✅ FITNESS APP: Network error, backend down, etc - STAY LOGGED IN!
+          console.warn('⚠️ AuthContext: Profile fetch failed (not 401) - keeping user logged in:', profileError?.message);
+          // Token still valid, just couldn't reach server
+          // User stays authenticated with existing token
         }
       }
     } catch (error) {
-      setHasToken(false); // Clear token state on error
-      setUser(null);
-      // Only clear token if there's an error, but preserve user data
-      try {
-        await authService.clearToken();
-    
-      } catch (clearError) {
-        // Ignore clear errors
-      }
+      // ✅ FITNESS APP: Top-level catch - something went very wrong
+      // But still don't logout unless we know token is invalid
+      console.warn('⚠️ AuthContext: Unexpected error in auth check - keeping user logged in:', error);
+      // Keep token and authentication state
     } finally {
       setIsLoading(false);
     }

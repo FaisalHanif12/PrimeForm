@@ -264,8 +264,33 @@ class ProgressService {
         for (const exerciseId of filteredExercises) {
           const exerciseData = this.getExerciseDataFromId(exerciseId, workoutPlan);
           if (exerciseData) {
-            caloriesBurned += exerciseData.caloriesBurned || this.estimateCaloriesBurned(exerciseData);
+            const exerciseCalories = exerciseData.caloriesBurned || this.estimateCaloriesBurned(exerciseData);
+            caloriesBurned += exerciseCalories;
+            if (__DEV__) {
+              console.log(`🔥 Exercise: ${exerciseData.name}, Calories: ${exerciseCalories} (${exerciseData.caloriesBurned ? 'from data' : 'estimated'})`);
+            }
+          } else {
+            // ✅ FIXED: If exercise data not found, estimate based on exercise name from ID
+            // Extract exercise name from ID and provide a basic estimate
+            const parts = exerciseId.split('-');
+            if (parts.length >= 4) {
+              const exerciseName = parts.slice(3).join('-');
+              // Create a minimal exercise object for estimation
+              const estimatedExercise: Partial<WorkoutExercise> = {
+                name: exerciseName,
+                sets: 3, // Default to 3 sets
+                reps: 12, // Default reps
+              };
+              const estimatedCalories = this.estimateCaloriesBurned(estimatedExercise as WorkoutExercise);
+              caloriesBurned += estimatedCalories;
+              if (__DEV__) {
+                console.warn(`⚠️ Exercise data not found for ${exerciseId}, using estimate: ${estimatedCalories} kcal`);
+              }
+            }
           }
+        }
+        if (__DEV__) {
+          console.log(`🔥 Total calories burned: ${caloriesBurned} kcal (from ${filteredExercises.length} exercises)`);
         }
       }
 
@@ -614,39 +639,101 @@ class ProgressService {
 
   // Get exercise data from exercise ID
   private getExerciseDataFromId(exerciseId: string, workoutPlan: WorkoutPlan): WorkoutExercise | null {
-    // Format: "YYYY-MM-DD-exerciseName"
-    const parts = exerciseId.split('-');
-    if (parts.length < 4) return null;
-    
-    const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
-    const exerciseName = parts.slice(3).join('-');
-    
-    // Find the day in the weekly plan
-    for (const day of workoutPlan.weeklyPlan) {
-      if (day.date === dateStr) {
-        return day.exercises.find(e => e.name === exerciseName) || null;
+    try {
+      // Format: "YYYY-MM-DD-exerciseName"
+      const parts = exerciseId.split('-');
+      if (parts.length < 4) {
+        console.warn('⚠️ Invalid exercise ID format:', exerciseId);
+        return null;
       }
+      
+      const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+      const exerciseName = parts.slice(3).join('-');
+      
+      // Strategy 1: Try exact date match first
+      for (const day of workoutPlan.weeklyPlan) {
+        if (day.date === dateStr) {
+          const exercise = day.exercises.find(e => e.name === exerciseName);
+          if (exercise) {
+            return exercise;
+          }
+          // If exact name not found, try case-insensitive match
+          const caseInsensitiveMatch = day.exercises.find(e => 
+            e.name.toLowerCase() === exerciseName.toLowerCase()
+          );
+          if (caseInsensitiveMatch) {
+            return caseInsensitiveMatch;
+          }
+        }
+      }
+      
+      // Strategy 2: Try to match by day of week pattern
+      try {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const exerciseDate = new Date(year, month - 1, day);
+        
+        // Check if date is valid
+        if (isNaN(exerciseDate.getTime())) {
+          console.warn('⚠️ Invalid date in exercise ID:', dateStr);
+          return null;
+        }
+        
+        const dayOfWeek = exerciseDate.getDay();
+        
+        // Map: Sunday(0)->6, Monday(1)->0, etc. for workout plan (Mon=0, Tue=1, ..., Sun=6)
+        const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        
+        if (planDayIndex < workoutPlan.weeklyPlan.length) {
+          const day = workoutPlan.weeklyPlan[planDayIndex];
+          const exercise = day.exercises.find(e => e.name === exerciseName);
+          if (exercise) {
+            return exercise;
+          }
+          // If exact name not found, try case-insensitive match
+          const caseInsensitiveMatch = day.exercises.find(e => 
+            e.name.toLowerCase() === exerciseName.toLowerCase()
+          );
+          if (caseInsensitiveMatch) {
+            return caseInsensitiveMatch;
+          }
+          // If still not found, try partial name match (for exercises with variations)
+          const partialMatch = day.exercises.find(e => 
+            e.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+            exerciseName.toLowerCase().includes(e.name.toLowerCase())
+          );
+          if (partialMatch) {
+            return partialMatch;
+          }
+        }
+      } catch (dateError) {
+        console.warn('⚠️ Error parsing date from exercise ID:', exerciseId, dateError);
+      }
+      
+      // Strategy 3: Last resort - search all days for exercise name match
+      for (const day of workoutPlan.weeklyPlan) {
+        const exercise = day.exercises.find(e => 
+          e.name.toLowerCase() === exerciseName.toLowerCase() ||
+          e.name.toLowerCase().includes(exerciseName.toLowerCase()) ||
+          exerciseName.toLowerCase().includes(e.name.toLowerCase())
+        );
+        if (exercise) {
+          console.log('✅ Found exercise using fallback name matching:', exerciseName, '->', exercise.name);
+          return exercise;
+        }
+      }
+      
+      console.warn('⚠️ Could not find exercise data for ID:', exerciseId);
+      return null;
+    } catch (error) {
+      console.error('❌ Error in getExerciseDataFromId:', error);
+      return null;
     }
-    
-    // If exact date not found, try to match by day of week pattern
-    const exerciseDate = new Date(dateStr);
-    const dayOfWeek = exerciseDate.getDay();
-    
-    // Map: Sunday(0)->6, Monday(1)->0, etc. for workout plan (Mon=0, Tue=1, ..., Sun=6)
-    const planDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    
-    if (planDayIndex < workoutPlan.weeklyPlan.length) {
-      const day = workoutPlan.weeklyPlan[planDayIndex];
-      return day.exercises.find(e => e.name === exerciseName) || null;
-    }
-    
-    return null;
   }
 
-  // Estimate calories burned for an exercise
+  // Estimate calories burned for an exercise (used when caloriesBurned is not available)
   private estimateCaloriesBurned(exercise: WorkoutExercise): number {
     const name = (exercise.name || '').toLowerCase();
-    let caloriesPerSet = 10;
+    let caloriesPerSet = 10; // Default base calories per set
 
     if (name.includes('squat') || name.includes('deadlift') || name.includes('lunge')) {
       caloriesPerSet = 15;
@@ -658,10 +745,20 @@ class ProgressService {
       caloriesPerSet = 7;
     } else if (name.includes('cardio') || name.includes('run') || name.includes('jump')) {
       caloriesPerSet = 20;
+    } else if (name.includes('romanian') || name.includes('glute')) {
+      caloriesPerSet = 12;
+    } else if (name.includes('calf') || name.includes('raise')) {
+      caloriesPerSet = 5;
     }
 
     const sets = exercise.sets || 3;
-    return caloriesPerSet * sets;
+    const reps = exercise.reps || 12;
+    
+    // ✅ IMPROVED: Factor in reps for more accurate estimation
+    // More reps = more calories (up to a point)
+    const repsMultiplier = Math.min(reps / 10, 1.5); // Cap at 1.5x for high rep sets
+    
+    return Math.round(caloriesPerSet * sets * repsMultiplier);
   }
 
   // Calculate period totals

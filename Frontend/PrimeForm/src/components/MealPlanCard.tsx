@@ -21,12 +21,12 @@ interface Props {
 }
 
 export default function MealPlanCard({ title, meals, totalCalories, completedMeals = new Set(), onPress, delay = 0 }: Props) {
-  const { t, language, transliterateText } = useLanguage();
+  const { t, language, transliterateText, transliterateNumbers } = useLanguage();
   
   // Helper function to check if meal is completed
   // Meal ID format: `${date}-${mealType}-${mealName}`
   // Example: "2025-12-17-breakfast-Vegetable Dalia (Broken Wheat Porridge)"
-  const isMealCompleted = (meal: MealItem): boolean => {
+  const isMealCompleted = React.useCallback((meal: MealItem): boolean => {
     // Get today's date in local timezone to avoid UTC offset
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
@@ -78,7 +78,19 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
       // Also check if it contains both date and meal name (for flexibility)
       return completedKey.includes(today) && completedKey.includes(mealType) && completedKey.includes(mealName);
     });
-  };
+  }, [completedMeals]);
+  
+  // ✅ Calculate consumed calories from completed meals (real-time)
+  const consumedCalories = React.useMemo(() => {
+    let consumed = 0;
+    meals.forEach(meal => {
+      if (isMealCompleted(meal)) {
+        consumed += meal.calories;
+      }
+    });
+    return consumed;
+  }, [meals, isMealCompleted]);
+  
   return (
     <Animated.View 
       entering={FadeInDown.delay(delay)} 
@@ -89,46 +101,57 @@ export default function MealPlanCard({ title, meals, totalCalories, completedMea
             <View style={styles.header}>
               <Text style={styles.title}>{title}</Text>
               <View style={styles.calorieContainer}>
-                <Text style={styles.calorieCount}>{totalCalories}</Text>
+                <Text style={styles.calorieCount}>
+                  {language === 'ur' ? transliterateNumbers(consumedCalories) : consumedCalories}
+                  <Text style={styles.calorieSeparator}>/</Text>
+                  {language === 'ur' ? transliterateNumbers(totalCalories) : totalCalories}
+                </Text>
                 <Text style={styles.calorieLabel}>{t('dashboard.stats.kcal')}</Text>
               </View>
             </View>
             
-            <View style={styles.mealList}>
-              {meals.map((meal, index) => {
-                const isCompleted = isMealCompleted(meal);
-                return (
-                <View key={index} style={[
-                  styles.mealItem,
-                  isCompleted && styles.mealItemCompleted
-                ]}>
-                  <View style={styles.mealIcon}>
-                    <Ionicons name="restaurant" size={16} color={colors.mutedText} />
-                  </View>
-                  
-                  <View style={styles.mealContent}>
-                    <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>
-                      {language === 'ur' ? transliterateText(meal.name) : meal.name}
-                    </Text>
-                    <View style={styles.mealDetails}>
-                      <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>
-                        {meal.calories} {t('dashboard.stats.kcal')}
-                      </Text>
-                      <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>
-                        {language === 'ur' ? transliterateText(meal.weight) : meal.weight}
-                      </Text>
+            {meals.length > 0 ? (
+              <View style={styles.mealList}>
+                {meals.map((meal, index) => {
+                  const isCompleted = isMealCompleted(meal);
+                  return (
+                  <View key={index} style={[
+                    styles.mealItem,
+                    isCompleted && styles.mealItemCompleted
+                  ]}>
+                    <View style={styles.mealIcon}>
+                      <Ionicons name="restaurant" size={16} color={colors.mutedText} />
                     </View>
-                  </View>
-                  
-                  {isCompleted && (
-                    <View style={styles.completedBadge}>
-                      <Text style={styles.completedIcon}>✓</Text>
+                    
+                    <View style={styles.mealContent}>
+                      <Text style={[styles.mealName, isCompleted && styles.mealNameCompleted]}>
+                        {language === 'ur' ? transliterateText(meal.name) : meal.name}
+                      </Text>
+                      <View style={styles.mealDetails}>
+                        <Text style={[styles.mealCalories, isCompleted && styles.mealCaloriesCompleted]}>
+                          {meal.calories} {t('dashboard.stats.kcal')}
+                        </Text>
+                        <Text style={[styles.mealWeight, isCompleted && styles.mealWeightCompleted]}>
+                          {language === 'ur' ? transliterateText(meal.weight) : meal.weight}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                </View>
-                );
-              })}
-            </View>
+                    
+                    {isCompleted && (
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedIcon}>✓</Text>
+                      </View>
+                    )}
+                  </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyMealContainer}>
+                <Text style={styles.emptyMealTitle}>{t('dashboard.empty.mealPlan.title')}</Text>
+                <Text style={styles.emptyMealText}>{t('dashboard.empty.mealPlan.text')}</Text>
+              </View>
+            )}
             
             {onPress && (
               <TouchableOpacity style={styles.viewAllButton} onPress={onPress}>
@@ -177,6 +200,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     fontFamily: fonts.heading,
+  },
+  calorieSeparator: {
+    color: colors.mutedText,
+    fontSize: 16,
+    fontWeight: '500',
   },
   calorieLabel: {
     color: colors.mutedText,
@@ -267,6 +295,23 @@ const styles = StyleSheet.create({
     fontSize: typography.small,
     fontWeight: '600',
     fontFamily: fonts.body,
+  },
+  emptyMealContainer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyMealTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '600',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.sm,
+  },
+  emptyMealText: {
+    color: colors.mutedText,
+    fontSize: 14,
+    fontFamily: fonts.body,
+    textAlign: 'center',
   },
 });
 

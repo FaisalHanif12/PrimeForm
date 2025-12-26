@@ -1,14 +1,105 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import * as Application from 'expo-application';
 
 const CURRENT_USER_ID_KEY = 'current_user_id';
+const DEVICE_ID_KEY = 'primeform_device_id';
+const HAS_EVER_SIGNED_UP_KEY = 'primeform_has_ever_signed_up';
+
+/**
+ * Generate a unique device identifier that persists across app reinstalls
+ * This uses the device's installation ID which is unique per device
+ */
+async function generateDeviceId(): Promise<string> {
+  try {
+    // Try to get the installation ID (persists across app reinstalls on the same device)
+    const installationId = await Application.getInstallationIdAsync();
+    if (installationId) {
+      return `device_${installationId}`;
+    }
+  } catch (error) {
+    console.warn('Failed to get installation ID:', error);
+  }
+
+  // Fallback: Generate a random UUID-like ID
+  const randomId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+  
+  return `device_${randomId}`;
+}
+
+/**
+ * Get or create a persistent device ID
+ * This ID is generated once and persists forever (even after app reinstall)
+ */
+async function getOrCreateDeviceId(): Promise<string> {
+  try {
+    // Check if device ID already exists
+    let deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY);
+    
+    if (!deviceId) {
+      // Generate new device ID
+      deviceId = await generateDeviceId();
+      await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId);
+    }
+    
+    return deviceId;
+  } catch (error) {
+    console.error('Error getting/creating device ID:', error);
+    // Return a temporary ID as fallback
+    return `temp_${Date.now()}`;
+  }
+}
+
+/**
+ * Check if user has ever signed up on this device
+ */
+async function hasEverSignedUp(): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(HAS_EVER_SIGNED_UP_KEY);
+    return value === 'true';
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Mark that user has signed up (permanent flag, never cleared)
+ */
+async function markUserSignedUp(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(HAS_EVER_SIGNED_UP_KEY, 'true');
+  } catch (error) {
+    console.error('Error marking user as signed up:', error);
+  }
+}
 
 /**
  * Get current user ID from storage
  */
 export async function getCurrentUserId(): Promise<string | null> {
   try {
-    return await AsyncStorage.getItem(CURRENT_USER_ID_KEY);
+    // First check if user has ever signed up
+    const signedUp = await hasEverSignedUp();
+    
+    if (signedUp) {
+      // If user has signed up, return their actual user ID (or null if logged out)
+      const userId = await AsyncStorage.getItem(CURRENT_USER_ID_KEY);
+      return userId;
+    }
+    
+    // If user has never signed up, check if they have an actual user ID from login
+    const userId = await AsyncStorage.getItem(CURRENT_USER_ID_KEY);
+    if (userId) {
+      // User is logged in, return their ID
+      return userId;
+    }
+    
+    // User is not logged in and has never signed up - return device ID as guest ID
+    const deviceId = await getOrCreateDeviceId();
+    return deviceId;
   } catch (error) {
     return null;
   }
@@ -16,10 +107,13 @@ export async function getCurrentUserId(): Promise<string | null> {
 
 /**
  * Set current user ID in storage
+ * This also marks that the user has signed up (permanent record)
  */
 export async function setCurrentUserId(userId: string): Promise<void> {
   try {
     await AsyncStorage.setItem(CURRENT_USER_ID_KEY, userId);
+    // Mark that user has signed up (permanent, never cleared)
+    await markUserSignedUp();
   } catch (error) {
     // Error setting current user ID - silently fail
   }
@@ -277,6 +371,82 @@ export async function validateCacheOnLogin(currentUserId: string): Promise<void>
     }
   } catch (error) {
     // Error validating cache on login - silently fail
+  }
+}
+
+/**
+ * Migrate guest data to authenticated user
+ * This is called when a user signs up or logs in for the first time
+ * It transfers data from the device ID (guest) to the actual user ID
+ * @param deviceId - The device/guest ID
+ * @param realUserId - The real authenticated user ID
+ */
+export async function migrateGuestDataToUser(deviceId: string, realUserId: string): Promise<void> {
+  try {
+    // Only migrate if the IDs are different and deviceId starts with 'device_'
+    if (deviceId === realUserId || !deviceId.startsWith('device_')) {
+      return;
+    }
+
+    const allKeys = await AsyncStorage.getAllKeys();
+    
+    // Find all keys that belong to the guest (device ID)
+    const guestKeys = allKeys.filter(key => key.startsWith(`user_${deviceId}_`));
+    
+    // Migrate each guest key to the real user
+    for (const guestKey of guestKeys) {
+      try {
+        const data = await AsyncStorage.getItem(guestKey);
+        if (data) {
+          // Create new key with real user ID
+          const newKey = guestKey.replace(`user_${deviceId}_`, `user_${realUserId}_`);
+          
+          // Parse the data if it's JSON and update userId field
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed && typeof parsed === 'object' && 'userId' in parsed) {
+              parsed.userId = realUserId;
+              await AsyncStorage.setItem(newKey, JSON.stringify(parsed));
+            } else {
+              await AsyncStorage.setItem(newKey, data);
+            }
+          } catch {
+            // Not JSON, just copy as is
+            await AsyncStorage.setItem(newKey, data);
+          }
+          
+          // Remove the old guest key
+          await AsyncStorage.removeItem(guestKey);
+        }
+      } catch (error) {
+        console.error(`Error migrating key ${guestKey}:`, error);
+        // Continue with other keys even if one fails
+      }
+    }
+    
+    console.log(`✅ Migrated ${guestKeys.length} guest data entries to user ${realUserId}`);
+  } catch (error) {
+    console.error('Error migrating guest data:', error);
+  }
+}
+
+/**
+ * Get the device ID (for guest users)
+ * This is exposed for debugging purposes
+ */
+export async function getDeviceId(): Promise<string> {
+  return await getOrCreateDeviceId();
+}
+
+/**
+ * Check if current session is using guest ID
+ */
+export async function isUsingGuestId(): Promise<boolean> {
+  try {
+    const currentId = await getCurrentUserId();
+    return currentId !== null && currentId.startsWith('device_');
+  } catch (error) {
+    return false;
   }
 }
 
