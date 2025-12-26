@@ -175,10 +175,11 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
     }
   }, [visible]);
 
-  // ✅ CRITICAL: Check for cached profile when modal opens
-  // This ensures profile data is loaded even if parent component hasn't loaded it yet
+  // ✅ OPTIMIZED: Check for cached profile when modal opens
+  // Implements request cancellation and avoids redundant API calls
   useEffect(() => {
     let isCancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const checkProfile = async () => {
       // Only check if modal is visible and we don't already have userInfo
@@ -186,71 +187,83 @@ export default function ProfilePage({ visible, onClose, userInfo, onUpdateUserIn
         return;
       }
 
-      // If we already have userInfo from parent, don't reload
+      // ✅ OPTIMIZATION: If we already have userInfo from parent, trust it and skip all checks
       if (userInfo) {
         setHasCheckedExisting(true);
         return;
       }
 
-      // If we've already checked and found nothing, don't check again
+      // ✅ OPTIMIZATION: If we've already checked, don't check again (prevent duplicate calls)
       if (hasCheckedExisting) {
         return;
       }
 
-      // First, quickly check cached data (fast, no loading needed)
-      try {
-        const cachedData = await userProfileService.getCachedData();
-        
-        if (cachedData && cachedData.success && cachedData.data) {
-          // Validate cached data belongs to current user
-          const { getCurrentUserId, validateCachedData } = await import('../utils/cacheKeys');
-          const userId = await getCurrentUserId();
-          if (userId && validateCachedData(cachedData.data, userId)) {
-            // We have cached profile data - use it immediately
-            if (onUpdateUserInfo) {
-              onUpdateUserInfo(cachedData.data as any);
-            }
-            setHasCheckedExisting(true);
-            return; // Don't make API call if we have valid cached data
-          }
-        }
-      } catch (error) {
-        // Ignore cache errors, continue to check API
-      }
-
-      // No cached data found - check API
-      setHasCheckedExisting(true);
-      setIsInitialLoading(false);
-
-      // Check API in background (non-blocking)
-      // This ensures we catch any profile that might exist on server but wasn't cached
-      try {
-        const response = await userProfileService.getUserProfile();
-
+      // ✅ OPTIMIZATION: Debounce rapid modal open/close to prevent race conditions
+      timeoutId = setTimeout(async () => {
         if (isCancelled) return;
 
-        // ✅ CRITICAL: Handle undefined/null responses gracefully
-        if (response && typeof response === 'object' && 'success' in response) {
-          if (response.success && response.data) {
-            // We found a profile on server - update parent
-            if (onUpdateUserInfo) {
-              onUpdateUserInfo(response.data as any);
+        // First, quickly check cached data (fast, no loading needed)
+        try {
+          const cachedData = await userProfileService.getCachedData();
+          
+          if (cachedData && cachedData.success && cachedData.data) {
+            // Validate cached data belongs to current user
+            const { getCurrentUserId, validateCachedData } = await import('../utils/cacheKeys');
+            const userId = await getCurrentUserId();
+            if (userId && validateCachedData(cachedData.data, userId)) {
+              if (isCancelled) return;
+              
+              // We have cached profile data - use it immediately
+              if (onUpdateUserInfo) {
+                onUpdateUserInfo(cachedData.data as any);
+              }
+              setHasCheckedExisting(true);
+              return; // ✅ OPTIMIZATION: Skip API call if cache is valid
             }
           }
+        } catch (error) {
+          // Ignore cache errors, continue to check API
         }
-        // If no profile found, that's fine - user can create one
-      } catch (error) {
-        // Ignore API errors - user can still create profile
-      }
+
+        // No cached data found - mark as checked (prevents duplicate calls)
+        setHasCheckedExisting(true);
+        setIsInitialLoading(false);
+
+        // ✅ OPTIMIZATION: Only make API call if absolutely necessary (cache miss)
+        // Skip API call if parent already attempted to load or cache is fresh
+        try {
+          if (isCancelled) return;
+          
+          const response = await userProfileService.getUserProfile();
+
+          if (isCancelled) return;
+
+          // ✅ CRITICAL: Handle undefined/null responses gracefully
+          if (response && typeof response === 'object' && 'success' in response) {
+            if (response.success && response.data) {
+              // We found a profile on server - update parent
+              if (onUpdateUserInfo) {
+                onUpdateUserInfo(response.data as any);
+              }
+            }
+          }
+          // If no profile found, that's fine - user can create one
+        } catch (error) {
+          // Ignore API errors - user can still create profile
+        }
+      }, 100); // ✅ OPTIMIZATION: 100ms debounce to prevent rapid calls
     };
 
-    // Always check when modal becomes visible
+    // Check when modal becomes visible
     if (visible) {
       checkProfile();
     }
 
     return () => {
       isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [visible, userInfo, hasCheckedExisting, onUpdateUserInfo]);
 

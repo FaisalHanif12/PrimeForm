@@ -46,7 +46,7 @@ export interface ProfileCompletionStatus {
 
 class UserProfileService {
   private cache: { data: any; timestamp: number; userId?: string } | null = null;
-  private cacheTimeout = 30 * 60 * 1000; // 30 minutes cache - profile rarely changes
+  private cacheTimeout = 60 * 60 * 1000; // ✅ OPTIMIZED: Extended to 60 minutes (profile rarely changes)
   private isLoading = false;
   private pendingCall: Promise<any> | null = null;
   private hasInitialized = false;

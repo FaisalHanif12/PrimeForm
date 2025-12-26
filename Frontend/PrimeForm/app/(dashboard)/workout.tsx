@@ -97,118 +97,170 @@ export default function WorkoutScreen() {
     return value;
   };
 
+  // ✅ OPTIMIZED: Initialize with request cancellation and debouncing
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        // OPTIMIZATION: Use cached data only - no API calls on page visit
-        // User profile is passed from dashboard or loaded from cache
-        const cachedData = await userProfileService.getCachedData();
-        // Validate cached data belongs to current user
-        if (cachedData && cachedData.data) {
-          const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
-          const userId = await getCurrentUserId();
-          if (userId && validateCachedData(cachedData.data, userId)) {
-            setUserInfo(cachedData.data);
-            setIsLoading(false);
-          } else {
-            // Cached data doesn't belong to current user, clear it
-            await userProfileService.clearCache();
-            setIsLoading(false);
-          }
-        } else {
-          // No cached data - show profile creation UI
-          setIsLoading(false);
-        }
+    let isCancelled = false;
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
-        // ✅ CRITICAL: First check local storage with user-specific key
-        // This prevents showing generation screen if plan exists locally
-        setLoadError(null);
+    const initializeData = async () => {
+      // ✅ OPTIMIZATION: Debounce to prevent race conditions on rapid navigation
+      debounceTimeout = setTimeout(async () => {
+        if (isCancelled) return;
+        
         try {
-          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
-          const Storage = await import('../../src/utils/storage');
+          // OPTIMIZATION: Use cached data only - no API calls on page visit
+          // User profile is passed from dashboard or loaded from cache
+          const cachedData = await userProfileService.getCachedData();
           
-          const userId = await getCurrentUserId();
-          if (userId) {
-            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
-            const cachedPlan = await Storage.default.getItem(userCacheKey);
-            if (cachedPlan) {
-              const plan = JSON.parse(cachedPlan);
-              // Validate cached data belongs to current user
-              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                setWorkoutPlan(plan);
-                setHasCheckedLocalStorage(true);
-                // ✅ OPTIMIZATION: Only sync in background if cache might be stale (older than 30 minutes)
-                // Diet/workout plans don't change frequently, so we can extend cache time
-                // This prevents unnecessary API calls when data is fresh
-                const planTimestamp = plan.updatedAt || plan.createdAt;
-                const CACHE_STALE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
-                const shouldSync = planTimestamp 
-                  ? (Date.now() - new Date(planTimestamp).getTime() > CACHE_STALE_THRESHOLD)
-                  : false; // If no timestamp, assume cache is fresh (don't sync)
-                
-                if (shouldSync) {
-                  // Only sync if cache might be stale
-                  aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
-                    if (dbPlan && dbPlan !== plan) {
-                      setWorkoutPlan(dbPlan);
-                    }
-                  }).catch(() => {
-                    // Ignore background sync errors
-                  });
+          if (isCancelled) return;
+          
+          // Validate cached data belongs to current user
+          if (cachedData && cachedData.data) {
+            const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+            const userId = await getCurrentUserId();
+            
+            if (isCancelled) return;
+            
+            if (userId && validateCachedData(cachedData.data, userId)) {
+              setUserInfo(cachedData.data);
+              setIsLoading(false);
+            } else {
+              // Cached data doesn't belong to current user, clear it
+              await userProfileService.clearCache();
+              if (!isCancelled) setIsLoading(false);
+            }
+          } else {
+            // No cached data - show profile creation UI
+            if (!isCancelled) setIsLoading(false);
+          }
+
+          if (isCancelled) return;
+
+          // ✅ CRITICAL: First check local storage with user-specific key
+          // This prevents showing generation screen if plan exists locally
+          setLoadError(null);
+          try {
+            const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
+            const Storage = await import('../../src/utils/storage');
+            
+            const userId = await getCurrentUserId();
+            
+            if (isCancelled) return;
+            
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+              const cachedPlan = await Storage.default.getItem(userCacheKey);
+              
+              if (isCancelled) return;
+              
+              if (cachedPlan) {
+                const plan = JSON.parse(cachedPlan);
+                // Validate cached data belongs to current user
+                if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                  setWorkoutPlan(plan);
+                  setHasCheckedLocalStorage(true);
+                  // ✅ OPTIMIZATION: Only sync in background if cache might be stale (older than 30 minutes)
+                  // Diet/workout plans don't change frequently, so we can extend cache time
+                  // This prevents unnecessary API calls when data is fresh
+                  const planTimestamp = plan.updatedAt || plan.createdAt;
+                  const CACHE_STALE_THRESHOLD = 30 * 60 * 1000; // 30 minutes
+                  const shouldSync = planTimestamp 
+                    ? (Date.now() - new Date(planTimestamp).getTime() > CACHE_STALE_THRESHOLD)
+                    : false; // If no timestamp, assume cache is fresh (don't sync)
+                  
+                  if (shouldSync && !isCancelled) {
+                    // Only sync if cache might be stale
+                    aiWorkoutService.loadWorkoutPlanFromDatabase().then((dbPlan) => {
+                      if (!isCancelled && dbPlan && dbPlan !== plan) {
+                        setWorkoutPlan(dbPlan);
+                      }
+                    }).catch(() => {
+                      // Ignore background sync errors
+                    });
+                  }
+                  
+                  if (!isCancelled) {
+                    setIsLoadingPlan(false);
+                    setInitialLoadComplete(true);
+                  }
+                  return;
                 }
-                setIsLoadingPlan(false);
-                setInitialLoadComplete(true);
-                return;
               }
             }
+          } catch (localError) {
+            // Ignore local storage errors
           }
-        } catch (localError) {
-          // Ignore local storage errors
-        }
-        
-        setHasCheckedLocalStorage(true);
-        
-        // Load workout plan from database
-        const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
-        if (plan) {
-          setWorkoutPlan(plan);
-        }
-      } catch (error) {
-        
-        // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
-        try {
-          const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
-          const Storage = await import('../../src/utils/storage');
           
-          const userId = await getCurrentUserId();
-          if (userId) {
-            const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
-            const cachedPlan = await Storage.default.getItem(userCacheKey);
-            if (cachedPlan) {
-              const plan = JSON.parse(cachedPlan);
-              // Validate cached data belongs to current user
-              if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
-                setWorkoutPlan(plan);
-                setLoadError(null); // Clear error since we found plan locally
-                setIsLoadingPlan(false);
-                setInitialLoadComplete(true);
-                return;
+          if (!isCancelled) {
+            setHasCheckedLocalStorage(true);
+          }
+          
+          if (isCancelled) return;
+          
+          // Load workout plan from database
+          const plan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+          
+          if (!isCancelled && plan) {
+            setWorkoutPlan(plan);
+          }
+        } catch (error) {
+          
+          if (isCancelled) return;
+          
+          // ✅ CRITICAL: On error, try local storage as last resort before showing generation screen
+          try {
+            const { getCurrentUserId, getUserCacheKey, validateCachedData } = await import('../../src/utils/cacheKeys');
+            const Storage = await import('../../src/utils/storage');
+            
+            const userId = await getCurrentUserId();
+            
+            if (isCancelled) return;
+            
+            if (userId) {
+              const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
+              const cachedPlan = await Storage.default.getItem(userCacheKey);
+              
+              if (isCancelled) return;
+              
+              if (cachedPlan) {
+                const plan = JSON.parse(cachedPlan);
+                // Validate cached data belongs to current user
+                if (validateCachedData(plan, userId) && plan && plan.weeklyPlan && Array.isArray(plan.weeklyPlan) && plan.weeklyPlan.length > 0) {
+                  setWorkoutPlan(plan);
+                  if (!isCancelled) {
+                    setLoadError(null); // Clear error since we found plan locally
+                    setIsLoadingPlan(false);
+                    setInitialLoadComplete(true);
+                  }
+                  return;
+                }
               }
             }
+          } catch (localError) {
+            // Ignore local storage errors
           }
-        } catch (localError) {
-          // Ignore local storage errors
+          
+          // Only set error if we truly have no plan
+          if (!isCancelled) {
+            setLoadError('Failed to load workout plan. Please check your connection.');
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsLoadingPlan(false);
+            setInitialLoadComplete(true);
+          }
         }
-        
-        // Only set error if we truly have no plan
-        setLoadError('Failed to load workout plan. Please check your connection.');
-      } finally {
-        setIsLoadingPlan(false);
-        setInitialLoadComplete(true);
-      }
+      }, 50); // ✅ Small debounce to prevent rapid calls
     };
 
     initializeData();
+
+    return () => {
+      isCancelled = true;
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+    };
   }, []);
 
   // Reset layout when screen comes into focus (after returning from modals)

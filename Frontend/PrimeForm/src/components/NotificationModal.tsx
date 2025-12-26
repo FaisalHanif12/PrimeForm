@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Dimensions,
   RefreshControl,
-  Alert,
   ActivityIndicator,
   Image
 } from 'react-native';
@@ -17,6 +16,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { colors } from '../theme/colors';
+import CustomAlert from './CustomAlert';
 
 const { width, height } = Dimensions.get('window');
 
@@ -46,6 +46,19 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
   const [refreshing, setRefreshing] = useState(false);
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
+  
+  // Custom alert state
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: Array<{ text: string; onPress?: () => void; style?: 'default' | 'cancel' | 'destructive' }>;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    buttons: [],
+  });
 
   // Handle refresh
   const handleRefresh = async () => {
@@ -83,26 +96,41 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
       return;
     }
 
-    Alert.alert(
-      t('notification.mark.all.read'),
-      t('notification.mark.all.read.confirm'),
-      [
+    setAlertConfig({
+      visible: true,
+      title: t('notification.mark.all.read'),
+      message: t('notification.mark.all.read.confirm'),
+      buttons: [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('notification.mark.all.read'), onPress: markAllAsRead }
+        { 
+          text: t('notification.mark.all.read'), 
+          onPress: () => {
+            markAllAsRead();
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+          }
+        }
       ]
-    );
+    });
   };
 
   // Handle delete notification
   const handleDeleteNotification = (notificationId: string) => {
-    Alert.alert(
-      t('notification.delete'),
-      t('notification.delete.confirm'),
-      [
+    setAlertConfig({
+      visible: true,
+      title: t('notification.delete'),
+      message: t('notification.delete.confirm'),
+      buttons: [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: language === 'ur' ? 'حذف' : 'Delete', style: 'destructive', onPress: () => deleteNotification(notificationId) }
+        { 
+          text: language === 'ur' ? 'حذف' : 'Delete', 
+          style: 'destructive', 
+          onPress: () => {
+            deleteNotification(notificationId);
+            setAlertConfig(prev => ({ ...prev, visible: false }));
+          }
+        }
       ]
-    );
+    });
   };
 
   // Handle bulk actions
@@ -114,10 +142,12 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
 
     const actionText = action === 'markAsRead' ? t('notification.bulk.mark.read') : t('notification.bulk.delete');
     const actionKey = action === 'markAsRead' ? 'mark as read' : 'delete';
-    Alert.alert(
-      actionText,
-      t('notification.bulk.action.confirm').replace('{action}', actionKey).replace('{count}', String(selectedNotifications.length)),
-      [
+    
+    setAlertConfig({
+      visible: true,
+      title: actionText,
+      message: t('notification.bulk.action.confirm').replace('{action}', actionKey).replace('{count}', String(selectedNotifications.length)),
+      buttons: [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: action === 'markAsRead' ? t('notification.mark.all.read') : (language === 'ur' ? 'حذف' : 'Delete'),
@@ -134,10 +164,11 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
             }
             setSelectedNotifications([]);
             setSelectionMode(false);
+            setAlertConfig(prev => ({ ...prev, visible: false }));
           }
         }
       ]
-    );
+    });
   };
 
   // Clear error when modal opens
@@ -318,6 +349,15 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
             </ScrollView>
           )}
         </View>
+
+        {/* Custom Alert */}
+        <CustomAlert
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          buttons={alertConfig.buttons}
+          onClose={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+        />
       </View>
     </Modal>
   );
