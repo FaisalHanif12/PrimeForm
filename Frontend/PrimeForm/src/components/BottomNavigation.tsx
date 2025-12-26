@@ -51,22 +51,24 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 
   // Platform-aware positioning and padding
   // iOS: Position perfectly at bottom with proper home indicator spacing
-  // Android: Fixed position at bottom for consistency
+  // Android: Fixed positioning - consistent across all pages
   const isIOS = Platform.OS === 'ios';
   
   // iOS: Minimal padding - just enough for home indicator
-  // Android: Minimal padding for consistent positioning
+  // Android: Fixed minimal padding for consistency
   const bottomPadding = isIOS 
     ? Math.max(insets.bottom - 8, spacing.xs) // Reduce padding slightly for perfect fit
-    : spacing.xs; // Fixed minimal padding for Android
+    : spacing.sm; // Fixed padding for Android
   
+  // Fixed bottom offset for Android - no insets calculation
+  // This ensures consistent positioning across all pages
   const bottomOffset = isIOS 
     ? spacing.xs // Very small offset to prevent cutoff on iOS
-    : spacing.md; // Fixed offset for Android - consistent across all pages
+    : spacing.md; // Fixed offset for Android - consistent positioning
     
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 
-    : NAVIGATION_HEIGHT_ANDROID; // Keep Android unchanged
+    : NAVIGATION_HEIGHT_ANDROID; // Fixed height for Android
 
   return (
     <View
