@@ -23,59 +23,56 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Icons8 Exercise Icon Mapping
+// Icons8 Exercise Icon Mapping - All icons from Icons8 API
 const exerciseIcons: Record<string, string> = {
-  // Chest exercises
-  pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
-  bench_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/bench-press.png',
-  chest_flyes: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
-  incline_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
-  dips: 'https://img.icons8.com/ios-filled/100/FFFFFF/parallel-tasks.png',
-  diamond_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
-  wall_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
-  decline_pushups: 'https://img.icons8.com/ios-filled/100/FFFFFF/push.png',
+  // Chest exercises - Push variations
+  military_pushups: 'https://img.icons8.com/?size=100&id=9760&format=png&color=FFFFFF',     // Pushups icon
+  staggered_pushups: 'https://img.icons8.com/?size=100&id=55884&format=png&color=FFFFFF',   // Push icon (ios_filled)
+  wide_arm_pushup: 'https://img.icons8.com/?size=100&id=9760&format=png&color=FFFFFF',      // Pushups icon
+  decline_pushups: 'https://img.icons8.com/?size=100&id=377&format=png&color=FFFFFF',       // Decline icon
+  incline_pushups: 'https://img.icons8.com/?size=100&id=9760&format=png&color=FFFFFF',      // Pushups icon
+  diamond_pushups: 'https://img.icons8.com/?size=100&id=9760&format=png&color=FFFFFF',      // Pushups icon
   
   // Back exercises
-  pullups: 'https://img.icons8.com/ios-filled/100/FFFFFF/pull-up.png',
-  rows: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
-  superman: 'https://img.icons8.com/ios-filled/100/FFFFFF/superman.png',
-  lat_pulldowns: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
-  reverse_flyes: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
-  face_pulls: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
+  pullups: 'https://img.icons8.com/?size=100&id=fDk83CIGXN0s&format=png&color=FFFFFF',      // Pull Up Bar (ios_filled)
+  deadlifts: 'https://img.icons8.com/?size=100&id=62779&format=png&color=FFFFFF',           // Deadlift (ios_filled)
+  superman: 'https://img.icons8.com/?size=100&id=41519&format=png&color=FFFFFF',            // Superman (ios_filled)
+  rows: 'https://img.icons8.com/?size=100&id=9784&format=png&color=FFFFFF',                 // Barbell (ios_filled)
   
   // Arms exercises
-  bicep_curls: 'https://img.icons8.com/ios-filled/100/FFFFFF/curls-with-dumbbells.png',
-  tricep_dips: 'https://img.icons8.com/ios-filled/100/FFFFFF/parallel-tasks.png',
-  hammer_curls: 'https://img.icons8.com/ios-filled/100/FFFFFF/dumbbell.png',
-  overhead_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
-  arm_circles: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  bicep_curls: 'https://img.icons8.com/?size=100&id=9782&format=png&color=FFFFFF',          // Curls With Dumbbells (ios_filled)
+  tricep_dips: 'https://img.icons8.com/?size=100&id=9848&format=png&color=FFFFFF',          // Bench Over Head (workout icon)
+  hammer_curls: 'https://img.icons8.com/?size=100&id=9782&format=png&color=FFFFFF',         // Curls With Dumbbells (ios_filled)
+  overhead_press: 'https://img.icons8.com/?size=100&id=9819&format=png&color=FFFFFF',       // Bench Press (ios_filled)
+  shoulder_press: 'https://img.icons8.com/?size=100&id=1VZWuCYuAsjq&format=png&color=FFFFFF', // Fit icon (showing muscle)
   
   // Legs exercises
-  squats: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
-  lunges: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
-  calf_raises: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
-  wall_sit: 'https://img.icons8.com/ios-filled/100/FFFFFF/chair.png',
-  jump_squats: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
-  step_ups: 'https://img.icons8.com/ios-filled/100/FFFFFF/stairs.png',
+  squats: 'https://img.icons8.com/?size=100&id=9833&format=png&color=FFFFFF',               // Fitness/Bench Press with Dumbbells (ios_filled)
+  lunges: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',               // Exercise icon (ios_filled)
+  jump_squats: 'https://img.icons8.com/?size=100&id=H3XYSFIHqHXm&format=png&color=FFFFFF',  // Jumping icon
+  squat_kicks: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',          // Exercise icon (ios_filled)
+  squat_reach: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',          // Exercise icon (ios_filled)
+  split_jump: 'https://img.icons8.com/?size=100&id=H3XYSFIHqHXm&format=png&color=FFFFFF',   // Jumping icon
+  leg_press: 'https://img.icons8.com/?size=100&id=9816&format=png&color=FFFFFF',            // Leg icon (ios_filled)
+  single_leg_rotation: 'https://img.icons8.com/?size=100&id=9816&format=png&color=FFFFFF',  // Leg icon (ios_filled)
   
   // Abs exercises
-  planks: 'https://img.icons8.com/ios-filled/100/FFFFFF/plank.png',
-  crunches: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
-  mountain_climbers: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
-  bicycle_crunches: 'https://img.icons8.com/ios-filled/100/FFFFFF/cycling.png',
-  leg_raises: 'https://img.icons8.com/ios-filled/100/FFFFFF/leg.png',
-  russian_twists: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
-  dead_bug: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
+  planks: 'https://img.icons8.com/?size=100&id=108446&format=png&color=FFFFFF',             // Plank (ios_filled)
+  t_plank: 'https://img.icons8.com/?size=100&id=108446&format=png&color=FFFFFF',            // Plank (ios_filled)
+  crunches: 'https://img.icons8.com/?size=100&id=71221&format=png&color=FFFFFF',            // Sit Ups (ios11)
+  sit_ups: 'https://img.icons8.com/?size=100&id=71221&format=png&color=FFFFFF',             // Sit Ups (ios11)
+  flutter_kicks: 'https://img.icons8.com/?size=100&id=9816&format=png&color=FFFFFF',        // Leg icon (ios_filled)
+  reverse_crunches: 'https://img.icons8.com/?size=100&id=71221&format=png&color=FFFFFF',    // Sit Ups (ios11)
+  deadbug: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',              // Exercise icon (ios_filled)
+  seated_abs_circles: 'https://img.icons8.com/?size=100&id=71221&format=png&color=FFFFFF',  // Sit Ups (ios11)
+  frog_press: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',           // Exercise icon (ios_filled)
   
   // Full body exercises
-  burpees: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
-  jumping_jacks: 'https://img.icons8.com/ios-filled/100/FFFFFF/jumping-rope.png',
-  deadlifts: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
-  thrusters: 'https://img.icons8.com/ios-filled/100/FFFFFF/barbell.png',
-  bear_crawl: 'https://img.icons8.com/ios-filled/100/FFFFFF/bear.png',
-  turkish_getup: 'https://img.icons8.com/ios-filled/100/FFFFFF/exercise.png',
-  high_knees: 'https://img.icons8.com/ios-filled/100/FFFFFF/running.png',
-  squat_to_press: 'https://img.icons8.com/ios-filled/100/FFFFFF/squats.png',
+  burpees: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',              // Exercise icon (ios_filled)
+  jumping_jacks: 'https://img.icons8.com/?size=100&id=BWzYFbn67l37&format=png&color=FFFFFF', // Skipping Rope (ios_filled)
+  running: 'https://img.icons8.com/?size=100&id=916&format=png&color=FFFFFF',               // Running (ios7)
+  punches: 'https://img.icons8.com/?size=100&id=9795&format=png&color=FFFFFF',              // Boxing glove (ios_filled)
+  squat_kick: 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF',           // Exercise icon (ios_filled)
 };
 
 // Enhanced exercise database with comprehensive data and animations
@@ -664,7 +661,8 @@ export default function GymExercisesScreen() {
   const renderExerciseCard = (exercise: any, index: number) => {
     // Get difficulty color and icon
     const difficultyColor = difficultyColors[exercise.difficulty as keyof typeof difficultyColors];
-    const iconUrl = exerciseIcons[exercise.id] || exerciseIcons.pushups;
+    // Fallback to general exercise icon if specific icon not found
+    const iconUrl = exerciseIcons[exercise.id] || 'https://img.icons8.com/?size=100&id=9769&format=png&color=FFFFFF';
     
     return (
       <Animated.View
