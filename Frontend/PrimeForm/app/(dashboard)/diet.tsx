@@ -83,39 +83,68 @@ export default function DietScreen() {
     return value;
   };
 
+  // ✅ OPTIMIZED: Initialize with request cancellation and debouncing
   useEffect(() => {
+    let isCancelled = false;
+    let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
+
     const initializeData = async () => {
-      try {
-        // OPTIMIZATION: Use cached data only - no API calls on page visit
-        const cachedData = await userProfileService.getCachedData();
-        // Validate cached data belongs to current user
-        if (cachedData && cachedData.data) {
-          const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
-          const userId = await getCurrentUserId();
-          if (userId && validateCachedData(cachedData.data, userId)) {
-            setUserInfo(cachedData.data);
-            setIsLoading(false);
+      // ✅ OPTIMIZATION: Debounce to prevent race conditions on rapid navigation
+      debounceTimeout = setTimeout(async () => {
+        if (isCancelled) return;
+        
+        try {
+          // OPTIMIZATION: Use cached data only - no API calls on page visit
+          const cachedData = await userProfileService.getCachedData();
+          
+          if (isCancelled) return;
+          
+          // Validate cached data belongs to current user
+          if (cachedData && cachedData.data) {
+            const { getCurrentUserId, validateCachedData } = await import('../../src/utils/cacheKeys');
+            const userId = await getCurrentUserId();
+            
+            if (isCancelled) return;
+            
+            if (userId && validateCachedData(cachedData.data, userId)) {
+              setUserInfo(cachedData.data);
+              setIsLoading(false);
+            } else {
+              // Cached data doesn't belong to current user, clear it
+              await userProfileService.clearCache();
+              if (!isCancelled) setIsLoading(false);
+            }
           } else {
-            // Cached data doesn't belong to current user, clear it
-            await userProfileService.clearCache();
+            // No cached data - show profile creation UI
+            if (!isCancelled) setIsLoading(false);
+          }
+
+          // Load diet plan from local cache only (no API call)
+          if (!isCancelled) {
+            await loadDietPlan();
+          }
+        } catch (error) {
+          // Error during initialization
+          if (!isCancelled) {
             setIsLoading(false);
           }
-        } else {
-          // No cached data - show profile creation UI
-          setIsLoading(false);
+        } finally {
+          if (!isCancelled) {
+            setIsLoadingPlan(false);
+            setInitialLoadComplete(true);
+          }
         }
-
-        // Load diet plan from local cache only (no API call)
-        await loadDietPlan();
-      } catch (error) {
-        // Error during initialization
-      } finally {
-        setIsLoadingPlan(false);
-        setInitialLoadComplete(true);
-      }
+      }, 50); // ✅ Small debounce to prevent rapid calls
     };
 
     initializeData();
+
+    return () => {
+      isCancelled = true;
+      if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+      }
+    };
   }, []);
 
   // Reset layout when screen comes into focus (after returning from modals)
@@ -625,8 +654,6 @@ export default function DietScreen() {
         </View>
       );
     }
-
-    // Only show generation screens if we've confirmed no plan exists
     if (userInfo) {
       // User has profile but no diet plan - show richer profile summary and generate button
       return (

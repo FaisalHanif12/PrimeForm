@@ -49,33 +49,74 @@ export default function RootLayout() {
               <Stack screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: colors.background },
+                animation: 'fade',
+                animationDuration: 200,
+                fullScreenGestureEnabled: false,
               }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="auth/login" />
-                <Stack.Screen name="auth/signup" />
-                <Stack.Screen name="auth/forgot" />
-                <Stack.Screen name="auth/otp-verification" />
-                <Stack.Screen name="auth/reset-password" />
-                <Stack.Screen name="(dashboard)" />
+                <Stack.Screen 
+                  name="index"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="auth/login"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="auth/signup"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="auth/forgot"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="auth/otp-verification"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="auth/reset-password"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
+                <Stack.Screen 
+                  name="(dashboard)"
+                  options={{
+                    animation: 'fade',
+                  }}
+                />
                 <Stack.Screen
                   name="gym-exercises"
                   options={{
                     presentation: 'card',
-                    animation: 'slide_from_right',
+                    animation: 'fade_from_bottom',
+                    animationDuration: 250,
                   }}
                 />
                 <Stack.Screen
                   name="exercise-workout"
                   options={{
-                    presentation: 'fullScreenModal',
-                    animation: 'slide_from_bottom',
+                    presentation: 'transparentModal',
+                    animation: 'fade',
+                    animationDuration: 250,
                   }}
                 />
                 <Stack.Screen
                   name="workout-player"
                   options={{
-                    presentation: 'fullScreenModal',
-                    animation: 'slide_from_bottom',
+                    presentation: 'transparentModal',
+                    animation: 'fade',
+                    animationDuration: 250,
                   }}
                 />
               </Stack>
