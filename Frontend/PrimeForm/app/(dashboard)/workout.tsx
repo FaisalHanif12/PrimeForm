@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions, ActivityIndicator, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, Alert, TouchableOpacity, Dimensions, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
@@ -266,9 +266,10 @@ export default function WorkoutScreen() {
   // Reset layout when screen comes into focus (after returning from modals)
   useFocusEffect(
     React.useCallback(() => {
-      // Reset status bar to ensure proper layout
+      // Reset status bar to ensure proper layout for both iOS and Android
       StatusBar.setBarStyle('light-content');
-      if (StatusBar.setBackgroundColor) {
+      // Android-specific: Set background color
+      if (Platform.OS === 'android' && StatusBar.setBackgroundColor) {
         StatusBar.setBackgroundColor(colors.background, true);
       }
     }, [])
@@ -851,6 +852,8 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    // Ensure proper spacing on Android where SafeAreaView doesn't work the same as iOS
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   mainContainer: {
     flex: 1,

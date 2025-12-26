@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Modal, ScrollView, Alert, TouchableOpacity, Dimensions, Image, ActivityIndicator, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Modal, ScrollView, Alert, TouchableOpacity, Dimensions, Image, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInLeft, FadeInRight, SlideInUp } from 'react-native-reanimated';
@@ -544,10 +544,11 @@ export default function DietScreen() {
               // Set deletion flag FIRST to prevent cache reload
               setJustDeleted(true);
               
-              // Clear all diet plan data from database and cache
+              // ✅ CRITICAL FIX: Only clear the diet plan, NOT completion data
+              // The service now preserves all meal completions and water intake
               await aiDietService.clearDietPlanFromDatabase();
               
-              // Also manually clear any remaining cache keys (double-check for completeness)
+              // ✅ Double-check: Manually clear ONLY the diet plan cache (NOT completion data)
               const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
               const Storage = await import('../../src/utils/storage');
               const userId = await getCurrentUserId();
@@ -555,25 +556,12 @@ export default function DietScreen() {
               if (userId) {
                 const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
                 await Storage.default.removeItem(userCacheKey);
-                
-                // Clear all related completion data
-                const completedMealsKey = await getUserCacheKey('completed_meals', userId);
-                const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
-                const waterIntakeKey = await getUserCacheKey('water_intake', userId);
-                const waterCompletedKey = await getUserCacheKey('water_completed', userId);
-                
-                await Storage.default.removeItem(completedMealsKey);
-                await Storage.default.removeItem(completedDaysKey);
-                await Storage.default.removeItem(waterIntakeKey);
-                await Storage.default.removeItem(waterCompletedKey);
+                // ✅ DO NOT clear completion data: completed_meals, completed_diet_days, water_intake, water_completed
               }
               
-              // Clear global keys as well
+              // Clear global plan key only (not completion data)
               await Storage.default.removeItem('cached_diet_plan');
-              await Storage.default.removeItem('completed_meals');
-              await Storage.default.removeItem('completed_diet_days');
-              await Storage.default.removeItem('water_intake');
-              await Storage.default.removeItem('water_completed');
+              // ✅ DO NOT clear: completed_meals, completed_diet_days, water_intake, water_completed
               
               // Clear local state immediately to trigger UI update
               setDietPlan(null);
@@ -603,23 +591,10 @@ export default function DietScreen() {
                 if (userId) {
                   const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
                   await Storage.default.removeItem(userCacheKey);
-                  
-                  // Clear completion data as well
-                  const completedMealsKey = await getUserCacheKey('completed_meals', userId);
-                  const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
-                  const waterIntakeKey = await getUserCacheKey('water_intake', userId);
-                  const waterCompletedKey = await getUserCacheKey('water_completed', userId);
-                  
-                  await Storage.default.removeItem(completedMealsKey);
-                  await Storage.default.removeItem(completedDaysKey);
-                  await Storage.default.removeItem(waterIntakeKey);
-                  await Storage.default.removeItem(waterCompletedKey);
+                  // ✅ DO NOT clear completion data even in error fallback
                 }
                 await Storage.default.removeItem('cached_diet_plan');
-                await Storage.default.removeItem('completed_meals');
-                await Storage.default.removeItem('completed_diet_days');
-                await Storage.default.removeItem('water_intake');
-                await Storage.default.removeItem('water_completed');
+                // ✅ DO NOT clear: completed_meals, completed_diet_days, water_intake, water_completed
               } catch (cacheError) {
                 // Ignore cache clearing errors
               }
@@ -839,6 +814,7 @@ export default function DietScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   mainContainer: {
     flex: 1,

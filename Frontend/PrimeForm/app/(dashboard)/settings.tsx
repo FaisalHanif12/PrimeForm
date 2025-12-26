@@ -9,6 +9,8 @@ import {
   Alert,
   Dimensions,
   SafeAreaView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -23,6 +25,7 @@ import NotificationModal from '../../src/components/NotificationModal';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { api } from '../../src/config/api';
 import Storage from '../../src/utils/storage';
+import { getCurrentUserId, isUsingGuestId } from '../../src/utils/cacheKeys';
 
 const { width, height } = Dimensions.get('window');
 
@@ -68,6 +71,22 @@ export default function SettingsPage() {
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
+
+  // Debug: Log current user ID on mount and when user changes
+  useEffect(() => {
+    const checkUserId = async () => {
+      const userId = await getCurrentUserId();
+      const guestStatus = await isUsingGuestId();
+      setCurrentUserId(userId);
+      setIsGuest(guestStatus);
+      console.log('📱 Current User ID:', userId);
+      console.log('👤 Is Guest:', guestStatus);
+      console.log('🔐 Is Authenticated:', isAuthenticated);
+    };
+    checkUserId();
+  }, [user, isAuthenticated]);
 
   const handleProfilePress = () => {
     setSidebarVisible(true);
@@ -467,6 +486,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,

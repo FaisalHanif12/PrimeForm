@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, Pressable, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, Alert, Pressable, Modal, Platform, StatusBar } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, ZoomIn, SlideInRight, FadeIn } from 'react-native-reanimated';
 import { colors, spacing, fonts, radius } from '../../src/theme/colors';
@@ -661,6 +661,7 @@ export default function PersonalizedWorkoutScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,

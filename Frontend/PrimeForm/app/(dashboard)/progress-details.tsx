@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, DeviceEventEmitter } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, DeviceEventEmitter, Platform, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import DashboardHeader from '../../src/components/DashboardHeader';
@@ -1047,6 +1047,7 @@ export default function ProgressDetailsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,

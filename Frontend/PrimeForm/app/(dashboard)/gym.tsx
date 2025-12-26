@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Dimensions, ImageBackground, Platform, StatusBar } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, SlideInUp, SlideInRight, ZoomIn } from 'react-native-reanimated';
 import { colors, spacing, typography, fonts, radius } from '../../src/theme/colors';
@@ -442,6 +442,7 @@ export default function GymScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
