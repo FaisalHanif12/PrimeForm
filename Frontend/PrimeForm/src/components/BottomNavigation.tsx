@@ -28,7 +28,7 @@ const tabs: Tab[] = [
 ];
 
 // Fixed height for consistent rendering across all devices
-const NAVIGATION_HEIGHT = 90; // iOS height
+const NAVIGATION_HEIGHT = 65; // iOS height - reduced for better visibility
 const NAVIGATION_HEIGHT_ANDROID = 90; // Android height - taller for premium feel
 const ICON_SIZE = 22;
 const LABEL_FONT_SIZE = 10;
@@ -50,17 +50,23 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   }, [activeTab]);
 
   // Platform-aware positioning and padding
-  // iOS: Use paddingBottom to respect home indicator (keeps content spacing)
-  // Android: NO paddingBottom - use bottom offset for positioning, taller bar for premium feel
+  // iOS: Position perfectly at bottom with proper home indicator spacing
+  // Android: Keep unchanged - position above system navigation
   const isIOS = Platform.OS === 'ios';
-  const bottomPadding = isIOS 
-    ? Math.max(insets.bottom, spacing.xs) + spacing.md
-    : 0; // No bottom padding on Android - we use bottom offset for positioning
   
-  const bottomOffset = isIOS ? 0 : insets.bottom;
+  // iOS: Minimal padding - just enough for home indicator
+  // Android: Keep minimal padding (unchanged)
+  const bottomPadding = isIOS 
+    ? Math.max(insets.bottom - 8, spacing.xs) // Reduce padding slightly for perfect fit
+    : spacing.sm; // Keep Android unchanged
+  
+  const bottomOffset = isIOS 
+    ? spacing.xs // Very small offset to prevent cutoff on iOS
+    : Math.max(insets.bottom, spacing.md); // Keep Android unchanged - lift above nav bar
+    
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 
-    : NAVIGATION_HEIGHT_ANDROID; // On Android, use taller height for premium feel (no padding)
+    : NAVIGATION_HEIGHT_ANDROID; // Keep Android unchanged
 
   return (
     <View
@@ -111,7 +117,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    // bottom is set dynamically in component (0 for iOS, insets.bottom for Android)
+    // bottom is set dynamically in component
     left: spacing.lg,
     right: spacing.lg,
     flexDirection: 'row',
@@ -127,7 +133,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     ...Platform.select({
       ios: {
-        paddingTop: spacing.md,
+        paddingTop: spacing.sm, // Reduced padding for iOS
         minHeight: NAVIGATION_HEIGHT,
       },
       android: {

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -19,8 +20,23 @@ export default function DashboardHeader({
   notificationCount = 0
 }: Props) {
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  
+  // iOS: Ultra-compact - just safe area inset (notch/dynamic island height)
+  // Android: Keep original spacing
+  const topPadding = Platform.OS === 'ios' 
+    ? insets.top  // Only the notch/dynamic island height, no extra spacing
+    : spacing.xl; // Keep Android unchanged
+  
+  const bottomPadding = Platform.OS === 'ios'
+    ? spacing.sm  // Minimal bottom padding on iOS
+    : spacing.lg; // Keep Android unchanged
+  
   return (
-    <Animated.View entering={FadeInUp} style={styles.container}>
+    <Animated.View entering={FadeInUp} style={[styles.container, { 
+      paddingTop: topPadding,
+      paddingBottom: bottomPadding
+    }]}>
       {/* Profile Icon */}
       <TouchableOpacity 
         style={styles.profileButton}
@@ -64,8 +80,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: 40, // Reduced from 60 to 20
-    paddingBottom: spacing.lg,
+    // paddingTop and paddingBottom set dynamically in component based on platform
   },
   profileButton: {
     padding: spacing.sm,
