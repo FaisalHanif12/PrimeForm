@@ -300,6 +300,8 @@ const translations = {
     'onboarding.cancel': 'Cancel',
 
     // Workout Page
+    'workout.page.comingSoon': 'Workout Tracking Coming Soon!',
+    'workout.page.comingSoonDesc': 'We\'re building amazing workout features to help you track your progress and achieve your fitness goals.',
 
     // Diet Page
     'diet.page.title': 'AI Diet Plan',

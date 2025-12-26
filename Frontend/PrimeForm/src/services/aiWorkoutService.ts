@@ -430,24 +430,22 @@ Generate the **final personalized plan now.**
         const userCacheKey = await getUserCacheKey('cached_workout_plan', userId);
         await Storage.removeItem(userCacheKey);
         
-        // Also clear all related workout completion data
-        const completedExercisesKey = await getUserCacheKey('completed_exercises', userId);
-        const completedDaysKey = await getUserCacheKey('completed_days', userId);
-        
-        await Storage.removeItem(completedExercisesKey);
-        await Storage.removeItem(completedDaysKey);
+        // ✅ CRITICAL FIX: DO NOT delete completion data when clearing workout plan
+        // User's exercise completions are valuable progress data that should persist
+        // even when they generate a new workout plan. Only clear the plan itself, not the progress!
+        // Completion data: completed_exercises, completed_days
+        // These should ONLY be cleared if user explicitly resets their entire progress
       }
       
-      // Clear old global keys for migration
+      // Clear old global keys for migration (plan only, not completion data)
       await Storage.removeItem('cached_workout_plan');
-      await Storage.removeItem('completed_exercises');
-      await Storage.removeItem('completed_days');
+      // ✅ DO NOT clear: completed_exercises, completed_days
 
       // Clear memory cache
       this.clearCache('workout-plan-active');
       
       if (__DEV__) {
-        console.log('✅ Workout plan and all related data cleared successfully');
+        console.log('✅ Workout plan cleared successfully (completion data preserved)');
       }
     } catch (error) {
       console.error('❌ Error clearing workout plan from database:', error);

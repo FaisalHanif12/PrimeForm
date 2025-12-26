@@ -1117,8 +1117,8 @@ export default function DashboardScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      <DecorativeBackground>
+    <DecorativeBackground>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         <View style={styles.mainContainer}>
           {/* Header */}
           <DashboardHeader
@@ -1322,8 +1322,8 @@ export default function DashboardScreen() {
           onClose={handleSignupModalClose}
           featureName={currentFeature}
         />
-      </DecorativeBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </DecorativeBackground>
   );
 }
 

@@ -425,24 +425,16 @@ Generate complete 7-day plan now.
         const userCacheKey = await getUserCacheKey('cached_diet_plan', userId);
         await Storage.removeItem(userCacheKey);
         
-        // Also clear all related diet completion data
-        const completedMealsKey = await getUserCacheKey('completed_meals', userId);
-        const completedDaysKey = await getUserCacheKey('completed_diet_days', userId);
-        const waterIntakeKey = await getUserCacheKey('water_intake', userId);
-        const waterCompletedKey = await getUserCacheKey('water_completed', userId);
-        
-        await Storage.removeItem(completedMealsKey);
-        await Storage.removeItem(completedDaysKey);
-        await Storage.removeItem(waterIntakeKey);
-        await Storage.removeItem(waterCompletedKey);
+        // ✅ CRITICAL FIX: DO NOT delete completion data when clearing diet plan
+        // User's meal completions and water intake are valuable progress data that should persist
+        // even when they generate a new diet plan. Only clear the plan itself, not the progress!
+        // Completion data: completed_meals, completed_diet_days, water_intake, water_completed
+        // These should ONLY be cleared if user explicitly resets their entire progress
       }
       
-      // Clear old global keys for migration
+      // Clear old global keys for migration (plan only, not completion data)
       await Storage.removeItem('cached_diet_plan');
-      await Storage.removeItem('completed_meals');
-      await Storage.removeItem('completed_diet_days');
-      await Storage.removeItem('water_intake');
-      await Storage.removeItem('water_completed');
+      // ✅ DO NOT clear: completed_meals, completed_diet_days, water_intake, water_completed
 
       // Clear memory cache
       this.clearCache('diet-plan-active');
@@ -455,7 +447,7 @@ Generate complete 7-day plan now.
       }
       
       if (__DEV__) {
-        console.log('✅ Diet plan and all related data cleared successfully');
+        console.log('✅ Diet plan cleared successfully (completion data preserved)');
       }
     } catch (error) {
       console.error('❌ Error clearing diet plan from database:', error);
