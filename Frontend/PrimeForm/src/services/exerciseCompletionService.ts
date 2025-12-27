@@ -89,8 +89,19 @@ class ExerciseCompletionService {
   }
   
   // ✅ CRITICAL: Ensure initialized before reading data
+  // Also checks if user ID has changed and reinitializes if needed
   async ensureInitialized(): Promise<void> {
+    const currentUserId = await getCurrentUserId();
+    
+    // If no tracked user ID, initialize
     if (!this.currentUserId) {
+      await this.initialize();
+      return;
+    }
+    
+    // ✅ CRITICAL: If user ID changed, reinitialize to load correct user's data
+    if (currentUserId !== this.currentUserId) {
+      console.log('⚠️ User ID changed in ensureInitialized, reinitializing...');
       await this.initialize();
     }
   }
@@ -349,22 +360,66 @@ class ExerciseCompletionService {
   }
 
   // Get completion statistics
-  getCompletionStats(): {
+  // ✅ FIXED: Now calculates accurate totals from workout plan
+  async getCompletionStats(): Promise<{
     totalExercises: number;
     completedExercises: number;
     totalDays: number;
     completedDays: number;
     completionRate: number;
-  } {
-    const totalExercises = this.completionData.completedExercises.length;
+  }> {
+    // Ensure initialized before reading data
+    await this.ensureInitialized();
+    
+    // Get completed counts (accurate - from stored data)
     const completedExercises = this.completionData.completedExercises.length;
-    const totalDays = this.completionData.completedDays.length;
     const completedDays = this.completionData.completedDays.length;
     
+    // Calculate totals from workout plan
+    let totalExercises = 0;
+    let totalDays = 0;
+    
+    try {
+      // Load workout plan to calculate accurate totals
+      const { default: aiWorkoutService } = await import('./aiWorkoutService');
+      const workoutPlan = await aiWorkoutService.loadWorkoutPlanFromDatabase();
+      
+      if (workoutPlan && workoutPlan.weeklyPlan) {
+        // Calculate exercises per week (sum across all 7 days in weekly plan)
+        const exercisesPerWeek = workoutPlan.weeklyPlan.reduce((total, day) => {
+          if (!day.isRestDay && day.exercises) {
+            return total + day.exercises.length;
+          }
+          return total;
+        }, 0);
+        
+        // Calculate total days (plan duration in days)
+        if (workoutPlan.startDate && workoutPlan.endDate) {
+          const startDate = new Date(workoutPlan.startDate);
+          const endDate = new Date(workoutPlan.endDate);
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          totalDays = Math.max(0, daysDiff);
+          
+          // Calculate total exercises for entire plan: (exercises per week) * (number of weeks)
+          const numberOfWeeks = Math.ceil(totalDays / 7);
+          totalExercises = exercisesPerWeek * numberOfWeeks;
+        } else {
+          // Fallback: estimate from totalWeeks if available
+          const numberOfWeeks = workoutPlan.totalWeeks || 0;
+          totalDays = numberOfWeeks * 7;
+          totalExercises = exercisesPerWeek * numberOfWeeks;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load workout plan for stats calculation:', error);
+      // If plan loading fails, we can't calculate accurate totals
+      // Return completed counts only
+    }
+    
     return {
-      totalExercises,
+      totalExercises: Math.max(totalExercises, completedExercises), // Ensure total >= completed
       completedExercises,
-      totalDays,
+      totalDays: Math.max(totalDays, completedDays), // Ensure total >= completed
       completedDays,
       completionRate: totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0,
     };

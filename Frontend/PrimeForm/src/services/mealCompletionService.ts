@@ -89,8 +89,19 @@ class MealCompletionService {
   }
   
   // ✅ CRITICAL: Ensure initialized before reading data
+  // Also checks if user ID has changed and reinitializes if needed
   async ensureInitialized(): Promise<void> {
+    const currentUserId = await getCurrentUserId();
+    
+    // If no tracked user ID, initialize
     if (!this.currentUserId) {
+      await this.initialize();
+      return;
+    }
+    
+    // ✅ CRITICAL: If user ID changed, reinitialize to load correct user's data
+    if (currentUserId !== this.currentUserId) {
+      console.log('⚠️ User ID changed in ensureInitialized, reinitializing...');
       await this.initialize();
     }
   }
@@ -323,6 +334,74 @@ class MealCompletionService {
     } catch (error) {
       console.error('❌ Error syncing with database:', error);
     }
+  }
+
+  // Get completion statistics
+  // ✅ FIXED: Now calculates accurate totals from diet plan
+  async getCompletionStats(): Promise<{
+    totalMeals: number;
+    completedMeals: number;
+    totalDays: number;
+    completedDays: number;
+    completionRate: number;
+  }> {
+    // Ensure initialized before reading data
+    await this.ensureInitialized();
+    
+    // Get completed counts (accurate - from stored data)
+    const completedMeals = this.completionData.completedMeals.length;
+    const completedDays = this.completionData.completedDays.length;
+    
+    // Calculate totals from diet plan
+    let totalMeals = 0;
+    let totalDays = 0;
+    
+    try {
+      // Load diet plan to calculate accurate totals
+      const { default: aiDietService } = await import('./aiDietService');
+      const dietPlan = await aiDietService.loadDietPlanFromDatabase();
+      
+      if (dietPlan && dietPlan.weeklyPlan) {
+        // Calculate total meals across all days in the plan
+        // Each day typically has 3 main meals (breakfast, lunch, dinner) + snacks
+        totalMeals = dietPlan.weeklyPlan.reduce((total, day) => {
+          let dayMeals = 3; // Breakfast, lunch, dinner
+          if (day.meals && day.meals.snacks) {
+            dayMeals += day.meals.snacks.length;
+          }
+          return total + dayMeals;
+        }, 0);
+        
+        // Calculate total days (plan duration in days)
+        if (dietPlan.startDate && dietPlan.endDate) {
+          const startDate = new Date(dietPlan.startDate);
+          const endDate = new Date(dietPlan.endDate);
+          const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          totalDays = Math.max(0, daysDiff);
+          
+          // Multiply daily meals by total days to get total meals for entire plan
+          const dailyMealAverage = dietPlan.weeklyPlan.length > 0 ? totalMeals / dietPlan.weeklyPlan.length : 0;
+          totalMeals = Math.round(dailyMealAverage * totalDays);
+        } else {
+          // Fallback: estimate from totalWeeks if available
+          totalDays = dietPlan.totalWeeks ? dietPlan.totalWeeks * 7 : 0;
+          const dailyMealAverage = dietPlan.weeklyPlan.length > 0 ? totalMeals / dietPlan.weeklyPlan.length : 0;
+          totalMeals = Math.round(dailyMealAverage * totalDays);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load diet plan for stats calculation:', error);
+      // If plan loading fails, we can't calculate accurate totals
+      // Return completed counts only
+    }
+    
+    return {
+      totalMeals: Math.max(totalMeals, completedMeals), // Ensure total >= completed
+      completedMeals,
+      totalDays: Math.max(totalDays, completedDays), // Ensure total >= completed
+      completedDays,
+      completionRate: totalMeals > 0 ? (completedMeals / totalMeals) * 100 : 0,
+    };
   }
 }
 

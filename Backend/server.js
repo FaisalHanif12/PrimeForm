@@ -87,10 +87,14 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
       'http://localhost:5001', // Backend API
-      'http://192.168.48.129:8081', // CURRENT network IP (Expo dev server)
-      'http://192.168.48.129:5001', // CURRENT network IP (Backend API)
-      'http://192.168.48.129:5000', // CURRENT network IP (Backend API alternate)
-      'exp://192.168.48.129:8081',  // CURRENT network IP (Expo protocol)
+      'http://192.168.32.204:8081', // CURRENT network IP (Expo dev server)
+      'http://192.168.32.204:5001', // CURRENT network IP (Backend API)
+      'http://192.168.32.204:5000', // CURRENT network IP (Backend API alternate)
+      'exp://192.168.32.204:8081',  // CURRENT network IP (Expo protocol)
+      'http://192.168.32.70:8081', // CURRENT network IP (Expo dev server)
+      'http://192.168.32.70:5001', // CURRENT network IP (Backend API)
+      'http://192.168.32.70:5000', // CURRENT network IP (Backend API alternate)
+      'exp://192.168.32.70:8081',  // CURRENT network IP (Expo protocol)
       'http://192.168.100.20:8081', // Previous network IP (Expo dev server)
       'http://192.168.100.20:5001', // Previous network IP (Backend API)
       'http://192.168.100.20:5000', // Previous network IP (Backend API alternate)
@@ -123,7 +127,8 @@ const corsOptions = {
       'exp://192.168.48.66:8081',  // Expo protocol - previous network
       'exp://192.168.75.66:8081',  // Expo protocol - previous mobile data
       'exp://192.168.100.33:8081', // Expo protocol - previous network
-      'exp://192.168.48.129:8081', // Expo protocol - current network
+      'exp://192.168.32.204:8081', // Expo protocol - current network
+      'exp://192.168.32.70:8081', // Expo protocol - current network
       'exp://192.168.100.20:8081', // Expo protocol - previous network
       'exp://192.168.0.117:8081',  // Expo protocol - old network
       'exp://localhost:8081',       // Expo localhost
@@ -229,7 +234,8 @@ const server = app.listen(PORT, HOST, async () => {
   console.log(`🏃‍♂️ Pure Body API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.48.129:${PORT}`); // Current network IP
+  console.log(`🌐 Network: http://192.168.32.204:${PORT}`); // Current network IP
+  console.log(`🌐 Network: http://192.168.32.70:${PORT}`); // Current network IP
   console.log(`🌐 Previous Network: http://192.168.100.20:${PORT}`); // Previous network IP for reference
   console.log(`🌐 Previous Network: http://192.168.182.204:${PORT}`); // Previous network IP for reference
   console.log(`🌐 Previous Network: http://192.168.182.70:${PORT}`); // Previous network IP for reference

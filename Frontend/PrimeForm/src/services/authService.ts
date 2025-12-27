@@ -183,19 +183,19 @@ class AuthService {
         // Ignore if service not available
       }
 
-      // Clear AI services cache (both in-memory and persistent)
+      // ✅ CRITICAL: Clear only in-memory cache for AI services, DO NOT clear persistent plans
+      // Diet and workout plans should persist across logout/login cycles per account
+      // Only clear in-memory cache to prevent showing wrong user's data
       try {
         const { default: aiDietService } = await import('./aiDietService');
-        aiDietService.clearInMemoryCache(); // Clear in-memory cache first
-        await aiDietService.clearDietPlanFromDatabase(); // Then clear persistent cache
+        aiDietService.clearInMemoryCache(); // Clear in-memory cache only, preserve storage
       } catch (error) {
         // Ignore if service not available
       }
 
       try {
         const { default: aiWorkoutService } = await import('./aiWorkoutService');
-        aiWorkoutService.clearInMemoryCache(); // Clear in-memory cache first
-        await aiWorkoutService.clearWorkoutPlanFromDatabase(); // Then clear persistent cache
+        aiWorkoutService.clearInMemoryCache(); // Clear in-memory cache only, preserve storage
       } catch (error) {
         // Ignore if service not available
       }

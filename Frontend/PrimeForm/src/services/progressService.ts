@@ -60,9 +60,7 @@ class ProgressService {
     await mealCompletionService.initialize();
     await this.performPeriodicCleanup();
   }
-  
-  // Clear caches when completion data changes (public method for external use)
-  // ✅ CRITICAL: Also clear cache when user switches accounts
+
   invalidateCaches(): void {
     this.statsCache.clear();
     this.chartsCache.clear();
@@ -1031,6 +1029,8 @@ class ProgressService {
   }
 
   // Calculate current week number from plan start date
+  // Week 1: From plan generation day until the end of Sunday (before Monday starts)
+  // Week 2+: Monday to Sunday cycles
   private getCurrentWeekNumber(planStartDate: Date, currentDate: Date): number {
     planStartDate.setHours(0, 0, 0, 0);
     currentDate.setHours(0, 0, 0, 0);
@@ -1040,13 +1040,44 @@ class ProgressService {
     if (daysDiff < 0) return 1;
     if (daysDiff === 0) return 1;
     
-    const startDayOfWeek = planStartDate.getDay();
+    const startDayOfWeek = planStartDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentDayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Calculate days in first week (from generation day to Sunday inclusive)
     const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
     
-    if (daysDiff < daysInFirstWeek) return 1;
+    // If we're still within the first week period (before Monday starts), return Week 1
+    // This includes: generation day to Sunday (inclusive)
+    if (daysDiff <= daysInFirstWeek) {
+      // If today is Sunday and we're still in the first week period, it's still Week 1
+      // Week 2 only starts on Monday
+      if (currentDayOfWeek === 0) {
+        return 1; // Still Week 1 if it's Sunday
+      }
+      return 1;
+    }
     
-    const remainingDays = daysDiff - daysInFirstWeek;
-    return 1 + Math.floor(remainingDays / 7) + 1;
+    // Calculate which Monday-Sunday cycle we're in
+    // First Monday starts after the first Sunday
+    const firstSundayDate = new Date(planStartDate);
+    const daysToFirstSunday = startDayOfWeek === 0 ? 0 : (7 - startDayOfWeek);
+    firstSundayDate.setDate(planStartDate.getDate() + daysToFirstSunday);
+    
+    // First Monday is the day after first Sunday
+    const firstMondayDate = new Date(firstSundayDate);
+    firstMondayDate.setDate(firstSundayDate.getDate() + 1);
+    
+    // Calculate days from first Monday to current date
+    const daysFromFirstMonday = Math.floor((currentDate.getTime() - firstMondayDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysFromFirstMonday < 0) {
+      // We're still before the first Monday, so it's Week 1
+      return 1;
+    }
+    
+    // Week 2 starts on first Monday, then each subsequent week starts every 7 days
+    const weekNumber = 2 + Math.floor(daysFromFirstMonday / 7);
+    return weekNumber;
   }
 
   // Calculate current month number from plan start date
