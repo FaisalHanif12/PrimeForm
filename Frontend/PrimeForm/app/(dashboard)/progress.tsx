@@ -382,14 +382,14 @@ export default function ProgressScreen() {
                         style={[
                           styles.progressFill,
                           {
-                            width: `${(card.completed / card.total) * 100}%`,
+                            width: `${card.total > 0 ? (card.completed / card.total) * 100 : 0}%`,
                             backgroundColor: card.color
                           }
                         ]}
                       />
                     </View>
                     <Text style={styles.percentageText}>
-                      {Math.round((card.completed / card.total) * 100)}% {t('progress.label.complete')}
+                      {card.total > 0 ? Math.round((card.completed / card.total) * 100) : 0}% {t('progress.label.complete')}
                     </Text>
                   </>
                 ) : (

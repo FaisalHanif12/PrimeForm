@@ -66,9 +66,10 @@ export default function DietPlanDisplay({
     const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Calculate week based on plan generation day
-    // First week: from generation day to Sunday (inclusive)
-    // Subsequent weeks: Monday to Sunday
+    // Week 1: From plan generation day until the end of Sunday (before Monday starts)
+    // Week 2+: Monday to Sunday cycles
     const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
     let calculatedWeek;
     if (daysDiff < 0) {
@@ -78,18 +79,39 @@ export default function DietPlanDisplay({
       // Generation day - week 1
       calculatedWeek = 1;
     } else {
-      // Calculate which week we're in
-      // First week: generation day to Sunday (if Sunday, only 1 day)
-      // Special case: if plan starts on Sunday (0), first week is only Sunday
+      // Calculate days in first week (from generation day to Sunday inclusive)
       const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
       
-      if (daysDiff < daysInFirstWeek) {
-        // Still in first week
-        calculatedWeek = 1;
+      // If we're still within the first week period (before Monday starts), return Week 1
+      if (daysDiff <= daysInFirstWeek) {
+        // If today is Sunday and we're still in the first week period, it's still Week 1
+        // Week 2 only starts on Monday
+        if (currentDayOfWeek === 0) {
+          calculatedWeek = 1; // Still Week 1 if it's Sunday
+        } else {
+          calculatedWeek = 1;
+        }
       } else {
-        // Calculate subsequent weeks (Monday to Sunday cycles)
-        const remainingDays = daysDiff - daysInFirstWeek;
-        calculatedWeek = 1 + Math.floor(remainingDays / 7) + 1;
+        // Calculate which Monday-Sunday cycle we're in
+        // First Monday starts after the first Sunday
+        const firstSundayDate = new Date(startDate);
+        const daysToFirstSunday = startDayOfWeek === 0 ? 0 : (7 - startDayOfWeek);
+        firstSundayDate.setDate(startDate.getDate() + daysToFirstSunday);
+        
+        // First Monday is the day after first Sunday
+        const firstMondayDate = new Date(firstSundayDate);
+        firstMondayDate.setDate(firstSundayDate.getDate() + 1);
+        
+        // Calculate days from first Monday to current date
+        const daysFromFirstMonday = Math.floor((today.getTime() - firstMondayDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysFromFirstMonday < 0) {
+          // We're still before the first Monday, so it's Week 1
+          calculatedWeek = 1;
+        } else {
+          // Week 2 starts on first Monday, then each subsequent week starts every 7 days
+          calculatedWeek = 2 + Math.floor(daysFromFirstMonday / 7);
+        }
       }
     }
     
@@ -242,21 +264,22 @@ export default function DietPlanDisplay({
       }
     } else {
       // Subsequent weeks: use Monday-Sunday pattern
-      // IMPORTANT: Show previous week until Monday starts (Sunday should show previous week)
-      const todayDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      // Calculate the Monday-Sunday range for the specific week number
+      const startDayOfWeek = startDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       
-      // If today is Sunday (0), show the previous week (go back 6 days to get to Monday of previous week)
-      // Otherwise, show the current week (Monday to Sunday)
-      let weekStartMonday: Date;
-      if (todayDayOfWeek === 0) {
-        // It's Sunday - show previous week (go back 6 days to get to Monday of previous week)
-        weekStartMonday = new Date(today);
-        weekStartMonday.setDate(today.getDate() - 6); // Go to Monday of previous week
-      } else {
-        // It's Monday-Saturday - show current week
-        weekStartMonday = new Date(today);
-        weekStartMonday.setDate(today.getDate() - todayDayOfWeek + 1); // Go to Monday of current week
-      }
+      // Calculate first Sunday after plan start
+      const firstSundayDate = new Date(startDate);
+      const daysToFirstSunday = startDayOfWeek === 0 ? 0 : (7 - startDayOfWeek);
+      firstSundayDate.setDate(startDate.getDate() + daysToFirstSunday);
+      
+      // First Monday is the day after first Sunday (this is when Week 2 starts)
+      const firstMondayDate = new Date(firstSundayDate);
+      firstMondayDate.setDate(firstSundayDate.getDate() + 1);
+      
+      // Calculate the Monday for the current week
+      // Week 2 starts on firstMondayDate, Week 3 starts 7 days later, etc.
+      const weekStartMonday = new Date(firstMondayDate);
+      weekStartMonday.setDate(firstMondayDate.getDate() + ((currentWeek - 2) * 7));
       weekStartMonday.setHours(0, 0, 0, 0); // Reset time to avoid timezone issues
       
       for (let i = 0; i < 7; i++) {

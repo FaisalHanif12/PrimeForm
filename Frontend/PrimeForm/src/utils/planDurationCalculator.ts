@@ -51,8 +51,8 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   } else {
     // For non-weight goals or missing weight data, use goal-based defaults
     if (goal.includes('fitness') || goal.includes('training') || goal.includes('endurance')) {
-      // General fitness/training goals: 6-12 months (24-52 weeks)
-      totalWeeks = 36; // 9 months - good balance for fitness improvement
+      // General fitness/training goals: 1 year (52 weeks)
+      totalWeeks = 52; // 1 year as per requirement
     } else if (goal.includes('maintain')) {
       // Maintenance: 3-6 months (12-24 weeks)
       totalWeeks = 16; // 4 months

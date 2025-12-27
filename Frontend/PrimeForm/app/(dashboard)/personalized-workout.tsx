@@ -89,10 +89,16 @@ export default function PersonalizedWorkoutScreen() {
   const [isReorderMode, setIsReorderMode] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [exerciseToDelete, setExerciseToDelete] = useState<number | null>(null);
+  const lastUserIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
-    loadWorkout();
-    checkTodayCompletion();
+    const initialize = async () => {
+      const userId = await getCurrentUserId();
+      lastUserIdRef.current = userId;
+      await loadWorkout();
+      await checkTodayCompletion();
+    };
+    initialize();
   }, []);
 
   // ✅ OPTIMIZATION: Re-check completion status when screen comes into focus
@@ -100,12 +106,22 @@ export default function PersonalizedWorkoutScreen() {
   const lastCompletionCheck = React.useRef<number>(0);
   useFocusEffect(
     React.useCallback(() => {
-      const now = Date.now();
-      // Debounce rapid focus changes (e.g., keyboard show/hide)
-      if (now - lastCompletionCheck.current > 10000) {
-        checkTodayCompletion();
-        lastCompletionCheck.current = now;
-      }
+      const checkOnFocus = async () => {
+        const now = Date.now();
+        // Debounce rapid focus changes (e.g., keyboard show/hide)
+        if (now - lastCompletionCheck.current > 10000) {
+          // ✅ CRITICAL: Also check if user ID changed on focus
+          const currentUserId = await getCurrentUserId();
+          if (lastUserIdRef.current !== null && currentUserId !== lastUserIdRef.current) {
+            console.log('⚠️ User ID changed on focus, reloading personalized workout...');
+            lastUserIdRef.current = currentUserId;
+            await loadWorkout();
+          }
+          await checkTodayCompletion();
+          lastCompletionCheck.current = now;
+        }
+      };
+      checkOnFocus();
     }, [])
   );
 

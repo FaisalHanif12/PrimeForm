@@ -6,13 +6,42 @@ const DEVICE_ID_KEY = 'primeform_device_id';
 const HAS_EVER_SIGNED_UP_KEY = 'primeform_has_ever_signed_up';
 
 /**
+ * Get installation ID (persists across app reinstalls)
+ * This is used to create persistent keys that survive app deletion
+ */
+async function getInstallationId(): Promise<string | null> {
+  try {
+    // Use type assertion to handle TypeScript definition issue
+    // The method exists at runtime (used in generateDeviceId)
+    const installationId = await (Application as any).getInstallationIdAsync();
+    return installationId;
+  } catch (error) {
+    console.warn('Failed to get installation ID:', error);
+    return null;
+  }
+}
+
+/**
+ * Get persistent signup key based on installation ID
+ * This key persists across app reinstalls because installation ID persists
+ */
+async function getPersistentSignupKey(): Promise<string> {
+  const installationId = await getInstallationId();
+  if (installationId) {
+    return `${HAS_EVER_SIGNED_UP_KEY}_${installationId}`;
+  }
+  // Fallback to regular key if installation ID unavailable
+  return HAS_EVER_SIGNED_UP_KEY;
+}
+
+/**
  * Generate a unique device identifier that persists across app reinstalls
  * This uses the device's installation ID which is unique per device
  */
 async function generateDeviceId(): Promise<string> {
   try {
     // Try to get the installation ID (persists across app reinstalls on the same device)
-    const installationId = await Application.getInstallationIdAsync();
+    const installationId = await getInstallationId();
     if (installationId) {
       return `device_${installationId}`;
     }
@@ -55,21 +84,84 @@ async function getOrCreateDeviceId(): Promise<string> {
 
 /**
  * Check if user has ever signed up on this device
+ * ✅ PERSISTENT: Uses installation ID to survive app deletion
+ * Checks both persistent key (installation-specific) and legacy key for backward compatibility
+ * Also attempts to recover signup status from existing user data
  */
 async function hasEverSignedUp(): Promise<boolean> {
   try {
-    const value = await AsyncStorage.getItem(HAS_EVER_SIGNED_UP_KEY);
-    return value === 'true';
+    // ✅ CRITICAL: Check persistent key first (installation-specific, survives app deletion)
+    const persistentKey = await getPersistentSignupKey();
+    const persistentValue = await AsyncStorage.getItem(persistentKey);
+    if (persistentValue === 'true') {
+      return true;
+    }
+    
+    // ✅ BACKWARD COMPATIBILITY: Also check legacy key for existing users
+    const legacyValue = await AsyncStorage.getItem(HAS_EVER_SIGNED_UP_KEY);
+    if (legacyValue === 'true') {
+      // Migrate to persistent key for future app deletions
+      await AsyncStorage.setItem(persistentKey, 'true');
+      return true;
+    }
+    
+    // ✅ RECOVERY: If flag doesn't exist but user has a real user ID (not device ID),
+    // it means they signed up before. Reconstruct the flag.
+    const currentUserId = await AsyncStorage.getItem(CURRENT_USER_ID_KEY);
+    if (currentUserId && !currentUserId.startsWith('device_') && !currentUserId.startsWith('temp_')) {
+      // User has a real user ID, which means they signed up before
+      // Reconstruct the persistent flag
+      await AsyncStorage.setItem(persistentKey, 'true');
+      await AsyncStorage.setItem(HAS_EVER_SIGNED_UP_KEY, 'true');
+      console.log('✅ Recovered hasEverSignedUp flag from existing user ID');
+      return true;
+    }
+    
+    // ✅ RECOVERY: Check if there's any user-specific cache data that indicates previous signup
+    // This helps recover signup status even after app deletion if user data still exists
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const installationId = await getInstallationId();
+      
+      // Check for any user-specific cache keys (format: user_<userId>_*)
+      // If we find user-specific keys that aren't device IDs, user has signed up before
+      const userSpecificKeys = allKeys.filter(key => 
+        key.startsWith('user_') && 
+        !key.includes('device_') &&
+        !key.includes('temp_')
+      );
+      
+      if (userSpecificKeys.length > 0 && installationId) {
+        // Found user-specific data, reconstruct the flag
+        await AsyncStorage.setItem(persistentKey, 'true');
+        await AsyncStorage.setItem(HAS_EVER_SIGNED_UP_KEY, 'true');
+        console.log('✅ Recovered hasEverSignedUp flag from existing user data');
+        return true;
+      }
+    } catch (recoveryError) {
+      // Recovery failed, continue with normal check
+      console.warn('⚠️ Recovery check failed:', recoveryError);
+    }
+    
+    return false;
   } catch (error) {
+    console.error('Error checking hasEverSignedUp:', error);
     return false;
   }
 }
 
 /**
  * Mark that user has signed up (permanent flag, never cleared)
+ * ✅ PERSISTENT: Stores in both persistent key (installation-specific) and legacy key
+ * This ensures the flag survives app deletion AND works for existing users
  */
 async function markUserSignedUp(): Promise<void> {
   try {
+    // ✅ CRITICAL: Store in persistent key (survives app deletion)
+    const persistentKey = await getPersistentSignupKey();
+    await AsyncStorage.setItem(persistentKey, 'true');
+    
+    // ✅ BACKWARD COMPATIBILITY: Also store in legacy key for existing code
     await AsyncStorage.setItem(HAS_EVER_SIGNED_UP_KEY, 'true');
   } catch (error) {
     console.error('Error marking user as signed up:', error);
@@ -220,6 +312,9 @@ export async function clearUserCache(userId?: string | null): Promise<void> {
     // All user-specific data should persist across logout/login cycles
     // while still being fully account-specific via user-prefixed keys.
     const preservedKeyFragments = [
+      // Diet & Workout Plans (preserve plans per account)
+      '_cached_diet_plan',
+      '_cached_workout_plan',
       // Progress & Completion Data
       '_completed_meals',
       '_completed_exercises',
