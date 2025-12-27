@@ -59,11 +59,11 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     : 0; // No padding for Android - height is fixed
 
   // ✅ ANDROID FIX: Use safe area insets to account for system navigation bar
-  // Reduced offset to minimize gap while still clearing system navigation bar
+  // Subtracts 10px from bottom inset to fine-tune positioning, with minimum of 10px
   // iOS remains unchanged - uses small offset as before
   const bottomOffset = isIOS 
     ? spacing.xs // Very small offset to prevent cutoff on iOS
-    : Math.max((insets.bottom || 0) + 8, 32); // Android: Use insets.bottom + 8px padding, minimum 32px to clear system nav bar
+    : Math.max((insets.bottom || 0) - 10, 10); // Android: Subtract 10px from bottom inset, minimum 10px to clear system nav bar
     
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 
