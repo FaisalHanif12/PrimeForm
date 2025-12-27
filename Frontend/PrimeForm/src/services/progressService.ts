@@ -361,9 +361,9 @@ class ProgressService {
         targetCarbs: Math.round(safeTargetCarbs),
         targetFats: Math.round(safeTargetFats),
         workoutsCompleted: filteredExercises.length,
-        totalWorkouts: Math.max(totalWorkouts, 1),
+        totalWorkouts: totalWorkouts, // ✅ FIXED: Allow 0 for rest days (no Math.max to force minimum)
         mealsCompleted: filteredMeals.length,
-        totalMeals: Math.max(totalMeals, 1),
+        totalMeals: Math.max(totalMeals, 1), // Keep minimum for meals (meals are always available)
         currentStreak: 0,
         longestStreak: 0,
         weightProgress: 0,
