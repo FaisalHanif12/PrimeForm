@@ -261,11 +261,9 @@ class AuthService {
         if (!isSameUser) {
           // Different user - clear previous user's data from memory (storage is preserved)
           console.log(`🔄 Switching accounts from ${previousId} to ${newUserId}`);
+      
+          await this.clearToken(); 
           
-          // Only clear non-persistent data (session data, not completion history)
-          await this.clearToken(); // Clear old token only
-          
-          // Reset in-memory state of services (storage data remains intact)
           try {
             const { default: mealCompletionService } = await import('./mealCompletionService');
             mealCompletionService.resetInMemoryState();
@@ -309,13 +307,10 @@ class AuthService {
           console.log(`🔄 Migrating guest data from ${previousId} to ${newUserId}`);
           await migrateGuestDataToUser(previousId, newUserId);
         }
-        
-        // Validate and clean cache for the new user
+ 
         if (newUserId) {
           await validateCacheOnLogin(newUserId);
           
-          // ✅ CRITICAL: Reinitialize completion services with guaranteed initialization
-          // Ensure services are fully initialized before proceeding
           try {
             const { default: mealCompletionService } = await import('./mealCompletionService');
             await mealCompletionService.reinitialize();

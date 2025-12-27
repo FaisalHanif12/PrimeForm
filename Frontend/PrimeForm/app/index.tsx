@@ -26,15 +26,19 @@ export default function Index() {
         hasCheckedRef.current = true;
         lastAuthStateRef.current = isAuthenticated;
 
+        // ✅ PERFORMANCE: Load all AsyncStorage items in parallel
+        const [hasEverSignedUp, isFirstLaunch] = await Promise.all([
+          AsyncStorage.getItem('primeform_has_ever_signed_up'),
+          AsyncStorage.getItem('primeform_first_launch')
+        ]);
+        
         // ✅ CRITICAL: ALWAYS check if user has ever signed up FIRST (this flag should NEVER be cleared)
         // This is the PRIMARY gate - if user has signed up, they MUST go to login if not authenticated
-        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
-        
         // ✅ CRITICAL: If user has ever signed up, they should NEVER see guest mode
         // Always redirect to login if not authenticated - NO EXCEPTIONS
         if (hasEverSignedUp === 'true') {
-          // Ensure language modal never shows for users who have ever signed up
-          await AsyncStorage.setItem('primeform_device_language_selected', 'true');
+          // Ensure language modal never shows for users who have ever signed up (non-blocking)
+          AsyncStorage.setItem('primeform_device_language_selected', 'true').catch(() => {});
           
           // Check if user is currently authenticated
           if (isAuthenticated) {
@@ -45,18 +49,14 @@ export default function Index() {
             // ✅ CRITICAL: User has signed up before but is not authenticated
             // This means token expired or was cleared - ALWAYS redirect to login
             // Do NOT check token again, just redirect immediately to prevent any guest mode access
-            try {
-              const { authService } = await import('../src/services/authService');
-              // Clear any stale token to ensure clean state
-              const tokenExists = await authService.getToken();
-              if (tokenExists) {
-                // Token exists but user is not authenticated - it's expired/invalid
-                // Clear it to ensure clean state
-                await authService.clearToken();
-              }
-            } catch (error) {
-              // Error checking token - continue to redirect anyway
-            }
+            // ✅ PERFORMANCE: Clear token in background (non-blocking)
+            import('../src/services/authService').then(({ authService }) => {
+              authService.getToken().then(tokenExists => {
+                if (tokenExists) {
+                  authService.clearToken().catch(() => {});
+                }
+              }).catch(() => {});
+            }).catch(() => {});
             // ✅ CRITICAL: ALWAYS redirect to login - never allow guest mode for users who have signed up
             router.replace('/auth/login');
             return;
@@ -65,7 +65,6 @@ export default function Index() {
 
         // ✅ CRITICAL: Only reach here if user has NEVER signed up
         // User has NEVER signed up - check if this is first launch
-        const isFirstLaunch = await AsyncStorage.getItem('primeform_first_launch');
         
         if (!isFirstLaunch) {
           // This is the very first time the app is launched

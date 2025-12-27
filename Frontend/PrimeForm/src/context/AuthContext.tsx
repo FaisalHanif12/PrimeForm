@@ -75,20 +75,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           if (cachedProfile.user) {
             setUser(cachedProfile.user);
             
-            // Initialize completion services
-            try {
-              const { default: mealCompletionService } = await import('../services/mealCompletionService');
-              await mealCompletionService.initialize();
-            } catch (error) {
-              // Ignore if service not available
-            }
-
-            try {
-              const { default: exerciseCompletionService } = await import('../services/exerciseCompletionService');
-              await exerciseCompletionService.initialize();
-            } catch (error) {
-              // Ignore if service not available
-            }
+            // ✅ PERFORMANCE: Initialize completion services in background (non-blocking)
+            // Don't wait for initialization - show UI immediately
+            Promise.all([
+              import('../services/mealCompletionService').then(m => m.default.initialize()).catch(() => {}),
+              import('../services/exerciseCompletionService').then(e => e.default.initialize()).catch(() => {})
+            ]).catch(() => {}); // Ignore errors - services will initialize when needed
             
             setIsLoading(false);
             return; // ✅ User stays logged in forever with cached profile!
@@ -99,11 +91,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.warn('⚠️ AuthContext: Cache read failed, will try to fetch profile');
       }
 
-      // ✅ FITNESS APP: No cached profile - try to fetch (optional)
+      // ✅ PERFORMANCE: Set loading to false immediately - don't wait for profile fetch
+      // User can use the app with token, profile will load in background
+      setIsLoading(false);
+      
+      // ✅ FITNESS APP: No cached profile - try to fetch (optional, non-blocking)
       // This only runs on first login or if cache was cleared
       // If fetch fails for any reason except 401, user STILL stays logged in with token
-      try {
-        const response = await authService.getProfile();
+      // ✅ PERFORMANCE: Fetch profile in background - don't block UI
+      (async () => {
+        try {
+          const response = await authService.getProfile();
         
         // ✅ FITNESS APP: ONLY logout on explicit 401 (token truly expired/invalid)
         // Everything else = user stays logged in
@@ -111,13 +109,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Token is definitely invalid - this is the ONLY case we logout
           console.warn('🔒 AuthContext: Token expired (401) - logging out');
           setHasToken(false);
-          await authService.clearToken();
+          authService.clearToken().catch(() => {});
           if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
+            AsyncStorage.removeItem(cacheKey).catch(() => {});
           }
           setUser(null);
-          setIsLoading(false);
-          return;
+          return; // Exit background fetch
         }
         
         // ✅ FITNESS APP: Profile fetch succeeded - update cache
@@ -138,54 +135,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             // Cache write failed, but user is still logged in
           }
 
-          // ✅ CRITICAL: Initialize completion services for logged-in user
-          // This ensures completion data is loaded when app starts with existing session
-          // Add small delay to ensure user ID is set
-          await new Promise(resolve => setTimeout(resolve, 50));
-          
-          try {
-            const { default: mealCompletionService } = await import('../services/mealCompletionService');
-            await mealCompletionService.initialize();
-            // ✅ CRITICAL: Verify initialization succeeded
-            const mealData = mealCompletionService.getCompletionData();
-            console.log('✅ AuthContext: Meal completion service initialized with', mealData.completedMeals.length, 'meals');
-          } catch (error) {
-            console.error('❌ AuthContext: Error initializing meal completion service:', error);
-            // Retry once
-            try {
-              const { default: mealCompletionService } = await import('../services/mealCompletionService');
-              await mealCompletionService.initialize();
-            } catch (retryError) {
-              console.error('❌ AuthContext: Retry failed for meal completion service:', retryError);
-            }
-          }
-
-          try {
-            const { default: exerciseCompletionService } = await import('../services/exerciseCompletionService');
-            await exerciseCompletionService.initialize();
-            // ✅ CRITICAL: Verify initialization succeeded
-            const exerciseData = exerciseCompletionService.getCompletionData();
-            console.log('✅ AuthContext: Exercise completion service initialized with', exerciseData.completedExercises.length, 'exercises');
-          } catch (error) {
-            console.error('❌ AuthContext: Error initializing exercise completion service:', error);
-            // Retry once
-            try {
-              const { default: exerciseCompletionService } = await import('../services/exerciseCompletionService');
-              await exerciseCompletionService.initialize();
-            } catch (retryError) {
-              console.error('❌ AuthContext: Retry failed for exercise completion service:', retryError);
-            }
-          }
-
-          // ✅ CRITICAL: Initialize user profile service to load cached profile data
-          // This ensures profile data is available immediately after login
-          try {
-            const { default: userProfileService } = await import('../services/userProfileService');
-            // Initialize cache (loads from storage if available)
-            await userProfileService.getCachedData();
-          } catch (error) {
-            // Ignore if service not available
-          }
+          // ✅ PERFORMANCE: Initialize completion services in background (non-blocking)
+          // Don't wait for initialization - show UI immediately, services will initialize when needed
+          Promise.all([
+            import('../services/mealCompletionService').then(m => m.default.initialize()).catch(() => {}),
+            import('../services/exerciseCompletionService').then(e => e.default.initialize()).catch(() => {}),
+            import('../services/userProfileService').then(u => u.default.getCachedData()).catch(() => {})
+          ]).catch(() => {}); // Ignore errors - services will initialize when needed
         } else {
           // ✅ FITNESS APP: Profile fetch returned unexpected response
           // But NOT a 401, so DON'T logout - just log warning
@@ -199,9 +155,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Explicit 401 - token is invalid
           console.warn('🔒 AuthContext: 401 error - logging out');
           setHasToken(false);
-          await authService.clearToken();
+          authService.clearToken().catch(() => {});
           if (userId) {
-            await AsyncStorage.removeItem(cacheKey);
+            AsyncStorage.removeItem(cacheKey).catch(() => {});
           }
           setUser(null);
         } else {
@@ -211,12 +167,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // User stays authenticated with existing token
         }
       }
+      })(); // End of background profile fetch
     } catch (error) {
       // ✅ FITNESS APP: Top-level catch - something went very wrong
       // But still don't logout unless we know token is invalid
       console.warn('⚠️ AuthContext: Unexpected error in auth check - keeping user logged in:', error);
       // Keep token and authentication state
-    } finally {
       setIsLoading(false);
     }
   };

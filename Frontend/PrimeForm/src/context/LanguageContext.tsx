@@ -2088,9 +2088,12 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
   useEffect(() => {
     const loadLanguage = async () => {
       try {
-        const savedLanguage = await AsyncStorage.getItem('primeform_language_selected');
-        const deviceLanguageSelected = await AsyncStorage.getItem('primeform_device_language_selected');
-        const hasEverSignedUp = await AsyncStorage.getItem('primeform_has_ever_signed_up');
+        // ✅ PERFORMANCE: Load all AsyncStorage items in parallel instead of sequentially
+        const [savedLanguage, deviceLanguageSelected, hasEverSignedUp] = await Promise.all([
+          AsyncStorage.getItem('primeform_language_selected'),
+          AsyncStorage.getItem('primeform_device_language_selected'),
+          AsyncStorage.getItem('primeform_has_ever_signed_up')
+        ]);
 
         console.log('🌍 LanguageContext: Loading language from storage:', {
           savedLanguage,
