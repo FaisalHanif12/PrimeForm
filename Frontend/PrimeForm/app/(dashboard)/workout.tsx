@@ -28,7 +28,7 @@ export default function WorkoutScreen() {
   const router = useRouter();
   const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, immediateRefreshNotifications } = useNotifications();
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
@@ -351,6 +351,11 @@ export default function WorkoutScreen() {
           clearInterval(timerInterval);
           setShowGenerationModal(false);
           setGenerationTimer(0);
+          
+          // Refresh notifications to show the new workout plan notification
+          setTimeout(() => {
+            immediateRefreshNotifications();
+          }, 1000);
         } else {
           showToast('error', response.message || 'Failed to generate workout plan');
         }
@@ -384,11 +389,12 @@ export default function WorkoutScreen() {
       if (response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        showToast('success', 'Profile created! Now generating your workout plan...');
-        // Here you would typically call the workout plan generation API
+        showToast('success', 'Profile created successfully!');
+        
+        // Refresh notifications to show profile completion notification
         setTimeout(() => {
-          showToast('success', 'Your personalized workout plan is ready! This feature will be available soon.');
-        }, 2000);
+          immediateRefreshNotifications();
+        }, 1000);
       } else {
         showToast('error', 'Failed to save profile. Please try again.');
       }

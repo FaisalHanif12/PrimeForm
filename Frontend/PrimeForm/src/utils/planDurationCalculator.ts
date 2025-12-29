@@ -1,31 +1,26 @@
 import { UserProfile } from '../services/userProfileService';
 
-/**
- * Calculates optimal plan duration based on user profile
- * Ensures both diet and workout plans have the same duration
- */
+
 export interface PlanDuration {
   totalWeeks: number;
   duration: string; // Human-readable format like "36 weeks" or "9 months"
   durationMonths: number; // Approximate months
 }
 
-/**
- * Calculate plan duration based on user profile
- * Uses safe weight loss/gain rates and ensures realistic timeframes
- */
+
 export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const goal = userProfile.bodyGoal?.toLowerCase() || '';
   const currentWeight = parseFloat(userProfile.currentWeight) || 0;
   const targetWeight = parseFloat(userProfile.targetWeight) || 0;
   
-  // Safe weight change rates (per week) - conservative and sustainable
-  const SAFE_LOSS_RATE = 0.3; // 0.3 kg/week (~0.66 lb/week) - sustainable fat loss
-  const SAFE_GAIN_RATE = 0.2; // 0.2 kg/week (~0.44 lb/week) - sustainable muscle gain
+  // Conservative safe weight change rates (per week) - lower rate = longer duration = more time to achieve goal
+  // Using minimum sustainable rates to ensure users have adequate time to reach their target
+  const SAFE_LOSS_RATE = 0.3; // 0.3 kg/week (~0.66 lb/week) - conservative sustainable fat loss rate
+  const SAFE_GAIN_RATE = 0.2; // 0.2 kg/week (~0.44 lb/week) - conservative sustainable muscle gain rate
   
   // Minimum and maximum plan durations
-  const MIN_WEEKS = 12; // Minimum 12 weeks (3 months) - ensures meaningful progress
-  const MAX_WEEKS = 52; // Maximum 52 weeks (1 year) - reasonable long-term plan
+  const MIN_WEEKS = 16; // Minimum 16 weeks (4 months) - ensures meaningful progress and habit formation
+  const MAX_WEEKS = 52; // Maximum 52 weeks (1 year) - reasonable long-term plan cap
   
   // Weight validation ranges (reasonable human weights in kg)
   const MIN_REASONABLE_WEIGHT = 30; // Minimum reasonable weight (kg)
@@ -62,23 +57,38 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   // CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
   if (isWeightRelatedGoal) {
     if (hasValidWeights && weightDelta > 0) {
-      // Calculate weeks needed based on weight delta and safe rate
+      // Calculate exact weeks needed based on weight delta and conservative safe rate
+      // Formula: weeks = weightDelta / safeRatePerWeek
+      // Using Math.ceil to round up, ensuring users have enough time (conservative approach)
       const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
       const calculatedWeeks = Math.ceil(weightDelta / safeRate);
       
       // Apply minimum and maximum constraints
+      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks (but minimum applies)
       totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, calculatedWeeks));
       
       // For very small weight changes (< 2kg), still use minimum duration
-      // This ensures the plan has enough time to establish habits
+      // This ensures the plan has enough time to establish habits and see meaningful results
       if (weightDelta < 2) {
         totalWeeks = MIN_WEEKS;
       }
+      
+      // Log calculation details for debugging
+      if (__DEV__) {
+        console.log('📊 Plan duration calculation:', {
+          goal: userProfile.bodyGoal,
+          currentWeight,
+          targetWeight,
+          weightDelta,
+          safeRate: `${safeRate} kg/week`,
+          calculatedWeeks,
+          finalWeeks: totalWeeks
+        });
+      }
     } else {
       // Weight-related goal but missing/invalid target weight
-      // Use a moderate default duration (16 weeks / 4 months) for weight goals without target
-      // This is better than defaulting to 12 weeks or 52 weeks
-      totalWeeks = 16; // 4 months - reasonable for weight goals
+      // Use minimum duration as default
+      totalWeeks = MIN_WEEKS;
     }
   } else {
     // For non-weight goals (General Training, Improve Fitness, Maintain Weight), use goal-based defaults
@@ -89,16 +99,14 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
       // Maintenance: 3-6 months (12-24 weeks)
       totalWeeks = 16; // 4 months
     } else {
-      // Default: 12 weeks (3 months) minimum
-      totalWeeks = MIN_WEEKS;
+      // Default: 12 weeks (3 months) fallback
+      totalWeeks = 12;
     }
   }
   
   // Calculate months (approximate - 4.33 weeks per month)
   const durationMonths = Math.round((totalWeeks / 4.33) * 10) / 10;
   
-  // Generate human-readable duration string
-  // Format: Show as months for 24+ weeks, weeks for less (matches workout plan display)
   let duration: string;
   if (totalWeeks >= 24) {
     // 24+ weeks, show as months (rounded)
