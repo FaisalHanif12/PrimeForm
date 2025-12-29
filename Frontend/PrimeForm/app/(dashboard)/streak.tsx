@@ -328,67 +328,103 @@ export default function StreakScreen() {
   const renderHistory = () => {
     if (!streakData) return null;
 
-    // History is already last 30 days from service
-    const last30Days = streakData.streakHistory;
+    // History is now from plan start date (or last 60 days if no plan)
+    const history = streakData.streakHistory;
+    
+    if (history.length === 0) {
+      return (
+        <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
+          <View style={styles.historyHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
+              <Text style={styles.historySubtitle}>No activity history yet</Text>
+            </View>
+          </View>
+        </Animated.View>
+      );
+    }
+
+    // Get plan start date from history (first date in history)
+    const firstHistoryDate = new Date(history[0].date);
+    const lastHistoryDate = new Date(history[history.length - 1].date);
+    
+    // Group days by month
+    const daysByMonth: { [key: string]: Array<{ date: string; workoutCompleted: boolean; dietCompleted: boolean; overallCompleted: boolean }> } = {};
+    
+    history.forEach((day) => {
+      const date = new Date(day.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!daysByMonth[monthKey]) {
+        daysByMonth[monthKey] = [];
+      }
+      daysByMonth[monthKey].push(day);
+    });
+
+    // Sort months chronologically (newest first)
+    const sortedMonths = Object.keys(daysByMonth).sort().reverse();
+
+    // Helper function to get month name
+    const getMonthName = (dateString: string): string => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
+
+    // Format date range for subtitle - simplified
+    const formatDate = (date: Date): string => {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+    
+    const subtitle = history.length > 0 
+      ? `${formatDate(firstHistoryDate)} - ${formatDate(lastHistoryDate)}`
+      : 'No activity yet';
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
         <View style={styles.historyHeader}>
           <View>
             <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
-            <Text style={styles.historySubtitle}>{t('streak.history.subtitle')}</Text>
+            <Text style={styles.historySubtitle}>{subtitle}</Text>
           </View>
         </View>
 
-        <View style={styles.calendarGrid}>
-          {last30Days.map((day, index) => {
-            const date = new Date(day.date);
-            const dayNumber = date.getDate();
-            const isComplete = day.overallCompleted;
-            const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {sortedMonths.map((monthKey) => {
+            const monthDays = daysByMonth[monthKey];
+            const firstDay = monthDays[0];
+            const monthName = getMonthName(firstDay.date);
 
             return (
-              <View key={index} style={[
-                styles.calendarDay,
-                isComplete && styles.calendarDayCompleted,
-                isPartial && styles.calendarDayPartial,
-              ]}>
-                <Text style={[
-                  styles.calendarDayNumber,
-                  isComplete && styles.calendarDayNumberActive,
-                  isPartial && styles.calendarDayNumberPartial
-                ]}>
-                  {dayNumber}
-                </Text>
-                {(isComplete || isPartial) && (
-                  <View style={styles.calendarDayDots}>
-                    {day.workoutCompleted && (
-                      <View style={[styles.activityDot, { backgroundColor: colors.primary }]} />
-                    )}
-                    {day.dietCompleted && (
-                      <View style={[styles.activityDot, { backgroundColor: colors.green }]} />
-                    )}
-                  </View>
-                )}
+              <View key={monthKey} style={styles.monthSection}>
+                <Text style={styles.monthHeader}>{monthName}</Text>
+                <View style={styles.calendarGrid}>
+                  {monthDays.map((day, index) => {
+                    const date = new Date(day.date);
+                    const dayNumber = date.getDate();
+                    const hasActivity = day.workoutCompleted || day.dietCompleted || day.overallCompleted;
+                    const isToday = date.toDateString() === new Date().toDateString();
+
+                    return (
+                      <View key={`${monthKey}-${index}`} style={[
+                        styles.calendarDay,
+                        hasActivity && styles.calendarDayCompleted,
+                        isToday && styles.calendarDayToday,
+                      ]}>
+                        <Text style={[
+                          styles.calendarDayNumber,
+                          hasActivity && styles.calendarDayNumberActive,
+                          isToday && styles.calendarDayNumberToday
+                        ]}>
+                          {dayNumber}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             );
           })}
-        </View>
-
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.primary }]} />
-            <Text style={styles.legendText}>{t('streak.legend.workout')}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>{t('streak.legend.diet')}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.cardBorder }]} />
-            <Text style={styles.legendText}>{t('streak.legend.missed')}</Text>
-          </View>
-        </View>
+        </ScrollView>
       </Animated.View>
     );
   };
@@ -680,77 +716,55 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     marginTop: spacing.xs,
   },
+  monthSection: {
+    marginBottom: spacing.xl,
+  },
+  monthHeader: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+    textTransform: 'capitalize',
+  },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 8,
     marginBottom: spacing.lg,
+    justifyContent: 'flex-start',
   },
   calendarDay: {
-    width: (screenWidth - spacing.lg * 2 - spacing.xs * 6) / 7,
-    aspectRatio: 1,
+    width: 44,
+    height: 44,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.xs,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
+    borderWidth: 1,
+    borderColor: colors.cardBorder + '40',
   },
   calendarDayCompleted: {
-    backgroundColor: colors.green + '15',
-    borderColor: colors.green + '60',
+    backgroundColor: colors.green + '40',
+    borderColor: colors.green + '80',
   },
-  calendarDayPartial: {
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary + '60',
+  calendarDayToday: {
+    borderWidth: 2,
+    borderColor: colors.gold,
   },
   calendarDayNumber: {
     color: colors.mutedText,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs / 2,
   },
   calendarDayNumberActive: {
-    color: colors.white,
+    color: colors.green,
+    fontWeight: '700',
   },
-  calendarDayNumberPartial: {
-    color: colors.white,
-  },
-  calendarDayDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  activityDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  legendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  legendIndicator: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-  },
-  legendText: {
-    color: colors.mutedText,
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: fonts.body,
+  calendarDayNumberToday: {
+    color: colors.gold,
+    fontWeight: '700',
   },
 
   // Bottom Spacing
