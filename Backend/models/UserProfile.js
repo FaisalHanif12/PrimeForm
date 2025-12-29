@@ -125,6 +125,7 @@ userProfileSchema.pre('save', function(next) {
 userProfileSchema.post('save', async function(doc) {
   try {
     // Check if this is a new profile completion badge
+    // Only create notification if profile is complete AND badge was just added
     if (doc.isProfileComplete && doc.badges.includes('profile_completion')) {
       // Get the user details for the notification
       const User = require('./User');
@@ -135,12 +136,17 @@ userProfileSchema.post('save', async function(doc) {
         const NotificationService = require('../services/notificationService');
         
         // Send profile completion badge notification
-        await NotificationService.createProfileCompletionBadgeNotification(
+        // The service will handle duplicate prevention
+        const notification = await NotificationService.createProfileCompletionBadgeNotification(
           doc.userId,
           user.fullName
         );
         
-        console.log('🏆 Profile completion badge notification sent for user:', user.email);
+        if (notification) {
+          console.log('🏆 Profile completion badge notification created for user:', user.email);
+        } else {
+          console.log('ℹ️ Profile completion badge notification already exists for user:', user.email);
+        }
       }
     }
   } catch (error) {

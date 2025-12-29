@@ -29,7 +29,7 @@ export default function DietScreen() {
   const { user } = useAuthContext();
   const { t, language, transliterateText } = useLanguage();
   const router = useRouter();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, immediateRefreshNotifications } = useNotifications();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [showUserInfoModal, setShowUserInfoModal] = useState(false);
@@ -267,6 +267,11 @@ export default function DietScreen() {
           setDietPlan(response.data);
           setJustDeleted(false); // ✅ Reset deletion flag when new plan is generated
           showToast('success', 'Your personalized diet plan is ready!');
+          
+          // Refresh notifications to show the new diet plan notification
+          setTimeout(() => {
+            immediateRefreshNotifications();
+          }, 1000);
         } else {
           showToast('error', 'Failed to generate diet plan. Please try again.');
         }
@@ -297,25 +302,12 @@ export default function DietScreen() {
       if (response && response.success) {
         setUserInfo(userInfoData);
         setShowUserInfoModal(false);
-        showToast('success', 'Profile created! Now generating your diet plan...');
-
-        // Automatically generate diet plan after profile creation
-        try {
-          setIsGenerating(true);
-          const dietResponse = await aiDietService.generateDietPlan(userInfoData);
-
-          if (dietResponse.success && dietResponse.data) {
-            setDietPlan(dietResponse.data);
-            setJustDeleted(false); // ✅ Reset deletion flag when new plan is generated
-            showToast('success', 'Your personalized diet plan is ready!');
-          } else {
-            showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
-          }
-        } catch (error) {
-          showToast('error', 'Profile saved, but diet plan generation failed. Please try again.');
-        } finally {
-          setIsGenerating(false);
-        }
+        showToast('success', 'Profile created successfully!');
+        
+        // Refresh notifications to show profile completion notification
+        setTimeout(() => {
+          immediateRefreshNotifications();
+        }, 1000);
       } else {
         showToast('error', 'Failed to save profile. Please try again.');
       }
