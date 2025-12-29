@@ -178,8 +178,22 @@ class StreakService {
         dietDaysSample: dietDaysList.slice(-5)
       });
 
-      // Generate daily activity history for last 90 days
-      const streakHistory = this.generateStreakHistory(workoutDaysList, dietDaysList);
+      // Get plan start dates to determine history start date
+      const workoutStartDate = workoutPlan?.startDate ? new Date(workoutPlan.startDate) : null;
+      const dietStartDate = dietPlan?.startDate ? new Date(dietPlan.startDate) : null;
+      
+      // Use the earliest plan start date, or today if no plans
+      let planStartDate: Date | null = null;
+      if (workoutStartDate && dietStartDate) {
+        planStartDate = workoutStartDate < dietStartDate ? workoutStartDate : dietStartDate;
+      } else if (workoutStartDate) {
+        planStartDate = workoutStartDate;
+      } else if (dietStartDate) {
+        planStartDate = dietStartDate;
+      }
+
+      // Generate daily activity history from plan start date (or last 60 days if no plan)
+      const streakHistory = this.generateStreakHistory(workoutDaysList, dietDaysList, planStartDate);
 
       // Calculate current streaks (ensure arrays are passed)
       const currentWorkoutStreak = this.calculateCurrentStreak(Array.isArray(workoutDaysList) ? workoutDaysList : []);
@@ -266,8 +280,8 @@ class StreakService {
     }
   }
 
-  // Generate daily activity history
-  private generateStreakHistory(workoutDays: string[], dietDays: string[]): Array<{
+  // Generate daily activity history from plan start date
+  private generateStreakHistory(workoutDays: string[], dietDays: string[], planStartDate: Date | null = null): Array<{
     date: string;
     workoutCompleted: boolean;
     dietCompleted: boolean;
@@ -285,6 +299,24 @@ class StreakService {
       return `${year}-${month}-${day}`;
     };
     
+    // Determine start date: use plan start date if available, otherwise use 60 days ago
+    let startDate: Date;
+    if (planStartDate) {
+      startDate = new Date(planStartDate);
+      startDate.setHours(0, 0, 0, 0);
+    } else {
+      // No plan, use last 60 days as fallback
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 59); // 60 days total (0-59 = 60 days)
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
+    // Ensure start date is not in the future
+    if (startDate > today) {
+      startDate = new Date(today);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    
     // Ensure we have arrays (safety check)
     const workoutDaysArray = Array.isArray(workoutDays) ? workoutDays : [];
     const dietDaysArray = Array.isArray(dietDays) ? dietDays : [];
@@ -293,11 +325,18 @@ class StreakService {
     const workoutDaysSet = new Set(workoutDaysArray);
     const dietDaysSet = new Set(dietDaysArray);
     
-    // Generate last 60 days (for comprehensive history view)
-    for (let i = 59; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
+    // Calculate number of days from start date to today
+    const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const totalDays = Math.min(daysDiff + 1, 60); // Cap at 60 days maximum
+    
+    // Generate history from plan start date to today (or last 60 days if no plan)
+    for (let i = 0; i < totalDays; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
       date.setHours(0, 0, 0, 0);
+      
+      // Don't include future dates
+      if (date > today) break;
       
       // Format date consistently (local time, not UTC)
       const dateString = formatLocalDate(date);
@@ -314,6 +353,14 @@ class StreakService {
         overallCompleted
       });
     }
+    
+    console.log('📊 StreakService: History generated:', {
+      planStartDate: planStartDate ? formatLocalDate(planStartDate) : 'none',
+      startDate: formatLocalDate(startDate),
+      today: formatLocalDate(today),
+      totalDays: history.length,
+      historyDates: history.slice(0, 3).map(d => d.date)
+    });
     
     return history;
   }

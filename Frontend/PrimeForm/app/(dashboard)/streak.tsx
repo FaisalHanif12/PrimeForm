@@ -328,16 +328,32 @@ export default function StreakScreen() {
   const renderHistory = () => {
     if (!streakData) return null;
 
-    // History is now last 60 days from service
-    const last60Days = streakData.streakHistory;
+    // History is now from plan start date (or last 60 days if no plan)
+    const history = streakData.streakHistory;
+    
+    if (history.length === 0) {
+      return (
+        <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
+          <View style={styles.historyHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
+              <Text style={styles.historySubtitle}>No activity history yet</Text>
+            </View>
+          </View>
+        </Animated.View>
+      );
+    }
 
+    // Get plan start date from history (first date in history)
+    const firstHistoryDate = new Date(history[0].date);
+    const lastHistoryDate = new Date(history[history.length - 1].date);
+    
     // Group days by month
     const daysByMonth: { [key: string]: Array<{ date: string; workoutCompleted: boolean; dietCompleted: boolean; overallCompleted: boolean }> } = {};
     
-    last60Days.forEach((day) => {
+    history.forEach((day) => {
       const date = new Date(day.date);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       
       if (!daysByMonth[monthKey]) {
         daysByMonth[monthKey] = [];
@@ -354,12 +370,21 @@ export default function StreakScreen() {
       return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     };
 
+    // Format date range for subtitle
+    const formatDate = (date: Date): string => {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+    
+    const subtitle = history.length > 0 
+      ? `Activity from ${formatDate(firstHistoryDate)} to ${formatDate(lastHistoryDate)}`
+      : 'Last 60 days of activity';
+
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
         <View style={styles.historyHeader}>
           <View>
             <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
-            <Text style={styles.historySubtitle}>Last 60 days of activity</Text>
+            <Text style={styles.historySubtitle}>{subtitle}</Text>
           </View>
         </View>
 
