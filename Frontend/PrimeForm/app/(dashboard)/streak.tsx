@@ -401,21 +401,18 @@ export default function StreakScreen() {
                   {monthDays.map((day, index) => {
                     const date = new Date(day.date);
                     const dayNumber = date.getDate();
-                    const isComplete = day.overallCompleted;
-                    const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+                    const hasActivity = day.workoutCompleted || day.dietCompleted || day.overallCompleted;
                     const isToday = date.toDateString() === new Date().toDateString();
 
                     return (
                       <View key={`${monthKey}-${index}`} style={[
                         styles.calendarDay,
-                        isComplete && styles.calendarDayCompleted,
-                        isPartial && styles.calendarDayPartial,
+                        hasActivity && styles.calendarDayCompleted,
                         isToday && styles.calendarDayToday,
                       ]}>
                         <Text style={[
                           styles.calendarDayNumber,
-                          isComplete && styles.calendarDayNumberActive,
-                          isPartial && styles.calendarDayNumberPartial,
+                          hasActivity && styles.calendarDayNumberActive,
                           isToday && styles.calendarDayNumberToday
                         ]}>
                           {dayNumber}
@@ -748,12 +745,8 @@ const styles = StyleSheet.create({
     borderColor: colors.cardBorder + '40',
   },
   calendarDayCompleted: {
-    backgroundColor: colors.green,
-    borderColor: colors.green,
-  },
-  calendarDayPartial: {
-    backgroundColor: colors.primary + '30',
-    borderColor: colors.primary + '60',
+    backgroundColor: colors.green + '40',
+    borderColor: colors.green + '80',
   },
   calendarDayToday: {
     borderWidth: 2,
@@ -766,12 +759,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading,
   },
   calendarDayNumberActive: {
-    color: colors.white,
+    color: colors.green,
     fontWeight: '700',
-  },
-  calendarDayNumberPartial: {
-    color: colors.primary,
-    fontWeight: '600',
   },
   calendarDayNumberToday: {
     color: colors.gold,
