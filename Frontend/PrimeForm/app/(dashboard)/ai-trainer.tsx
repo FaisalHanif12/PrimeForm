@@ -33,6 +33,7 @@ import ChatHistoryModal from '../../src/components/ChatHistoryModal';
 import aiTrainerService from '../../src/services/aiTrainerService';
 import { showRewardedAd } from '../../src/ads/showRewarded';
 import { AdUnits } from '../../src/ads/adUnits';
+import MarkdownText from '../../src/components/MarkdownText';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -493,14 +494,23 @@ export default function AITrainerScreen() {
                   styles.messageBubble,
                   message.type === 'user' ? styles.userBubble : styles.aiBubble
                 ]}>
-                  <Text style={[
-                    styles.messageText,
-                    message.type === 'user' ? styles.userMessageText : styles.aiMessageText
-                  ]}>
-                    {language === 'ur' 
-                      ? transliterateText(message.message)
-                      : message.message}
-                  </Text>
+                  {message.type === 'ai' ? (
+                    <MarkdownText
+                      text={language === 'ur' 
+                        ? transliterateText(message.message)
+                        : message.message}
+                      textStyle={styles.aiMessageText}
+                    />
+                  ) : (
+                    <Text style={[
+                      styles.messageText,
+                      styles.userMessageText
+                    ]}>
+                      {language === 'ur' 
+                        ? transliterateText(message.message)
+                        : message.message}
+                    </Text>
+                  )}
                   <Text style={[
                     styles.messageTime,
                     message.type === 'user' ? styles.userMessageTime : styles.aiMessageTime
