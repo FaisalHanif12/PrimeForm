@@ -24,9 +24,24 @@ export default function AuthButton({ label, onPress, loading, disabled, style }:
     shadowOpacity: 0.35 + pulse.value * 0.2,
     transform: [{ scale: 1 + pulse.value * 0.01 }],
   }));
+
+  const handlePress = () => {
+    if (!isDisabled && onPress) {
+      console.log('🔘 AuthButton pressed - label:', label);
+      onPress();
+    } else {
+      console.log('⚠️ AuthButton blocked', { isDisabled, disabled, loading, hasOnPress: !!onPress });
+    }
+  };
+
   return (
-    <Animated.View style={glow}>
-      <TouchableOpacity activeOpacity={0.9} onPress={onPress} disabled={isDisabled} style={[isDisabled && styles.buttonDisabled, style]}>
+    <Animated.View style={glow} pointerEvents="box-none">
+      <TouchableOpacity 
+        activeOpacity={0.9} 
+        onPress={handlePress} 
+        disabled={isDisabled} 
+        style={[isDisabled && styles.buttonDisabled, style]}
+      >
         <LinearGradient
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
