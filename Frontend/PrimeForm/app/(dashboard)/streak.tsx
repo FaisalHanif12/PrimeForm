@@ -370,14 +370,14 @@ export default function StreakScreen() {
       return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
     };
 
-    // Format date range for subtitle
+    // Format date range for subtitle - simplified
     const formatDate = (date: Date): string => {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
     
     const subtitle = history.length > 0 
-      ? `Activity from ${formatDate(firstHistoryDate)} to ${formatDate(lastHistoryDate)}`
-      : 'Last 60 days of activity';
+      ? `${formatDate(firstHistoryDate)} - ${formatDate(lastHistoryDate)}`
+      : 'No activity yet';
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
@@ -403,30 +403,23 @@ export default function StreakScreen() {
                     const dayNumber = date.getDate();
                     const isComplete = day.overallCompleted;
                     const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+                    const isToday = date.toDateString() === new Date().toDateString();
 
                     return (
                       <View key={`${monthKey}-${index}`} style={[
                         styles.calendarDay,
                         isComplete && styles.calendarDayCompleted,
                         isPartial && styles.calendarDayPartial,
+                        isToday && styles.calendarDayToday,
                       ]}>
                         <Text style={[
                           styles.calendarDayNumber,
                           isComplete && styles.calendarDayNumberActive,
-                          isPartial && styles.calendarDayNumberPartial
+                          isPartial && styles.calendarDayNumberPartial,
+                          isToday && styles.calendarDayNumberToday
                         ]}>
                           {dayNumber}
                         </Text>
-                        {(isComplete || isPartial) && (
-                          <View style={styles.calendarDayDots}>
-                            {day.workoutCompleted && (
-                              <View style={[styles.activityDot, { backgroundColor: colors.primary }]} />
-                            )}
-                            {day.dietCompleted && (
-                              <View style={[styles.activityDot, { backgroundColor: colors.green }]} />
-                            )}
-                          </View>
-                        )}
                       </View>
                     );
                   })}
@@ -435,21 +428,6 @@ export default function StreakScreen() {
             );
           })}
         </ScrollView>
-
-        <View style={styles.legendContainer}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.primary }]} />
-            <Text style={styles.legendText}>{t('streak.legend.workout')}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.green }]} />
-            <Text style={styles.legendText}>{t('streak.legend.diet')}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendIndicator, { backgroundColor: colors.cardBorder }]} />
-            <Text style={styles.legendText}>{t('streak.legend.missed')}</Text>
-          </View>
-        </View>
       </Animated.View>
     );
   };
@@ -755,74 +733,49 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: 8,
     marginBottom: spacing.lg,
+    justifyContent: 'flex-start',
   },
   calendarDay: {
-    width: (screenWidth - spacing.lg * 2 - spacing.xs * 6) / 7,
-    aspectRatio: 1,
+    width: 44,
+    height: 44,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.xs,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.cardBorder,
+    borderWidth: 1,
+    borderColor: colors.cardBorder + '40',
   },
   calendarDayCompleted: {
-    backgroundColor: colors.green + '15',
-    borderColor: colors.green + '60',
+    backgroundColor: colors.green,
+    borderColor: colors.green,
   },
   calendarDayPartial: {
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.primary + '30',
     borderColor: colors.primary + '60',
+  },
+  calendarDayToday: {
+    borderWidth: 2,
+    borderColor: colors.gold,
   },
   calendarDayNumber: {
     color: colors.mutedText,
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
     fontFamily: fonts.heading,
-    marginBottom: spacing.xs / 2,
   },
   calendarDayNumberActive: {
     color: colors.white,
+    fontWeight: '700',
   },
   calendarDayNumberPartial: {
-    color: colors.white,
-  },
-  calendarDayDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  activityDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  legendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  legendIndicator: {
-    width: 14,
-    height: 14,
-    borderRadius: 3,
-  },
-  legendText: {
-    color: colors.mutedText,
-    fontSize: 12,
+    color: colors.primary,
     fontWeight: '600',
-    fontFamily: fonts.body,
+  },
+  calendarDayNumberToday: {
+    color: colors.gold,
+    fontWeight: '700',
   },
 
   // Bottom Spacing
