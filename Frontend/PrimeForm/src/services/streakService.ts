@@ -293,8 +293,8 @@ class StreakService {
     const workoutDaysSet = new Set(workoutDaysArray);
     const dietDaysSet = new Set(dietDaysArray);
     
-    // Generate last 90 days (for comprehensive history view)
-    for (let i = 89; i >= 0; i--) {
+    // Generate last 60 days (for comprehensive history view)
+    for (let i = 59; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       date.setHours(0, 0, 0, 0);

@@ -328,52 +328,88 @@ export default function StreakScreen() {
   const renderHistory = () => {
     if (!streakData) return null;
 
-    // History is already last 30 days from service
-    const last30Days = streakData.streakHistory;
+    // History is now last 60 days from service
+    const last60Days = streakData.streakHistory;
+
+    // Group days by month
+    const daysByMonth: { [key: string]: Array<{ date: string; workoutCompleted: boolean; dietCompleted: boolean; overallCompleted: boolean }> } = {};
+    
+    last60Days.forEach((day) => {
+      const date = new Date(day.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
+      if (!daysByMonth[monthKey]) {
+        daysByMonth[monthKey] = [];
+      }
+      daysByMonth[monthKey].push(day);
+    });
+
+    // Sort months chronologically (newest first)
+    const sortedMonths = Object.keys(daysByMonth).sort().reverse();
+
+    // Helper function to get month name
+    const getMonthName = (dateString: string): string => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    };
 
     return (
       <Animated.View entering={FadeInUp.delay(300)} style={styles.historyContainer}>
         <View style={styles.historyHeader}>
           <View>
             <Text style={styles.sectionTitle}>{t('streak.history.title')}</Text>
-            <Text style={styles.historySubtitle}>{t('streak.history.subtitle')}</Text>
+            <Text style={styles.historySubtitle}>Last 60 days of activity</Text>
           </View>
         </View>
 
-        <View style={styles.calendarGrid}>
-          {last30Days.map((day, index) => {
-            const date = new Date(day.date);
-            const dayNumber = date.getDate();
-            const isComplete = day.overallCompleted;
-            const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {sortedMonths.map((monthKey) => {
+            const monthDays = daysByMonth[monthKey];
+            const firstDay = monthDays[0];
+            const monthName = getMonthName(firstDay.date);
 
             return (
-              <View key={index} style={[
-                styles.calendarDay,
-                isComplete && styles.calendarDayCompleted,
-                isPartial && styles.calendarDayPartial,
-              ]}>
-                <Text style={[
-                  styles.calendarDayNumber,
-                  isComplete && styles.calendarDayNumberActive,
-                  isPartial && styles.calendarDayNumberPartial
-                ]}>
-                  {dayNumber}
-                </Text>
-                {(isComplete || isPartial) && (
-                  <View style={styles.calendarDayDots}>
-                    {day.workoutCompleted && (
-                      <View style={[styles.activityDot, { backgroundColor: colors.primary }]} />
-                    )}
-                    {day.dietCompleted && (
-                      <View style={[styles.activityDot, { backgroundColor: colors.green }]} />
-                    )}
-                  </View>
-                )}
+              <View key={monthKey} style={styles.monthSection}>
+                <Text style={styles.monthHeader}>{monthName}</Text>
+                <View style={styles.calendarGrid}>
+                  {monthDays.map((day, index) => {
+                    const date = new Date(day.date);
+                    const dayNumber = date.getDate();
+                    const isComplete = day.overallCompleted;
+                    const isPartial = (day.workoutCompleted || day.dietCompleted) && !isComplete;
+
+                    return (
+                      <View key={`${monthKey}-${index}`} style={[
+                        styles.calendarDay,
+                        isComplete && styles.calendarDayCompleted,
+                        isPartial && styles.calendarDayPartial,
+                      ]}>
+                        <Text style={[
+                          styles.calendarDayNumber,
+                          isComplete && styles.calendarDayNumberActive,
+                          isPartial && styles.calendarDayNumberPartial
+                        ]}>
+                          {dayNumber}
+                        </Text>
+                        {(isComplete || isPartial) && (
+                          <View style={styles.calendarDayDots}>
+                            {day.workoutCompleted && (
+                              <View style={[styles.activityDot, { backgroundColor: colors.primary }]} />
+                            )}
+                            {day.dietCompleted && (
+                              <View style={[styles.activityDot, { backgroundColor: colors.green }]} />
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             );
           })}
-        </View>
+        </ScrollView>
 
         <View style={styles.legendContainer}>
           <View style={styles.legendItem}>
@@ -679,6 +715,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: fonts.body,
     marginTop: spacing.xs,
+  },
+  monthSection: {
+    marginBottom: spacing.xl,
+  },
+  monthHeader: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '700',
+    fontFamily: fonts.heading,
+    marginBottom: spacing.md,
+    textTransform: 'capitalize',
   },
   calendarGrid: {
     flexDirection: 'row',
