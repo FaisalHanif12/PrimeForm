@@ -171,6 +171,13 @@ class StreakService {
       const workoutDaysList = this.calculateCompletedWorkoutDays(workoutPlan, completedExercisesSet) || [];
       const dietDaysList = this.calculateCompletedDietDays(dietPlan, completedMealsSet) || [];
 
+      console.log('📊 StreakService: Completed days calculated:', {
+        workoutDaysCount: workoutDaysList.length,
+        dietDaysCount: dietDaysList.length,
+        workoutDaysSample: workoutDaysList.slice(-5),
+        dietDaysSample: dietDaysList.slice(-5)
+      });
+
       // Generate daily activity history for last 90 days
       const streakHistory = this.generateStreakHistory(workoutDaysList, dietDaysList);
 
@@ -183,6 +190,15 @@ class StreakService {
       const longestWorkoutStreak = this.calculateLongestStreak(Array.isArray(workoutDaysList) ? workoutDaysList : []);
       const longestDietStreak = this.calculateLongestStreak(Array.isArray(dietDaysList) ? dietDaysList : []);
       const longestOverallStreak = this.calculateLongestOverallStreak(streakHistory);
+
+      console.log('📊 StreakService: Streak calculations:', {
+        currentWorkoutStreak,
+        currentDietStreak,
+        currentOverallStreak,
+        longestWorkoutStreak,
+        longestDietStreak,
+        longestOverallStreak
+      });
 
       // Calculate consistency percentages (returns object with workout, diet, overall)
       const weeklyConsistencyData = this.calculateWeeklyConsistency(streakHistory);
@@ -261,6 +277,14 @@ class StreakService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Helper function to format date consistently (local time, not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
     // Ensure we have arrays (safety check)
     const workoutDaysArray = Array.isArray(workoutDays) ? workoutDays : [];
     const dietDaysArray = Array.isArray(dietDays) ? dietDays : [];
@@ -269,17 +293,14 @@ class StreakService {
     const workoutDaysSet = new Set(workoutDaysArray);
     const dietDaysSet = new Set(dietDaysArray);
     
-    // Generate last 30 days (for history view)
-    for (let i = 29; i >= 0; i--) {
+    // Generate last 90 days (for comprehensive history view)
+    for (let i = 89; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       date.setHours(0, 0, 0, 0);
       
-      // Format date consistently (YYYY-MM-DD)
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
+      // Format date consistently (local time, not UTC)
+      const dateString = formatLocalDate(date);
       
       // Check if day is completed (use Set for O(1) lookup)
       const workoutCompleted = workoutDaysSet.has(dateString);
@@ -301,6 +322,14 @@ class StreakService {
   private calculateCurrentStreak(completedDays: string[]): number {
     if (completedDays.length === 0) return 0;
 
+    // Helper function to format date consistently (local time, not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     // Normalize dates to YYYY-MM-DD format and remove duplicates
     const normalizedDays = completedDays
       .map(day => {
@@ -311,7 +340,7 @@ class StreakService {
         // Try to parse as date
         try {
           const date = new Date(day);
-          return date.toISOString().split('T')[0];
+          return formatLocalDate(date);
         } catch {
           return null;
         }
@@ -322,20 +351,22 @@ class StreakService {
 
     // Sort dates and get unique values
     const uniqueDays = Array.from(new Set(normalizedDays)).sort();
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
     
-    // Find the most recent completed day (today or yesterday)
+    // Get today and yesterday in local time
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = formatLocalDate(today);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = formatLocalDate(yesterday);
+    
+    // Find the most recent completed day
     const mostRecentDay = uniqueDays[uniqueDays.length - 1];
-    const startDate = mostRecentDay === today ? today : 
-                     (mostRecentDay === yesterdayStr ? yesterdayStr : mostRecentDay);
     
     // If the most recent day is more than 1 day ago, streak is broken
-    const startDateObj = new Date(startDate);
-    const todayObj = new Date(today);
-    const daysDiff = Math.floor((todayObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    const mostRecentDate = new Date(mostRecentDay + 'T00:00:00');
+    const daysDiff = Math.floor((today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysDiff > 1) {
       return 0; // Streak broken - gap of more than 1 day
@@ -343,16 +374,19 @@ class StreakService {
     
     // Count consecutive days backwards from the most recent completed day
     let streak = 0;
-    const currentDate = new Date(startDate);
+    const startDate = new Date(mostRecentDay + 'T00:00:00');
     
+    // Check backwards from most recent day
     for (let i = 0; i < 365; i++) { // Check up to a year
-      const checkDate = new Date(currentDate);
-      checkDate.setDate(currentDate.getDate() - i);
-      const dateString = checkDate.toISOString().split('T')[0];
+      const checkDate = new Date(startDate);
+      checkDate.setDate(startDate.getDate() - i);
+      checkDate.setHours(0, 0, 0, 0);
+      const dateString = formatLocalDate(checkDate);
       
       if (uniqueDays.includes(dateString)) {
         streak++;
       } else {
+        // If we hit a gap, stop counting
         break;
       }
     }
@@ -367,11 +401,55 @@ class StreakService {
     dietCompleted: boolean;
     overallCompleted: boolean;
   }>): number {
-    let streak = 0;
+    if (history.length === 0) return 0;
+    
+    // Helper function to format date consistently (local time, not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    // Get today in local time
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = formatLocalDate(today);
+    
+    // Find the most recent overall completed day
     const reversedHistory = [...history].reverse();
+    let mostRecentCompletedDate: string | null = null;
     
     for (const day of reversedHistory) {
       if (day.overallCompleted) {
+        mostRecentCompletedDate = day.date;
+        break;
+      }
+    }
+    
+    if (!mostRecentCompletedDate) return 0;
+    
+    // Check if streak is broken (more than 1 day ago)
+    const mostRecentDate = new Date(mostRecentCompletedDate + 'T00:00:00');
+    const daysDiff = Math.floor((today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 1) {
+      return 0; // Streak broken - gap of more than 1 day
+    }
+    
+    // Count consecutive overall completed days backwards from most recent
+    let streak = 0;
+    const startDate = new Date(mostRecentCompletedDate + 'T00:00:00');
+    
+    for (let i = 0; i < 365; i++) {
+      const checkDate = new Date(startDate);
+      checkDate.setDate(startDate.getDate() - i);
+      checkDate.setHours(0, 0, 0, 0);
+      const dateString = formatLocalDate(checkDate);
+      
+      // Find this date in history
+      const dayInHistory = history.find(d => d.date === dateString);
+      if (dayInHistory && dayInHistory.overallCompleted) {
         streak++;
       } else {
         break;
@@ -385,19 +463,46 @@ class StreakService {
   private calculateLongestStreak(completedDays: string[]): number {
     if (completedDays.length === 0) return 0;
 
-    const sortedDays = completedDays.sort();
-    let longestStreak = 1;
+    // Helper function to format date consistently (local time, not UTC)
+    const formatLocalDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Normalize and sort dates
+    const normalizedDays = completedDays
+      .map(day => {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+          return day;
+        }
+        try {
+          const date = new Date(day);
+          return formatLocalDate(date);
+        } catch {
+          return null;
+        }
+      })
+      .filter((day): day is string => day !== null);
+
+    if (normalizedDays.length === 0) return 0;
+
+    const sortedDays = Array.from(new Set(normalizedDays)).sort();
+    let longestStreak = sortedDays.length > 0 ? 1 : 0;
     let currentStreak = 1;
 
     for (let i = 1; i < sortedDays.length; i++) {
-      const prevDate = new Date(sortedDays[i - 1]);
-      const currentDate = new Date(sortedDays[i]);
-      const dayDiff = (currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24);
+      const prevDate = new Date(sortedDays[i - 1] + 'T00:00:00');
+      const currentDate = new Date(sortedDays[i] + 'T00:00:00');
+      const dayDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
 
       if (dayDiff === 1) {
+        // Consecutive day
         currentStreak++;
         longestStreak = Math.max(longestStreak, currentStreak);
       } else {
+        // Gap found, reset current streak
         currentStreak = 1;
       }
     }
@@ -412,14 +517,39 @@ class StreakService {
     dietCompleted: boolean;
     overallCompleted: boolean;
   }>): number {
+    if (history.length === 0) return 0;
+    
+    // Sort history by date to ensure chronological order
+    const sortedHistory = [...history].sort((a, b) => a.date.localeCompare(b.date));
+    
     let longestStreak = 0;
     let currentStreak = 0;
     
-    for (const day of history) {
+    for (let i = 0; i < sortedHistory.length; i++) {
+      const day = sortedHistory[i];
+      
       if (day.overallCompleted) {
-        currentStreak++;
+        // Check if this is consecutive with previous day
+        if (i > 0) {
+          const prevDate = new Date(sortedHistory[i - 1].date + 'T00:00:00');
+          const currentDate = new Date(day.date + 'T00:00:00');
+          const dayDiff = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (dayDiff === 1 && sortedHistory[i - 1].overallCompleted) {
+            // Consecutive day, continue streak
+            currentStreak++;
+          } else {
+            // Gap found or previous day not completed, start new streak
+            currentStreak = 1;
+          }
+        } else {
+          // First day
+          currentStreak = 1;
+        }
+        
         longestStreak = Math.max(longestStreak, currentStreak);
       } else {
+        // Day not completed, reset streak
         currentStreak = 0;
       }
     }
@@ -429,16 +559,13 @@ class StreakService {
 
   // Calculate weekly consistency percentage
   // Returns separate counts for workout and diet, and overall
+  // Uses actual week boundaries (Monday-Sunday)
   private calculateWeeklyConsistency(history: Array<{
     date: string;
     workoutCompleted: boolean;
     dietCompleted: boolean;
     overallCompleted: boolean;
   }>): { workout: number; diet: number; overall: number } {
-    // Get current week (last 7 days including today)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
     // Helper function to format date consistently (local time, not UTC)
     const formatLocalDate = (date: Date): string => {
       const year = date.getFullYear();
@@ -447,27 +574,39 @@ class StreakService {
       return `${year}-${month}-${day}`;
     };
     
-    // Get last 7 days (including today) - use local time format
-    const last7Days: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
+    // Get current date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get Monday of current week (week starts on Monday)
+    const currentDayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const daysFromMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1; // Convert to Mon=0, Sun=6
+    const mondayOfWeek = new Date(today);
+    mondayOfWeek.setDate(today.getDate() - daysFromMonday);
+    mondayOfWeek.setHours(0, 0, 0, 0);
+    
+    // Generate dates from Monday to today (current week)
+    const currentWeekDays: string[] = [];
+    for (let i = 0; i <= daysFromMonday; i++) {
+      const date = new Date(mondayOfWeek);
+      date.setDate(mondayOfWeek.getDate() + i);
       const dateStr = formatLocalDate(date);
-      last7Days.push(dateStr);
+      currentWeekDays.push(dateStr);
     }
     
-    // Filter history to only include last 7 days
-    const lastWeek = history.filter(day => last7Days.includes(day.date));
+    // Filter history to only include current week days (Monday to today)
+    const currentWeek = history.filter(day => currentWeekDays.includes(day.date));
     
-    // Count completed days for each type
-    const workoutCompleted = lastWeek.filter(day => day.workoutCompleted).length;
-    const dietCompleted = lastWeek.filter(day => day.dietCompleted).length;
-    const overallCompleted = lastWeek.filter(day => day.overallCompleted).length;
+    // Count completed days for each type in current week
+    const workoutCompleted = currentWeek.filter(day => day.workoutCompleted).length;
+    const dietCompleted = currentWeek.filter(day => day.dietCompleted).length;
+    const overallCompleted = currentWeek.filter(day => day.overallCompleted).length;
     
     console.log('📊 StreakService: Weekly consistency calculation:', {
-      last7Days,
-      historyLength: history.length,
-      lastWeekLength: lastWeek.length,
+      today: formatLocalDate(today),
+      mondayOfWeek: formatLocalDate(mondayOfWeek),
+      currentWeekDays,
+      currentWeekLength: currentWeek.length,
       workoutCompleted,
       dietCompleted,
       overallCompleted
@@ -825,16 +964,33 @@ class StreakService {
         return;
       }
       
-      const today = new Date().toISOString().split('T')[0];
+      // Helper function to format date consistently (local time, not UTC)
+      const formatLocalDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const today = formatLocalDate(new Date());
       const baseKey = type === 'workout' ? 'completed_workout_days' : 'completed_diet_days';
       const storageKey = await getUserCacheKey(baseKey, userId);
       
-      const completedDays = await Storage.getItem(storageKey) || '[]';
-      const daysList = JSON.parse(completedDays);
+      const completedDaysData = await Storage.getItem(storageKey);
+      const daysList = completedDaysData ? JSON.parse(completedDaysData) : [];
+      
+      // Ensure it's an array
+      if (!Array.isArray(daysList)) {
+        console.warn(`⚠️ Invalid ${type} streak data format, resetting`);
+        await Storage.setItem(storageKey, JSON.stringify([]));
+        return;
+      }
       
       if (completed && !daysList.includes(today)) {
         daysList.push(today);
-        await Storage.setItem(storageKey, JSON.stringify(daysList));
+        // Remove duplicates and sort
+        const uniqueDays = Array.from(new Set(daysList)).sort();
+        await Storage.setItem(storageKey, JSON.stringify(uniqueDays));
         console.log(`✅ ${type} streak updated for ${today} (user: ${userId})`);
       }
     } catch (error) {
