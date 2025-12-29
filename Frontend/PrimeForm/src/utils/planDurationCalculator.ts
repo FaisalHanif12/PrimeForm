@@ -19,38 +19,70 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const currentWeight = parseFloat(userProfile.currentWeight) || 0;
   const targetWeight = parseFloat(userProfile.targetWeight) || 0;
   
-  // Safe weight change rates (per week)
-  const SAFE_LOSS_RATE = 0.5; // 0.5 kg/week (1 lb/week) - safe and sustainable
-  const SAFE_GAIN_RATE = 0.3; // 0.3 kg/week (0.66 lb/week) - safe muscle gain rate
+  // Safe weight change rates (per week) - conservative and sustainable
+  const SAFE_LOSS_RATE = 0.3; // 0.3 kg/week (~0.66 lb/week) - sustainable fat loss
+  const SAFE_GAIN_RATE = 0.2; // 0.2 kg/week (~0.44 lb/week) - sustainable muscle gain
   
   // Minimum and maximum plan durations
   const MIN_WEEKS = 12; // Minimum 12 weeks (3 months) - ensures meaningful progress
   const MAX_WEEKS = 52; // Maximum 52 weeks (1 year) - reasonable long-term plan
   
+  // Weight validation ranges (reasonable human weights in kg)
+  const MIN_REASONABLE_WEIGHT = 30; // Minimum reasonable weight (kg)
+  const MAX_REASONABLE_WEIGHT = 200; // Maximum reasonable weight (kg)
+  
   let totalWeeks = 12; // Default fallback
   
-  // Check if goal is weight-related and we have valid weight data
+  // Check if goal is weight-related
   const isWeightLoss = goal.includes('lose') || goal.includes('fat');
   const isWeightGain = goal.includes('gain') || goal.includes('muscle');
-  const hasValidWeights = currentWeight > 0 && targetWeight > 0;
-  const weightDelta = Math.abs(currentWeight - targetWeight);
+  const isWeightRelatedGoal = isWeightLoss || isWeightGain;
   
-  if ((isWeightLoss || isWeightGain) && hasValidWeights && weightDelta > 0) {
-    // Calculate weeks needed based on weight delta and safe rate
-    const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
-    const calculatedWeeks = Math.ceil(weightDelta / safeRate);
-    
-    // Apply minimum and maximum constraints
-    totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, calculatedWeeks));
-    
-    // For very small weight changes (< 2kg), still use minimum duration
-    // This ensures the plan has enough time to establish habits
-    if (weightDelta < 2) {
-      totalWeeks = MIN_WEEKS;
+  // Validate weight data - check if weights are within reasonable ranges
+  const isValidCurrentWeight = currentWeight >= MIN_REASONABLE_WEIGHT && currentWeight <= MAX_REASONABLE_WEIGHT;
+  const isValidTargetWeight = targetWeight >= MIN_REASONABLE_WEIGHT && targetWeight <= MAX_REASONABLE_WEIGHT;
+  const hasValidWeights = isValidCurrentWeight && isValidTargetWeight && currentWeight > 0 && targetWeight > 0;
+  
+  // Calculate weight delta only if weights are valid
+  const weightDelta = hasValidWeights ? Math.abs(currentWeight - targetWeight) : 0;
+  
+  // Log warning if invalid weights detected (for debugging)
+  if (isWeightRelatedGoal && !hasValidWeights) {
+    if (__DEV__) {
+      console.warn('⚠️ Invalid weight data for duration calculation:', {
+        currentWeight,
+        targetWeight,
+        isValidCurrentWeight,
+        isValidTargetWeight,
+        goal: userProfile.bodyGoal
+      });
+    }
+  }
+  
+  // CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
+  if (isWeightRelatedGoal) {
+    if (hasValidWeights && weightDelta > 0) {
+      // Calculate weeks needed based on weight delta and safe rate
+      const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
+      const calculatedWeeks = Math.ceil(weightDelta / safeRate);
+      
+      // Apply minimum and maximum constraints
+      totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, calculatedWeeks));
+      
+      // For very small weight changes (< 2kg), still use minimum duration
+      // This ensures the plan has enough time to establish habits
+      if (weightDelta < 2) {
+        totalWeeks = MIN_WEEKS;
+      }
+    } else {
+      // Weight-related goal but missing/invalid target weight
+      // Use a moderate default duration (16 weeks / 4 months) for weight goals without target
+      // This is better than defaulting to 12 weeks or 52 weeks
+      totalWeeks = 16; // 4 months - reasonable for weight goals
     }
   } else {
-    // For non-weight goals or missing weight data, use goal-based defaults
-    if (goal.includes('fitness') || goal.includes('training') || goal.includes('endurance')) {
+    // For non-weight goals (General Training, Improve Fitness, Maintain Weight), use goal-based defaults
+    if (goal.includes('fitness') || goal.includes('training') || goal.includes('endurance') || goal.includes('improve')) {
       // General fitness/training goals: 1 year (52 weeks)
       totalWeeks = 52; // 1 year as per requirement
     } else if (goal.includes('maintain')) {

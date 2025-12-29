@@ -54,21 +54,33 @@ export default function ForgotPasswordScreen() {
 
 
   const onSubmit = async () => {
+    console.log('🔵 onSubmit called - email:', email, 'loading:', loading, 'isSubmitted:', isSubmitted);
+    
+    // Prevent multiple submissions
+    if (loading || isSubmitted) {
+      console.log('⚠️ Button already processing, ignoring click');
+      return;
+    }
+    
     setTouched(true);
     const emailError = validateEmail(email);
     
     if (emailError) {
       setError(emailError);
+      console.log('❌ Email validation error:', emailError);
       return;
     }
     
     setError(undefined);
+    console.log('✅ Email validated, calling sendReset...');
     
     try {
       const response = await sendReset(email);
+      console.log('📧 Forgot password response:', response);
+      
       if (response?.success) {
         setIsSubmitted(true);
-        showToast('success', t('toast.reset.success'));
+        showToast('success', response.message || t('toast.reset.success'));
         
         // Navigate to OTP screen immediately after showing toast
         setTimeout(() => {
@@ -78,12 +90,24 @@ export default function ForgotPasswordScreen() {
           });
         }, 1500);
       } else {
-        showToast('error', t('toast.reset.error'));
+        // Show the actual error message from the API if available
+        const errorMessage = response?.message || t('toast.reset.error');
+        setError(errorMessage);
+        showToast('error', errorMessage);
+        console.log('❌ API error:', errorMessage);
       }
     } catch (error) {
-      console.error('Forgot password error:', error);
-      showToast('error', t('toast.connection.error'));
+      console.error('💥 Forgot password error:', error);
+      const errorMessage = error instanceof Error ? error.message : t('toast.connection.error');
+      setError(errorMessage);
+      showToast('error', errorMessage);
     }
+  };
+
+  const handleBack = () => {
+    // Navigate back to login screen
+    // Using replace ensures we don't create navigation loops
+    router.replace('/auth/login');
   };
 
   return (
@@ -94,7 +118,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.header}>
               <TouchableOpacity 
                 style={styles.backButton} 
-                onPress={() => router.back()}
+                onPress={handleBack}
                 activeOpacity={0.7}
               >
                 <Ionicons name="arrow-back" size={24} color={colors.gold} />
@@ -135,12 +159,15 @@ export default function ForgotPasswordScreen() {
                 />
               )}
             </Animated.View>
-            <Animated.View entering={FadeInDown}>
+            <Animated.View entering={FadeInDown} style={{ width: '100%' }}>
               <AuthButton 
                 label={isSubmitted ? t('auth.forgot.sent') : t('auth.forgot.button')} 
-                onPress={onSubmit} 
+                onPress={() => {
+                  console.log('🔘 Button pressed!');
+                  onSubmit();
+                }} 
                 loading={loading}
-                disabled={isSubmitted}
+                disabled={isSubmitted || loading}
               />
             </Animated.View>
             </Animated.View>

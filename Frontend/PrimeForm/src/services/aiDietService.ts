@@ -3,11 +3,7 @@ import dietPlanService from './dietPlanService';
 import Storage from '../utils/storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 import { calculatePlanDuration, formatDurationForPrompt, PlanDuration } from '../utils/planDurationCalculator';
-
-const OPENROUTER_API_KEY = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = process.env.EXPO_PUBLIC_OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
-const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://primeform.app';
-const SITE_NAME = process.env.EXPO_PUBLIC_SITE_NAME || 'Pure Body';
+import { api } from '../config/api';
 
 export interface DietMeal {
   name: string;
@@ -207,55 +203,23 @@ Generate complete 7-day plan now.
 
   async generateDietPlan(userProfile: UserProfile): Promise<AIDietResponse> {
     try {
-      // Check if API key is available
-      if (!OPENROUTER_API_KEY) {
-        throw new Error('Sorry for the inconvenience. AI is temporarily unavailable.');
-      }
-
       const prompt = this.generatePrompt(userProfile);
 
       const startTime = Date.now();
 
-      // Make API call without timeout - let it take as long as needed for better UX
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'HTTP-Referer': SITE_URL,
-          'X-Title': SITE_NAME,
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.0-flash-001',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.3, // Lower temperature for faster, more consistent responses
-          max_tokens: 3000, // Reduced for faster generation
-          stream: false,
-          top_p: 0.8, // Slightly lower for faster responses
-          frequency_penalty: 0.0,
-          presence_penalty: 0.0,
-        }),
+      // Call backend proxy endpoint instead of OpenRouter directly
+      const response = await api.post('/diet-plans/generate', {
+        prompt: prompt
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API request failed with status: ${response.status}: ${errorText}`);
-      }
-
-      const data = await response.json();
       const endTime = Date.now();
       const responseTime = endTime - startTime;
 
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response format from AI');
+      if (!response.success || !response.data?.content) {
+        throw new Error(response.message || 'Invalid response format from AI');
       }
 
-      const aiResponse = data.choices[0].message.content;
+      const aiResponse = response.data.content;
 
       // Parse the AI response into structured data
       const dietPlan = this.parseAIResponse(aiResponse, userProfile);
