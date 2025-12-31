@@ -291,6 +291,19 @@ class AuthService {
         // Store new token and extract user ID
         await this.storeToken(response.token);
         
+        // ✅ CRITICAL: Trigger push token registration after successful login
+        // This ensures push token is sent to backend immediately after login
+        try {
+          const { default: pushNotificationService } = await import('./pushNotificationService');
+          // Register push token in background (non-blocking)
+          pushNotificationService.initialize().catch((error: any) => {
+            console.warn('⚠️ [AUTH] Push token registration failed (non-critical):', error?.message);
+          });
+        } catch (error) {
+          // Ignore if push notification service not available
+          console.warn('⚠️ [AUTH] Push notification service not available');
+        }
+        
         // ✅ CRITICAL: Verify user ID is set before initializing services
         // Add small delay to ensure AsyncStorage write completes
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -415,6 +428,19 @@ class AuthService {
         
         // Store new token and extract user ID
         await this.storeToken(response.token);
+        
+        // ✅ CRITICAL: Trigger push token registration after successful signup
+        // This ensures push token is sent to backend immediately after signup
+        try {
+          const { default: pushNotificationService } = await import('./pushNotificationService');
+          // Register push token in background (non-blocking)
+          pushNotificationService.initialize().catch((error: any) => {
+            console.warn('⚠️ [AUTH] Push token registration failed (non-critical):', error?.message);
+          });
+        } catch (error) {
+          // Ignore if push notification service not available
+          console.warn('⚠️ [AUTH] Push notification service not available');
+        }
         
         // ✅ CRITICAL: Verify user ID is set before initializing services
         // Add small delay to ensure AsyncStorage write completes
