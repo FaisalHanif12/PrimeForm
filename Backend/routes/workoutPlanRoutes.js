@@ -7,7 +7,8 @@ const {
   markExerciseCompleted,
   markDayCompleted,
   deleteWorkoutPlan,
-  getWorkoutStats
+  getWorkoutStats,
+  generateWorkoutPlan
 } = require('../controllers/workoutPlanController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -16,6 +17,9 @@ router.use(protect);
 
 // Create workout plan
 router.post('/', createWorkoutPlan);
+
+// Generate workout plan via AI (OpenRouter proxy)
+router.post('/generate', generateWorkoutPlan);
 
 // Get active workout plan
 router.get('/active', getActiveWorkoutPlan);

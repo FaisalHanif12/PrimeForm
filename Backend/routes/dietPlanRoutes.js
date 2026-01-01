@@ -10,7 +10,8 @@ const {
   markDayCompleted,
   logWaterIntake,
   getDietStats,
-  getAllUserDietPlans
+  getAllUserDietPlans,
+  generateDietPlan
 } = require('../controllers/dietPlanController');
 
 // Apply authentication middleware to all routes
@@ -18,6 +19,7 @@ router.use(protect);
  
 // Diet Plan CRUD Routes
 router.post('/', createDietPlan);                    // POST /api/diet-plans
+router.post('/generate', generateDietPlan);          // POST /api/diet-plans/generate (OpenRouter proxy)
 router.get('/', getUserDietPlan);                    // GET /api/diet-plans
 router.get('/active', getUserDietPlan);              // GET /api/diet-plans/active
 router.get('/all', getAllUserDietPlans);             // GET /api/diet-plans/all

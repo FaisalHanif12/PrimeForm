@@ -8,15 +8,28 @@ const HAS_EVER_SIGNED_UP_KEY = 'primeform_has_ever_signed_up';
 /**
  * Get installation ID (persists across app reinstalls)
  * This is used to create persistent keys that survive app deletion
+ * 
+ * Note: getInstallationIdAsync may not be available in all versions of expo-application.
+ * If unavailable, the function returns null and the app will use a fallback device ID.
  */
 async function getInstallationId(): Promise<string | null> {
   try {
-    // Use type assertion to handle TypeScript definition issue
-    // The method exists at runtime (used in generateDeviceId)
-    const installationId = await (Application as any).getInstallationIdAsync();
-    return installationId;
-  } catch (error) {
-    console.warn('Failed to get installation ID:', error);
+    // Check if the method exists before calling it
+    // This prevents the TypeError from appearing in console
+    if (Application && typeof (Application as any).getInstallationIdAsync === 'function') {
+      const installationId = await (Application as any).getInstallationIdAsync();
+      return installationId;
+    }
+    
+    // Method doesn't exist - return null silently (fallback will be used)
+    return null;
+  } catch (error: any) {
+    // Silently fail - this is expected if the method doesn't exist or fails
+    // The app will use fallback device ID generation instead
+    // Only log if it's an unexpected error (not the "is not a function" error)
+    if (error && error.message && !error.message.includes('is not a function')) {
+      console.warn('Failed to get installation ID:', error.message);
+    }
     return null;
   }
 }

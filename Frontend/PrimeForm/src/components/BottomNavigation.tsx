@@ -49,21 +49,16 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
     });
   }, [activeTab]);
 
-  // Platform-aware positioning and padding
-  // iOS: Position perfectly at bottom with proper home indicator spacing
-  // Android: Use safe area insets to avoid system navigation bar overlap
+  
   const isIOS = Platform.OS === 'ios';
 
   const bottomPadding = isIOS 
     ? Math.max(insets.bottom - 8, spacing.xs)
     : 0; // No padding for Android - height is fixed
-
-  // ✅ ANDROID FIX: Use safe area insets to account for system navigation bar
-  // Subtracts 10px from bottom inset to fine-tune positioning, with minimum of 10px
-  // iOS remains unchanged - uses small offset as before
+  
   const bottomOffset = isIOS 
     ? spacing.xs // Very small offset to prevent cutoff on iOS
-    : Math.max((insets.bottom || 0) - 10, 10); // Android: Subtract 10px from bottom inset, minimum 10px to clear system nav bar
+    : Math.max((insets.bottom || 0) + 8, 28); // Android: Use insets.bottom + 4px padding, minimum 24px to clear system nav bar
     
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 
@@ -118,7 +113,6 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    // bottom is set dynamically in component
     left: spacing.lg,
     right: spacing.lg,
     flexDirection: 'row',

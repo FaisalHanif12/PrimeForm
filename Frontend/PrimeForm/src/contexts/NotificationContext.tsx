@@ -27,6 +27,7 @@ interface NotificationContextType {
   // Actions
   fetchNotifications: (options?: any) => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  immediateRefreshNotifications: () => Promise<void>; // ✅ Immediate refresh without rate limiting
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
@@ -73,6 +74,21 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setError(err.message || 'An error occurred while fetching notifications');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Immediate refresh notifications (no rate limiting) - for immediate updates after plan creation
+  const immediateRefreshNotifications = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      // Immediately fetch notifications and unread count without any rate limiting
+      await fetchNotifications({ page: 1, limit: 20, includeRead: true });
+      await fetchUnreadCount();
+      console.log('✅ Notifications refreshed immediately');
+    } catch (err: any) {
+      console.error('⚠️ Failed to immediately refresh notifications:', err);
+      // Silently fail - don't show toast for background refresh
     }
   };
 
@@ -259,6 +275,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     error,
     fetchNotifications,
     refreshNotifications,
+    immediateRefreshNotifications, // ✅ Export immediate refresh function
     markAsRead,
     markAllAsRead,
     deleteNotification,

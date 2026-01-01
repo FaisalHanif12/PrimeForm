@@ -303,6 +303,128 @@ const getWorkoutStats = async (req, res) => {
   }
 };
 
+// Proxy OpenRouter API call for workout plan generation
+const generateWorkoutPlan = async (req, res) => {
+  const { prompt } = req.body;
+
+  // Input validation
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Prompt is required and must be a non-empty string'
+    });
+  }
+
+  // Workout plan prompts can be long (includes full user profile details)
+  // OpenRouter supports up to 1M tokens, so we allow up to 50000 characters to match original behavior
+  if (prompt.length > 50000) {
+    return res.status(400).json({
+      success: false,
+      message: 'Prompt is too long (max 50000 characters)'
+    });
+  }
+
+  // Get OpenRouter config from backend env (SECURE - not exposed to frontend)
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+  const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
+  const OPENROUTER_SITE_URL = process.env.OPENROUTER_SITE_URL || 'https://primeform.app';
+  const OPENROUTER_SITE_NAME = process.env.OPENROUTER_SITE_NAME || 'PrimeForm';
+
+  if (!OPENROUTER_API_KEY) {
+    console.error('❌ OPENROUTER_API_KEY is missing from backend environment variables');
+    return res.status(500).json({
+      success: false,
+      message: 'AI service is temporarily unavailable. Please try again later.'
+    });
+  }
+
+  let timeoutId;
+  try {
+    // Create timeout controller (60 seconds max for workout plan generation)
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 60000);
+
+    // Forward request to OpenRouter
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': OPENROUTER_SITE_URL,
+        'X-Title': OPENROUTER_SITE_NAME,
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 3000,
+        stream: false,
+        top_p: 0.8,
+        frequency_penalty: 0.0,
+        presence_penalty: 0.0,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ OpenRouter API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText.substring(0, 200) // Limit error log length
+      });
+      
+      return res.status(response.status).json({
+        success: false,
+        message: `AI service error: ${response.statusText}`
+      });
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices?.[0]?.message?.content;
+
+    if (!aiResponse) {
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid response format from AI'
+      });
+    }
+
+    // Return response in same format frontend expects
+    res.status(200).json({
+      success: true,
+      data: {
+        content: aiResponse
+      },
+      message: 'Workout plan generated successfully'
+    });
+
+  } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      console.error('❌ OpenRouter API timeout');
+      return res.status(504).json({
+        success: false,
+        message: 'AI service timeout. Please try again.'
+      });
+    }
+
+    console.error('❌ Error proxying OpenRouter API:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to communicate with AI service. Please try again later.'
+    });
+  }
+};
+
 module.exports = {
   createWorkoutPlan,
   getActiveWorkoutPlan,
@@ -310,7 +432,8 @@ module.exports = {
   markExerciseCompleted,
   markDayCompleted,
   deleteWorkoutPlan,
-  getWorkoutStats
+  getWorkoutStats,
+  generateWorkoutPlan
 };
 
 

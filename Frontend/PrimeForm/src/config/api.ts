@@ -5,39 +5,40 @@ interface ApiConfig {
 }
 
 const getApiConfig = (): ApiConfig => {
-  // For development, try multiple URLs with fallback
-  // For production, use your actual domain
   const isDevelopment = __DEV__;
 
   if (isDevelopment) {
-    /**
-     * IMPORTANT:
-     * Use the SAME IP that Metro is using (shown in the Expo terminal as
-     * "exp://192.168.xxx.xxx:8081"). This is the IP your phone can reach.
-     *
-     * Right now Metro is running on: http://192.168.32.70:8081
-     * So we use that base IP with the backend port 5001.
-     */
-    const baseURL = 'http://192.168.32.70:5001/api';
+    // Use EXPO_PUBLIC_API_URL if set, otherwise fallback to LAN IP
+    const DEV_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.48.129:5001/api';
 
-    console.log('🔍 API URL (development):', baseURL);
+    console.log('🔧 ENV: Development');
+    console.log('🔍 API URL:', DEV_API_URL);
 
     return {
-      baseURL,
-      // Keep this reasonable so network issues fail fast instead of hanging the UI
-      timeout: 10000, // 10 seconds
+      baseURL: DEV_API_URL,
+      timeout: 10000, // fast failure for dev
     };
   }
 
-  // Production configuration
+  // Production: Use EXPO_PUBLIC_API_URL if set, otherwise default to production domain
+  const PROD_API_URL =
+    process.env.EXPO_PUBLIC_API_URL ||
+    'https://api.purebody.faisalhanif.work/api';
+
+  console.log('🚀 ENV: Production');
+  console.log('🌍 API URL:', PROD_API_URL);
+
   return {
-    baseURL: 'https://your-production-domain.com/api', // Replace with your actual domain
-    timeout: 30000,
+    baseURL: PROD_API_URL,
+    timeout: 30000, // production-safe timeout
   };
 };
 
 export const apiConfig = getApiConfig();
 export const API_BASE_URL = apiConfig.baseURL;
+
+// Log resolved API base URL on module load (single log on app start)
+console.log('📡 API Base URL resolved:', API_BASE_URL);
 
 // Create API client with proper authentication handling
 class ApiClient {
@@ -69,7 +70,7 @@ class ApiClient {
     return `${method}:${endpoint}:${body}`;
   }
 
-  private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
+  private async request(endpoint: string, options: RequestInit & { customTimeout?: number } = {}): Promise<any> {
     const url = `${this.baseURL}${endpoint}`;
     const requestKey = this.getRequestKey(endpoint, options);
 
@@ -84,6 +85,18 @@ class ApiClient {
     console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
     console.log(`🔑 Auth Token: ${await this.getAuthToken() ? 'Present' : 'None'}`);
 
+    const customTimeout = options.customTimeout;
+    let requestTimeout = this.timeout;
+    if (customTimeout !== undefined) {
+      requestTimeout = customTimeout;
+    } else if (endpoint.includes('/generate')) {
+      // Diet/Workout plan generation - backend timeout is 60s
+      requestTimeout = 90000; // 90 seconds (60s backend + 30s buffer)
+    } else if (endpoint.includes('/ai-trainer/send-message')) {
+      // AI Trainer chat - backend timeout is 30s
+      requestTimeout = 35000; // 35 seconds (30s backend + 5s buffer)
+    }
+
     // Create the request promise
     const requestPromise = (async () => {
       try {
@@ -92,7 +105,7 @@ class ApiClient {
 
         // Add timeout to fetch
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        const timeoutId = setTimeout(() => controller.abort(), requestTimeout);
 
         try {
           const headers: Record<string, string> = {
@@ -194,10 +207,11 @@ class ApiClient {
     return this.request(endpoint, { method: 'GET' });
   }
 
-  async post(endpoint: string, data?: any): Promise<any> {
+  async post(endpoint: string, data?: any, customTimeout?: number): Promise<any> {
     return this.request(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
+      customTimeout,
     });
   }
 
