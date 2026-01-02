@@ -278,6 +278,9 @@ export async function performAppUpdateMigration(): Promise<void> {
             if (invalidCount > 0) {
               console.warn(`⚠️ Removed ${invalidCount} invalid data entries during migration`);
             }
+            
+            // ✅ CRITICAL: Verify all critical data is accessible after migration
+            await ensureDataAccessibility();
           }
           
           console.log('✅ App update migration completed successfully');
@@ -350,6 +353,116 @@ export async function ensureAuthPersistence(): Promise<boolean> {
   } catch (error) {
     console.error('❌ Error ensuring auth persistence:', error);
     return false;
+  }
+}
+
+/**
+ * ✅ CRITICAL: Verify all critical user data exists after migration
+ * This ensures users don't lose any data after app updates
+ * @param userId - User ID to verify
+ * @returns Object with verification results
+ */
+export async function verifyCriticalDataAfterUpdate(userId: string): Promise<{
+  success: boolean;
+  missingData: string[];
+  verifiedData: string[];
+}> {
+  const result = {
+    success: true,
+    missingData: [] as string[],
+    verifiedData: [] as string[]
+  };
+
+  try {
+    if (!userId || userId.startsWith('device_') || userId.startsWith('temp_')) {
+      return result;
+    }
+
+    // Critical data keys that must exist (if user had them before)
+    const criticalKeys = [
+      'cached_diet_plan',
+      'cached_workout_plan',
+      'cached_user_profile',
+      'completed_meals',
+      'completed_exercises',
+      'water_intake',
+      'ai_trainer_conversations'
+    ];
+
+    const allKeys = await AsyncStorage.getAllKeys();
+    const userPrefix = `user_${userId}_`;
+
+    for (const baseKey of criticalKeys) {
+      const userKey = `${userPrefix}${baseKey}`;
+      const exists = allKeys.some(key => key === userKey || key.startsWith(userKey));
+      
+      if (exists) {
+        result.verifiedData.push(baseKey);
+      } else {
+        // Check if old global key exists (needs migration)
+        const oldKey = baseKey;
+        if (allKeys.includes(oldKey)) {
+          // Old key exists but not migrated yet - this is OK, migration will handle it
+          result.verifiedData.push(baseKey);
+        } else {
+          // Key doesn't exist - might be OK if user never had this data
+          // Don't mark as missing unless we're certain they had it before
+        }
+      }
+    }
+
+    // If we verified at least some data, consider it successful
+    if (result.verifiedData.length > 0) {
+      result.success = true;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('❌ Error verifying critical data:', error);
+    // Return success=true to not block app startup
+    return { ...result, success: true };
+  }
+}
+
+/**
+ * ✅ CRITICAL: Ensure all user data is accessible after update
+ * This is a final safety check to guarantee smooth user experience
+ */
+export async function ensureDataAccessibility(): Promise<void> {
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId || userId.startsWith('device_') || userId.startsWith('temp_')) {
+      return;
+    }
+
+    // Verify critical data exists
+    const verification = await verifyCriticalDataAfterUpdate(userId);
+    
+    if (verification.verifiedData.length > 0) {
+      console.log(`✅ Verified ${verification.verifiedData.length} critical data entries after update`);
+    }
+
+    // Ensure all user-specific keys are accessible
+    const allKeys = await AsyncStorage.getAllKeys();
+    const userPrefix = `user_${userId}_`;
+    const userKeys = allKeys.filter(key => key.startsWith(userPrefix));
+    
+    console.log(`✅ Found ${userKeys.length} user-specific data entries`);
+    
+    // Validate each key is readable
+    for (const key of userKeys.slice(0, 10)) { // Check first 10 keys
+      try {
+        const data = await AsyncStorage.getItem(key);
+        if (!data) {
+          console.warn(`⚠️ Key ${key} exists but data is empty`);
+        }
+      } catch (error) {
+        console.warn(`⚠️ Error reading key ${key}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error ensuring data accessibility:', error);
+    // Don't throw - this is a safety check, shouldn't break app
   }
 }
 

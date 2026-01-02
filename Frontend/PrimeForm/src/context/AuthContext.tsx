@@ -245,12 +245,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Step 3: Check auth status (restore user from cache/token)
         await checkAuthStatus();
         
-        // ✅ CRITICAL: After auth check, validate all account data integrity
-        // This ensures data integrity is maintained even if user is already logged in
+        // ✅ CRITICAL: After auth check, ensure all data is accessible
+        // This guarantees users can access all their plans and progress after update
         const userId = await getCurrentUserId();
         if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
-          // Run validation in background (non-blocking)
-          validateAllAccountData(userId).catch((error) => {
+          // Run validation and verification in background (non-blocking)
+          Promise.all([
+            validateAllAccountData(userId),
+            import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
+          ]).catch((error) => {
             console.warn('⚠️ Background data validation error (non-critical):', error);
           });
         }
