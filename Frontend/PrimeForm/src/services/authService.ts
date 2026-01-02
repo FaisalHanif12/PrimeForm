@@ -291,6 +291,24 @@ class AuthService {
         // Store new token and extract user ID
         await this.storeToken(response.token);
         
+        // ✅ CRITICAL FIX: Cache user data immediately from login response
+        // This ensures user data is available even if /auth/me API fails later
+        if (response.data?.user && newUserId) {
+          try {
+            const { getUserCacheKey } = await import('../utils/cacheKeys');
+            const cacheKey = await getUserCacheKey('cached_user_profile', newUserId);
+            const cacheData = {
+              user: response.data.user,
+              timestamp: Date.now()
+            };
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
+            console.log('✅ AuthService: Cached user data from login response');
+          } catch (cacheError) {
+            // Cache write failed - non-critical, will try again via /auth/me
+            console.warn('⚠️ AuthService: Failed to cache user data from login response');
+          }
+        }
+        
         // ✅ CRITICAL: Trigger push token registration after successful login
         // This ensures push token is sent to backend immediately after login
         try {
@@ -428,6 +446,24 @@ class AuthService {
         
         // Store new token and extract user ID
         await this.storeToken(response.token);
+        
+        // ✅ CRITICAL FIX: Cache user data immediately from signup response
+        // This ensures user data is available even if /auth/me API fails later
+        if (response.data?.user && newUserId) {
+          try {
+            const { getUserCacheKey } = await import('../utils/cacheKeys');
+            const cacheKey = await getUserCacheKey('cached_user_profile', newUserId);
+            const cacheData = {
+              user: response.data.user,
+              timestamp: Date.now()
+            };
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
+            console.log('✅ AuthService: Cached user data from signup response');
+          } catch (cacheError) {
+            // Cache write failed - non-critical, will try again via /auth/me
+            console.warn('⚠️ AuthService: Failed to cache user data from signup response');
+          }
+        }
         
         // ✅ CRITICAL: Trigger push token registration after successful signup
         // This ensures push token is sent to backend immediately after signup

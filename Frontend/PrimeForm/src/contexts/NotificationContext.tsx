@@ -239,8 +239,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   // Effect to fetch notifications when user logs in
+  // ✅ CRITICAL FIX: Changed condition from `isAuthenticated && user` to just `isAuthenticated`
+  // This ensures notifications load even when user profile hasn't been fetched yet
+  // (e.g., user created account but didn't fill profile, or API is slow)
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated) {
+      // ✅ CRITICAL: Load notifications even if user object is null
+      // User object might be null if profile fetch failed or is still loading
+      // But user is still authenticated (has valid token)
       fetchNotifications();
       // Initialize push notifications
       pushNotificationService.initialize().then(() => {
@@ -254,7 +260,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       // Clean up push notification listeners
       pushNotificationService.cleanup();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]); // ✅ Removed `user` from dependencies - notifications should load based on auth only
 
   // Effect to periodically check for new notifications
   useEffect(() => {
