@@ -3,6 +3,7 @@ import dietPlanService from './dietPlanService';
 import Storage from '../utils/storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 import { calculatePlanDuration, formatDurationForPrompt, PlanDuration } from '../utils/planDurationCalculator';
+import { getHeightInCm, formatHeightForPrompt } from '../utils/heightConverter';
 import { api } from '../config/api';
 
 export interface DietMeal {
@@ -109,9 +110,13 @@ class AIDietService {
   }
 
   private generatePrompt(userProfile: UserProfile): string {
+    // ✅ CRITICAL: Normalize height to cm for calculations (handles both cm and inches)
+    const heightCm = getHeightInCm(userProfile.height);
+    const formattedHeight = formatHeightForPrompt(userProfile.height, heightCm);
+    
     const dailyCalories = userProfile.gender === 'Male' ?
-      Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * Number(userProfile.height)) - (5.677 * userProfile.age)) * 1.4 :
-      Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * Number(userProfile.height)) - (4.330 * userProfile.age)) * 1.4;
+      Math.round(88.362 + (13.397 * Number(userProfile.currentWeight)) + (4.799 * heightCm) - (5.677 * userProfile.age)) * 1.4 :
+      Math.round(447.593 + (9.247 * Number(userProfile.currentWeight)) + (3.098 * heightCm) - (4.330 * userProfile.age)) * 1.4;
 
     const targetWeightLine =
       userProfile.bodyGoal?.includes('Gain') || userProfile.bodyGoal?.includes('Lose') || userProfile.bodyGoal?.includes('Fat')
@@ -126,7 +131,7 @@ class AIDietService {
 You are a certified nutritionist. Create a **7-day diet plan** for this user:
 
 **USER PROFILE:**
-- Age: ${userProfile.age}, Gender: ${userProfile.gender}, Height: ${userProfile.height}cm, Weight: ${userProfile.currentWeight}kg
+- Age: ${userProfile.age}, Gender: ${userProfile.gender}, Height: ${formattedHeight}, Weight: ${userProfile.currentWeight}kg
 - Goal: ${userProfile.bodyGoal} (PRIORITY)
 ${targetWeightLine ? `${targetWeightLine}\n` : ''}- Diet: ${userProfile.dietPreference || 'No restriction'}
 - Country: ${userProfile.country || 'International'}
