@@ -187,6 +187,7 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
     dietPreference: ''
   });
   const [validationErrors, setValidationErrors] = useState<{[key: string]: boolean}>({});
+  const [validationMessages, setValidationMessages] = useState<{[key: string]: string}>({});
 
   // Helper function to get localized text
   const getLocalizedText = (item: { en: string; ur: string }) => {
@@ -206,6 +207,26 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
     // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: false }));
+      setValidationMessages(prev => ({ ...prev, [field]: '' }));
+    }
+    
+    // ✅ Real-time validation for target weight
+    if (field === 'targetWeight' && (userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle')) {
+      const current = parseFloat(userInfo.currentWeight);
+      const target = parseFloat(value);
+      
+      if (!isNaN(current) && !isNaN(target) && current > 0 && target > 0) {
+        const { validateTargetWeight } = require('../utils/planDurationCalculator');
+        const validation = validateTargetWeight(current, target, userInfo.bodyGoal);
+        
+        if (!validation.isValid && validation.error) {
+          setValidationErrors(prev => ({ ...prev, targetWeight: true }));
+          setValidationMessages(prev => ({ ...prev, targetWeight: validation.error || '' }));
+        } else {
+          setValidationErrors(prev => ({ ...prev, targetWeight: false }));
+          setValidationMessages(prev => ({ ...prev, targetWeight: '' }));
+        }
+      }
     }
   };
 
@@ -225,6 +246,24 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
         // Validate target weight only if body goal requires it
         if ((userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && !userInfo.targetWeight) {
           errors.targetWeight = true;
+        }
+        
+        // ✅ CRITICAL: Validate target weight logic (realistic constraints)
+        if ((userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && userInfo.currentWeight && userInfo.targetWeight) {
+          const current = parseFloat(userInfo.currentWeight);
+          const target = parseFloat(userInfo.targetWeight);
+          
+          if (!isNaN(current) && !isNaN(target) && current > 0 && target > 0) {
+            const { validateTargetWeight } = require('../utils/planDurationCalculator');
+            const validation = validateTargetWeight(current, target, userInfo.bodyGoal);
+            
+            if (!validation.isValid) {
+              errors.targetWeight = true;
+              if (validation.error) {
+                setValidationMessages(prev => ({ ...prev, targetWeight: validation.error || '' }));
+              }
+            }
+          }
         }
         break;
       case 3:
@@ -422,7 +461,9 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
             keyboardType="numeric"
           />
           {validationErrors.targetWeight && (
-            <Text style={styles.errorText}>{t('validation.weight.required')}</Text>
+            <Text style={styles.errorText}>
+              {validationMessages.targetWeight || t('validation.weight.required')}
+            </Text>
           )}
         </View>
       )}

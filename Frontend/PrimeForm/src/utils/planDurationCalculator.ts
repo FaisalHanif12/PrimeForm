@@ -8,18 +8,75 @@ export interface PlanDuration {
 }
 
 
+/**
+ * Validate target weight based on current weight and goal
+ * Returns validation result with error message if invalid
+ */
+export function validateTargetWeight(
+  currentWeight: number,
+  targetWeight: number,
+  bodyGoal: string
+): { isValid: boolean; error?: string } {
+  if (!currentWeight || !targetWeight || currentWeight <= 0 || targetWeight <= 0) {
+    return { isValid: false, error: 'Invalid weight values' };
+  }
+
+  const goal = bodyGoal?.toLowerCase() || '';
+  const isWeightLoss = goal.includes('lose') || goal.includes('fat');
+  const isWeightGain = goal.includes('gain') || goal.includes('muscle');
+
+  // For weight loss: target must be less than current
+  if (isWeightLoss && targetWeight >= currentWeight) {
+    return {
+      isValid: false,
+      error: 'Target weight must be less than current weight for weight loss goals'
+    };
+  }
+
+  // For weight gain: target must be greater than current
+  if (isWeightGain && targetWeight <= currentWeight) {
+    return {
+      isValid: false,
+      error: 'Target weight must be greater than current weight for muscle gain goals'
+    };
+  }
+
+  // Calculate weight delta
+  const weightDelta = Math.abs(currentWeight - targetWeight);
+  const maxAllowedDelta = currentWeight * 0.5; // Maximum 50% of current weight
+
+  // Validate that target weight is not more than 50% away from current weight
+  if (weightDelta > maxAllowedDelta) {
+    return {
+      isValid: false,
+      error: `Target weight cannot be more than ${Math.round(maxAllowedDelta)}kg away from current weight (maximum 50% change)`
+    };
+  }
+
+  return { isValid: true };
+}
+
 export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const goal = userProfile.bodyGoal?.toLowerCase() || '';
   const currentWeight = parseFloat(userProfile.currentWeight) || 0;
   const targetWeight = parseFloat(userProfile.targetWeight) || 0;
   
-  // Conservative safe weight change rates (per week) - lower rate = longer duration = more time to achieve goal
-  // Using minimum sustainable rates to ensure users have adequate time to reach their target
-  const SAFE_LOSS_RATE = 0.3; // 0.3 kg/week (~0.66 lb/week) - conservative sustainable fat loss rate
-  const SAFE_GAIN_RATE = 0.2; // 0.2 kg/week (~0.44 lb/week) - conservative sustainable muscle gain rate
+  // ✅ REALISTIC weight change rates based on scientific research:
+  // - Weight Loss: 0.5-1 kg/week is safe, but 0.5-0.75 kg/week is more sustainable long-term
+  // - Muscle Gain: 0.2-0.5 kg/week naturally, but 0.25-0.4 kg/week is realistic for most people
+  // Using progressive rates: faster for larger weight changes, slower for smaller changes
+  const BASE_LOSS_RATE = 0.6; // 0.6 kg/week base rate (realistic and sustainable)
+  const BASE_GAIN_RATE = 0.3; // 0.3 kg/week base rate (realistic natural muscle gain)
+  
+  // Progressive rates: larger weight changes can sustain slightly faster rates initially
+  // but we'll use conservative base rates for safety
+  const MIN_LOSS_RATE = 0.5; // Minimum 0.5 kg/week (very conservative)
+  const MAX_LOSS_RATE = 0.75; // Maximum 0.75 kg/week (sustainable for most)
+  const MIN_GAIN_RATE = 0.25; // Minimum 0.25 kg/week (very conservative)
+  const MAX_GAIN_RATE = 0.4; // Maximum 0.4 kg/week (realistic natural limit)
   
   // Minimum and maximum plan durations
-  const MIN_WEEKS = 16; // Minimum 16 weeks (4 months) - ensures meaningful progress and habit formation
+  const MIN_WEEKS = 12; // Minimum 12 weeks (3 months) - ensures meaningful progress
   const MAX_WEEKS = 52; // Maximum 52 weeks (1 year) - reasonable long-term plan cap
   
   // Weight validation ranges (reasonable human weights in kg)
@@ -38,6 +95,22 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const isValidTargetWeight = targetWeight >= MIN_REASONABLE_WEIGHT && targetWeight <= MAX_REASONABLE_WEIGHT;
   const hasValidWeights = isValidCurrentWeight && isValidTargetWeight && currentWeight > 0 && targetWeight > 0;
   
+  // ✅ CRITICAL: Validate target weight logic
+  if (hasValidWeights && isWeightRelatedGoal) {
+    const validation = validateTargetWeight(currentWeight, targetWeight, userProfile.bodyGoal);
+    if (!validation.isValid) {
+      if (__DEV__) {
+        console.warn('⚠️ Invalid target weight:', validation.error);
+      }
+      // Use minimum duration if validation fails (will be caught by frontend validation)
+      return {
+        totalWeeks: MIN_WEEKS,
+        duration: `${MIN_WEEKS} weeks`,
+        durationMonths: Math.round((MIN_WEEKS / 4.33) * 10) / 10
+      };
+    }
+  }
+  
   // Calculate weight delta only if weights are valid
   const weightDelta = hasValidWeights ? Math.abs(currentWeight - targetWeight) : 0;
   
@@ -54,17 +127,43 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
     }
   }
   
-  // CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
+  // ✅ CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
   if (isWeightRelatedGoal) {
     if (hasValidWeights && weightDelta > 0) {
-      // Calculate exact weeks needed based on weight delta and conservative safe rate
-      // Formula: weeks = weightDelta / safeRatePerWeek
-      // Using Math.ceil to round up, ensuring users have enough time (conservative approach)
-      const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
-      const calculatedWeeks = Math.ceil(weightDelta / safeRate);
+      // ✅ REALISTIC CALCULATION: Use progressive rates based on weight delta
+      // Larger weight changes can sustain slightly faster rates, but we'll use base rates for safety
+      let weeklyRate: number;
+      
+      if (isWeightLoss) {
+        // Weight Loss: Use base rate of 0.6 kg/week (realistic and sustainable)
+        // For very large weight changes (>15kg), use slightly faster rate (0.7 kg/week)
+        // For small changes (<5kg), use slightly slower rate (0.5 kg/week)
+        if (weightDelta > 15) {
+          weeklyRate = 0.7; // Slightly faster for large changes
+        } else if (weightDelta < 5) {
+          weeklyRate = 0.5; // More conservative for small changes
+        } else {
+          weeklyRate = BASE_LOSS_RATE; // 0.6 kg/week (optimal balance)
+        }
+      } else {
+        // Muscle Gain: Use base rate of 0.3 kg/week (realistic natural muscle gain)
+        // For larger gains (>10kg), use slightly faster rate (0.35 kg/week)
+        // For smaller gains (<5kg), use slightly slower rate (0.25 kg/week)
+        if (weightDelta > 10) {
+          weeklyRate = 0.35; // Slightly faster for large changes
+        } else if (weightDelta < 5) {
+          weeklyRate = 0.25; // More conservative for small changes
+        } else {
+          weeklyRate = BASE_GAIN_RATE; // 0.3 kg/week (optimal balance)
+        }
+      }
+      
+      // Calculate exact weeks needed: weeks = weightDelta / weeklyRate
+      // Using Math.ceil to round up, ensuring users have enough time
+      const calculatedWeeks = Math.ceil(weightDelta / weeklyRate);
       
       // Apply minimum and maximum constraints
-      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks (but minimum applies)
+      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks
       totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, calculatedWeeks));
       
       // For very small weight changes (< 2kg), still use minimum duration
@@ -75,14 +174,15 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
       
       // Log calculation details for debugging
       if (__DEV__) {
-        console.log('📊 Plan duration calculation:', {
+        console.log('📊 Plan duration calculation (REALISTIC):', {
           goal: userProfile.bodyGoal,
-          currentWeight,
-          targetWeight,
-          weightDelta,
-          safeRate: `${safeRate} kg/week`,
+          currentWeight: `${currentWeight} kg`,
+          targetWeight: `${targetWeight} kg`,
+          weightDelta: `${weightDelta} kg`,
+          weeklyRate: `${weeklyRate} kg/week`,
           calculatedWeeks,
-          finalWeeks: totalWeeks
+          finalWeeks: totalWeeks,
+          duration: `${Math.round(totalWeeks / 4.33)} months`
         });
       }
     } else {
