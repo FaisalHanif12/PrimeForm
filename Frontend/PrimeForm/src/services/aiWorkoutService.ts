@@ -272,6 +272,13 @@ Generate the **final personalized plan now.**
             throw new Error(`Database save failed: ${saveResponse.message}`);
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          
+          // If error is about premium users, throw immediately without retrying
+          if (errorMessage.includes('premium') || errorMessage.includes('Premium')) {
+            throw error;
+          }
+          
           retryCount++;
           
           if (retryCount >= maxRetries) {

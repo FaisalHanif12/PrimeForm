@@ -363,7 +363,10 @@ export default function WorkoutScreen() {
         // Show interactive error alert
         const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
 
-        if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+        // Check if error is about premium users
+        if (errorMessage.includes('premium') || errorMessage.includes('Premium')) {
+          showToast('info', 'Only premium users can create new plans. Upgrade to premium to create additional plans.');
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
           showToast('error', 'Network issue detected. Please check your connection and try again.');
         } else if (errorMessage.includes('API')) {
           showToast('error', 'AI service is temporarily busy. Please try again in a moment.');
@@ -599,7 +602,54 @@ export default function WorkoutScreen() {
           onDayPress={(day) => {
             // Handle day press - could show day details
           }}
-          onGenerateNew={handleDeletePlan}
+          onGenerateNew={async () => {
+            // Check if plan is completed - if so, don't allow creating new one
+            const totalWeeks = workoutPlan.totalWeeks || 12;
+            const startDate = new Date(workoutPlan.startDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            startDate.setHours(0, 0, 0, 0);
+            
+            const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            const startDayOfWeek = startDate.getDay();
+            const currentDayOfWeek = today.getDay();
+            
+            let currentWeek = 1;
+            if (daysDiff < 0) {
+              currentWeek = 1;
+            } else if (daysDiff === 0) {
+              currentWeek = 1;
+            } else {
+              const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
+              if (daysDiff <= daysInFirstWeek) {
+                currentWeek = 1;
+              } else {
+                const firstSundayDate = new Date(startDate);
+                const daysToFirstSunday = startDayOfWeek === 0 ? 0 : (7 - startDayOfWeek);
+                firstSundayDate.setDate(startDate.getDate() + daysToFirstSunday);
+                const firstMondayDate = new Date(firstSundayDate);
+                firstMondayDate.setDate(firstSundayDate.getDate() + 1);
+                const daysFromFirstMonday = Math.floor((today.getTime() - firstMondayDate.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysFromFirstMonday < 0) {
+                  currentWeek = 1;
+                } else {
+                  currentWeek = 2 + Math.floor(daysFromFirstMonday / 7);
+                }
+              }
+            }
+            
+            const completedWeeks = Math.max(0, currentWeek - 1);
+            const progress = totalWeeks > 0 ? (completedWeeks / totalWeeks) * 100 : 0;
+            
+            // If plan is completed, show message and return
+            if (progress >= 100) {
+              showToast('info', 'Only premium users can create new plans. Upgrade to premium to create additional plans.');
+              return;
+            }
+
+            // Plan not completed, proceed with deletion
+            await handleDeletePlan();
+          }}
           isGeneratingNew={isGeneratingPlan}
         />
       );

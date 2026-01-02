@@ -40,6 +40,56 @@ const createWorkoutPlan = async (req, res) => {
       });
     }
 
+    // Check if user has a completed active plan
+    const existingPlan = await WorkoutPlan.getActiveWorkoutPlan(userId);
+    if (existingPlan) {
+      // Calculate progress based on weeks completed
+      const today = new Date();
+      const startDate = new Date(existingPlan.startDate);
+      today.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const startDayOfWeek = startDate.getDay();
+      const currentDayOfWeek = today.getDay();
+      
+      let currentWeek = 1;
+      if (daysDiff < 0) {
+        currentWeek = 1;
+      } else if (daysDiff === 0) {
+        currentWeek = 1;
+      } else {
+        const daysInFirstWeek = startDayOfWeek === 0 ? 1 : (7 - startDayOfWeek);
+        if (daysDiff <= daysInFirstWeek) {
+          currentWeek = 1;
+        } else {
+          const firstSundayDate = new Date(startDate);
+          const daysToFirstSunday = startDayOfWeek === 0 ? 0 : (7 - startDayOfWeek);
+          firstSundayDate.setDate(startDate.getDate() + daysToFirstSunday);
+          const firstMondayDate = new Date(firstSundayDate);
+          firstMondayDate.setDate(firstSundayDate.getDate() + 1);
+          const daysFromFirstMonday = Math.floor((today.getTime() - firstMondayDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysFromFirstMonday < 0) {
+            currentWeek = 1;
+          } else {
+            currentWeek = 2 + Math.floor(daysFromFirstMonday / 7);
+          }
+        }
+      }
+      
+      const totalWeeks = existingPlan.totalWeeks || 12;
+      const completedWeeks = Math.max(0, currentWeek - 1);
+      const progress = totalWeeks > 0 ? (completedWeeks / totalWeeks) * 100 : 0;
+      
+      // If plan is completed (100%), prevent creating new plan
+      if (progress >= 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only premium users can create new plans. Please upgrade to premium to create additional plans.'
+        });
+      }
+    }
+
     // Deactivate old workout plans for this user
     await WorkoutPlan.deactivateOldPlans(userId);
 
