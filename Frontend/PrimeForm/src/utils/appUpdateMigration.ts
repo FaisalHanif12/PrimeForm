@@ -386,7 +386,9 @@ export async function verifyCriticalDataAfterUpdate(userId: string): Promise<{
       'completed_meals',
       'completed_exercises',
       'water_intake',
-      'ai_trainer_conversations'
+      'ai_trainer_conversations',
+      'personalizedWorkout', // Personalized workout exercises
+      'lastWorkoutCompletion' // Personalized workout completion tracking
     ];
 
     const allKeys = await AsyncStorage.getAllKeys();
