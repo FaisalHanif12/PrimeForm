@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
+import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 
 interface User {
   fullName: string;
@@ -99,13 +99,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // This only runs on first login or if cache was cleared
       // If fetch fails for any reason except 401, user STILL stays logged in with token
       // ✅ PERFORMANCE: Fetch profile in background - don't block UI
+      // ✅ CRITICAL FIX: Add retry logic for slow API responses (common after app restart)
       (async () => {
         try {
-          const response = await authService.getProfile();
-        
-        // ✅ FITNESS APP: ONLY logout on explicit 401 (token truly expired/invalid)
-        // Everything else = user stays logged in
-        if (response.tokenExpired || response.statusCode === 401) {
+          let retryCount = 0;
+          const maxRetries = 2;
+          let response: any = null;
+          
+          // Retry logic for slow/unreliable API responses
+          while (retryCount <= maxRetries) {
+            try {
+              response = await authService.getProfile();
+              break; // Success - exit retry loop
+            } catch (retryError: any) {
+              retryCount++;
+              if (retryCount > maxRetries) {
+                // All retries failed - throw error to be caught by outer catch
+                throw retryError;
+              }
+              // Wait before retry (exponential backoff: 1s, 2s)
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              console.log(`🔄 AuthContext: Retrying profile fetch (attempt ${retryCount}/${maxRetries})`);
+            }
+          }
+          
+          // ✅ FITNESS APP: ONLY logout on explicit 401 (token truly expired/invalid)
+          // Everything else = user stays logged in
+          if (response.tokenExpired || response.statusCode === 401) {
           // Token is definitely invalid - this is the ONLY case we logout
           console.warn('🔒 AuthContext: Token expired (401) - logging out');
           setHasToken(false);
@@ -143,9 +163,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             import('../services/userProfileService').then(u => u.default.getCachedData()).catch(() => {})
           ]).catch(() => {}); // Ignore errors - services will initialize when needed
         } else {
-          // ✅ FITNESS APP: Profile fetch returned unexpected response
-          // But NOT a 401, so DON'T logout - just log warning
-          console.warn('⚠️ AuthContext: Profile fetch returned non-success, but keeping user logged in');
+          // ✅ CRITICAL FIX: Profile fetch returned unexpected response
+          // Try to use cached user data as fallback to prevent "User" display issue
+          console.warn('⚠️ AuthContext: Profile fetch returned non-success, trying cached data as fallback');
+          try {
+            const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
+            if (cachedProfileJson) {
+              const cachedProfile: CachedProfile = JSON.parse(cachedProfileJson);
+              if (cachedProfile.user && validateCachedData(cachedProfile.user, userId)) {
+                // Use cached user data to prevent showing "User" instead of actual name
+                setUser(cachedProfile.user);
+                console.log('✅ AuthContext: Using cached user data as fallback');
+              }
+            }
+          } catch (cacheError) {
+            // Cache read failed - user will show as "User" but still logged in
+            console.warn('⚠️ AuthContext: Could not load cached user data');
+          }
           // Keep hasToken true, keep user logged in
           // They can still use the app even if profile fetch fails
         }
@@ -163,6 +197,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         } else {
           // ✅ FITNESS APP: Network error, backend down, etc - STAY LOGGED IN!
           console.warn('⚠️ AuthContext: Profile fetch failed (not 401) - keeping user logged in:', profileError?.message);
+          // ✅ CRITICAL FIX: Try to use cached user data as fallback when network fails
+          // This prevents showing "User" instead of actual name when API is slow/unavailable
+          try {
+            const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
+            if (cachedProfileJson) {
+              const cachedProfile: CachedProfile = JSON.parse(cachedProfileJson);
+              if (cachedProfile.user && validateCachedData(cachedProfile.user, userId)) {
+                // Use cached user data to prevent showing "User" instead of actual name
+                setUser(cachedProfile.user);
+                console.log('✅ AuthContext: Using cached user data after network error');
+              }
+            }
+          } catch (cacheError) {
+            // Cache read failed - user will show as "User" but still logged in
+            console.warn('⚠️ AuthContext: Could not load cached user data after network error');
+          }
           // Token still valid, just couldn't reach server
           // User stays authenticated with existing token
         }

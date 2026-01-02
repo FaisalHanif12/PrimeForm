@@ -40,24 +40,35 @@ export default function Index() {
           // Ensure language modal never shows for users who have ever signed up (non-blocking)
           AsyncStorage.setItem('primeform_device_language_selected', 'true').catch(() => {});
           
-          // Check if user is currently authenticated
+          // ✅ CRITICAL: Check authentication status
+          // If authenticated (token exists and valid), go to dashboard
+          // If not authenticated but token exists, wait for auth check to complete
+          // Only redirect to login if truly no token or token is invalid
           if (isAuthenticated) {
             // User has valid token - go to dashboard
             router.replace('/(dashboard)');
             return;
           } else {
-            // ✅ CRITICAL: User has signed up before but is not authenticated
-            // This means token expired or was cleared - ALWAYS redirect to login
-            // Do NOT check token again, just redirect immediately to prevent any guest mode access
-            // ✅ PERFORMANCE: Clear token in background (non-blocking)
-            import('../src/services/authService').then(({ authService }) => {
-              authService.getToken().then(tokenExists => {
-                if (tokenExists) {
-                  authService.clearToken().catch(() => {});
-                }
-              }).catch(() => {});
-            }).catch(() => {});
-            // ✅ CRITICAL: ALWAYS redirect to login - never allow guest mode for users who have signed up
+            // User has signed up but isAuthenticated is false
+            // This could mean:
+            // 1. Token doesn't exist (user logged out or token was cleared)
+            // 2. Token exists but is invalid (401 - will be handled by AuthContext)
+            // 3. App is still loading (isLoading = true) - wait for it to complete
+            
+            // ✅ CRITICAL: If app is still loading, wait for auth check to complete
+            // AuthContext will handle token validation and logout only on 401
+            if (isLoading) {
+              // Still loading - wait for auth check to complete
+              // AuthContext will set isAuthenticated once token is validated
+              return;
+            }
+            
+            // ✅ CRITICAL: App finished loading but user is not authenticated
+            // This means either:
+            // - Token doesn't exist (user logged out)
+            // - Token was invalid and AuthContext already cleared it (401)
+            // In both cases, redirect to login
+            // Do NOT clear token here - AuthContext already handles 401 cases
             router.replace('/auth/login');
             return;
           }

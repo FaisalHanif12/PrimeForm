@@ -30,6 +30,11 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
   const [notification, setNotification] = useState<Notifications.Notification | undefined>();
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
+  // ✅ CRITICAL: Use ref to track registration status and prevent duplicate registrations
+  const isRegisteringRef = useRef<boolean>(false);
+  const registrationPromiseRef = useRef<Promise<string | undefined> | null>(null);
+  // ✅ CRITICAL: Use ref to track current token to avoid stale closures
+  const expoPushTokenRef = useRef<string | undefined>(undefined);
   const { language, t } = useLanguage();
   const { showToast } = useToast();
   const router = useRouter();
@@ -43,65 +48,125 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
     }
   };
 
-  useEffect(() => {
-    // Check if running in Expo Go and show warning
-    if (Constants.appOwnership === 'expo') {
-      showToast('warning', t('notification.push.expo.go'));
-      return;
-    }
-    
-    // ✅ CRITICAL: Register push token on mount (will only save to server if authenticated)
-    registerForPushNotificationsAsync(handleRegistrationError)
-      .then(token => {
-        setExpoPushToken(token);
-        if (token) {
-          showToast('success', t('notification.push.enabled'));
-        }
-      })
-      .catch((error: any) => {
-        showToast('error', t('notification.push.setup.failed'));
-      });
-  }, []);
-
-  // ✅ CRITICAL: Re-register push token when authentication state changes
-  // This ensures token is sent to backend immediately after login
-  // Note: This effect runs once on mount and when authToken changes (via polling)
+  // ✅ CRITICAL: Single consolidated effect to handle push token registration
+  // This prevents duplicate registrations and race conditions
   useEffect(() => {
     let mounted = true;
     let timeoutId: ReturnType<typeof setTimeout>;
     
-    const checkAuthAndRegister = async () => {
+    const initializePushNotifications = async () => {
+      // Check if running in Expo Go and show warning
+      if (Constants.appOwnership === 'expo') {
+        showToast('warning', t('notification.push.expo.go'));
+        return;
+      }
+
+      // ✅ CRITICAL: Prevent duplicate registrations using ref
+      if (isRegisteringRef.current) {
+        console.log('🔔 [PUSH] Registration already in progress, skipping...');
+        // Wait for existing registration to complete
+        if (registrationPromiseRef.current) {
+          try {
+            const token = await registrationPromiseRef.current;
+            if (token && mounted) {
+              setExpoPushToken(token);
+            }
+          } catch (error) {
+            console.error('❌ [PUSH] Error waiting for existing registration:', error);
+          }
+        }
+        return;
+      }
+
       try {
+        // Mark as registering to prevent duplicates
+        isRegisteringRef.current = true;
+
+        // Check authentication status
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
         const authToken = await AsyncStorage.getItem('authToken');
-        
-        if (!mounted) return;
-        
-        if (authToken && !expoPushToken) {
-          // User is authenticated but no push token yet - register now
-          console.log('🔔 [PUSH] User authenticated, registering push token...');
-          const token = await registerForPushNotificationsAsync(handleRegistrationError);
-          if (token && mounted) {
-            setExpoPushToken(token);
-          }
-        } else if (authToken && expoPushToken) {
-          // User is authenticated and has token - ensure it's saved to server
-          console.log('🔔 [PUSH] User authenticated with existing token, ensuring server sync...');
-          await pushNotificationService.savePushTokenToServer(expoPushToken);
+
+        if (!mounted) {
+          isRegisteringRef.current = false;
+          return;
         }
-      } catch (error) {
-        console.error('❌ [PUSH] Error checking auth and registering:', error);
+
+        // Register for push notifications (only once)
+        console.log('🔔 [PUSH] Starting push token registration...');
+        const registrationPromise = registerForPushNotificationsAsync(handleRegistrationError);
+        registrationPromiseRef.current = registrationPromise;
+
+        const token = await registrationPromise;
+
+        if (!mounted) {
+          isRegisteringRef.current = false;
+          return;
+        }
+
+        if (token) {
+          setExpoPushToken(token);
+          expoPushTokenRef.current = token; // Update ref for use in callbacks
+          console.log('✅ [PUSH] Push token registered successfully');
+
+          // Only show success toast if user is authenticated
+          if (authToken) {
+            showToast('success', t('notification.push.enabled'));
+          }
+
+          // If user is authenticated, ensure token is saved to server
+          // Note: registerForPushNotificationsAsync already saves to server, but we double-check here
+          if (authToken) {
+            console.log('🔔 [PUSH] User authenticated, ensuring server sync...');
+            await pushNotificationService.savePushTokenToServer(token);
+          } else {
+            console.log('⚠️ [PUSH] User not authenticated, token will be saved after login');
+          }
+        } else {
+          console.warn('⚠️ [PUSH] Push token registration returned null');
+        }
+      } catch (error: any) {
+        console.error('❌ [PUSH] Error during push token registration:', error);
+        if (mounted) {
+          showToast('error', t('notification.push.setup.failed'));
+        }
+      } finally {
+        isRegisteringRef.current = false;
+        registrationPromiseRef.current = null;
       }
     };
 
-    // Check auth status after a short delay to ensure token is stored
-    timeoutId = setTimeout(checkAuthAndRegister, 1000);
+    // Start initialization immediately
+    initializePushNotifications();
+
+    // Also check auth status after a delay to handle late authentication
+    timeoutId = setTimeout(async () => {
+      if (!mounted) return;
+
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const authToken = await AsyncStorage.getItem('authToken');
+        // ✅ CRITICAL: Use ref to avoid stale closure
+        const currentToken = expoPushTokenRef.current;
+
+        if (authToken && currentToken) {
+          // User is now authenticated and we have a token - ensure it's saved to server
+          console.log('🔔 [PUSH] Late auth check: User authenticated with token, ensuring server sync...');
+          await pushNotificationService.savePushTokenToServer(currentToken);
+        } else if (authToken && !currentToken && !isRegisteringRef.current) {
+         
+          console.log('🔔 [PUSH] Late auth check: User authenticated but no token, registering...');
+          await initializePushNotifications();
+        }
+      } catch (error) {
+        console.error('❌ [PUSH] Error in late auth check:', error);
+      }
+    }, 2000); // Check after 2 seconds to catch late authentication
     
     return () => {
       mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, []); // Run once on mount - authService.login will trigger push registration
+  }, []); // Run once on mount
 
   // Set up notification listeners
   useEffect(() => {
