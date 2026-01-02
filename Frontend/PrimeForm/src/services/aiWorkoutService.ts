@@ -3,6 +3,7 @@ import workoutPlanService from './workoutPlanService';
 import Storage from '../utils/storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
 import { calculatePlanDuration, formatDurationForPrompt, PlanDuration } from '../utils/planDurationCalculator';
+import { getHeightInCm, formatHeightForPrompt } from '../utils/heightConverter';
 import { api } from '../config/api';
 
 export interface WorkoutExercise {
@@ -94,6 +95,10 @@ class AIWorkoutService {
   }
 
   private generatePrompt(userProfile: UserProfile): string {
+    // ✅ CRITICAL: Normalize height to cm for calculations (handles both cm and inches)
+    const heightCm = getHeightInCm(userProfile.height);
+    const formattedHeight = formatHeightForPrompt(userProfile.height, heightCm);
+    
     const targetWeightLine =
       userProfile.bodyGoal?.includes('Gain') || userProfile.bodyGoal?.includes('Lose') || userProfile.bodyGoal?.includes('Fat')
         ? `- Target Weight: ${userProfile.targetWeight ? `${userProfile.targetWeight} kg` : 'Not provided'}`
@@ -103,6 +108,13 @@ class AIWorkoutService {
     const planDuration = calculatePlanDuration(userProfile);
     const durationForPrompt = formatDurationForPrompt(planDuration);
 
+    // Calculate BMI using normalized height in cm
+    const bmi = Number(userProfile.currentWeight) / Math.pow(heightCm / 100, 2);
+    const bmiCategory = bmi < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : 
+                        bmi < 25 ? 'NORMAL - BALANCED APPROACH' : 
+                        bmi < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 
+                        'OBESE - LOW-IMPACT, GRADUAL PROGRESSION';
+
     const prompt = `
 You are a world-class certified fitness trainer with 15+ years of experience in highly personalized training programs.  
 Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** based on this EXACT user profile:
@@ -110,9 +122,8 @@ Create an EXTREMELY PERSONALIZED and HIGHLY SPECIFIC **7-day workout plan** base
 ### CRITICAL USER ANALYSIS
 - Age: ${userProfile.age} years (${userProfile.age < 25 ? 'Young adult - higher recovery, can handle intense training' : userProfile.age < 40 ? 'Adult - balanced approach, moderate recovery' : userProfile.age < 55 ? 'Middle-aged - focus on joint health, longer recovery' : 'Mature - emphasize mobility, low-impact exercises'})
 - Gender: ${userProfile.gender} (${userProfile.gender === 'Male' ? 'Typically higher muscle mass, focus on strength' : 'Often better flexibility, may need more upper body focus'})
-- Height: ${userProfile.height} cm | Weight: ${userProfile.currentWeight} kg${targetWeightLine ? ` → ${userProfile.targetWeight} kg` : ''}
-${targetWeightLine ? `${targetWeightLine}\n` : ''}- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - BALANCED APPROACH' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 'OBESE - LOW-IMPACT, GRADUAL PROGRESSION'})
-- BMI: ${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)).toFixed(1)} (${(Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 18.5 ? 'UNDERWEIGHT - FOCUS ON MUSCLE BUILDING' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 25 ? 'NORMAL - BALANCED APPROACH' : (Number(userProfile.currentWeight) / Math.pow(Number(userProfile.height) / 100, 2)) < 30 ? 'OVERWEIGHT - EMPHASIZE CARDIO & FAT LOSS' : 'OBESE - LOW-IMPACT, GRADUAL PROGRESSION'})
+- Height: ${formattedHeight} | Weight: ${userProfile.currentWeight} kg${targetWeightLine ? ` → ${userProfile.targetWeight} kg` : ''}
+${targetWeightLine ? `${targetWeightLine}\n` : ''}- BMI: ${bmi.toFixed(1)} (${bmiCategory})
 - PRIMARY GOAL: ${userProfile.bodyGoal} (THIS IS THE #1 PRIORITY - EVERY EXERCISE MUST ALIGN WITH THIS GOAL)
 - Fitness Level: Beginner (START SLOW, FOCUS ON FORM, BASIC MOVEMENTS)
 - Available Equipment: ${userProfile.availableEquipment} (STRICTLY USE ONLY THESE TOOLS - NO EXCEPTIONS)
@@ -261,6 +272,13 @@ Generate the **final personalized plan now.**
             throw new Error(`Database save failed: ${saveResponse.message}`);
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          
+          // If error is about premium users, throw immediately without retrying
+          if (errorMessage.includes('premium') || errorMessage.includes('Premium')) {
+            throw error;
+          }
+          
           retryCount++;
           
           if (retryCount >= maxRetries) {

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { authService } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserCacheKey, getCurrentUserId, validateCachedData } from '../utils/cacheKeys';
+import { performAppUpdateMigration, ensureAuthPersistence } from '../utils/appUpdateMigration';
+import { validateAllAccountData } from '../utils/dataIntegrity';
 
 interface User {
   fullName: string;
@@ -228,7 +230,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    checkAuthStatus();
+    // ✅ CRITICAL: Perform app update migration FIRST to ensure data persistence
+    // This ensures all user data (diet, workout, progress, AI trainer, etc.) is preserved
+    // and user stays logged in after app updates
+    // ✅ CRITICAL: Also validates data integrity on every app startup
+    (async () => {
+      try {
+        // Step 1: Ensure auth persistence (recover token and user ID if needed)
+        await ensureAuthPersistence();
+        
+        // Step 2: Perform app update migration (migrate old cache keys, validate data)
+        await performAppUpdateMigration();
+        
+        // Step 3: Check auth status (restore user from cache/token)
+        await checkAuthStatus();
+        
+        // ✅ CRITICAL: After auth check, ensure all data is accessible
+        // This guarantees users can access all their plans and progress after update
+        const userId = await getCurrentUserId();
+        if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
+          // Run validation and verification in background (non-blocking)
+          Promise.all([
+            validateAllAccountData(userId),
+            import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
+          ]).catch((error) => {
+            console.warn('⚠️ Background data validation error (non-critical):', error);
+          });
+        }
+      } catch (error) {
+        console.warn('⚠️ Error in app startup migration:', error);
+        // Still check auth status even if migration fails
+        checkAuthStatus();
+      }
+    })();
   }, []);
 
   const login = (userData: User) => {

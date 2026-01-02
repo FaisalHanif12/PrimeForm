@@ -147,6 +147,11 @@ export default function DietPlanDisplay({
     return roundedProgress;
   };
 
+  // Check if plan is completed (100% progress)
+  const isPlanCompleted = (): boolean => {
+    return getProgressPercentage() >= 100;
+  };
+
   // Get today's day data by finding it from current week days
   const getTodaysDayData = () => {
     const currentWeekDays = getCurrentWeekDays();
@@ -867,6 +872,16 @@ export default function DietPlanDisplay({
       setWaterCompleted(waterCompleted);
       setWaterIntake(waterIntake);
     }
+  };
+
+  // Override onGenerateNew to prevent creating new plan when current plan is completed
+  const handleGenerateNew = () => {
+    if (isPlanCompleted()) {
+      // Plan is completed, don't allow creating new one
+      return;
+    }
+    // Plan not completed, allow generating new one
+    onGenerateNew?.();
   };
 
   return (

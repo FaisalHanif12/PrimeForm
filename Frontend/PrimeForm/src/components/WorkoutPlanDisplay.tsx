@@ -549,6 +549,11 @@ export default function WorkoutPlanDisplay({
     return roundedProgress;
   };
 
+  // Check if plan is completed (100% progress)
+  const isPlanCompleted = (): boolean => {
+    return getProgressPercentage() >= 100;
+  };
+
   const getDayStatus = (day: WorkoutDay, index: number): 'completed' | 'rest' | 'upcoming' | 'missed' | 'in_progress' => {
     if (day.isRestDay) return 'rest';
 
@@ -701,6 +706,15 @@ export default function WorkoutPlanDisplay({
     onExercisePress?.(exercise);
   };
 
+  // Override onGenerateNew to prevent creating new plan when current plan is completed
+  const handleGenerateNew = () => {
+    if (isPlanCompleted()) {
+      // Plan is completed, don't allow creating new one
+      return;
+    }
+    // Plan not completed, allow generating new one
+    onGenerateNew?.();
+  };
 
   // Removed delete plan handler and button per new requirement
 

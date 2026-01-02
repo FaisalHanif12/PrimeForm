@@ -168,7 +168,7 @@ async function hasEverSignedUp(): Promise<boolean> {
  * ✅ PERSISTENT: Stores in both persistent key (installation-specific) and legacy key
  * This ensures the flag survives app deletion AND works for existing users
  */
-async function markUserSignedUp(): Promise<void> {
+export async function markUserSignedUp(): Promise<void> {
   try {
     // ✅ CRITICAL: Store in persistent key (survives app deletion)
     const persistentKey = await getPersistentSignupKey();
