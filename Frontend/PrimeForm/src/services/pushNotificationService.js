@@ -74,17 +74,36 @@ class PushNotificationService {
       }
       
       try {
-        // Get projectId from app configuration
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.expoConfig?.projectId;
+        // ✅ CRITICAL: Get projectId from app configuration (required for EAS builds)
+        // Expo SDK 54: Check Constants.easConfig?.projectId first, then fallback to expoConfig
+        const projectId = Constants.easConfig?.projectId || 
+                         Constants.expoConfig?.extra?.eas?.projectId || 
+                         Constants.expoConfig?.projectId;
+        
+        // ✅ ENHANCED LOGGING: Log all relevant info for debugging
+        if (__DEV__) {
+          console.log('🔔 [PUSH SERVICE] === Push Token Registration Debug ===');
+          console.log('🔔 [PUSH SERVICE] Device.isDevice:', Device.isDevice);
+          console.log('🔔 [PUSH SERVICE] Platform.OS:', Platform.OS);
+          console.log('🔑 [PUSH SERVICE] Project ID (easConfig):', Constants.easConfig?.projectId);
+          console.log('🔑 [PUSH SERVICE] Project ID (expoConfig.extra.eas):', Constants.expoConfig?.extra?.eas?.projectId);
+          console.log('🔑 [PUSH SERVICE] Project ID (final selected):', projectId);
+        }
         
         if (!projectId) {
-          console.error('❌ No projectId found in app configuration');
+          console.error('❌ [PUSH SERVICE] No projectId found in app configuration');
+          console.error('❌ [PUSH SERVICE] Available Constants.easConfig:', Constants.easConfig);
+          console.error('❌ [PUSH SERVICE] Available Constants.expoConfig.extra:', Constants.expoConfig?.extra);
           return null;
         }
         
-        console.log('🔑 Using projectId:', projectId);
+        console.log('🔑 [PUSH SERVICE] Using projectId:', projectId);
         token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-        console.log('📱 Expo Push Token:', token);
+        
+        // ✅ ENHANCED LOGGING: Mask token for security but show enough to verify
+        const maskedToken = token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'null';
+        console.log('📱 [PUSH SERVICE] Expo Push Token generated (masked):', maskedToken);
+        console.log('📱 [PUSH SERVICE] Token length:', token?.length || 0);
       } catch (error) {
         console.error('❌ Error getting Expo push token:', error);
         // Handle specific validation errors
@@ -105,9 +124,17 @@ class PushNotificationService {
     try {
       const authToken = await AsyncStorage.getItem('authToken');
       if (!authToken) {
-        console.log('❌ No auth token found, cannot save push token');
+        console.log('⚠️ [PUSH SERVICE] No auth token found, cannot save push token (user not logged in)');
+        console.log('⚠️ [PUSH SERVICE] Token will be saved automatically after login');
         return;
       }
+
+      // ✅ ENHANCED LOGGING: Mask token for security
+      const maskedToken = token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'null';
+      console.log('📤 [PUSH SERVICE] Saving push token to server (masked):', maskedToken);
+      console.log('📤 [PUSH SERVICE] Token length:', token?.length || 0);
+      console.log('📤 [PUSH SERVICE] API endpoint:', `${API_BASE_URL}/user-profile/push-token`);
+      console.log('📤 [PUSH SERVICE] Auth token present:', !!authToken);
 
       const response = await fetch(`${API_BASE_URL}/user-profile/push-token`, {
         method: 'POST',
@@ -118,14 +145,39 @@ class PushNotificationService {
         body: JSON.stringify({ pushToken: token }),
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (response.ok) {
-        console.log('✅ Push token saved to server');
+        console.log('✅ [PUSH SERVICE] Push token saved to server successfully');
+        console.log('📥 [PUSH SERVICE] Server response:', responseData);
       } else {
-        console.error('❌ Failed to save push token to server');
+        console.error('❌ [PUSH SERVICE] Failed to save push token to server');
+        console.error('📥 [PUSH SERVICE] Response status:', response.status);
+        console.error('📥 [PUSH SERVICE] Response data:', responseData);
       }
     } catch (error) {
-      console.error('❌ Error saving push token to server:', error);
+      console.error('❌ [PUSH SERVICE] Error saving push token to server:', {
+        message: error.message,
+        error: error,
+        stack: error.stack
+      });
     }
+  }
+
+  // Utility function to test push notification (for debugging)
+  async testPushNotification() {
+    const token = this.expoPushToken || await this.registerForPushNotificationsAsync();
+    if (!token) {
+      console.error('❌ No push token available for testing');
+      return;
+    }
+    
+    console.log('🧪 TEST: Push token for testing:', token);
+    console.log('🧪 TEST: Use this token with Expo Push Notification Tool:');
+    console.log('🧪 TEST: https://expo.dev/notifications');
+    console.log('🧪 TEST: Or call backend endpoint to send test notification');
+    
+    return token;
   }
 
   // Set up notification listeners

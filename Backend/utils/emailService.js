@@ -2,6 +2,28 @@ const nodemailer = require('nodemailer');
 
 // Create transporter
 const createTransporter = () => {
+  // ✅ ENHANCED VALIDATION: Check for required environment variables with detailed logging
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    const missingVars = [];
+    if (!process.env.GMAIL_USER) missingVars.push('GMAIL_USER');
+    if (!process.env.GMAIL_APP_PASSWORD) missingVars.push('GMAIL_APP_PASSWORD');
+    
+    console.error('❌ [EMAIL] === Email Configuration Error ===');
+    console.error('❌ [EMAIL] Missing environment variables:', missingVars.join(', '));
+    console.error('❌ [EMAIL] Please set these in your .env file or VPS environment:');
+    console.error('❌ [EMAIL]   GMAIL_USER=your-email@gmail.com');
+    console.error('❌ [EMAIL]   GMAIL_APP_PASSWORD=your-app-specific-password');
+    console.error('❌ [EMAIL] Note: GMAIL_APP_PASSWORD is NOT your regular Gmail password.');
+    console.error('❌ [EMAIL] Generate it at: https://myaccount.google.com/apppasswords');
+    console.error('❌ [EMAIL] To verify on VPS, run: pm2 env <process-id> | grep GMAIL');
+    throw new Error(`Missing email configuration: ${missingVars.join(', ')}`);
+  }
+
+  // ✅ ENHANCED LOGGING: Log email configuration (without exposing password)
+  console.log('📧 [EMAIL] Email service configured');
+  console.log('📧 [EMAIL] Gmail user:', process.env.GMAIL_USER);
+  console.log('📧 [EMAIL] Gmail app password:', process.env.GMAIL_APP_PASSWORD ? '***SET***' : 'NOT SET');
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -18,6 +40,7 @@ const createTransporter = () => {
 const sendOTPEmail = async (email, otp, fullName, purpose = 'verification') => {
   try {
     const transporter = createTransporter();
+    console.log(`📧 Attempting to send OTP email to: ${email} (purpose: ${purpose})`);
 
     const purposeText = purpose === 'password_reset' ? 'Password Reset' : 'Account Verification';
     const actionText = purpose === 'password_reset' ? 'reset your password' : 'verify your account';
@@ -167,15 +190,37 @@ const sendOTPEmail = async (email, otp, fullName, purpose = 'verification') => {
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ ${purposeText} email sent successfully to ${email}`);
+    console.log(`✅ [EMAIL] ${purposeText} email sent successfully to ${email}`);
+    console.log(`📧 [EMAIL] Email message ID: ${result.messageId}`);
     return {
       success: true,
       messageId: result.messageId
     };
 
   } catch (error) {
-    console.error('❌ Error sending email:', error);
-    throw new Error('Failed to send email');
+    // ✅ ENHANCED LOGGING: Comprehensive error logging with SMTP details
+    console.error('❌ [EMAIL] === Error sending OTP email ===');
+    console.error('❌ [EMAIL] Error message:', error.message);
+    console.error('❌ [EMAIL] Error code:', error.code);
+    console.error('❌ [EMAIL] Error command:', error.command);
+    console.error('❌ [EMAIL] SMTP response:', error.response);
+    console.error('❌ [EMAIL] SMTP response code:', error.responseCode);
+    console.error('❌ [EMAIL] Target email:', email);
+    console.error('❌ [EMAIL] Purpose:', purpose);
+    console.error('❌ [EMAIL] Full error:', error);
+    
+    // Check for common SMTP errors
+    if (error.code === 'EAUTH') {
+      console.error('❌ [EMAIL] Authentication failed - check GMAIL_APP_PASSWORD');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('❌ [EMAIL] Connection failed - check SMTP ports (587/465) are not blocked');
+      console.error('❌ [EMAIL] Test from VPS: telnet smtp.gmail.com 587');
+    } else if (error.responseCode === 535) {
+      console.error('❌ [EMAIL] Invalid credentials - verify GMAIL_APP_PASSWORD');
+    }
+    
+    // Re-throw with more context
+    throw new Error(`Failed to send ${purpose} email: ${error.message}`);
   }
 };
 
@@ -344,14 +389,31 @@ const sendWelcomeEmail = async (email, fullName) => {
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ Welcome email sent successfully to ${email}`);
+    console.log(`✅ [EMAIL] Welcome email sent successfully to ${email}`);
+    console.log(`📧 [EMAIL] Email message ID: ${result.messageId}`);
     return {
       success: true,
       messageId: result.messageId
     };
 
   } catch (error) {
-    console.error('❌ Error sending welcome email:', error);
+    // ✅ ENHANCED LOGGING: Comprehensive error logging with SMTP details
+    console.error('❌ [EMAIL] === Error sending welcome email ===');
+    console.error('❌ [EMAIL] Error message:', error.message);
+    console.error('❌ [EMAIL] Error code:', error.code);
+    console.error('❌ [EMAIL] SMTP response:', error.response);
+    console.error('❌ [EMAIL] SMTP response code:', error.responseCode);
+    console.error('❌ [EMAIL] Target email:', email);
+    console.error('❌ [EMAIL] Full error:', error);
+    
+    // Check for common SMTP errors
+    if (error.code === 'EAUTH') {
+      console.error('❌ [EMAIL] Authentication failed - check GMAIL_APP_PASSWORD');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('❌ [EMAIL] Connection failed - check SMTP ports (587/465) are not blocked');
+      console.error('❌ [EMAIL] Test from VPS: telnet smtp.gmail.com 587');
+    }
+    
     // Don't throw error for welcome email failure - just log it
     return {
       success: false,
@@ -520,12 +582,53 @@ const sendContactEmail = async ({ fromName, fromEmail, problem }) => {
 // Test email configuration
 const testEmailConfiguration = async () => {
   try {
+    // ✅ ENHANCED VALIDATION: Check environment variables first with detailed logging
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+      const missingVars = [];
+      if (!process.env.GMAIL_USER) missingVars.push('GMAIL_USER');
+      if (!process.env.GMAIL_APP_PASSWORD) missingVars.push('GMAIL_APP_PASSWORD');
+      
+      console.error('❌ [EMAIL] === Email Configuration Test Failed ===');
+      console.error('❌ [EMAIL] Missing environment variables:', missingVars.join(', '));
+      console.error('❌ [EMAIL] Required .env variables:');
+      console.error('❌ [EMAIL]   GMAIL_USER=your-email@gmail.com');
+      console.error('❌ [EMAIL]   GMAIL_APP_PASSWORD=your-app-specific-password');
+      console.error('❌ [EMAIL] Note: GMAIL_APP_PASSWORD is NOT your regular Gmail password.');
+      console.error('❌ [EMAIL] Generate it at: https://myaccount.google.com/apppasswords');
+      console.error('❌ [EMAIL] To verify on VPS:');
+      console.error('❌ [EMAIL]   pm2 env <process-id> | grep GMAIL');
+      console.error('❌ [EMAIL]   OR: printenv | grep GMAIL');
+      return false;
+    }
+
     const transporter = createTransporter();
     await transporter.verify();
-    console.log('✅ Email configuration is valid');
+    console.log('✅ [EMAIL] Email configuration is valid');
+    console.log(`✅ [EMAIL] Using Gmail account: ${process.env.GMAIL_USER}`);
+    console.log('✅ [EMAIL] SMTP connection verified successfully');
     return true;
   } catch (error) {
-    console.error('❌ Email configuration error:', error.message);
+    // ✅ ENHANCED LOGGING: Comprehensive error logging
+    console.error('❌ [EMAIL] === Email Configuration Test Failed ===');
+    console.error('❌ [EMAIL] Error message:', error.message);
+    console.error('❌ [EMAIL] Error code:', error.code);
+    console.error('❌ [EMAIL] Error command:', error.command);
+    console.error('❌ [EMAIL] SMTP response:', error.response);
+    console.error('❌ [EMAIL] SMTP response code:', error.responseCode);
+    
+    // Check for common SMTP errors
+    if (error.code === 'EAUTH') {
+      console.error('❌ [EMAIL] Authentication failed - check GMAIL_APP_PASSWORD');
+      console.error('❌ [EMAIL] Verify app password at: https://myaccount.google.com/apppasswords');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('❌ [EMAIL] Connection failed - check SMTP ports (587/465) are not blocked');
+      console.error('❌ [EMAIL] Test from VPS:');
+      console.error('❌ [EMAIL]   telnet smtp.gmail.com 587');
+      console.error('❌ [EMAIL]   OR: nc -zv smtp.gmail.com 587');
+    } else if (error.responseCode === 535) {
+      console.error('❌ [EMAIL] Invalid credentials - verify GMAIL_APP_PASSWORD');
+    }
+    
     return false;
   }
 };

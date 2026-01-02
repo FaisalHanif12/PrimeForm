@@ -9,7 +9,7 @@ import NotificationHandler from '../src/components/NotificationHandler';
 
 export default function RootLayout() {
   useEffect(() => {
-
+    // Initialize AdMob SDK once at app startup
     const initializeAds = async () => {
       try {
         // Dynamically import to avoid errors if module doesn't exist
@@ -24,16 +24,23 @@ export default function RootLayout() {
           console.log('✅ AdMob initialized successfully (Production Mode - Real Ads Active)');
         }
       } catch (error: any) {
-        // Silently handle errors - expected in Expo Go or if module not available
+        // Log errors for debugging - expected in Expo Go, but should work in EAS builds
         if (error?.message?.includes('TurboModuleRegistry') || 
             error?.message?.includes('RNGoogleMobileAdsModule')) {
           // This is expected in Expo Go - native modules require EAS build
           if (__DEV__) {
             console.log('ℹ️ AdMob not available (expected in Expo Go - requires EAS build)');
+          } else {
+            // In production build, this should not happen - log as warning
+            console.warn('⚠️ AdMob module not found in EAS build. Check native module compilation.');
           }
         } else {
-          // Unexpected error - log in production for debugging
-          console.warn('⚠️ AdMob initialization error:', error?.message || error);
+          // Unexpected error - log full error for debugging
+          console.error('❌ AdMob initialization error:', {
+            message: error?.message,
+            error: error,
+            stack: error?.stack
+          });
         }
       }
     };

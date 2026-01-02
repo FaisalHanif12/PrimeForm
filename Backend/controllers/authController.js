@@ -162,26 +162,52 @@ const forgotPassword = asyncHandler(async (req, res) => {
   
   try {
     await user.save();
-    console.log('User saved successfully');
-    console.log('User OTP data after save:', user.otp);
+    console.log('✅ User saved successfully with OTP');
+    console.log('📝 User OTP data after save:', user.otp);
     
     // Send OTP email
-    await sendOTPEmail(email, otp, user.fullName, 'password_reset');
-    console.log('OTP email sent successfully');
-    
-    res.status(200).json({
-      success: true,
-      message: 'Password reset code sent to your email'
-    });
+    try {
+      await sendOTPEmail(email, otp, user.fullName, 'password_reset');
+      console.log('✅ OTP email sent successfully to:', email);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Password reset code sent to your email'
+      });
+    } catch (emailError) {
+      console.error('❌ Failed to send OTP email:', {
+        error: emailError.message,
+        email: email,
+        user: user.fullName
+      });
+      
+      // Clear OTP if email fails
+      user.clearOTP();
+      await user.save();
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send reset email. Please check your email configuration or try again later.'
+      });
+    }
   } catch (error) {
-    console.log('Error in forgot password:', error);
-    // Clear OTP if email fails
-    user.clearOTP();
-    await user.save();
+    console.error('❌ Error in forgot password flow:', {
+      error: error.message,
+      stack: error.stack,
+      email: email
+    });
+    
+    // Clear OTP if save fails
+    try {
+      user.clearOTP();
+      await user.save();
+    } catch (clearError) {
+      console.error('❌ Error clearing OTP:', clearError);
+    }
     
     return res.status(500).json({
       success: false,
-      message: 'Failed to send reset email. Please try again.'
+      message: 'Failed to process password reset request. Please try again.'
     });
   }
 });

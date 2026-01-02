@@ -76,76 +76,40 @@ app.use('/api/auth/forgot-password', authLimiter);
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    // In development, be more permissive
-    if (process.env.NODE_ENV === 'development') {
+    // Mobile apps typically don't send an origin header, so we allow them
+    if (!origin) {
+      console.log('✅ CORS: Allowing request with no origin (mobile app)');
       return callback(null, true);
     }
 
+    // ✅ DEVELOPMENT MODE: Allow all origins for flexibility
+    // This prevents CORS issues when IP addresses change
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    if (isDevelopment) {
+      console.log(`✅ CORS: Development mode - Allowing origin: ${origin}`);
+      return callback(null, true);
+    }
+
+    // ✅ PRODUCTION MODE: Only allow specific domains
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:8081', // Expo dev server
       'http://localhost:5001', // Backend API
-      'http://192.168.32.204:8081', // CURRENT network IP (Expo dev server)
-      'http://192.168.32.204:5001', // CURRENT network IP (Backend API)
-      'http://192.168.32.204:5000', // CURRENT network IP (Backend API alternate)
-      'exp://192.168.32.204:8081',  // CURRENT network IP (Expo protocol)
-      'http://192.168.32.70:8081', // CURRENT network IP (Expo dev server)
-      'http://192.168.32.70:5001', // CURRENT network IP (Backend API)
-      'http://192.168.32.70:5000', // CURRENT network IP (Backend API alternate)
-      'exp://192.168.32.70:8081',  // CURRENT network IP (Expo protocol)
-      'http://192.168.100.20:8081', // Previous network IP (Expo dev server)
-      'http://192.168.100.20:5001', // Previous network IP (Backend API)
-      'http://192.168.100.20:5000', // Previous network IP (Backend API alternate)
-      'exp://192.168.100.20:8081',  // Previous network IP (Expo protocol)
-      'http://192.168.254.70:8081', // Previous network IP (Expo dev server)
-      'http://192.168.254.70:5001', // Previous network IP (Backend API)
-      'http://192.168.254.70:5000', // Previous network IP (Backend API alternate)
-      'exp://192.168.254.70:8081',  // Previous network IP (Expo protocol)
-      'http://192.168.182.204:8081', // Previous network IP (Expo dev server)
-      'http://192.168.182.204:5001', // Previous network IP (Backend API)
-      'http://192.168.182.204:5000', // Previous network IP (Backend API alternate)
-      'exp://192.168.182.204:8081',  // Previous network IP (Expo protocol)
-      'http://192.168.135.70:8081', // Previous network IP (Expo dev server)
-      'http://192.168.135.70:5001', // Previous network IP (Backend API)
-      'exp://192.168.135.70:8081',  // Previous network IP (Expo protocol)
-      'http://192.168.0.112:8081', // Previous network IP (Expo dev server)
-      'http://192.168.0.112:5000', // Previous network IP (API)
-      'http://192.168.49.223:8081', // Previous network IP (Expo dev server)
-      'http://192.168.49.223:5000', // Previous network IP (API)
-      'http://192.168.48.66:8081', // Your previous network IP
-      'http://192.168.48.66:5000', // Your previous API IP
-      'http://192.168.75.66:8081', // Your previous mobile data IP
-      'http://192.168.75.66:5000', // Your previous mobile data API IP
-      'http://192.168.100.33:8081', // Your previous network IP
-      'http://192.168.100.33:5000', // Your previous API IP
-      'http://192.168.0.117:8081', // Your old IP address
-      'http://192.168.0.117:5000', // Your old API IP
-      'exp://192.168.0.112:8081',  // Expo protocol - previous network
-      'exp://192.168.49.223:8081',  // Expo protocol - previous network
-      'exp://192.168.48.66:8081',  // Expo protocol - previous network
-      'exp://192.168.75.66:8081',  // Expo protocol - previous mobile data
-      'exp://192.168.100.33:8081', // Expo protocol - previous network
-      'exp://192.168.32.204:8081', // Expo protocol - current network
-      'exp://192.168.32.70:8081', // Expo protocol - current network
-      'exp://192.168.100.20:8081', // Expo protocol - previous network
-      'exp://192.168.0.117:8081',  // Expo protocol - old network
-      'exp://localhost:8081',       // Expo localhost
-      'http://192.168.111.70:8081', // Previous network IP (Expo dev server)
-      'http://192.168.111.70:5000', // Previous network IP (API)
-      'exp://192.168.111.70:8081',  // Previous network IP (Expo protocol)
-      process.env.FRONTEND_URL
-    ].filter(Boolean);
+      // Add your production domain here
+      process.env.FRONTEND_URL,
+      process.env.ALLOWED_ORIGINS?.split(',') || []
+    ].flat().filter(Boolean);
 
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`✅ CORS: Allowed origin: ${origin}`);
       callback(null, true);
     } else {
+      console.warn(`❌ CORS: Blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
@@ -228,33 +192,27 @@ app.use(errorHandler);
 
 // Server configuration
 const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
+const HOST = process.env.NODE_ENV === 'production' ? '127.0.0.1' : '0.0.0.0';
 const server = app.listen(PORT, HOST, async () => {
   console.log('🚀 ================================');
   console.log(`🏃‍♂️ Pure Body API Server Running`);
   console.log('🚀 ================================');
   console.log(`📡 Server: http://localhost:${PORT}`);
-  console.log(`🌐 Network: http://192.168.32.204:${PORT}`); // Current network IP
-  console.log(`🌐 Network: http://192.168.32.70:${PORT}`); // Current network IP
-  console.log(`🌐 Previous Network: http://192.168.100.20:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Network: http://192.168.182.204:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Network: http://192.168.182.70:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Network: http://192.168.111.70:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Network: http://192.168.0.112:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Network: http://192.168.48.66:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Previous Mobile Data: http://192.168.75.66:${PORT}`); // Previous mobile data IP for reference
-  console.log(`🌐 Previous Network: http://192.168.100.33:${PORT}`); // Previous network IP for reference
-  console.log(`🌐 Old Network: http://192.168.0.117:${PORT}`); // Keep old IP for reference
+  console.log(`🌐 Network: http://192.168.48.129:${PORT}`); // Current network IP
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏰ Started: ${new Date().toLocaleString()}`);
 
-  // Test email configuration on startup
-  console.log('📧 Testing email configuration...');
+  // ✅ ENHANCED: Test email configuration on startup with detailed logging
+  console.log('📧 [STARTUP] Testing email configuration...');
   const emailTest = await testEmailConfiguration();
   if (emailTest) {
-    console.log('✅ Email service ready');
+    console.log('✅ [STARTUP] Email service ready');
+    console.log('✅ [STARTUP] Email configured: YES');
   } else {
-    console.log('⚠️  Email service configuration issue - check your .env file');
+    console.log('⚠️  [STARTUP] Email service configuration issue - check your .env file');
+    console.log('⚠️  [STARTUP] Email configured: NO');
+    console.log('⚠️  [STARTUP] Welcome emails and password reset emails will fail');
+    console.log('⚠️  [STARTUP] To fix: Set GMAIL_USER and GMAIL_APP_PASSWORD in .env or VPS environment');
   }
 
   console.log('🚀 ================================');

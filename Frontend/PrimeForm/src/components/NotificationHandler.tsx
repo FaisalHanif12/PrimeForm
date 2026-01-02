@@ -50,6 +50,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
       return;
     }
     
+    // ✅ CRITICAL: Register push token on mount (will only save to server if authenticated)
     registerForPushNotificationsAsync(handleRegistrationError)
       .then(token => {
         setExpoPushToken(token);
@@ -60,7 +61,50 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
       .catch((error: any) => {
         showToast('error', t('notification.push.setup.failed'));
       });
+  }, []);
 
+  // ✅ CRITICAL: Re-register push token when authentication state changes
+  // This ensures token is sent to backend immediately after login
+  // Note: This effect runs once on mount and when authToken changes (via polling)
+  useEffect(() => {
+    let mounted = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    
+    const checkAuthAndRegister = async () => {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const authToken = await AsyncStorage.getItem('authToken');
+        
+        if (!mounted) return;
+        
+        if (authToken && !expoPushToken) {
+          // User is authenticated but no push token yet - register now
+          console.log('🔔 [PUSH] User authenticated, registering push token...');
+          const token = await registerForPushNotificationsAsync(handleRegistrationError);
+          if (token && mounted) {
+            setExpoPushToken(token);
+          }
+        } else if (authToken && expoPushToken) {
+          // User is authenticated and has token - ensure it's saved to server
+          console.log('🔔 [PUSH] User authenticated with existing token, ensuring server sync...');
+          await pushNotificationService.savePushTokenToServer(expoPushToken);
+        }
+      } catch (error) {
+        console.error('❌ [PUSH] Error checking auth and registering:', error);
+      }
+    };
+
+    // Check auth status after a short delay to ensure token is stored
+    timeoutId = setTimeout(checkAuthAndRegister, 1000);
+    
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []); // Run once on mount - authService.login will trigger push registration
+
+  // Set up notification listeners
+  useEffect(() => {
     // Listener for notifications received while app is in foreground
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
       try {
@@ -90,9 +134,7 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
 
     return () => {
       if (notificationListener.current) {
-        if (notificationListener.current) {
-          notificationListener.current.remove();
-        }
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
         responseListener.current.remove();
@@ -166,46 +208,90 @@ const NotificationHandler: React.FC<NotificationHandlerProps> = ({ children }) =
 };
 
 async function registerForPushNotificationsAsync(handleRegistrationError?: (errorMessage: string) => void): Promise<string | undefined> {
+  // Create Android notification channel
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#F59E0B',
-    });
+    try {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#F59E0B',
+      });
+      console.log('✅ Android notification channel created');
+    } catch (error) {
+      console.error('❌ Error creating Android notification channel:', error);
+    }
   }
 
   if (Device.isDevice) {
+    // Request notification permissions (Android 13+ compatible)
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    console.log('📱 Notification permission status:', existingStatus);
+    
     let finalStatus = existingStatus;
     
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
+      console.log('📱 Notification permission requested, new status:', status);
     }
     
     if (finalStatus !== 'granted') {
-      handleRegistrationError?.('Permission not granted to get push token for push notification!');
+      const errorMsg = 'Permission not granted to get push token for push notification!';
+      console.error('❌', errorMsg);
+      handleRegistrationError?.(errorMsg);
       return;
     }
     
     try {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId || (Constants.expoConfig as any)?.projectId;
+      // ✅ CRITICAL: Get projectId from app configuration (required for EAS builds)
+      // Expo SDK 54: Check Constants.easConfig?.projectId first, then fallback to expoConfig
+      const projectId = Constants.easConfig?.projectId || 
+                       Constants.expoConfig?.extra?.eas?.projectId || 
+                       (Constants.expoConfig as any)?.projectId;
+      
+      // ✅ ENHANCED LOGGING: Log all relevant info for debugging
+      if (__DEV__) {
+        console.log('🔔 [PUSH] === Push Token Registration Debug ===');
+        console.log('🔔 [PUSH] Device.isDevice:', Device.isDevice);
+        console.log('🔔 [PUSH] Platform.OS:', Platform.OS);
+        console.log('🔔 [PUSH] Constants.appOwnership:', Constants.appOwnership);
+        console.log('🔑 [PUSH] Project ID (easConfig):', Constants.easConfig?.projectId);
+        console.log('🔑 [PUSH] Project ID (expoConfig.extra.eas):', Constants.expoConfig?.extra?.eas?.projectId);
+        console.log('🔑 [PUSH] Project ID (final selected):', projectId);
+      }
       
       if (!projectId) {
-        handleRegistrationError?.('Project ID not found in app configuration');
+        const errorMsg = 'Project ID not found in app configuration';
+        console.error('❌ [PUSH]', errorMsg);
+        console.error('❌ [PUSH] Available Constants.easConfig:', Constants.easConfig);
+        console.error('❌ [PUSH] Available Constants.expoConfig.extra:', Constants.expoConfig?.extra);
+        handleRegistrationError?.(errorMsg);
         return;
       }
       
-      const pushTokenString = (await Notifications.getExpoPushTokenAsync({
+      // Get Expo push token
+      const tokenResponse = await Notifications.getExpoPushTokenAsync({
         projectId,
-      })).data;
+      });
+      const pushTokenString = tokenResponse.data;
+      
+      // ✅ ENHANCED LOGGING: Mask token for security but show enough to verify
+      const maskedToken = pushTokenString ? `${pushTokenString.substring(0, 20)}...${pushTokenString.substring(pushTokenString.length - 10)}` : 'null';
+      console.log('📱 [PUSH] Expo Push Token generated (masked):', maskedToken);
+      console.log('📱 [PUSH] Token length:', pushTokenString?.length || 0);
       
       // Save token to server via push notification service
       await pushNotificationService.savePushTokenToServer(pushTokenString);
       
       return pushTokenString;
     } catch (error: any) {
+      console.error('❌ Error getting Expo push token:', {
+        message: error.message,
+        error: error,
+        stack: error.stack
+      });
+      
       if (error.message && error.message.includes('Invalid uuid')) {
         handleRegistrationError?.('Invalid project ID format. Please check your app.json configuration.');
       } else {
@@ -213,7 +299,9 @@ async function registerForPushNotificationsAsync(handleRegistrationError?: (erro
       }
     }
   } else {
-    handleRegistrationError?.('Must use physical device for push notifications');
+    const errorMsg = 'Must use physical device for push notifications';
+    console.warn('⚠️', errorMsg);
+    handleRegistrationError?.(errorMsg);
   }
 }
 

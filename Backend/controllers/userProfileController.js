@@ -38,7 +38,16 @@ exports.savePushToken = async (req, res) => {
     const userId = req.user._id ? req.user._id.toString() : req.user.id;
     const { pushToken } = req.body;
 
+    // ✅ ENHANCED LOGGING: Comprehensive logging for debugging
+    console.log('📱 [BACKEND] === Push Token Save Request ===');
+    console.log('📱 [BACKEND] User ID:', userId);
+    console.log('📱 [BACKEND] Push token present:', !!pushToken);
+    console.log('📱 [BACKEND] Push token length:', pushToken ? pushToken.length : 0);
+    console.log('📱 [BACKEND] Push token (first 20 chars):', pushToken ? pushToken.substring(0, 20) + '...' : 'null');
+    console.log('📱 [BACKEND] Push token (last 10 chars):', pushToken ? '...' + pushToken.substring(pushToken.length - 10) : 'null');
+
     if (!pushToken) {
+      console.error('❌ [BACKEND] Push token is missing in request');
       return res.status(400).json({
         success: false,
         message: 'Push token is required'
@@ -47,16 +56,29 @@ exports.savePushToken = async (req, res) => {
 
     // Update user with push token
     await User.findByIdAndUpdate(userId, { pushToken });
+    console.log('✅ [BACKEND] Push token saved to user document');
+    console.log('✅ [BACKEND] User document updated with pushToken field');
 
     // Check for pending notifications and send them
-    await NotificationService.sendPendingNotifications(userId);
+    try {
+      console.log('📬 [BACKEND] Checking for pending notifications for user:', userId);
+      await NotificationService.sendPendingNotifications(userId);
+      console.log('✅ [BACKEND] Pending notifications processed');
+    } catch (notificationError) {
+      // Don't fail the token save if notification sending fails
+      console.error('⚠️ [BACKEND] Error sending pending notifications (non-critical):', notificationError.message);
+    }
 
     res.status(200).json({
       success: true,
       message: 'Push token saved successfully'
     });
   } catch (error) {
-    console.error('Error saving push token:', error);
+    console.error('❌ [BACKEND] Error saving push token:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user._id ? req.user._id.toString() : req.user.id
+    });
     res.status(500).json({
       success: false,
       message: 'Internal server error',

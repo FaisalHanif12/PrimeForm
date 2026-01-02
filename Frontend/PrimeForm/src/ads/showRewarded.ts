@@ -1,16 +1,27 @@
-// Safely import AdMob modules - will be null if module not available
+import { Platform } from "react-native";
+
+// ✅ CRITICAL: Prevent web bundling from importing native modules
+// Web builds should never import react-native-google-mobile-ads
 let RewardedAd: any = null;
 let RewardedAdEventType: any = null;
 let AdEventType: any = null;
 
-try {
-  const adsModule = require("react-native-google-mobile-ads");
-  RewardedAd = adsModule.RewardedAd;
-  RewardedAdEventType = adsModule.RewardedAdEventType;
-  AdEventType = adsModule.AdEventType;
-} catch (error) {
-  // Module not available (e.g., in Expo Go)
-  console.log("ℹ️ AdMob RewardedAd not available (requires EAS build)");
+if (Platform.OS !== 'web') {
+  // Native platform only - safe to import
+  try {
+    const adsModule = require("react-native-google-mobile-ads");
+    RewardedAd = adsModule.RewardedAd;
+    RewardedAdEventType = adsModule.RewardedAdEventType;
+    AdEventType = adsModule.AdEventType;
+  } catch (error) {
+    // Module not available (e.g., in Expo Go)
+    console.log("ℹ️ [ADMOB] RewardedAd not available (requires EAS build)");
+  }
+} else {
+  // Web platform - log once
+  if (__DEV__) {
+    console.log("ℹ️ [ADMOB] Web platform detected - RewardedAd not available");
+  }
 }
 
 interface RewardedAdCallbacks {
@@ -19,7 +30,7 @@ interface RewardedAdCallbacks {
   onClosed?: () => void;
 }
 
-let currentAd: RewardedAd | null = null;
+let currentAd: any = null;
 let isAdLoaded = false;
 let isAdShowing = false;
 
@@ -64,15 +75,25 @@ export function showRewardedAd(
   isAdLoaded = false;
   isAdShowing = false;
 
+  // ✅ ENHANCED LOGGING: Log ad unit ID and environment for debugging
+  if (__DEV__) {
+    console.log('📱 [ADMOB] === Loading Rewarded Ad ===');
+    console.log('📱 [ADMOB] Ad unit ID:', adUnitId);
+    console.log('📱 [ADMOB] Platform:', Platform.OS);
+    console.log('📱 [ADMOB] Module available:', !!RewardedAd);
+  }
+
   const unsubLoaded = currentAd.addAdEventListener(AdEventType.LOADED, () => {
     isAdLoaded = true;
+    console.log('✅ Rewarded ad LOADED successfully');
     // Only show if not already showing another ad
     if (!isAdShowing) {
       try {
         currentAd?.show();
         isAdShowing = true;
+        console.log('📺 Rewarded ad OPENED');
       } catch (error) {
-        console.error("Error showing rewarded ad:", error);
+        console.error("❌ Error showing rewarded ad:", error);
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }
     }
@@ -81,14 +102,21 @@ export function showRewardedAd(
   const unsubEarned = currentAd.addAdEventListener(
     RewardedAdEventType.EARNED_REWARD,
     () => {
+      console.log('🎉 Rewarded ad EARNED_REWARD - user watched ad');
       onEarned();
     }
   );
 
   const unsubError = currentAd.addAdEventListener(
     AdEventType.ERROR,
-    (error) => {
-      console.error("Rewarded ad error:", error);
+    (error: any) => {
+      console.error("❌ Rewarded ad ERROR event:", {
+        error,
+        message: error?.message,
+        code: error?.code,
+        domain: error?.domain,
+        adUnitId
+      });
       isAdLoaded = false;
       isAdShowing = false;
       onError?.(error instanceof Error ? error : new Error(String(error)));
@@ -96,6 +124,7 @@ export function showRewardedAd(
   );
 
   const unsubClosed = currentAd.addAdEventListener(AdEventType.CLOSED, () => {
+    console.log('🔒 Rewarded ad CLOSED');
     isAdLoaded = false;
     isAdShowing = false;
     // Clean up current ad
