@@ -1,87 +1,46 @@
 import { UserProfile } from '../services/userProfileService';
 
-
 export interface PlanDuration {
   totalWeeks: number;
-  duration: string; // Human-readable format like "36 weeks" or "9 months"
+  duration: string;       // Human-readable format like "36 weeks" or "9 months"
   durationMonths: number; // Approximate months
 }
 
-
 /**
- * Validate target weight based on current weight and goal
- * Returns validation result with error message if invalid
+ * ✅ RESEARCH-BACKED WEIGHT LOSS/GAIN RATES
+ * Based on scientific studies and fitness industry standards:
+ * 
+ * Weight Loss:
+ * - Safe & Sustainable: 0.5-1.0 kg/week (1-2 lbs/week)
+ * - Conservative (used here): 0.5 kg/week - ensures muscle preservation and long-term success
+ * - Maximum safe: 1.0 kg/week for obese individuals
+ * 
+ * Weight Gain (Muscle):
+ * - Realistic muscle gain: 0.25-0.5 kg/week (0.5-1 lb/week)
+ * - Conservative (used here): 0.25 kg/week - ensures quality muscle gain, not just fat
+ * - Maximum realistic: 0.5 kg/week for beginners with perfect nutrition
+ * 
+ * Sources: ACSM, NSCA, and multiple peer-reviewed studies
  */
-export function validateTargetWeight(
-  currentWeight: number,
-  targetWeight: number,
-  bodyGoal: string
-): { isValid: boolean; error?: string } {
-  if (!currentWeight || !targetWeight || currentWeight <= 0 || targetWeight <= 0) {
-    return { isValid: false, error: 'Invalid weight values' };
-  }
-
-  const goal = bodyGoal?.toLowerCase() || '';
-  const isWeightLoss = goal.includes('lose') || goal.includes('fat');
-  const isWeightGain = goal.includes('gain') || goal.includes('muscle');
-
-  // For weight loss: target must be less than current
-  if (isWeightLoss && targetWeight >= currentWeight) {
-    return {
-      isValid: false,
-      error: 'Target weight must be less than current weight for weight loss goals'
-    };
-  }
-
-  // For weight gain: target must be greater than current
-  if (isWeightGain && targetWeight <= currentWeight) {
-    return {
-      isValid: false,
-      error: 'Target weight must be greater than current weight for muscle gain goals'
-    };
-  }
-
-  // Calculate weight delta
-  const weightDelta = Math.abs(currentWeight - targetWeight);
-  const maxAllowedDelta = currentWeight * 0.5; // Maximum 50% of current weight
-
-  // Validate that target weight is not more than 50% away from current weight
-  if (weightDelta > maxAllowedDelta) {
-    return {
-      isValid: false,
-      error: `Target weight cannot be more than ${Math.round(maxAllowedDelta)}kg away from current weight (maximum 50% change)`
-    };
-  }
-
-  return { isValid: true };
-}
-
 export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const goal = userProfile.bodyGoal?.toLowerCase() || '';
   const currentWeight = parseFloat(userProfile.currentWeight) || 0;
   const targetWeight = parseFloat(userProfile.targetWeight) || 0;
   
-  // ✅ REALISTIC weight change rates based on scientific research:
-  // - Weight Loss: 0.5-1 kg/week is safe, but 0.5-0.75 kg/week is more sustainable long-term
-  // - Muscle Gain: 0.2-0.5 kg/week naturally, but 0.25-0.4 kg/week is realistic for most people
-  // Using progressive rates: faster for larger weight changes, slower for smaller changes
-  const BASE_LOSS_RATE = 0.6; // 0.6 kg/week base rate (realistic and sustainable)
-  const BASE_GAIN_RATE = 0.3; // 0.3 kg/week base rate (realistic natural muscle gain)
-  
-  // Progressive rates: larger weight changes can sustain slightly faster rates initially
-  // but we'll use conservative base rates for safety
-  const MIN_LOSS_RATE = 0.5; // Minimum 0.5 kg/week (very conservative)
-  const MAX_LOSS_RATE = 0.75; // Maximum 0.75 kg/week (sustainable for most)
-  const MIN_GAIN_RATE = 0.25; // Minimum 0.25 kg/week (very conservative)
-  const MAX_GAIN_RATE = 0.4; // Maximum 0.4 kg/week (realistic natural limit)
+  // ✅ RESEARCH-BACKED RATES: Conservative and sustainable
+  const SAFE_LOSS_RATE = 0.5; // 0.5 kg/week (~1.1 lb/week) - safe, sustainable fat loss rate
+  const SAFE_GAIN_RATE = 0.25; // 0.25 kg/week (~0.55 lb/week) - realistic muscle gain rate
   
   // Minimum and maximum plan durations
   const MIN_WEEKS = 12; // Minimum 12 weeks (3 months) - ensures meaningful progress
-  const MAX_WEEKS = 52; // Maximum 52 weeks (1 year) - reasonable long-term plan cap
+  const MAX_WEEKS = 104; // Maximum 104 weeks (2 years) - reasonable long-term plan cap
   
   // Weight validation ranges (reasonable human weights in kg)
   const MIN_REASONABLE_WEIGHT = 30; // Minimum reasonable weight (kg)
   const MAX_REASONABLE_WEIGHT = 200; // Maximum reasonable weight (kg)
+  
+  // Maximum weight change allowed (50% of current weight - realistic limit)
+  const MAX_WEIGHT_CHANGE_PERCENT = 0.5; // 50% of current weight
   
   let totalWeeks = 12; // Default fallback
   
@@ -95,33 +54,70 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const isValidTargetWeight = targetWeight >= MIN_REASONABLE_WEIGHT && targetWeight <= MAX_REASONABLE_WEIGHT;
   const hasValidWeights = isValidCurrentWeight && isValidTargetWeight && currentWeight > 0 && targetWeight > 0;
   
-  // ✅ CRITICAL: Validate target weight logic
-  if (hasValidWeights && isWeightRelatedGoal) {
-    const validation = validateTargetWeight(currentWeight, targetWeight, userProfile.bodyGoal);
-    if (!validation.isValid) {
-      if (__DEV__) {
-        console.warn('⚠️ Invalid target weight:', validation.error);
+  // ✅ CRITICAL VALIDATION: Check if target weight makes sense for the goal
+  let weightDelta = 0;
+  let isValidTarget = true;
+  
+  if (hasValidWeights) {
+    if (isWeightLoss) {
+      // For weight loss: target must be LESS than current weight
+      if (targetWeight >= currentWeight) {
+        isValidTarget = false;
+        if (__DEV__) {
+          console.warn('⚠️ Invalid target weight for weight loss:', {
+            currentWeight,
+            targetWeight,
+            goal: userProfile.bodyGoal
+          });
+        }
+      } else {
+        weightDelta = currentWeight - targetWeight;
       }
-      // Use minimum duration if validation fails (will be caught by frontend validation)
-      return {
-        totalWeeks: MIN_WEEKS,
-        duration: `${MIN_WEEKS} weeks`,
-        durationMonths: Math.round((MIN_WEEKS / 4.33) * 10) / 10
-      };
+    } else if (isWeightGain) {
+      // For weight gain: target must be MORE than current weight
+      if (targetWeight <= currentWeight) {
+        isValidTarget = false;
+        if (__DEV__) {
+          console.warn('⚠️ Invalid target weight for weight gain:', {
+            currentWeight,
+            targetWeight,
+            goal: userProfile.bodyGoal
+          });
+        }
+      } else {
+        weightDelta = targetWeight - currentWeight;
+      }
+    } else {
+      // For other goals, calculate absolute difference
+      weightDelta = Math.abs(currentWeight - targetWeight);
+    }
+    
+    // ✅ CRITICAL VALIDATION: Weight change should not exceed 50% of current weight
+    const maxAllowedChange = currentWeight * MAX_WEIGHT_CHANGE_PERCENT;
+    if (weightDelta > maxAllowedChange) {
+      isValidTarget = false;
+      if (__DEV__) {
+        console.warn('⚠️ Weight change exceeds realistic limit (50% of current weight):', {
+          currentWeight,
+          targetWeight,
+          weightDelta,
+          maxAllowedChange,
+          goal: userProfile.bodyGoal
+        });
+      }
     }
   }
   
-  // Calculate weight delta only if weights are valid
-  const weightDelta = hasValidWeights ? Math.abs(currentWeight - targetWeight) : 0;
-  
   // Log warning if invalid weights detected (for debugging)
-  if (isWeightRelatedGoal && !hasValidWeights) {
+  if (isWeightRelatedGoal && (!hasValidWeights || !isValidTarget)) {
     if (__DEV__) {
       console.warn('⚠️ Invalid weight data for duration calculation:', {
         currentWeight,
         targetWeight,
         isValidCurrentWeight,
         isValidTargetWeight,
+        isValidTarget,
+        weightDelta,
         goal: userProfile.bodyGoal
       });
     }
@@ -129,42 +125,22 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   
   // ✅ CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
   if (isWeightRelatedGoal) {
-    if (hasValidWeights && weightDelta > 0) {
-      // ✅ REALISTIC CALCULATION: Use progressive rates based on weight delta
-      // Larger weight changes can sustain slightly faster rates, but we'll use base rates for safety
-      let weeklyRate: number;
+    if (hasValidWeights && isValidTarget && weightDelta > 0) {
+      // Calculate exact weeks needed based on weight delta and research-backed safe rate
+      // Formula: weeks = weightDelta / safeRatePerWeek
+      // Using Math.ceil to round up, ensuring users have enough time (conservative approach)
+      const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
+      const calculatedWeeks = Math.ceil(weightDelta / safeRate);
       
-      if (isWeightLoss) {
-        // Weight Loss: Use base rate of 0.6 kg/week (realistic and sustainable)
-        // For very large weight changes (>15kg), use slightly faster rate (0.7 kg/week)
-        // For small changes (<5kg), use slightly slower rate (0.5 kg/week)
-        if (weightDelta > 15) {
-          weeklyRate = 0.7; // Slightly faster for large changes
-        } else if (weightDelta < 5) {
-          weeklyRate = 0.5; // More conservative for small changes
-        } else {
-          weeklyRate = BASE_LOSS_RATE; // 0.6 kg/week (optimal balance)
-        }
-      } else {
-        // Muscle Gain: Use base rate of 0.3 kg/week (realistic natural muscle gain)
-        // For larger gains (>10kg), use slightly faster rate (0.35 kg/week)
-        // For smaller gains (<5kg), use slightly slower rate (0.25 kg/week)
-        if (weightDelta > 10) {
-          weeklyRate = 0.35; // Slightly faster for large changes
-        } else if (weightDelta < 5) {
-          weeklyRate = 0.25; // More conservative for small changes
-        } else {
-          weeklyRate = BASE_GAIN_RATE; // 0.3 kg/week (optimal balance)
-        }
-      }
-      
-      // Calculate exact weeks needed: weeks = weightDelta / weeklyRate
-      // Using Math.ceil to round up, ensuring users have enough time
-      const calculatedWeeks = Math.ceil(weightDelta / weeklyRate);
+      // ✅ ENHANCED: Add buffer weeks for sustainable progress
+      // Research shows that adding 20-30% buffer time improves long-term success rates
+      // This accounts for plateaus, maintenance weeks, and lifestyle adjustments
+      const bufferPercent = 0.25; // 25% buffer for realistic planning
+      const weeksWithBuffer = Math.ceil(calculatedWeeks * (1 + bufferPercent));
       
       // Apply minimum and maximum constraints
-      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks
-      totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, calculatedWeeks));
+      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks (but minimum applies)
+      totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, weeksWithBuffer));
       
       // For very small weight changes (< 2kg), still use minimum duration
       // This ensures the plan has enough time to establish habits and see meaningful results
@@ -174,26 +150,30 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
       
       // Log calculation details for debugging
       if (__DEV__) {
-        console.log('📊 Plan duration calculation (REALISTIC):', {
+        console.log('📊 Plan duration calculation (Research-Backed):', {
           goal: userProfile.bodyGoal,
-          currentWeight: `${currentWeight} kg`,
-          targetWeight: `${targetWeight} kg`,
+          currentWeight,
+          targetWeight,
           weightDelta: `${weightDelta} kg`,
-          weeklyRate: `${weeklyRate} kg/week`,
-          calculatedWeeks,
-          finalWeeks: totalWeeks,
-          duration: `${Math.round(totalWeeks / 4.33)} months`
+          safeRate: `${safeRate} kg/week`,
+          calculatedWeeks: `${calculatedWeeks} weeks`,
+          bufferPercent: `${(bufferPercent * 100).toFixed(0)}%`,
+          weeksWithBuffer: `${weeksWithBuffer} weeks`,
+          finalWeeks: `${totalWeeks} weeks (${(totalWeeks / 4.33).toFixed(1)} months)`
         });
       }
     } else {
-      // Weight-related goal but missing/invalid target weight
+      // Weight-related goal but missing/invalid target weight or invalid target
       // Use minimum duration as default
       totalWeeks = MIN_WEEKS;
+      if (__DEV__) {
+        console.warn('⚠️ Using default duration due to invalid weight data');
+      }
     }
   } else {
     // For non-weight goals (General Training, Improve Fitness, Maintain Weight), use goal-based defaults
     if (goal.includes('fitness') || goal.includes('training') || goal.includes('endurance') || goal.includes('improve')) {
-      // General fitness/training goals: 1 year (52 weeks)
+      // General fitness/training goals: 1 year (52 weeks) - long-term commitment
       totalWeeks = 52; // 1 year as per requirement
     } else if (goal.includes('maintain')) {
       // Maintenance: 3-6 months (12-24 weeks)
