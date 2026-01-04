@@ -446,6 +446,22 @@ export default function DashboardScreen() {
     // Handle authentication state changes silently
   }, [isAuthenticated, user, hasCompletedSignup]);
 
+  // ✅ CRITICAL FIX: Update dashboardData when user loads to prevent "User" fallback
+  // This ensures dashboardData.user.fullName updates when user profile loads
+  useEffect(() => {
+    if (user?.fullName && dashboardData) {
+      setDashboardData(prev => ({
+        ...prev!,
+        user: {
+          ...prev!.user,
+          fullName: user.fullName,
+          email: user.email || prev!.user.email,
+          isEmailVerified: user.isEmailVerified ?? prev!.user.isEmailVerified
+        }
+      }));
+    }
+  }, [user?.fullName, user?.email, user?.isEmailVerified]);
+
   // Language selection modal is now controlled by hasSelectedLanguage from context
 
   const loadDashboard = async () => {
