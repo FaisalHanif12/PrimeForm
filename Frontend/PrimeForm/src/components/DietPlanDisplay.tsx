@@ -6,9 +6,11 @@ import {
   ScrollView, 
   TouchableOpacity,
   Dimensions,
-  DeviceEventEmitter
+  DeviceEventEmitter,
+  Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
@@ -36,6 +38,7 @@ export default function DietPlanDisplay({
   isGeneratingNew = false
 }: DietPlanDisplayProps) {
   const { t, language, transliterateText, translateDayName } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [selectedDay, setSelectedDay] = useState<DietDay | null>(null);
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
@@ -1049,7 +1052,18 @@ export default function DietPlanDisplay({
         </View>
         
         {selectedDay && (
-          <ScrollView style={styles.mealsContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.mealsContainer} 
+            contentContainerStyle={[
+              styles.mealsContentContainer,
+              {
+                paddingBottom: Platform.OS === 'android' 
+                  ? Math.max((insets.bottom || 0) + 120, 140) // Bottom nav (90px) + safe area + extra padding
+                  : Math.max(insets.bottom + 100, 120) // Bottom nav (65px) + safe area + extra padding
+              }
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Breakfast */}
             <View
               style={[
@@ -1911,6 +1925,9 @@ const styles = StyleSheet.create({
   },
   mealsContainer: {
     flex: 1,
+  },
+  mealsContentContainer: {
+    paddingBottom: spacing.xl,
   },
 
   // Meal Cards

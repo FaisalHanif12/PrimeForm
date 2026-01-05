@@ -6,9 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  DeviceEventEmitter
+  DeviceEventEmitter,
+  Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { WorkoutPlan, WorkoutDay, WorkoutExercise } from '../services/aiWorkoutService';
 import aiWorkoutService from '../services/aiWorkoutService';
@@ -42,6 +44,7 @@ export default function WorkoutPlanDisplay({
   isGeneratingNew = false
 }: WorkoutPlanDisplayProps) {
   const { t, language, transliterateText, translateDayName } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null);
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
@@ -899,7 +902,18 @@ export default function WorkoutPlanDisplay({
         </View>
 
         {selectedDay && !selectedDay.isRestDay && (
-          <ScrollView style={styles.exercisesContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.exercisesContainer} 
+            contentContainerStyle={[
+              styles.exercisesContentContainer,
+              {
+                paddingBottom: Platform.OS === 'android' 
+                  ? Math.max((insets.bottom || 0) + 120, 140) // Bottom nav (90px) + safe area + extra padding
+                  : Math.max(insets.bottom + 100, 120) // Bottom nav (65px) + safe area + extra padding
+              }
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {selectedDay.exercises && selectedDay.exercises.length > 0 ? (
               selectedDay.exercises.map((exercise, index) => {
                 const exerciseId = selectedDay.date ? `${selectedDay.date}-${exercise.name}` : `exercise-${index}`;
@@ -1008,7 +1022,14 @@ export default function WorkoutPlanDisplay({
         {selectedDay?.isRestDay && (
           <ScrollView 
             style={styles.restDayScrollContainer}
-            contentContainerStyle={styles.restDayScrollContent}
+            contentContainerStyle={[
+              styles.restDayScrollContent,
+              {
+                paddingBottom: Platform.OS === 'android' 
+                  ? Math.max((insets.bottom || 0) + 120, 140) // Bottom nav (90px) + safe area + extra padding
+                  : Math.max(insets.bottom + 100, 120) // Bottom nav (65px) + safe area + extra padding
+              }
+            ]}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.restDayContainer}>
@@ -1549,6 +1570,9 @@ const styles = StyleSheet.create({
   },
   exercisesContainer: {
     flex: 1,
+  },
+  exercisesContentContainer: {
+    paddingBottom: spacing.xl,
   },
 
   // Modern Exercise Cards
