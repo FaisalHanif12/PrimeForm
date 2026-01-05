@@ -1089,6 +1089,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.breakfast.protein}g • C: {selectedDay.meals.breakfast.carbs}g • F: {selectedDay.meals.breakfast.fats}g
                     </Text>
+                    {selectedDay.meals.breakfast.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.breakfast.servingSize) : selectedDay.meals.breakfast.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1185,6 +1193,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.lunch.protein}g • C: {selectedDay.meals.lunch.carbs}g • F: {selectedDay.meals.lunch.fats}g
                     </Text>
+                    {selectedDay.meals.lunch.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.lunch.servingSize) : selectedDay.meals.lunch.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1281,6 +1297,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.dinner.protein}g • C: {selectedDay.meals.dinner.carbs}g • F: {selectedDay.meals.dinner.fats}g
                     </Text>
+                    {selectedDay.meals.dinner.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.dinner.servingSize) : selectedDay.meals.dinner.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1975,6 +1999,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   mealMacrosCompleted: {
+    color: colors.mutedText + '80',
+    textDecorationLine: 'line-through',
+  },
+  mealQuantity: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginTop: spacing.xs,
+  },
+  mealQuantityCompleted: {
     color: colors.mutedText + '80',
     textDecorationLine: 'line-through',
   },
