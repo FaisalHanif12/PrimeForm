@@ -6,9 +6,11 @@ import {
   ScrollView, 
   TouchableOpacity,
   Dimensions,
-  DeviceEventEmitter
+  DeviceEventEmitter,
+  Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';
 import { DietPlan, DietDay, DietMeal } from '../services/aiDietService';
 import dietPlanService from '../services/dietPlanService';
@@ -36,6 +38,7 @@ export default function DietPlanDisplay({
   isGeneratingNew = false
 }: DietPlanDisplayProps) {
   const { t, language, transliterateText, translateDayName } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [selectedDay, setSelectedDay] = useState<DietDay | null>(null);
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
@@ -1049,7 +1052,18 @@ export default function DietPlanDisplay({
         </View>
         
         {selectedDay && (
-          <ScrollView style={styles.mealsContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.mealsContainer} 
+            contentContainerStyle={[
+              styles.mealsContentContainer,
+              {
+                paddingBottom: Platform.OS === 'android' 
+                  ? Math.max((insets.bottom || 0) + 120, 140) // Bottom nav (90px) + safe area + extra padding
+                  : Math.max(insets.bottom + 100, 120) // Bottom nav (65px) + safe area + extra padding
+              }
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Breakfast */}
             <View
               style={[
@@ -1089,6 +1103,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.breakfast.protein}g • C: {selectedDay.meals.breakfast.carbs}g • F: {selectedDay.meals.breakfast.fats}g
                     </Text>
+                    {selectedDay.meals.breakfast.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-breakfast-${selectedDay.meals.breakfast.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.breakfast.servingSize) : selectedDay.meals.breakfast.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1185,6 +1207,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.lunch.protein}g • C: {selectedDay.meals.lunch.carbs}g • F: {selectedDay.meals.lunch.fats}g
                     </Text>
+                    {selectedDay.meals.lunch.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-lunch-${selectedDay.meals.lunch.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.lunch.servingSize) : selectedDay.meals.lunch.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1281,6 +1311,14 @@ export default function DietPlanDisplay({
                     ]}>
                       P: {selectedDay.meals.dinner.protein}g • C: {selectedDay.meals.dinner.carbs}g • F: {selectedDay.meals.dinner.fats}g
                     </Text>
+                    {selectedDay.meals.dinner.servingSize && (
+                      <Text style={[
+                        styles.mealQuantity,
+                        completedMeals.has(`${selectedDay.date}-dinner-${selectedDay.meals.dinner.name}`) && styles.mealQuantityCompleted
+                      ]}>
+                        {language === 'ur' ? transliterateText(selectedDay.meals.dinner.servingSize) : selectedDay.meals.dinner.servingSize}
+                      </Text>
+                    )}
                   </View>
                   
                   <View style={styles.mealAction}>
@@ -1888,6 +1926,9 @@ const styles = StyleSheet.create({
   mealsContainer: {
     flex: 1,
   },
+  mealsContentContainer: {
+    paddingBottom: spacing.xl,
+  },
 
   // Meal Cards
   mealCard: {
@@ -1975,6 +2016,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
   },
   mealMacrosCompleted: {
+    color: colors.mutedText + '80',
+    textDecorationLine: 'line-through',
+  },
+  mealQuantity: {
+    color: colors.gold,
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: fonts.body,
+    marginTop: spacing.xs,
+  },
+  mealQuantityCompleted: {
     color: colors.mutedText + '80',
     textDecorationLine: 'line-through',
   },

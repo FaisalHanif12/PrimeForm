@@ -165,15 +165,15 @@ ${targetWeightLine ? `${targetWeightLine}\n` : ''}- Diet: ${userProfile.dietPref
 #### 🍽️ 7-Day Plan  
 
 **Day 1: [Day Name]**  
-**Breakfast:** [ACTUAL MEAL NAME like "Oatmeal with Berries" or "Scrambled Eggs with Toast"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Breakfast:** [ACTUAL MEAL NAME like "Oatmeal with Berries" or "Scrambled Eggs with Toast"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min – Quantity: [e.g., "1 bowl", "2 pieces", "250g", "1 serving"]  
 - Ingredients: [list]
 - Instructions: [brief method]
 
-**Lunch:** [ACTUAL MEAL NAME like "Grilled Chicken Salad" or "Vegetable Curry"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Lunch:** [ACTUAL MEAL NAME like "Grilled Chicken Salad" or "Vegetable Curry"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min – Quantity: [e.g., "1 plate", "300g", "2 rotis", "1 serving"]  
 - Ingredients: [list]
 - Instructions: [brief method]
 
-**Dinner:** [ACTUAL MEAL NAME like "Baked Salmon with Vegetables" or "Lentil Soup"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min  
+**Dinner:** [ACTUAL MEAL NAME like "Baked Salmon with Vegetables" or "Lentil Soup"] – [Cal] kcal | P: [X]g | C: [X]g | F: [X]g – [Time] min – Quantity: [e.g., "1 plate", "250g", "2 pieces", "1 serving"]  
 - Ingredients: [list]
 - Instructions: [brief method]
 
@@ -631,6 +631,16 @@ Generate complete 7-day plan now.
           const caloriesMatch = daySection.match(new RegExp(`${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^\\n]*?(\\d+)\\s*kcal`, 'i'));
           const calories = caloriesMatch ? parseInt(caloriesMatch[1]) : 300;
           
+          // Extract quantity if available
+          let quantity = '1 serving'; // Default fallback
+          const quantityMatch = daySection.match(new RegExp(`[Qq]uantity:?\\s*([^\\n–-]+)`, 'i')) ||
+                               daySection.match(new RegExp(`[Qq]ty:?\\s*([^\\n–-]+)`, 'i')) ||
+                               daySection.match(new RegExp(`Quantity:?\\s*([^\\n–-]+)`, 'i'));
+          if (quantityMatch) {
+            quantity = quantityMatch[1].trim();
+            quantity = quantity.replace(/[–-]+$/, '').trim();
+          }
+          
           return {
             name: name,
             emoji: this.getMealEmoji(name),
@@ -640,7 +650,7 @@ Generate complete 7-day plan now.
             carbs: Math.round(calories * 0.5 / 4),
             fats: Math.round(calories * 0.3 / 9),
             preparationTime: '15 min',
-            servingSize: '1 serving',
+            servingSize: quantity,
             instructions: this.extractInstructions(daySection, mealType) || 'Prepare according to standard cooking methods'
           };
         }
@@ -700,6 +710,17 @@ Generate complete 7-day plan now.
                            daySection.match(new RegExp(`[Tt]ime:?\\s*([^\\n]+)`, 'i'));
       const prepTime = prepTimeMatch ? prepTimeMatch[1].trim() : '15 min';
 
+      // Extract quantity if available (look for "Quantity:" or "Qty:" after prep time)
+      let quantity = '1 serving'; // Default fallback
+      const quantityMatch = daySection.match(new RegExp(`[Qq]uantity:?\\s*([^\\n–-]+)`, 'i')) ||
+                           daySection.match(new RegExp(`[Qq]ty:?\\s*([^\\n–-]+)`, 'i')) ||
+                           daySection.match(new RegExp(`Quantity:?\\s*([^\\n–-]+)`, 'i'));
+      if (quantityMatch) {
+        quantity = quantityMatch[1].trim();
+        // Clean up any trailing dashes or extra spaces
+        quantity = quantity.replace(/[–-]+$/, '').trim();
+      }
+
       const ingredients = this.extractIngredients(daySection, mealType);
       const instructions = this.extractInstructions(daySection, mealType);
 
@@ -714,7 +735,7 @@ Generate complete 7-day plan now.
           carbs: carbs,
           fats: fats,
           preparationTime: prepTime,
-          servingSize: '1 serving',
+          servingSize: quantity,
           instructions: instructions || 'Prepare according to standard cooking methods'
         };
         

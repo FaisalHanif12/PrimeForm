@@ -10,7 +10,9 @@ import {
   Alert,
   Animated,
   SafeAreaView,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fonts, radius } from '../theme/colors';
 import { WorkoutExercise } from '../services/aiWorkoutService';
 import { useLanguage } from '../context/LanguageContext';
@@ -37,6 +39,7 @@ export default function ExerciseDetailScreen({
   selectedDay,
 }: ExerciseDetailScreenProps) {
   const { t, language, transliterateText } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [completedSets, setCompletedSets] = useState<Set<number>>(new Set());
   const [isCompleting, setIsCompleting] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -152,7 +155,7 @@ export default function ExerciseDetailScreen({
           ]}
         >
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, spacing.md) }]}>
             <TouchableOpacity 
               style={styles.closeButton} 
               onPress={onClose}
@@ -164,7 +167,11 @@ export default function ExerciseDetailScreen({
           </View>
 
           {/* Content */}
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.content} 
+            contentContainerStyle={canComplete && !isCompleted ? styles.contentWithBottomAction : undefined}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Exercise Info Card */}
             <View style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
@@ -292,7 +299,14 @@ export default function ExerciseDetailScreen({
 
           {/* Bottom Action */}
           {canComplete && !isCompleted && (
-            <View style={styles.bottomAction}>
+            <View style={[
+              styles.bottomAction,
+              {
+                paddingBottom: Platform.OS === 'android' 
+                  ? Math.max((insets.bottom || 0) + spacing.md, spacing.lg)
+                  : Math.max(insets.bottom, spacing.md)
+              }
+            ]}>
               <TouchableOpacity
                 style={[
                   styles.completeButton,
@@ -339,7 +353,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.cardBorder,
@@ -369,6 +383,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  contentWithBottomAction: {
+    paddingBottom: spacing.xl,
   },
   exerciseCard: {
     backgroundColor: colors.surface,
