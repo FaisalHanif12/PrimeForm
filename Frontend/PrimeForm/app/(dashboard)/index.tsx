@@ -136,14 +136,14 @@ export default function DashboardScreen() {
         const { default: mealCompletionService } = await import('../../src/services/mealCompletionService');
         await mealCompletionService.ensureInitialized();
       } catch (error) {
-        console.warn('⚠️ Error ensuring meal completion service initialized:', error);
+        if (__DEV__) console.warn('⚠️ Error ensuring meal completion service initialized:', error);
       }
 
       try {
         const { default: exerciseCompletionService } = await import('../../src/services/exerciseCompletionService');
         await exerciseCompletionService.ensureInitialized();
       } catch (error) {
-        console.warn('⚠️ Error ensuring exercise completion service initialized:', error);
+        if (__DEV__) console.warn('⚠️ Error ensuring exercise completion service initialized:', error);
       }
 
       // OPTIMIZATION: Load from local storage first - no API call needed
@@ -467,6 +467,36 @@ export default function DashboardScreen() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
+      
+      // ✅ CRITICAL: Get user name from cache if user context hasn't loaded yet
+      // This prevents "User" fallback during initial load
+      let displayName = 'User';
+      if (isAuthenticated) {
+        if (user?.fullName) {
+          displayName = user.fullName;
+        } else {
+          // User context hasn't loaded yet - try to get from cache
+          try {
+            const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
+            const userId = await getCurrentUserId();
+            if (userId) {
+              const cacheKey = await getUserCacheKey('cached_user_profile', userId);
+              const cachedData = await AsyncStorage.getItem(cacheKey);
+              if (cachedData) {
+                const parsed = JSON.parse(cachedData);
+                if (parsed?.user?.fullName) {
+                  displayName = parsed.user.fullName;
+                }
+              }
+            }
+          } catch (cacheError) {
+            // Cache read failed - keep default "User"
+          }
+        }
+      } else {
+        displayName = hasCompletedSignup ? 'User' : 'Guest';
+      }
+      
       // For now, we'll use mock data since dashboard API is not implemented
       // This maintains the exact same functionality
       setDashboardData({
@@ -478,7 +508,7 @@ export default function DashboardScreen() {
         },
         quickActions: [],
         user: {
-          fullName: isAuthenticated ? (user?.fullName || 'User') : (hasCompletedSignup ? 'User' : 'Guest'),
+          fullName: displayName,
           email: isAuthenticated ? (user?.email || 'user@example.com') : (hasCompletedSignup ? 'user@purebody.com' : 'guest@purebody.com'),
           isEmailVerified: isAuthenticated ? (user?.isEmailVerified || false) : hasCompletedSignup,
           memberSince: new Date().toISOString(),

@@ -58,7 +58,7 @@ export default function BottomNavigation({ activeTab, onTabPress }: Props) {
   
   const bottomOffset = isIOS 
     ? spacing.xs // Very small offset to prevent cutoff on iOS
-    : Math.max((insets.bottom || 0) + 8, 28); // Android: Use insets.bottom + 4px padding, minimum 24px to clear system nav bar
+    : Math.max((insets.bottom || 0) + 4, 24); // Android: Use insets.bottom + 4px padding, minimum 24px to clear system nav bar
     
   const containerHeight = isIOS 
     ? NAVIGATION_HEIGHT + bottomPadding 

@@ -9,8 +9,6 @@ import { LanguageProvider } from '../src/context/LanguageContext';
 import { NotificationProvider } from '../src/contexts/NotificationContext';
 import NotificationHandler from '../src/components/NotificationHandler';
 
-// ✅ CRITICAL: Prevent web bundling from importing native modules
-// Web builds should never import react-native-google-mobile-ads
 let mobileAdsModule: any = null;
 
 if (Platform.OS !== 'web') {
@@ -18,15 +16,7 @@ if (Platform.OS !== 'web') {
   try {
     mobileAdsModule = require('react-native-google-mobile-ads').default;
   } catch (error) {
-    // Module not available (e.g., in Expo Go)
-    if (__DEV__) {
-      console.log('ℹ️ [ADMOB] MobileAds module not available (requires EAS build)');
-    }
-  }
-} else {
-  // Web platform - log once
-  if (__DEV__) {
-    console.log('ℹ️ [ADMOB] Web platform detected - MobileAds not available');
+    // Module not available (e.g., in Expo Go) - silent in production
   }
 }
 
@@ -34,13 +24,14 @@ export default function RootLayout() {
   useEffect(() => {
     // Check for Expo Updates when app comes to foreground
     const checkForUpdates = async () => {
-      if (__DEV__ || !Updates.isEnabled) {
-        // Skip in development or if updates are disabled
+      // Check if updates are enabled
+      if (!Updates.isEnabled) {
         return;
       }
 
       try {
         const update = await Updates.checkForUpdateAsync();
+        
         if (update.isAvailable) {
           // Update is available, download it
           await Updates.fetchUpdateAsync();
@@ -48,16 +39,12 @@ export default function RootLayout() {
           await Updates.reloadAsync();
         }
       } catch (error) {
-        // Silently fail - updates will be checked on next app launch
-        if (__DEV__) {
-          console.log('Update check failed:', error);
-        }
+        // Updates will be checked on next app launch automatically
+        console.error('❌ Update check failed:', error);
       }
     };
-
     // Check for updates on app startup
     checkForUpdates();
-
     // Also check when app comes to foreground
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (nextAppState === 'active') {
@@ -74,32 +61,12 @@ export default function RootLayout() {
 
       try {
         await mobileAdsModule().initialize();
-        
-        // ✅ PRODUCTION: AdMob SDK initialized successfully
-        // Ads will now work in production builds
-        if (__DEV__) {
-          console.log('✅ AdMob initialized successfully (Development Mode)');
-        } else {
-          console.log('✅ AdMob initialized successfully (Production Mode - Real Ads Active)');
-        }
       } catch (error: any) {
-        // Log errors for debugging - expected in Expo Go, but should work in EAS builds
-        if (error?.message?.includes('TurboModuleRegistry') || 
-            error?.message?.includes('RNGoogleMobileAdsModule')) {
-          // This is expected in Expo Go - native modules require EAS build
-          if (__DEV__) {
-            console.log('ℹ️ AdMob not available (expected in Expo Go - requires EAS build)');
-          } else {
-            // In production build, this should not happen - log as warning
-            console.warn('⚠️ AdMob module not found in EAS build. Check native module compilation.');
-          }
-        } else {
-          // Unexpected error - log full error for debugging
-          console.error('❌ AdMob initialization error:', {
-            message: error?.message,
-            error: error,
-            stack: error?.stack
-          });
+        // AdMob initialization error - log only critical errors
+        if (!error?.message?.includes('TurboModuleRegistry') && 
+            !error?.message?.includes('RNGoogleMobileAdsModule')) {
+          // Unexpected error - log for debugging
+          console.error('❌ AdMob initialization error:', error?.message);
         }
       }
     };

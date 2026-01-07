@@ -81,9 +81,6 @@ export default function SettingsPage() {
       const guestStatus = await isUsingGuestId();
       setCurrentUserId(userId);
       setIsGuest(guestStatus);
-      console.log('📱 Current User ID:', userId);
-      console.log('👤 Is Guest:', guestStatus);
-      console.log('🔐 Is Authenticated:', isAuthenticated);
     };
     checkUserId();
   }, [user, isAuthenticated]);

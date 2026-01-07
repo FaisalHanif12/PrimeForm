@@ -211,7 +211,6 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
 
   const validateCurrentStep = () => {
     const errors: {[key: string]: boolean} = {};
-    const errorMessages: {[key: string]: string} = {};
     
     switch (currentStep) {
       case 1:
@@ -221,79 +220,11 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
         if (!userInfo.height) errors.height = true;
         break;
       case 2:
-        if (!userInfo.currentWeight) {
-          errors.currentWeight = true;
-        } else {
-          const currentWeightNum = parseFloat(userInfo.currentWeight);
-          if (isNaN(currentWeightNum) || currentWeightNum < 30 || currentWeightNum > 200) {
-            errors.currentWeight = true;
-            errorMessages.currentWeight = language === 'ur' 
-              ? 'وزن 30-200 کلوگرام کے درمیان ہونا چاہیے' 
-              : 'Weight must be between 30-200 kg';
-          }
-        }
-        
-        if (!userInfo.bodyGoal) {
-          errors.bodyGoal = true;
-        }
-        
-        // ✅ CRITICAL: Validate target weight only if body goal requires it
-        if (userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') {
-          if (!userInfo.targetWeight) {
-            errors.targetWeight = true;
-          } else {
-            const currentWeightNum = parseFloat(userInfo.currentWeight) || 0;
-            const targetWeightNum = parseFloat(userInfo.targetWeight) || 0;
-            
-            // Validate target weight is a valid number
-            if (isNaN(targetWeightNum) || targetWeightNum < 30 || targetWeightNum > 200) {
-              errors.targetWeight = true;
-              errorMessages.targetWeight = language === 'ur'
-                ? 'ہدف وزن 30-200 کلوگرام کے درمیان ہونا چاہیے'
-                : 'Target weight must be between 30-200 kg';
-            }
-            // Validate target weight makes sense for the goal
-            else if (userInfo.bodyGoal === 'Lose Fat') {
-              // For weight loss: target must be LESS than current weight
-              if (targetWeightNum >= currentWeightNum) {
-                errors.targetWeight = true;
-                errorMessages.targetWeight = language === 'ur'
-                  ? 'وزن کم کرنے کے لیے ہدف وزن موجودہ وزن سے کم ہونا چاہیے'
-                  : 'Target weight must be less than current weight for weight loss';
-              }
-              // Validate weight loss doesn't exceed 50% of current weight
-              else {
-                const weightLoss = currentWeightNum - targetWeightNum;
-                const maxAllowedLoss = currentWeightNum * 0.5; // 50% of current weight
-                if (weightLoss > maxAllowedLoss) {
-                  errors.targetWeight = true;
-                  errorMessages.targetWeight = language === 'ur'
-                    ? `وزن میں کمی موجودہ وزن کا 50% سے زیادہ نہیں ہونی چاہیے (زیادہ سے زیادہ: ${maxAllowedLoss.toFixed(1)} کلو)`
-                    : `Weight loss cannot exceed 50% of current weight (maximum: ${maxAllowedLoss.toFixed(1)} kg)`;
-                }
-              }
-            }
-            else if (userInfo.bodyGoal === 'Gain Muscle') {
-              // For weight gain: target must be MORE than current weight
-              if (targetWeightNum <= currentWeightNum) {
-                errors.targetWeight = true;
-                errorMessages.targetWeight = language === 'ur'
-                  ? 'پٹھے بنانے کے لیے ہدف وزن موجودہ وزن سے زیادہ ہونا چاہیے'
-                  : 'Target weight must be greater than current weight for muscle gain';
-              }
-              // Validate weight gain doesn't exceed 50% of current weight
-              else {
-                const weightGain = targetWeightNum - currentWeightNum;
-                const maxAllowedGain = currentWeightNum * 0.5; // 50% of current weight
-                if (weightGain > maxAllowedGain) {
-                  errors.targetWeight = true;
-                  errorMessages.targetWeight = language === 'ur'
-                    ? `وزن میں اضافہ موجودہ وزن کا 50% سے زیادہ نہیں ہونا چاہیے (زیادہ سے زیادہ: ${maxAllowedGain.toFixed(1)} کلو)`
-                    : `Weight gain cannot exceed 50% of current weight (maximum: ${maxAllowedGain.toFixed(1)} kg)`;
-                }
-              }
-            }
-          }
+        if (!userInfo.currentWeight) errors.currentWeight = true;
+        if (!userInfo.bodyGoal) errors.bodyGoal = true;
+        // Validate target weight only if body goal requires it
+        if ((userInfo.bodyGoal === 'Lose Fat' || userInfo.bodyGoal === 'Gain Muscle') && !userInfo.targetWeight) {
+          errors.targetWeight = true;
         }
         break;
       case 3:
@@ -306,16 +237,6 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
     }
     
     setValidationErrors(errors);
-    
-    // Show alert with specific error messages if validation fails
-    if (Object.keys(errors).length > 0 && Object.keys(errorMessages).length > 0) {
-      const firstError = Object.values(errorMessages)[0];
-      Alert.alert(
-        language === 'ur' ? 'غلطی' : 'Validation Error',
-        firstError
-      );
-    }
-    
     return Object.keys(errors).length === 0;
   };
 
@@ -489,43 +410,75 @@ export default function UserInfoModal({ visible, onComplete, onCancel }: Props) 
             value={userInfo.targetWeight}
             onChangeText={(value) => updateUserInfo('targetWeight', value)}
             placeholder={
-              userInfo.bodyGoal === 'Lose Fat' 
-                ? (language === 'ur' ? 'مثال: 60 (کم از کم موجودہ وزن سے کم)' : 'e.g., 60 (must be less than current weight)')
-                : (language === 'ur' ? 'مثال: 80 (کم از کم موجودہ وزن سے زیادہ)' : 'e.g., 80 (must be greater than current weight)')
+              language === 'ur'
+                ? 'مثال: 60 کلوگرام'
+                : 'e.g., 60 kg'
             }
             placeholderTextColor={colors.mutedText}
             keyboardType="numeric"
           />
-          {validationErrors.targetWeight && (
-            <Text style={styles.errorText}>
-              {userInfo.bodyGoal === 'Lose Fat'
-                ? (language === 'ur' 
-                    ? 'ہدف وزن موجودہ وزن سے کم ہونا چاہیے (زیادہ سے زیادہ 50% کمی)'
-                    : 'Target must be less than current weight (max 50% loss)')
-                : (language === 'ur'
-                    ? 'ہدف وزن موجودہ وزن سے زیادہ ہونا چاہیے (زیادہ سے زیادہ 50% اضافہ)'
-                    : 'Target must be greater than current weight (max 50% gain)')
-              }
-            </Text>
-          )}
-          {userInfo.currentWeight && userInfo.targetWeight && !validationErrors.targetWeight && (
-            <Text style={styles.helperText}>
-              {(() => {
-                const current = parseFloat(userInfo.currentWeight) || 0;
-                const target = parseFloat(userInfo.targetWeight) || 0;
-                const diff = Math.abs(current - target);
-                const maxAllowed = current * 0.5;
+          {/* Show elegant calculated difference when both weights are entered */}
+          {userInfo.currentWeight && userInfo.targetWeight && (
+            (() => {
+              const current = parseFloat(userInfo.currentWeight) || 0;
+              const target = parseFloat(userInfo.targetWeight) || 0;
+              if (current > 0 && target > 0 && current !== target) {
+                const difference = Math.abs(current - target);
                 if (userInfo.bodyGoal === 'Lose Fat') {
-                  return language === 'ur'
-                    ? `فرق: ${diff.toFixed(1)} کلو (زیادہ سے زیادہ: ${maxAllowed.toFixed(1)} کلو)`
-                    : `Difference: ${diff.toFixed(1)} kg (max: ${maxAllowed.toFixed(1)} kg)`;
-                } else {
-                  return language === 'ur'
-                    ? `فرق: ${diff.toFixed(1)} کلو (زیادہ سے زیادہ: ${maxAllowed.toFixed(1)} کلو)`
-                    : `Difference: ${diff.toFixed(1)} kg (max: ${maxAllowed.toFixed(1)} kg)`;
+                  if (target < current) {
+                    return (
+                      <View style={styles.differenceContainer}>
+                        <Text style={styles.differenceIcon}>🎯</Text>
+                        <Text style={styles.calculatedDifference}>
+                          {language === 'ur' 
+                            ? `آپ ${difference.toFixed(1)} کلوگرام وزن کم کرنا چاہتے ہیں`
+                            : `You want to lose ${difference.toFixed(1)} kg`}
+                        </Text>
+                      </View>
+                    );
+                  } else {
+                    return (
+                      <View style={styles.differenceContainer}>
+                        <Text style={styles.differenceWarning}>⚠️</Text>
+                        <Text style={styles.differenceWarningText}>
+                          {language === 'ur'
+                            ? 'ہدف وزن موجودہ وزن سے کم ہونا چاہیے'
+                            : 'Target weight must be less than current weight'}
+                        </Text>
+                      </View>
+                    );
+                  }
+                } else if (userInfo.bodyGoal === 'Gain Muscle') {
+                  if (target > current) {
+                    return (
+                      <View style={styles.differenceContainer}>
+                        <Text style={styles.differenceIcon}>💪</Text>
+                        <Text style={styles.calculatedDifference}>
+                          {language === 'ur'
+                            ? `آپ ${difference.toFixed(1)} کلوگرام وزن بڑھانا چاہتے ہیں`
+                            : `You want to gain ${difference.toFixed(1)} kg`}
+                        </Text>
+                      </View>
+                    );
+                  } else {
+                    return (
+                      <View style={styles.differenceContainer}>
+                        <Text style={styles.differenceWarning}>⚠️</Text>
+                        <Text style={styles.differenceWarningText}>
+                          {language === 'ur'
+                            ? 'ہدف وزن موجودہ وزن سے زیادہ ہونا چاہیے'
+                            : 'Target weight must be greater than current weight'}
+                        </Text>
+                      </View>
+                    );
+                  }
                 }
-              })()}
-            </Text>
+              }
+              return null;
+            })()
+          )}
+          {validationErrors.targetWeight && (
+            <Text style={styles.errorText}>{t('validation.weight.required')}</Text>
           )}
         </View>
       )}
@@ -864,13 +817,38 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     marginLeft: spacing.xs,
   },
-  helperText: {
-    color: colors.mutedText,
-    fontSize: 11,
+  differenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: 'rgba(0, 201, 124, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 201, 124, 0.2)',
+  },
+  differenceIcon: {
+    fontSize: 18,
+    marginRight: spacing.xs,
+  },
+  calculatedDifference: {
+    fontSize: 14,
     fontFamily: fonts.body,
-    marginTop: spacing.xs,
-    marginLeft: spacing.xs,
-    fontStyle: 'italic',
+    color: colors.primary,
+    fontWeight: '600',
+    flex: 1,
+  },
+  differenceWarning: {
+    fontSize: 18,
+    marginRight: spacing.xs,
+  },
+  differenceWarningText: {
+    fontSize: 13,
+    fontFamily: fonts.body,
+    color: colors.error,
+    fontWeight: '500',
+    flex: 1,
   },
   summaryContainer: {
     backgroundColor: 'rgba(0, 201, 124, 0.1)',

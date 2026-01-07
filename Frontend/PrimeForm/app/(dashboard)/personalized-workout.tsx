@@ -113,7 +113,7 @@ export default function PersonalizedWorkoutScreen() {
           // ✅ CRITICAL: Also check if user ID changed on focus
           const currentUserId = await getCurrentUserId();
           if (lastUserIdRef.current !== null && currentUserId !== lastUserIdRef.current) {
-            console.log('⚠️ User ID changed on focus, reloading personalized workout...');
+            if (__DEV__) console.log('⚠️ User ID changed on focus, reloading personalized workout...');
             lastUserIdRef.current = currentUserId;
             await loadWorkout();
           }

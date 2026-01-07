@@ -106,7 +106,7 @@ class AIDietService {
   clearInMemoryCache(): void {
     this.dataCache.clear();
     this.loadingCache.clear();
-    console.log('✅ AI Diet Service in-memory cache cleared');
+    if (__DEV__) console.log('✅ AI Diet Service in-memory cache cleared');
   }
 
   private generatePrompt(userProfile: UserProfile): string {
@@ -423,7 +423,7 @@ Generate complete 7-day plan now.
       }
       
       if (__DEV__) {
-        console.log('✅ Diet plan cleared successfully (completion data preserved)');
+        if (__DEV__) console.log('✅ Diet plan cleared successfully (completion data preserved)');
       }
     } catch (error) {
       console.error('❌ Error clearing diet plan from database:', error);
@@ -740,19 +740,19 @@ Generate complete 7-day plan now.
         };
         
         if (__DEV__) {
-          console.log(`✅ Successfully parsed ${mealType}: "${parsedMeal.name}"`);
+          if (__DEV__) console.log(`✅ Successfully parsed ${mealType}: "${parsedMeal.name}"`);
         }
         
         return parsedMeal;
       } else {
         if (__DEV__) {
-          console.warn(`⚠️ Parsed ${mealType} but name is invalid: "${name}"`);
+          if (__DEV__) console.warn(`⚠️ Parsed ${mealType} but name is invalid: "${name}"`);
         }
       }
     }
 
     if (__DEV__) {
-      console.warn(`⚠️ Failed to parse ${mealType} from day section. Trying alternative methods...`);
+      if (__DEV__) console.warn(`⚠️ Failed to parse ${mealType} from day section. Trying alternative methods...`);
     }
     
     return null;

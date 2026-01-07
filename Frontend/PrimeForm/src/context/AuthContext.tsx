@@ -65,8 +65,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const userId = await getCurrentUserId();
       const cacheKey = await getUserCacheKey(PROFILE_CACHE_BASE_KEY, userId);
 
-      // ✅ FITNESS APP: Check cache FIRST - if profile exists, use it forever!
-      // No expiry check - cached profile is always valid until user logs out
+      // ✅ CRITICAL: Check cache FIRST and set user BEFORE setting loading to false
+      // This ensures user name appears immediately (no "User" fallback)
+      let cachedUser: User | null = null;
       try {
         const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
         if (cachedProfileJson) {
@@ -75,6 +76,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // ✅ FITNESS APP: Cache always valid - no time check!
           // User stays logged in with cached profile forever
           if (cachedProfile.user) {
+            cachedUser = cachedProfile.user;
             setUser(cachedProfile.user);
             
             // ✅ PERFORMANCE: Initialize completion services in background (non-blocking)
@@ -83,25 +85,38 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               import('../services/mealCompletionService').then(m => m.default.initialize()).catch(() => {}),
               import('../services/exerciseCompletionService').then(e => e.default.initialize()).catch(() => {})
             ]).catch(() => {}); // Ignore errors - services will initialize when needed
-            
-            setIsLoading(false);
-            return; // ✅ User stays logged in forever with cached profile!
           }
         }
       } catch (cacheError) {
         // Cache read failed - but still don't logout! Just try to fetch profile
-        console.warn('⚠️ AuthContext: Cache read failed, will try to fetch profile');
+        if (__DEV__) console.warn('⚠️ AuthContext: Cache read failed, will try to fetch profile');
       }
 
-      // ✅ PERFORMANCE: Set loading to false immediately - don't wait for profile fetch
-      // User can use the app with token, profile will load in background
       setIsLoading(false);
+
+      if (cachedUser) {
+        // Have cached user - return early, fetch fresh data in background
+        (async () => {
+          try {
+            const response = await authService.getProfile();
+            if (response.success && response.data?.user) {
+              setUser(response.data.user);
+              // Update cache with fresh data
+              const cacheData: CachedProfile = {
+                user: response.data.user,
+                timestamp: Date.now()
+              };
+              await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
+            }
+          } catch (error) {
+            // Background update failed - keep using cached data
+            if (__DEV__) console.warn('⚠️ Background profile update failed:', error);
+          }
+        })();
+        return; // ✅ User displayed from cache immediately!
+      }
       
-      // ✅ FITNESS APP: No cached profile - try to fetch (optional, non-blocking)
-      // This only runs on first login or if cache was cleared
-      // If fetch fails for any reason except 401, user STILL stays logged in with token
-      // ✅ PERFORMANCE: Fetch profile in background - don't block UI
-      // ✅ CRITICAL FIX: Add retry logic for slow API responses (common after app restart)
+      // Background profile fetch (non-blocking)
       (async () => {
         try {
           let retryCount = 0;
@@ -121,7 +136,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               }
               // Wait before retry (exponential backoff: 1s, 2s)
               await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              console.log(`🔄 AuthContext: Retrying profile fetch (attempt ${retryCount}/${maxRetries})`);
+              if (__DEV__) console.log(`🔄 AuthContext: Retrying profile fetch (attempt ${retryCount}/${maxRetries})`);
             }
           }
           
@@ -129,7 +144,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // Everything else = user stays logged in
           if (response.tokenExpired || response.statusCode === 401) {
           // Token is definitely invalid - this is the ONLY case we logout
-          console.warn('🔒 AuthContext: Token expired (401) - logging out');
+          if (__DEV__) console.warn('🔒 AuthContext: Token expired (401) - logging out');
           setHasToken(false);
           authService.clearToken().catch(() => {});
           if (userId) {
@@ -167,7 +182,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         } else {
           // ✅ CRITICAL FIX: Profile fetch returned unexpected response
           // Try to use cached user data as fallback to prevent "User" display issue
-          console.warn('⚠️ AuthContext: Profile fetch returned non-success, trying cached data as fallback');
+          if (__DEV__) console.warn('⚠️ AuthContext: Profile fetch returned non-success, trying cached data as fallback');
           try {
             const cachedProfileJson = await AsyncStorage.getItem(cacheKey);
             if (cachedProfileJson) {
@@ -175,12 +190,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               if (cachedProfile.user && validateCachedData(cachedProfile.user, userId)) {
                 // Use cached user data to prevent showing "User" instead of actual name
                 setUser(cachedProfile.user);
-                console.log('✅ AuthContext: Using cached user data as fallback');
+                if (__DEV__) console.log('✅ AuthContext: Using cached user data as fallback');
               }
             }
           } catch (cacheError) {
             // Cache read failed - user will show as "User" but still logged in
-            console.warn('⚠️ AuthContext: Could not load cached user data');
+            if (__DEV__) console.warn('⚠️ AuthContext: Could not load cached user data');
           }
           // Keep hasToken true, keep user logged in
           // They can still use the app even if profile fetch fails
@@ -189,7 +204,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // ✅ FITNESS APP: Profile fetch threw error - check if it's 401
         if (profileError?.statusCode === 401 || profileError?.message?.includes('401')) {
           // Explicit 401 - token is invalid
-          console.warn('🔒 AuthContext: 401 error - logging out');
+          if (__DEV__) console.warn('🔒 AuthContext: 401 error - logging out');
           setHasToken(false);
           authService.clearToken().catch(() => {});
           if (userId) {
@@ -198,7 +213,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           setUser(null);
         } else {
           // ✅ FITNESS APP: Network error, backend down, etc - STAY LOGGED IN!
-          console.warn('⚠️ AuthContext: Profile fetch failed (not 401) - keeping user logged in:', profileError?.message);
+          if (__DEV__) console.warn('⚠️ AuthContext: Profile fetch failed (not 401) - keeping user logged in:', profileError?.message);
           // ✅ CRITICAL FIX: Try to use cached user data as fallback when network fails
           // This prevents showing "User" instead of actual name when API is slow/unavailable
           try {
@@ -208,12 +223,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               if (cachedProfile.user && validateCachedData(cachedProfile.user, userId)) {
                 // Use cached user data to prevent showing "User" instead of actual name
                 setUser(cachedProfile.user);
-                console.log('✅ AuthContext: Using cached user data after network error');
+                if (__DEV__) console.log('✅ AuthContext: Using cached user data after network error');
               }
             }
           } catch (cacheError) {
             // Cache read failed - user will show as "User" but still logged in
-            console.warn('⚠️ AuthContext: Could not load cached user data after network error');
+            if (__DEV__) console.warn('⚠️ AuthContext: Could not load cached user data after network error');
           }
           // Token still valid, just couldn't reach server
           // User stays authenticated with existing token
@@ -223,43 +238,47 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } catch (error) {
       // ✅ FITNESS APP: Top-level catch - something went very wrong
       // But still don't logout unless we know token is invalid
-      console.warn('⚠️ AuthContext: Unexpected error in auth check - keeping user logged in:', error);
+      if (__DEV__) console.warn('⚠️ AuthContext: Unexpected error in auth check - keeping user logged in:', error);
       // Keep token and authentication state
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // ✅ CRITICAL: Perform app update migration FIRST to ensure data persistence
-    // This ensures all user data (diet, workout, progress, AI trainer, etc.) is preserved
-    // and user stays logged in after app updates
-    // ✅ CRITICAL: Also validates data integrity on every app startup
+    // ✅ OPTIMIZED: Fast auth check first, defer heavy operations
+    // This ensures UI loads quickly while data integrity checks happen in background
     (async () => {
       try {
-        // Step 1: Ensure auth persistence (recover token and user ID if needed)
+        // Step 1: FAST - Ensure auth persistence (recover token and user ID if needed)
         await ensureAuthPersistence();
         
-        // Step 2: Perform app update migration (migrate old cache keys, validate data)
-        await performAppUpdateMigration();
-        
-        // Step 3: Check auth status (restore user from cache/token)
+        // Step 2: FAST - Check auth status immediately (restore user from cache/token)
         await checkAuthStatus();
         
-        // ✅ CRITICAL: After auth check, ensure all data is accessible
-        // This guarantees users can access all their plans and progress after update
-        const userId = await getCurrentUserId();
-        if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
-          // Run validation and verification in background (non-blocking)
-          Promise.all([
-            validateAllAccountData(userId),
-            import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
-          ]).catch((error) => {
-            console.warn('⚠️ Background data validation error (non-critical):', error);
-          });
-        }
+        // ✅ PERFORMANCE OPTIMIZATION: Defer heavy operations to after UI loads
+        // Run migration and validation 2 seconds after app loads
+        setTimeout(async () => {
+          try {
+            // Step 3: DEFERRED - Perform app update migration (only if needed)
+            await performAppUpdateMigration();
+            
+            // Step 4: DEFERRED - Validate data integrity in background
+            const userId = await getCurrentUserId();
+            if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
+              Promise.all([
+                validateAllAccountData(userId),
+                import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
+              ]).catch((error) => {
+                if (__DEV__) console.warn('⚠️ Background data validation error (non-critical):', error);
+              });
+            }
+          } catch (error) {
+            if (__DEV__) console.warn('⚠️ Error in deferred migration:', error);
+          }
+        }, 2000); // Defer 2 seconds to let UI render first
       } catch (error) {
-        console.warn('⚠️ Error in app startup migration:', error);
-        // Still check auth status even if migration fails
+        if (__DEV__) console.warn('⚠️ Error in app startup:', error);
+        // Still check auth status even if persistence check fails
         checkAuthStatus();
       }
     })();

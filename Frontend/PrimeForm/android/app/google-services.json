@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "702276211308",
+    "project_id": "purebody-70f44",
+    "storage_bucket": "purebody-70f44.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:702276211308:android:c78f9b5081caf4a16b3e49",
+        "android_client_info": {
+          "package_name": "com.maherfaisal.purebody"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQi3cYX2obWnZysJtPd78WFRRByX2K5RM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
