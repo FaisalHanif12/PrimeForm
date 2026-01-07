@@ -180,3 +180,7 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// ✅ CRITICAL: Apply Google Services plugin (required for Firebase & AdMob)
+// This must be at the END of the file, after dependencies block
+apply plugin: 'com.google.gms.google-services'

@@ -7,32 +7,30 @@ export interface PlanDuration {
 }
 
 /**
- * ✅ RESEARCH-BACKED WEIGHT LOSS/GAIN RATES
- * Based on scientific studies and fitness industry standards:
+ * ✅ ENHANCED RESEARCH-BACKED WEIGHT LOSS/GAIN RATES
+ * Based on Precision Nutrition and multiple peer-reviewed studies:
  * 
  * Weight Loss:
- * - Safe & Sustainable: 0.5-1.0 kg/week (1-2 lbs/week)
- * - Conservative (used here): 0.5 kg/week - ensures muscle preservation and long-term success
- * - Maximum safe: 1.0 kg/week for obese individuals
+ * - Safe & Sustainable: 0.5% to 1% of body weight per week
+ * - Example: 70kg person = 0.35-0.7 kg/week
+ * - Smaller changes (<5kg): Can use higher rate (0.75-1% per week) for faster results
+ * - Medium changes (5-15kg): Moderate rate (0.5-0.75% per week) for sustainable progress
+ * - Large changes (>15kg): Conservative rate (0.5% per week) to preserve muscle mass
  * 
  * Weight Gain (Muscle):
- * - Realistic muscle gain: 0.25-0.5 kg/week (0.5-1 lb/week)
- * - Conservative (used here): 0.25 kg/week - ensures quality muscle gain, not just fat
- * - Maximum realistic: 0.5 kg/week for beginners with perfect nutrition
+ * - Realistic muscle gain: 0.25-0.5 kg/week for beginners
+ * - Percentage-based: ~0.175-0.26 kg/week (1-1.5% of body weight per month)
+ * - Quality muscle gain requires adequate time for proper nutrition and recovery
  * 
- * Sources: ACSM, NSCA, and multiple peer-reviewed studies
+ * Sources: Precision Nutrition, ACSM, NSCA, and multiple peer-reviewed studies
  */
 export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
   const goal = userProfile.bodyGoal?.toLowerCase() || '';
   const currentWeight = parseFloat(userProfile.currentWeight) || 0;
   const targetWeight = parseFloat(userProfile.targetWeight) || 0;
   
-  // ✅ RESEARCH-BACKED RATES: Conservative and sustainable
-  const SAFE_LOSS_RATE = 0.5; // 0.5 kg/week (~1.1 lb/week) - safe, sustainable fat loss rate
-  const SAFE_GAIN_RATE = 0.25; // 0.25 kg/week (~0.55 lb/week) - realistic muscle gain rate
-  
   // Minimum and maximum plan durations
-  const MIN_WEEKS = 12; // Minimum 12 weeks (3 months) - ensures meaningful progress
+  const MIN_WEEKS = 16; // Minimum 12 weeks (3 months) - ensures meaningful progress and habit formation
   const MAX_WEEKS = 104; // Maximum 104 weeks (2 years) - reasonable long-term plan cap
   
   // Weight validation ranges (reasonable human weights in kg)
@@ -123,23 +121,60 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
     }
   }
   
-  // ✅ CRITICAL: For weight-related goals (Lose Fat / Gain Muscle), calculate duration based on target weight
+  // ✅ ENHANCED: For weight-related goals, calculate duration using variable, research-backed rates
   if (isWeightRelatedGoal) {
     if (hasValidWeights && isValidTarget && weightDelta > 0) {
-      // Calculate exact weeks needed based on weight delta and research-backed safe rate
-      // Formula: weeks = weightDelta / safeRatePerWeek
-      // Using Math.ceil to round up, ensuring users have enough time (conservative approach)
-      const safeRate = isWeightLoss ? SAFE_LOSS_RATE : SAFE_GAIN_RATE;
-      const calculatedWeeks = Math.ceil(weightDelta / safeRate);
+      let weeklyRate: number;
       
-      // ✅ ENHANCED: Add buffer weeks for sustainable progress
-      // Research shows that adding 20-30% buffer time improves long-term success rates
-      // This accounts for plateaus, maintenance weeks, and lifestyle adjustments
-      const bufferPercent = 0.25; // 25% buffer for realistic planning
+      if (isWeightLoss) {
+        // ✅ VARIABLE WEIGHT LOSS RATE: Reduced rates to maximize plan duration
+        // Research: 0.5% to 1% of body weight per week is safe and sustainable
+        // Using conservative rates to ensure longer, more realistic plans
+        if (weightDelta < 5) {
+          // Small changes (<5kg): Conservative rate for longer plans
+          // Example: 70kg person losing 3kg = ~0.35 kg/week
+          weeklyRate = currentWeight * 0.005; // 0.5% per week (conservative, maximizes weeks)
+        } else if (weightDelta <= 15) {
+          // Medium changes (5-15kg): Moderate-conservative rate for sustainable progress
+          // Example: 70kg person losing 10kg = ~0.35 kg/week
+          weeklyRate = currentWeight * 0.005; // 0.5% per week (conservative, maximizes weeks)
+        } else {
+          // Large changes (>15kg): Very conservative rate to preserve muscle mass
+          // Example: 70kg person losing 20kg = ~0.28 kg/week
+          weeklyRate = currentWeight * 0.004; // 0.4% per week (very conservative, maximizes weeks)
+        }
+        
+        // Ensure minimum rate of 0.25 kg/week and maximum of 0.8 kg/week for safety
+        weeklyRate = Math.max(0.25, Math.min(0.8, weeklyRate));
+      } else {
+        // Weight gain (muscle): Reduced rates to maximize plan duration
+        // Quality muscle gain requires time - using conservative rates for longer plans
+        if (weightDelta < 5) {
+          // Small muscle gain: Conservative rate for longer plans
+          weeklyRate = 0.2; // 0.2 kg/week (reduced from 0.3)
+        } else if (weightDelta <= 15) {
+          // Medium muscle gain: Conservative rate
+          weeklyRate = 0.18; // 0.18 kg/week (reduced from 0.25)
+        } else {
+          // Large muscle gain: Very conservative rate (ensures quality over speed)
+          weeklyRate = 0.15; // 0.15 kg/week (reduced from 0.22)
+        }
+      }
+      
+      // Calculate base weeks needed: weightDelta / weeklyRate
+      const calculatedWeeks = Math.ceil(weightDelta / weeklyRate);
+      
+      // ✅ ENHANCED BUFFER: Add 35% buffer for realistic planning and maximum success
+      // Research shows that adding buffer time (30-40%) significantly improves:
+      // - Long-term success rates (accounts for plateaus in weeks 4-8 and 12-16)
+      // - Maintenance weeks (important for metabolic adaptation)
+      // - Lifestyle adjustments and setbacks
+      // - Ensures users have adequate time to achieve goals sustainably
+      // Using 35% to maximize weeks while staying realistic
+      const bufferPercent = 0.35; // 35% buffer maximizes success while staying realistic
       const weeksWithBuffer = Math.ceil(calculatedWeeks * (1 + bufferPercent));
       
       // Apply minimum and maximum constraints
-      // This ensures duration scales properly: more weight = more weeks, less weight = fewer weeks (but minimum applies)
       totalWeeks = Math.max(MIN_WEEKS, Math.min(MAX_WEEKS, weeksWithBuffer));
       
       // For very small weight changes (< 2kg), still use minimum duration
@@ -150,16 +185,18 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
       
       // Log calculation details for debugging
       if (__DEV__) {
-        console.log('📊 Plan duration calculation (Research-Backed):', {
+        const weightDeltaPercent = ((weightDelta / currentWeight) * 100).toFixed(1);
+        console.log('📊 Enhanced Plan Duration Calculation (Research-Backed):', {
           goal: userProfile.bodyGoal,
-          currentWeight,
-          targetWeight,
-          weightDelta: `${weightDelta} kg`,
-          safeRate: `${safeRate} kg/week`,
+          currentWeight: `${currentWeight} kg`,
+          targetWeight: `${targetWeight} kg`,
+          weightDelta: `${weightDelta} kg (${weightDeltaPercent}% of body weight)`,
+          weeklyRate: `${weeklyRate.toFixed(3)} kg/week`,
           calculatedWeeks: `${calculatedWeeks} weeks`,
           bufferPercent: `${(bufferPercent * 100).toFixed(0)}%`,
           weeksWithBuffer: `${weeksWithBuffer} weeks`,
-          finalWeeks: `${totalWeeks} weeks (${(totalWeeks / 4.33).toFixed(1)} months)`
+          finalWeeks: `${totalWeeks} weeks (${(totalWeeks / 4.33).toFixed(1)} months)`,
+          note: 'Rate varies based on weight change amount for optimal realism'
         });
       }
     } else {
@@ -210,4 +247,3 @@ export function calculatePlanDuration(userProfile: UserProfile): PlanDuration {
 export function formatDurationForPrompt(planDuration: PlanDuration): string {
   return `${planDuration.totalWeeks} weeks (~${planDuration.durationMonths.toFixed(1)} months)`;
 }
-

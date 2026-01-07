@@ -13,7 +13,10 @@
     "build:android:aab": "eas build --platform android --profile production",
     "build:ios": "eas build --platform ios --profile preview",
     "build:ios:prod": "eas build --platform ios --profile production",
-    "build:all": "eas build --platform all --profile preview"
+    "build:all": "eas build --platform all --profile preview",
+    "update:preview": "eas update --branch preview --message \"Update preview build\"",
+    "update:production": "eas update --branch production --message \"Update production build\"",
+    "update:android": "eas update --branch preview --platform android --message \"Update Android APK\""
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

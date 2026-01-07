@@ -48,7 +48,7 @@ export default function ExerciseDetailScreen({
   // Reset state when modal opens with a new exercise
   useEffect(() => {
     if (visible && exercise) {
-      console.log('🔄 ExerciseDetailScreen: Opening with exercise:', exercise.name);
+      if (__DEV__) console.log('🔄 ExerciseDetailScreen: Opening with exercise:', exercise.name);
       setCompletedSets(new Set());
       setIsCompleting(false);
     }
@@ -92,7 +92,7 @@ export default function ExerciseDetailScreen({
 
   const handleCompleteExercise = async () => {
     if (!canComplete || isCompleting) {
-      console.log('⚠️ Cannot complete - already completing or not allowed');
+      if (__DEV__) console.log('⚠️ Cannot complete - already completing or not allowed');
       return;
     }
     
@@ -105,26 +105,28 @@ export default function ExerciseDetailScreen({
       return;
     }
 
-    console.log('========================================');
-    console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
-    console.log('   Exercise:', exercise.name);
-    console.log('   Completed sets:', Array.from(completedSets));
-    console.log('========================================');
+    if (__DEV__) {
+      console.log('========================================');
+      console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
+      console.log('   Exercise:', exercise.name);
+      console.log('   Completed sets:', Array.from(completedSets));
+      console.log('========================================');
+    }
     
     setIsCompleting(true);
 
     try {
       // Mark exercise as complete in backend
       if (onComplete) {
-        console.log('🔄 Calling onComplete to mark exercise as complete...');
+        if (__DEV__) console.log('🔄 Calling onComplete to mark exercise as complete...');
         await onComplete();
-        console.log('✅ Exercise marked as complete in backend');
+        if (__DEV__) console.log('✅ Exercise marked as complete in backend');
       }
       
       // Close this modal - parent will handle showing completion screen
-      console.log('🚪 Closing detail modal...');
+      if (__DEV__) console.log('🚪 Closing detail modal...');
       onClose();
-      console.log('✅ Detail modal closed, parent will show completion screen');
+      if (__DEV__) console.log('✅ Detail modal closed, parent will show completion screen');
       
     } catch (error) {
       console.error('❌ Error completing exercise:', error);

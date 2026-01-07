@@ -119,7 +119,7 @@ export default function WorkoutPlanDisplay({
     // ✅ CRITICAL: Prevent duplicate completion (race condition protection)
     const exerciseId = `${selectedDay.date}-${selectedExercise.name}`;
     if (completedExercises.has(exerciseId)) {
-      console.log('⚠️ Exercise already completed, skipping');
+      if (__DEV__) console.log('⚠️ Exercise already completed, skipping');
       // Still close modal even if already completed
       setExerciseModalVisible(false);
       setSelectedExercise(null);

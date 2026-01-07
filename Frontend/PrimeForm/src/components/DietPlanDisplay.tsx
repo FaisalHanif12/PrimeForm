@@ -721,7 +721,7 @@ export default function DietPlanDisplay({
 
     // ✅ CRITICAL: Prevent duplicate completion (race condition protection)
     if (completedMeals.has(mealId)) {
-      console.log('⚠️ Meal already completed, skipping');
+      if (__DEV__) console.log('⚠️ Meal already completed, skipping');
       return;
     }
     

@@ -483,6 +483,7 @@ const translations = {
     'userinfo.lifestyle.health': 'AI Lifestyle & Health',
     'userinfo.diet.preferences': 'AI Diet Preferences',
     'userinfo.select.diet': 'Select your AI diet preference',
+    'userinfo.target.weight.helper': 'Enter your final target weight (not the amount to lose/gain)',
 
     // Requirements Panel
     'requirements.title': 'Email & Password Requirements',
@@ -1291,6 +1292,7 @@ const translations = {
     'userinfo.lifestyle.health': 'لافک اور صحت',
     'userinfo.diet.preferences': 'خوراک پسندیاں',
     'userinfo.select.diet': 'اپنی خوراک پسندی دیکھیں',
+    'userinfo.target.weight.helper': 'اپنا حتمی ہدف وزن درج کریں (کم یا زیادہ کرنے کی مقدار نہیں)',
 
     // Requirements Panel
     'requirements.title': 'ای میل اور پاس ورڈ کی ضروریات',
@@ -2095,16 +2097,11 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
           AsyncStorage.getItem('primeform_has_ever_signed_up')
         ]);
 
-        console.log('🌍 LanguageContext: Loading language from storage:', {
-          savedLanguage,
-          deviceLanguageSelected,
-          hasEverSignedUp
-        });
 
         // CRITICAL: If user has ever signed up, always mark language as selected
         // According to workflow Phase 4: After sign-up, language modal NEVER appears again
         if (hasEverSignedUp === 'true') {
-          console.log('🚫 LanguageContext: User has signed up before - language marked as selected');
+          if (__DEV__) console.log('🚫 LanguageContext: User has signed up before - language marked as selected');
           setHasSelectedLanguage(true);
           // Use saved language or default to English
           const finalLanguage = (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) ? savedLanguage : 'en';
@@ -2117,17 +2114,17 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'ur')) {
           setLanguage(savedLanguage);
           setHasSelectedLanguage(true);
-          console.log('✅ LanguageContext: Language loaded and marked as selected');
+          if (__DEV__) console.log('✅ LanguageContext: Language loaded and marked as selected');
         } else if (deviceLanguageSelected === 'true') {
           // Device language was selected before, use default English
           setLanguage('en');
           setHasSelectedLanguage(true);
-          console.log('✅ LanguageContext: Device language previously selected, using English default');
+          if (__DEV__) console.log('✅ LanguageContext: Device language previously selected, using English default');
         } else {
           // If no language is saved and device language not selected, mark as not selected
           setLanguage('en');
           setHasSelectedLanguage(false);
-          console.log('🌍 LanguageContext: No saved language, defaulting to English');
+          if (__DEV__) console.log('🌍 LanguageContext: No saved language, defaulting to English');
         }
       } catch (error) {
         console.error('Failed to load language:', error);

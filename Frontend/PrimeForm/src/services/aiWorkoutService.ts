@@ -91,7 +91,7 @@ class AIWorkoutService {
   clearInMemoryCache(): void {
     this.dataCache.clear();
     this.loadingCache.clear();
-    console.log('✅ AI Workout Service in-memory cache cleared');
+    if (__DEV__) console.log('✅ AI Workout Service in-memory cache cleared');
   }
 
   private generatePrompt(userProfile: UserProfile): string {
@@ -427,7 +427,7 @@ Generate the **final personalized plan now.**
       this.clearCache('workout-plan-active');
       
       if (__DEV__) {
-        console.log('✅ Workout plan cleared successfully (completion data preserved)');
+        if (__DEV__) console.log('✅ Workout plan cleared successfully (completion data preserved)');
       }
     } catch (error) {
       console.error('❌ Error clearing workout plan from database:', error);

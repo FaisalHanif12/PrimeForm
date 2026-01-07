@@ -2,7 +2,7 @@
   "expo": {
     "name": "PureBody",
     "slug": "purebody",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "developmentClient": {
       "silentLaunch": true
@@ -77,7 +77,7 @@
       }
     },
     "owner": "maherfaisal",
-    "runtimeVersion": "1.0.1",
+    "runtimeVersion": "1.0.2",
     "updates": {
       "url": "https://u.expo.dev/8fd8d9d9-0e37-4002-b75e-545f7a2fc230"
     }
