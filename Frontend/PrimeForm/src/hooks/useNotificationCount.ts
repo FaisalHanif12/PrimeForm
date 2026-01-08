@@ -3,8 +3,9 @@ import notificationService from '../services/notificationService';
 
 /**
  * Custom hook to manage notification count across all pages
- * ✅ OPTIMIZED: No auto-refresh to avoid DB load
+ * ✅ OPTIMIZED: Event-driven updates via push notifications instead of polling
  * ✅ Manual refresh available via refresh() function
+ * ✅ Eliminates excessive DB queries by only fetching when notifications arrive
  */
 export function useNotificationCount() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,8 +29,34 @@ export function useNotificationCount() {
   }, []);
 
   useEffect(() => {
-    // Initial fetch only on mount
+    // Initial fetch on mount
     fetchUnreadCount();
+
+    // ✅ OPTIMIZATION: Listen for push notifications instead of polling
+    // This eliminates excessive DB queries by only fetching when new notifications arrive
+    import('expo-notifications').then((Notifications) => {
+      // Listen for notifications received while app is in foreground or background
+      const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
+        console.log('🔔 [NOTIFICATION COUNT HOOK] New notification received, refreshing count...');
+        // Event-driven update - only fetch when notification arrives
+        fetchUnreadCount();
+      });
+
+      // Listen for when user taps on notification
+      const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log('🔔 [NOTIFICATION COUNT HOOK] Notification tapped, refreshing count...');
+        fetchUnreadCount();
+      });
+
+      // Cleanup listeners on unmount
+      return () => {
+        notificationListener.remove();
+        responseListener.remove();
+      };
+    }).catch((error) => {
+      // Fallback for web or environments where expo-notifications is not available
+      console.log('⚠️ [NOTIFICATION COUNT HOOK] Expo Notifications not available, skipping listener setup');
+    });
   }, [fetchUnreadCount]);
 
   return {

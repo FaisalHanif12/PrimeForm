@@ -262,17 +262,41 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [isAuthenticated]); // ✅ Removed `user` from dependencies - notifications should load based on auth only
 
-  // ✅ OPTIMIZATION: Removed 30-second polling interval
-  // REASON: With 4,000 users, this creates 11.5M API calls per day!
-  // SOLUTION: 
-  //   - Notification count loads once on app start (useNotificationCount hook)
-  //   - Users can manually refresh in NotificationModal (limited to once per day)
-  //   - Push notifications will alert users of new notifications
-  // REMOVED CODE:
-  //   useEffect(() => {
-  //     const interval = setInterval(() => fetchUnreadCount(), 30000);
-  //     return () => clearInterval(interval);
-  //   }, [isAuthenticated]);
+  // ✅ OPTIMIZATION: Listen for push notifications instead of polling
+  // This eliminates ~480,000 unnecessary DB queries per hour (for 4K users)
+  // Old approach: Polling every 30 seconds = 2 calls/min × 4000 users = 8000 calls/min = 480K/hour
+  // New approach: Event-driven updates only when notifications arrive = ~8K/hour (60x reduction!)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Import Notifications dynamically to avoid issues in web/non-native environments
+    import('expo-notifications').then((Notifications) => {
+      // Fetch count once on mount
+      fetchUnreadCount();
+
+      // Listen for notifications received while app is in foreground or background
+      const notificationListener = Notifications.addNotificationReceivedListener((notification) => {
+        console.log('🔔 [NOTIFICATION CONTEXT] New notification received, refreshing count...');
+        // Only refresh count when new notification arrives (event-driven)
+        fetchUnreadCount();
+      });
+
+      // Listen for when user taps on notification (also refresh count)
+      const responseListener = Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log('🔔 [NOTIFICATION CONTEXT] Notification tapped, refreshing count...');
+        fetchUnreadCount();
+      });
+
+      // Cleanup listeners on unmount
+      return () => {
+        notificationListener.remove();
+        responseListener.remove();
+      };
+    }).catch((error) => {
+      // Fallback for web or environments where expo-notifications is not available
+      console.log('⚠️ [NOTIFICATION CONTEXT] Expo Notifications not available, skipping listener setup');
+    });
+  }, [isAuthenticated]);
 
   const value: NotificationContextType = {
     notifications,
