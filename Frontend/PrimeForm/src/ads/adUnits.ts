@@ -72,11 +72,6 @@ const TEST = {
   rewarded: TestIds?.REWARDED || "ca-app-pub-3940256099942544/5224354917",
 };
 
-// ✅ PRODUCTION READY: Exports ad unit IDs based on environment
-// - In production builds: Uses PROD ad unit IDs (real ads, will generate revenue)
-// - In development: Uses TEST ad unit IDs (Google's test ads, no revenue)
-// - Platform-specific: Different ad units for Android and iOS
-// - Web platform: Uses test IDs (ads won't work on web anyway)
 export const AdUnits = {
   banner: useTestAds
     ? TEST.banner

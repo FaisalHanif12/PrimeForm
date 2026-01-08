@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
 import notificationService from '../services/notificationService';
 
 /**
  * Custom hook to manage notification count across all pages
- * Automatically updates when app comes to foreground
+ * ✅ OPTIMIZED: No auto-refresh to avoid DB load
+ * ✅ Manual refresh available via refresh() function
  */
 export function useNotificationCount() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,27 +28,8 @@ export function useNotificationCount() {
   }, []);
 
   useEffect(() => {
-    // Initial fetch
+    // Initial fetch only on mount
     fetchUnreadCount();
-
-    // Set up app state listener to refresh count when app comes to foreground
-    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active') {
-        fetchUnreadCount();
-      }
-    });
-
-    // Refresh every 30 seconds when app is active
-    const interval = setInterval(() => {
-      if (AppState.currentState === 'active') {
-        fetchUnreadCount();
-      }
-    }, 30000);
-
-    return () => {
-      subscription.remove();
-      clearInterval(interval);
-    };
   }, [fetchUnreadCount]);
 
   return {
