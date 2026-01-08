@@ -26,6 +26,7 @@ import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import streakService from '../../src/services/streakService';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -66,6 +67,7 @@ export default function StreakScreen() {
   const { t, language, transliterateText } = useLanguage();
   const { user } = useAuthContext();
   const { showToast } = useToast();
+  const { unreadCount } = useNotificationCount();
 
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
@@ -438,7 +440,7 @@ export default function StreakScreen() {
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
             onNotificationPress={handleNotificationPress}
-            notificationCount={0}
+            notificationCount={unreadCount}
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />

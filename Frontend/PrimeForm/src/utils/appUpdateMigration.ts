@@ -315,9 +315,9 @@ export async function performAppUpdateMigration(): Promise<void> {
           
           // Only validate if it's been more than a day or never validated
           if (lastValidationDate !== today) {
-            const invalidCount = await validateAllAccountData(userId);
+          const invalidCount = await validateAllAccountData(userId);
             if (invalidCount > 0 && __DEV__) {
-              console.log(`✅ Validated account data: Removed ${invalidCount} invalid entries`);
+            console.log(`✅ Validated account data: Removed ${invalidCount} invalid entries`);
             }
             // Mark validation as done for today
             await AsyncStorage.setItem('primeform_last_validation_date', today);

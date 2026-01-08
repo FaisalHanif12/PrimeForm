@@ -263,15 +263,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             await performAppUpdateMigration();
             
             // Step 4: DEFERRED - Validate data integrity in background
-            const userId = await getCurrentUserId();
-            if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
-              Promise.all([
-                validateAllAccountData(userId),
-                import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
-              ]).catch((error) => {
+        const userId = await getCurrentUserId();
+        if (userId && !userId.startsWith('device_') && !userId.startsWith('temp_')) {
+          Promise.all([
+            validateAllAccountData(userId),
+            import('../utils/appUpdateMigration').then(m => m.ensureDataAccessibility())
+          ]).catch((error) => {
                 if (__DEV__) console.warn('⚠️ Background data validation error (non-critical):', error);
-              });
-            }
+          });
+        }
           } catch (error) {
             if (__DEV__) console.warn('⚠️ Error in deferred migration:', error);
           }

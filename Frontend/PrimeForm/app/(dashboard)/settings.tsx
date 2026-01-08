@@ -26,6 +26,8 @@ import { useAuthContext } from '../../src/context/AuthContext';
 import { api } from '../../src/config/api';
 import Storage from '../../src/utils/storage';
 import { getCurrentUserId, isUsingGuestId } from '../../src/utils/cacheKeys';
+import notificationSettingsService from '../../src/services/notificationSettingsService';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 const { width, height } = Dimensions.get('window');
 
@@ -48,6 +50,7 @@ export default function SettingsPage() {
   const { t, language } = useLanguage();
   const { showToast } = useToast();
   const { user, isAuthenticated, logout } = useAuthContext();
+  const { unreadCount } = useNotificationCount();
   
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     pushNotifications: true,
@@ -172,12 +175,9 @@ export default function SettingsPage() {
 
   const loadNotificationSettings = async () => {
     try {
-      // First try to load from AsyncStorage
-      const storedSettings = await Storage.getItem('notificationSettings');
-      if (storedSettings) {
-        const parsedSettings = JSON.parse(storedSettings);
-        setNotificationSettings(parsedSettings);
-      }
+      // Load from notification settings service
+      const settings = await notificationSettingsService.getSettings();
+      setNotificationSettings(settings);
 
       // Then try to sync with backend
       try {
@@ -189,36 +189,22 @@ export default function SettingsPage() {
             dietReminders: response.data.dietReminders ?? true,
           };
           setNotificationSettings(backendSettings);
-          // Save to AsyncStorage for offline access
-          await Storage.setItem('notificationSettings', JSON.stringify(backendSettings));
+          // Save using notification settings service (will update handler)
+          await notificationSettingsService.saveSettings(backendSettings);
         }
       } catch (error) {
-        // If backend fails, use stored settings or defaults
-        if (!storedSettings) {
-          // No stored settings, use defaults (all ON)
-          const defaultSettings = {
-            pushNotifications: true,
-            workoutReminders: true,
-            dietReminders: true,
-          };
-          setNotificationSettings(defaultSettings);
-        }
+        // If backend fails, use loaded settings from service
+        console.log('Using local notification settings');
       }
     } catch (error) {
-      // Failed to load notification settings, use defaults
-      const defaultSettings = {
-        pushNotifications: true,
-        workoutReminders: true,
-        dietReminders: true,
-      };
-      setNotificationSettings(defaultSettings);
+      console.error('Error loading notification settings:', error);
     }
   };
 
   const saveNotificationSettings = async (settings: NotificationSettings) => {
     try {
-      // Save to AsyncStorage first for immediate persistence
-      await Storage.setItem('notificationSettings', JSON.stringify(settings));
+      // Save using notification settings service (will update handler)
+      await notificationSettingsService.saveSettings(settings);
 
       // Then sync with backend
       try {
@@ -226,11 +212,11 @@ export default function SettingsPage() {
         if (response.success) {
           showToast('success', 'Notification settings saved successfully!');
         } else {
-          showToast('error', 'Failed to save notification settings');
+          showToast('success', 'Settings saved locally!');
         }
       } catch (error: any) {
         // Even if backend fails, settings are saved locally
-        showToast('success', 'Notification settings saved locally!');
+        showToast('success', 'Settings saved locally!');
       }
     } catch (error) {
       showToast('error', 'Failed to save notification settings');
@@ -432,7 +418,7 @@ export default function SettingsPage() {
         userName={user?.fullName || t('common.user')}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
-        notificationCount={0}
+        notificationCount={unreadCount}
       />
       <View style={styles.container}>
         <ScrollView 

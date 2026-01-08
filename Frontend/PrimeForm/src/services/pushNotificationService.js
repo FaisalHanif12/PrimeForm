@@ -25,6 +25,10 @@ class PushNotificationService {
   // Initialize push notifications
   async initialize() {
     try {
+      console.log('🔔 [PUSH INIT] Starting push notification initialization...');
+      console.log('🔔 [PUSH INIT] Platform:', Platform.OS);
+      console.log('🔔 [PUSH INIT] Device.isDevice:', Device.isDevice);
+      
       // Reset cleanup flag
       this.isCleanedUp = false;
       
@@ -32,16 +36,24 @@ class PushNotificationService {
       const token = await this.registerForPushNotificationsAsync();
       if (token) {
         this.expoPushToken = token;
+        console.log('✅ [PUSH INIT] Token generated successfully');
+        console.log('✅ [PUSH INIT] Token (first 30 chars):', token.substring(0, 30) + '...');
+        
         await this.savePushTokenToServer(token);
-        console.log('✅ Push notifications initialized with token:', token);
+        console.log('✅ [PUSH INIT] Push notifications initialized successfully');
+      } else {
+        console.error('❌ [PUSH INIT] Failed to generate push token');
       }
 
       // Set up notification listeners
       this.setupNotificationListeners();
+      console.log('✅ [PUSH INIT] Notification listeners set up');
       
       return token;
     } catch (error) {
-      console.error('❌ Error initializing push notifications:', error);
+      console.error('❌ [PUSH INIT] Error initializing push notifications:', error);
+      console.error('❌ [PUSH INIT] Error message:', error.message);
+      console.error('❌ [PUSH INIT] Error stack:', error.stack);
       return null;
     }
   }
@@ -80,15 +92,13 @@ class PushNotificationService {
                          Constants.expoConfig?.extra?.eas?.projectId || 
                          Constants.expoConfig?.projectId;
         
-        // ✅ ENHANCED LOGGING: Log all relevant info for debugging
-        if (__DEV__) {
-          console.log('🔔 [PUSH SERVICE] === Push Token Registration Debug ===');
-          console.log('🔔 [PUSH SERVICE] Device.isDevice:', Device.isDevice);
-          console.log('🔔 [PUSH SERVICE] Platform.OS:', Platform.OS);
-          console.log('🔑 [PUSH SERVICE] Project ID (easConfig):', Constants.easConfig?.projectId);
-          console.log('🔑 [PUSH SERVICE] Project ID (expoConfig.extra.eas):', Constants.expoConfig?.extra?.eas?.projectId);
-          console.log('🔑 [PUSH SERVICE] Project ID (final selected):', projectId);
-        }
+        // ✅ PRODUCTION LOGGING: Always log critical info for debugging
+        console.log('🔔 [PUSH TOKEN] === Push Token Registration ===');
+        console.log('🔔 [PUSH TOKEN] Device.isDevice:', Device.isDevice);
+        console.log('🔔 [PUSH TOKEN] Platform.OS:', Platform.OS);
+        console.log('🔑 [PUSH TOKEN] Project ID (easConfig):', Constants.easConfig?.projectId || 'NOT_SET');
+        console.log('🔑 [PUSH TOKEN] Project ID (expoConfig.extra.eas):', Constants.expoConfig?.extra?.eas?.projectId || 'NOT_SET');
+        console.log('🔑 [PUSH TOKEN] Project ID (final selected):', projectId || 'NOT_SET');
         
         if (!projectId) {
           console.error('❌ [PUSH SERVICE] No projectId found in app configuration');

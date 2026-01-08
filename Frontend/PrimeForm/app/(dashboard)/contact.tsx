@@ -26,6 +26,7 @@ import ProfilePage from '../../src/components/ProfilePage';
 import NotificationModal from '../../src/components/NotificationModal';
 import { useAuthContext } from '../../src/context/AuthContext';
 import api from '../../src/config/api';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -38,6 +39,7 @@ interface ContactForm {
 export default function ContactPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { unreadCount } = useNotificationCount();
   const { showToast } = useToast();
   const { user, isAuthenticated, logout } = useAuthContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -274,7 +276,7 @@ export default function ContactPage() {
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
           onNotificationPress={handleNotificationPress}
-          notificationCount={0}
+          notificationCount={unreadCount}
         />
         <ScrollView
           style={styles.container}

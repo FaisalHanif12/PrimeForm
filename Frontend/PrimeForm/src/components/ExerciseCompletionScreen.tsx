@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
-  StatusBar,
   Animated,
 } from 'react-native';
 import { colors, spacing, typography, fonts, radius } from '../theme/colors';

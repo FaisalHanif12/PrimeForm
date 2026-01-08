@@ -18,6 +18,7 @@ import { useToast } from '../context/ToastContext';
 import { colors } from '../theme/colors';
 import CustomAlert from './CustomAlert';
 import ToastNotification from './ToastNotification';
+import Storage from '../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,11 +86,33 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose 
     buttons: [],
   });
 
-  // Handle refresh
+  // ✅ Handle refresh with daily limit
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await refreshNotifications();
-    setRefreshing(false);
+    try {
+      // Check if user already refreshed today
+      const lastRefreshDate = await Storage.getItem('lastNotificationRefreshDate');
+      const today = new Date().toDateString();
+      
+      if (lastRefreshDate === today) {
+        console.log('⚠️ [NOTIFICATION REFRESH] Already refreshed today, skipping...');
+        showModalToast('warning', t('notification.refresh.limit.reached') || 'You can only refresh notifications once per day');
+        return;
+      }
+      
+      console.log('🔄 [NOTIFICATION REFRESH] Starting manual refresh...');
+      setRefreshing(true);
+      await refreshNotifications();
+      
+      // Save today's date as last refresh date
+      await Storage.setItem('lastNotificationRefreshDate', today);
+      console.log('✅ [NOTIFICATION REFRESH] Refresh successful, date saved');
+      showModalToast('success', t('notification.refresh.success') || 'Notifications refreshed successfully');
+    } catch (error) {
+      console.error('❌ [NOTIFICATION REFRESH] Error during refresh:', error);
+      showModalToast('error', t('notification.refresh.failed') || 'Failed to refresh notifications');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Handle notification press
