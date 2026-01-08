@@ -106,11 +106,11 @@ export default function ExerciseDetailScreen({
     }
 
     if (__DEV__) {
-      console.log('========================================');
-      console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
-      console.log('   Exercise:', exercise.name);
-      console.log('   Completed sets:', Array.from(completedSets));
-      console.log('========================================');
+    console.log('========================================');
+    console.log('✅ ExerciseDetailScreen: All sets completed, processing...');
+    console.log('   Exercise:', exercise.name);
+    console.log('   Completed sets:', Array.from(completedSets));
+    console.log('========================================');
     }
     
     setIsCompleting(true);

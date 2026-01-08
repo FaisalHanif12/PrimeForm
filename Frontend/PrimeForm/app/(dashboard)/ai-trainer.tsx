@@ -180,19 +180,28 @@ export default function AITrainerScreen() {
   };
 
   const handleSendMessage = async () => {
-    if (!currentMessage.trim()) return;
+    console.log('🎬 [AI TRAINER] === handleSendMessage CALLED ===');
+    console.log('🎬 [AI TRAINER] Current message:', currentMessage?.substring(0, 50));
+    
+    if (!currentMessage.trim()) {
+      console.log('⚠️ [AI TRAINER] Empty message, returning');
+      return;
+    }
 
     // Get user ID for tracking
     const { getCurrentUserId, getUserCacheKey } = await import('../../src/utils/cacheKeys');
     const userId = await getCurrentUserId();
+    console.log('🎬 [AI TRAINER] User ID:', userId);
     
     if (!userId) {
+      console.log('❌ [AI TRAINER] No user ID, showing auth error');
       showToast('warning', t('aiTrainer.error.notAuthenticated'));
       return;
     }
 
     const today = new Date();
     const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
+    console.log('🎬 [AI TRAINER] Date key:', dateKey);
 
     // ✅ CRITICAL: Check daily message limit FIRST (before showing ad)
     // Daily usage limit: max 3 messages per user per day
@@ -200,44 +209,59 @@ export default function AITrainerScreen() {
       const usageKey = await getUserCacheKey(`ai_trainer_usage_${dateKey}`, userId);
       const rawUsage = await Storage.getItem(usageKey);
       const currentCount = rawUsage ? Number(rawUsage) || 0 : 0;
+      console.log('🎬 [AI TRAINER] Usage count today:', currentCount, '/ 3');
 
       if (currentCount >= 3) {
+        console.log('❌ [AI TRAINER] Daily limit reached (3/3)');
         showToast('warning', t('aiTrainer.limit.reached'));
         return; // Stop here if limit reached
       }
     } catch (error) {
-      console.error('Error checking AI Trainer daily limit:', error);
+      console.error('❌ [AI TRAINER] Error checking daily limit:', error);
       // If something goes wrong with the limit check, still allow the message
     }
 
     // Check if user has already watched rewarded ad today (once per day)
     const adWatchedKey = await getUserCacheKey(`ai_trainer_ad_watched_${dateKey}`, userId);
     const hasWatchedAdToday = await Storage.getItem(adWatchedKey) === 'true';
+    console.log('🎬 [AI TRAINER] Ad watched today:', hasWatchedAdToday);
+    console.log('🎬 [AI TRAINER] Ad watched key:', adWatchedKey);
 
     // If ad not watched today, show rewarded ad first
     if (!hasWatchedAdToday) {
+      console.log('📺 [AI TRAINER] Ad NOT watched today - showing rewarded ad...');
+      console.log('📺 [AI TRAINER] Ad Unit ID:', AdUnits.rewardedTrainer);
+      
       // Show rewarded ad
       showRewardedAd(AdUnits.rewardedTrainer, {
         onEarned: async () => {
+          console.log('🎉 [AI TRAINER] onEarned callback triggered!');
           // Mark ad as watched for today
           await Storage.setItem(adWatchedKey, 'true');
+          console.log('✅ [AI TRAINER] Ad marked as watched for today');
           // Proceed with sending message after ad is watched
+          console.log('📤 [AI TRAINER] Proceeding with message send...');
           await proceedWithSendingMessage();
         },
         onError: (error) => {
-          console.error('Rewarded ad error:', error);
+          console.error('❌ [AI TRAINER] Rewarded ad error:', error);
+          console.error('❌ [AI TRAINER] Error message:', error?.message);
+          console.error('❌ [AI TRAINER] Error code:', (error as any)?.code);
           // If ad fails, still allow sending message (graceful degradation)
           showToast('warning', 'Ad could not be loaded. Proceeding with message...');
           proceedWithSendingMessage();
         },
         onClosed: () => {
+          console.log('🔒 [AI TRAINER] Ad closed by user');
           // Ad was closed without watching - don't send message
           // User can try again by clicking send button
         }
       });
+      console.log('📺 [AI TRAINER] showRewardedAd() called, waiting for callbacks...');
       return; // Exit early, message will be sent after ad is watched
     }
 
+    console.log('✅ [AI TRAINER] Ad already watched today, proceeding directly');
     // Ad already watched today, proceed directly
     await proceedWithSendingMessage();
   };
