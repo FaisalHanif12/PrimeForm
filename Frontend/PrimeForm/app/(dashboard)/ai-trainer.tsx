@@ -34,6 +34,7 @@ import aiTrainerService from '../../src/services/aiTrainerService';
 import { showRewardedAd } from '../../src/ads/showRewarded';
 import { AdUnits } from '../../src/ads/adUnits';
 import MarkdownText from '../../src/components/MarkdownText';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -48,6 +49,7 @@ interface ChatMessage {
 export default function AITrainerScreen() {
   const router = useRouter();
   const { t, language, transliterateText, transliterateName } = useLanguage();
+  const { unreadCount } = useNotificationCount();
   const { user } = useAuthContext();
   const { showToast } = useToast();
   const scrollViewRef = useRef<ScrollView>(null);
@@ -417,7 +419,7 @@ export default function AITrainerScreen() {
             userName={user?.fullName || t('common.user')}
             onProfilePress={handleProfilePress}
             onNotificationPress={handleNotificationPress}
-            notificationCount={0}
+            notificationCount={unreadCount}
           />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />

@@ -8,6 +8,7 @@ import { ToastProvider } from '../src/context/ToastContext';
 import { LanguageProvider } from '../src/context/LanguageContext';
 import { NotificationProvider } from '../src/contexts/NotificationContext';
 import NotificationHandler from '../src/components/NotificationHandler';
+import notificationSettingsService from '../src/services/notificationSettingsService';
 
 let mobileAdsModule: any = null;
 
@@ -72,6 +73,9 @@ export default function RootLayout() {
     };
 
     initializeAds();
+
+    // Initialize notification settings
+    notificationSettingsService.initialize();
 
     return () => {
       subscription?.remove();
