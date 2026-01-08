@@ -262,17 +262,17 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [isAuthenticated]); // ✅ Removed `user` from dependencies - notifications should load based on auth only
 
-  // Effect to periodically check for new notifications
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    // Set up interval to check for new notifications every 30 seconds
-    const interval = setInterval(() => {
-      fetchUnreadCount();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  // ✅ OPTIMIZATION: Removed 30-second polling interval
+  // REASON: With 4,000 users, this creates 11.5M API calls per day!
+  // SOLUTION: 
+  //   - Notification count loads once on app start (useNotificationCount hook)
+  //   - Users can manually refresh in NotificationModal (limited to once per day)
+  //   - Push notifications will alert users of new notifications
+  // REMOVED CODE:
+  //   useEffect(() => {
+  //     const interval = setInterval(() => fetchUnreadCount(), 30000);
+  //     return () => clearInterval(interval);
+  //   }, [isAuthenticated]);
 
   const value: NotificationContextType = {
     notifications,
