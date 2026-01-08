@@ -129,46 +129,6 @@ exports.createOrUpdateProfile = async (req, res) => {
       }
     }
     
-    // ✅ CRITICAL: Validate target weight logic (realistic constraints)
-    if (profileData.currentWeight && profileData.targetWeight && 
-        (profileData.bodyGoal === 'Lose Fat' || profileData.bodyGoal === 'Gain Muscle')) {
-      const currentWeight = parseFloat(profileData.currentWeight);
-      const targetWeight = parseFloat(profileData.targetWeight);
-      
-      if (!isNaN(currentWeight) && !isNaN(targetWeight) && currentWeight > 0 && targetWeight > 0) {
-        const goal = profileData.bodyGoal?.toLowerCase() || '';
-        const isWeightLoss = goal.includes('lose') || goal.includes('fat');
-        const isWeightGain = goal.includes('gain') || goal.includes('muscle');
-        
-        // For weight loss: target must be less than current
-        if (isWeightLoss && targetWeight >= currentWeight) {
-          return res.status(400).json({
-            success: false,
-            message: 'Target weight must be less than current weight for weight loss goals'
-          });
-        }
-        
-        // For weight gain: target must be greater than current
-        if (isWeightGain && targetWeight <= currentWeight) {
-          return res.status(400).json({
-            success: false,
-            message: 'Target weight must be greater than current weight for muscle gain goals'
-          });
-        }
-        
-        // Validate that target weight is not more than 50% away from current weight
-        const weightDelta = Math.abs(currentWeight - targetWeight);
-        const maxAllowedDelta = currentWeight * 0.5; // Maximum 50% of current weight
-        
-        if (weightDelta > maxAllowedDelta) {
-          return res.status(400).json({
-            success: false,
-            message: `Target weight cannot be more than ${Math.round(maxAllowedDelta)}kg away from current weight (maximum 50% change). Please set a more realistic goal.`
-          });
-        }
-      }
-    }
-    
     console.log('🔍 createOrUpdateProfile - Existing profile found:', userProfile ? 'Yes' : 'No');
     if (userProfile) {
       console.log('🔍 createOrUpdateProfile - Existing profile userId:', userProfile.userId);

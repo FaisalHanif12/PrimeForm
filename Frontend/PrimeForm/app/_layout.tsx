@@ -55,19 +55,30 @@ export default function RootLayout() {
 
     // Initialize AdMob SDK once at app startup (native platforms only)
     const initializeAds = async () => {
+      console.log('📱 [ADMOB SDK] Starting AdMob SDK initialization...');
+      console.log('📱 [ADMOB SDK] Platform:', Platform.OS);
+      console.log('📱 [ADMOB SDK] Module available:', !!mobileAdsModule);
+      
       // Skip AdMob initialization if module is not available (web or Expo Go)
       if (!mobileAdsModule) {
+        console.log('⚠️ [ADMOB SDK] AdMob module not available (web or Expo Go)');
         return;
       }
 
       try {
+        console.log('📱 [ADMOB SDK] Initializing Google Mobile Ads SDK...');
         await mobileAdsModule().initialize();
+        console.log('✅ [ADMOB SDK] AdMob SDK initialized successfully!');
+        console.log('✅ [ADMOB SDK] Ready to show ads');
       } catch (error: any) {
+        console.error('❌ [ADMOB SDK] AdMob initialization error:', error);
+        console.error('❌ [ADMOB SDK] Error message:', error?.message);
+        
         // AdMob initialization error - log only critical errors
         if (!error?.message?.includes('TurboModuleRegistry') && 
             !error?.message?.includes('RNGoogleMobileAdsModule')) {
           // Unexpected error - log for debugging
-          console.error('❌ AdMob initialization error:', error?.message);
+          console.error('❌ [ADMOB SDK] Unexpected initialization error:', error?.message);
         }
       }
     };

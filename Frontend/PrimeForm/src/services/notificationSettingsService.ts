@@ -51,11 +51,20 @@ class NotificationSettingsService {
    * Update notification handler based on settings
    */
   private async updateNotificationHandler(settings: NotificationSettings): Promise<void> {
+    console.log('🔔 [NOTIFICATION SETTINGS] Updating notification handler...');
+    console.log('🔔 [NOTIFICATION SETTINGS] Push Notifications:', settings.pushNotifications);
+    console.log('🔔 [NOTIFICATION SETTINGS] Workout Reminders:', settings.workoutReminders);
+    console.log('🔔 [NOTIFICATION SETTINGS] Diet Reminders:', settings.dietReminders);
+    
     // Configure notification handler
     Notifications.setNotificationHandler({
       handleNotification: async (notification) => {
+        const notificationType = notification.request.content.data?.type as string;
+        console.log('🔔 [NOTIFICATION HANDLER] Received notification type:', notificationType || 'general');
+        
         // If push notifications are completely disabled, don't show anything
         if (!settings.pushNotifications) {
+          console.log('🔕 [NOTIFICATION HANDLER] Push notifications disabled - blocking notification');
           return {
             shouldShowAlert: false,
             shouldPlaySound: false,
@@ -64,10 +73,9 @@ class NotificationSettingsService {
         }
 
         // Check notification type and apply specific settings
-        const notificationType = notification.request.content.data?.type as string;
-
         // Diet reminders
         if (notificationType?.includes('diet') || notificationType?.includes('meal')) {
+          console.log('🍽️ [NOTIFICATION HANDLER] Diet notification - Allowed:', settings.dietReminders);
           return {
             shouldShowAlert: settings.dietReminders,
             shouldPlaySound: settings.dietReminders,
@@ -77,6 +85,7 @@ class NotificationSettingsService {
 
         // Workout reminders
         if (notificationType?.includes('workout') || notificationType?.includes('exercise')) {
+          console.log('💪 [NOTIFICATION HANDLER] Workout notification - Allowed:', settings.workoutReminders);
           return {
             shouldShowAlert: settings.workoutReminders,
             shouldPlaySound: settings.workoutReminders,
@@ -85,6 +94,7 @@ class NotificationSettingsService {
         }
 
         // Default: show notification if push notifications are enabled
+        console.log('🔔 [NOTIFICATION HANDLER] General notification - Allowed: true');
         return {
           shouldShowAlert: true,
           shouldPlaySound: true,
@@ -92,6 +102,8 @@ class NotificationSettingsService {
         };
       },
     });
+    
+    console.log('✅ [NOTIFICATION SETTINGS] Notification handler updated successfully');
   }
 
   /**

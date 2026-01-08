@@ -32,23 +32,22 @@ if (!TestIds) {
 // IMPORTANT: For production builds, ensure EXPO_PUBLIC_ADS_MODE is NOT set to "test"
 // Production ad unit IDs are configured below and will be used automatically in production
 
-// ✅ ENHANCED LOGGING: Log ad mode configuration (one-time on module load)
+// ✅ PRODUCTION LOGGING: Always log ad mode configuration for debugging
 const adsMode = process.env.EXPO_PUBLIC_ADS_MODE;
 const useTestAds = __DEV__ || adsMode === "test";
 
-if (__DEV__ || !adsMode) {
-  console.log('📱 [ADMOB] === Ad Configuration ===');
-  console.log('📱 [ADMOB] Platform:', Platform.OS);
-  console.log('📱 [ADMOB] __DEV__:', __DEV__);
-  console.log('📱 [ADMOB] EXPO_PUBLIC_ADS_MODE:', adsMode || '(not set)');
-  console.log('📱 [ADMOB] Using test ads:', useTestAds);
-  console.log('📱 [ADMOB] Module loaded:', Platform.OS === 'web' ? false : !!TestIds);
-}
+console.log('📱 [ADMOB INIT] === Ad Configuration ===');
+console.log('📱 [ADMOB INIT] Platform:', Platform.OS);
+console.log('📱 [ADMOB INIT] __DEV__:', __DEV__);
+console.log('📱 [ADMOB INIT] EXPO_PUBLIC_ADS_MODE:', adsMode || '(not set)');
+console.log('📱 [ADMOB INIT] Using test ads:', useTestAds);
+console.log('📱 [ADMOB INIT] TestIds module available:', Platform.OS === 'web' ? false : !!TestIds);
+console.log('📱 [ADMOB INIT] Expected behavior:', useTestAds ? 'SHOW TEST ADS' : 'SHOW PRODUCTION ADS');
 
 // ✅ VALIDATION: Warn if production mode but test ads are being used
 if (!__DEV__ && adsMode === "test") {
-  console.warn('⚠️ [ADMOB] WARNING: Production build but EXPO_PUBLIC_ADS_MODE=test is set!');
-  console.warn('⚠️ [ADMOB] Test ads will be shown instead of production ads.');
+  console.warn('⚠️ [ADMOB INIT] WARNING: Production build but EXPO_PUBLIC_ADS_MODE=test is set!');
+  console.warn('⚠️ [ADMOB INIT] Test ads will be shown instead of production ads.');
 }
 
 // ✅ PRODUCTION AD UNIT IDs - These will be used in production builds
@@ -104,11 +103,10 @@ export const AdUnits = {
       : PROD.ios.rewardedWorkout,
 };
 
-// ✅ ENHANCED LOGGING: Log selected ad unit IDs (one-time on module load)
-if (__DEV__ || !adsMode) {
-  console.log('📱 [ADMOB] Selected ad unit IDs:');
-  console.log('📱 [ADMOB]   Banner:', AdUnits.banner);
-  console.log('📱 [ADMOB]   Rewarded Trainer:', AdUnits.rewardedTrainer);
-  console.log('📱 [ADMOB]   Rewarded Diet:', AdUnits.rewardedDiet);
-  console.log('📱 [ADMOB]   Rewarded Workout:', AdUnits.rewardedWorkout);
-}
+// ✅ PRODUCTION LOGGING: Always log selected ad unit IDs for debugging
+console.log('📱 [ADMOB INIT] Selected ad unit IDs:');
+console.log('📱 [ADMOB INIT]   Banner:', AdUnits.banner);
+console.log('📱 [ADMOB INIT]   Rewarded Trainer:', AdUnits.rewardedTrainer);
+console.log('📱 [ADMOB INIT]   Rewarded Diet:', AdUnits.rewardedDiet);
+console.log('📱 [ADMOB INIT]   Rewarded Workout:', AdUnits.rewardedWorkout);
+console.log('📱 [ADMOB INIT] ====================================');
