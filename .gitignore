@@ -75,3 +75,6 @@ Thumbs.db
 # Uncomment if you want to ignore these
 # package-lock.json
 # yarn.lock
+# Firebase service account (sensitive)
+Backend/config/firebase-service-account.json
+*.firebase-adminsdk*.json

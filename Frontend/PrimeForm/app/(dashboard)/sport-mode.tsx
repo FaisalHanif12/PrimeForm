@@ -23,6 +23,7 @@ import { sportCategories, getTranslatedSportName } from '../../src/data/sportExe
 import userProfileService from '../../src/services/userProfileService';
 import { useAuthContext } from '../../src/context/AuthContext';
 import { useLanguage } from '../../src/context/LanguageContext';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - spacing.xl * 3) / 2;
@@ -30,6 +31,7 @@ const cardWidth = (screenWidth - spacing.xl * 3) / 2;
 export default function SportModePage() {
   const { user } = useAuthContext();
   const { t, language } = useLanguage();
+  const { unreadCount } = useNotificationCount();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
@@ -139,6 +141,7 @@ export default function SportModePage() {
         userName={user?.fullName || 'User'}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
+        notificationCount={unreadCount}
       />
 
       <ScrollView

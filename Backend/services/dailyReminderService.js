@@ -3,7 +3,6 @@ const User = require('../models/User');
 const DietPlan = require('../models/DietPlan');
 const WorkoutPlan = require('../models/WorkoutPlan');
 
-// Daily reminder translations
 const reminderTranslations = {
   en: {
     diet: {
@@ -117,7 +116,6 @@ class DailyReminderService {
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Send workout reminder notification
    * @param {string} userId - The user ID
@@ -136,7 +134,6 @@ class DailyReminderService {
         workoutReminders: true,
         dietReminders: true
       };
-
       // If push notifications are disabled, don't send any notification
       if (!notificationSettings.pushNotifications) {
         console.log(`Push notifications disabled for user ${userId}, skipping workout reminder`);
