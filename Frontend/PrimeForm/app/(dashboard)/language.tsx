@@ -21,6 +21,7 @@ import BottomNavigation from '../../src/components/BottomNavigation';
 import NotificationModal from '../../src/components/NotificationModal';
 import ProfilePage from '../../src/components/ProfilePage';
 import { useAuthContext } from '../../src/context/AuthContext';
+import { useNotificationCount } from '../../src/hooks/useNotificationCount';
 
 interface LanguageOption {
   code: 'en' | 'ur';
@@ -52,6 +53,7 @@ export default function LanguagePreferencesPage() {
   const { language, changeLanguage, t } = useLanguage();
   const { showToast } = useToast();
   const { user } = useAuthContext();
+  const { unreadCount } = useNotificationCount();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
@@ -192,8 +194,10 @@ export default function LanguagePreferencesPage() {
     <View style={styles.container}>
       {/* Header */}
       <DashboardHeader
+        userName={user?.fullName || t('common.user')}
         onProfilePress={handleProfilePress}
         onNotificationPress={handleNotificationPress}
+        notificationCount={unreadCount}
       />
 
       {/* Sidebar */}

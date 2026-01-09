@@ -461,8 +461,8 @@ export default function StreakScreen() {
         <DashboardHeader
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
-          onNotificationPress={() => {}}
-          notificationCount={0}
+          onNotificationPress={handleNotificationPress}
+          notificationCount={unreadCount}
         />
 
         <ScrollView

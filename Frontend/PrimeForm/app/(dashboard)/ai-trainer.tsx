@@ -488,7 +488,7 @@ export default function AITrainerScreen() {
           userName={user?.fullName || t('common.user')}
           onProfilePress={handleProfilePress}
           onNotificationPress={handleNotificationPress}
-          notificationCount={0}
+          notificationCount={unreadCount}
         />
 
         <View style={styles.container}>
