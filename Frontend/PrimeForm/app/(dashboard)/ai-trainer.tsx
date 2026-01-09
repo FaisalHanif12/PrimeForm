@@ -232,32 +232,59 @@ export default function AITrainerScreen() {
       console.log('📺 [AI TRAINER] Ad NOT watched today - showing rewarded ad...');
       console.log('📺 [AI TRAINER] Ad Unit ID:', AdUnits.rewardedTrainer);
       
-      // Show rewarded ad
-      showRewardedAd(AdUnits.rewardedTrainer, {
-        onEarned: async () => {
-          console.log('🎉 [AI TRAINER] onEarned callback triggered!');
-          // Mark ad as watched for today
-          await Storage.setItem(adWatchedKey, 'true');
-          console.log('✅ [AI TRAINER] Ad marked as watched for today');
-          // Proceed with sending message after ad is watched
-          console.log('📤 [AI TRAINER] Proceeding with message send...');
-          await proceedWithSendingMessage();
-        },
-        onError: (error) => {
-          console.error('❌ [AI TRAINER] Rewarded ad error:', error);
-          console.error('❌ [AI TRAINER] Error message:', error?.message);
-          console.error('❌ [AI TRAINER] Error code:', (error as any)?.code);
-          // If ad fails, still allow sending message (graceful degradation)
-          showToast('warning', 'Ad could not be loaded. Proceeding with message...');
+      // ✅ CRITICAL: Add timeout fallback in case ad never loads or callbacks never fire
+      let adCallbackFired = false;
+      const adTimeout = setTimeout(() => {
+        if (!adCallbackFired) {
+          console.log('⏱️ [AI TRAINER] Ad load timeout (10s) - proceeding without ad');
+          showToast('warning', 'Ad timed out. Proceeding with message...');
           proceedWithSendingMessage();
-        },
-        onClosed: () => {
-          console.log('🔒 [AI TRAINER] Ad closed by user');
-          // Ad was closed without watching - don't send message
-          // User can try again by clicking send button
         }
-      });
-      console.log('📺 [AI TRAINER] showRewardedAd() called, waiting for callbacks...');
+      }, 10000); // 10 second timeout
+      
+      // Show rewarded ad
+      try {
+        showRewardedAd(AdUnits.rewardedTrainer, {
+          onEarned: async () => {
+            if (adCallbackFired) return; // Prevent double execution
+            adCallbackFired = true;
+            clearTimeout(adTimeout);
+            console.log('🎉 [AI TRAINER] onEarned callback triggered!');
+            // Mark ad as watched for today
+            await Storage.setItem(adWatchedKey, 'true');
+            console.log('✅ [AI TRAINER] Ad marked as watched for today');
+            // Proceed with sending message after ad is watched
+            console.log('📤 [AI TRAINER] Proceeding with message send...');
+            await proceedWithSendingMessage();
+          },
+          onError: (error) => {
+            if (adCallbackFired) return; // Prevent double execution
+            adCallbackFired = true;
+            clearTimeout(adTimeout);
+            console.error('❌ [AI TRAINER] Rewarded ad error:', error);
+            console.error('❌ [AI TRAINER] Error message:', error?.message);
+            console.error('❌ [AI TRAINER] Error code:', (error as any)?.code);
+            // If ad fails, still allow sending message (graceful degradation)
+            showToast('warning', 'Ad could not be loaded. Proceeding with message...');
+            proceedWithSendingMessage();
+          },
+          onClosed: () => {
+            if (adCallbackFired) return; // Prevent double execution
+            adCallbackFired = true;
+            clearTimeout(adTimeout);
+            console.log('🔒 [AI TRAINER] Ad closed by user');
+            // Ad was closed without watching - don't send message
+            // User can try again by clicking send button
+          }
+        });
+        console.log('📺 [AI TRAINER] showRewardedAd() called, waiting for callbacks...');
+      } catch (error) {
+        // Catch any synchronous errors from showRewardedAd
+        clearTimeout(adTimeout);
+        console.error('❌ [AI TRAINER] Exception calling showRewardedAd:', error);
+        showToast('error', 'Ad system error. Proceeding with message...');
+        proceedWithSendingMessage();
+      }
       return; // Exit early, message will be sent after ad is watched
     }
 
