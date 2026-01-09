@@ -86,40 +86,40 @@ class PushNotificationService {
       }
       
       try {
-        // ✅ CRITICAL: Get projectId from app configuration (required for EAS builds)
-        // Expo SDK 54: Check Constants.easConfig?.projectId first, then fallback to expoConfig
-        const projectId = Constants.easConfig?.projectId || 
-                         Constants.expoConfig?.extra?.eas?.projectId || 
-                         Constants.expoConfig?.projectId;
-        
-        // ✅ PRODUCTION LOGGING: Always log critical info for debugging
-        console.log('🔔 [PUSH TOKEN] === Push Token Registration ===');
+        // ✅ CRITICAL FIX: Get native FCM token for Firebase Admin SDK compatibility
+        // Backend now uses Firebase Admin SDK which requires native FCM tokens, not Expo tokens
+        console.log('🔔 [PUSH TOKEN] === Push Token Registration (FCM Native) ===');
         console.log('🔔 [PUSH TOKEN] Device.isDevice:', Device.isDevice);
         console.log('🔔 [PUSH TOKEN] Platform.OS:', Platform.OS);
-        console.log('🔑 [PUSH TOKEN] Project ID (easConfig):', Constants.easConfig?.projectId || 'NOT_SET');
-        console.log('🔑 [PUSH TOKEN] Project ID (expoConfig.extra.eas):', Constants.expoConfig?.extra?.eas?.projectId || 'NOT_SET');
-        console.log('🔑 [PUSH TOKEN] Project ID (final selected):', projectId || 'NOT_SET');
         
-        if (!projectId) {
-          console.error('❌ [PUSH SERVICE] No projectId found in app configuration');
-          console.error('❌ [PUSH SERVICE] Available Constants.easConfig:', Constants.easConfig);
-          console.error('❌ [PUSH SERVICE] Available Constants.expoConfig.extra:', Constants.expoConfig?.extra);
+        if (Platform.OS === 'android') {
+          // For Android: Get native FCM token directly (required for Firebase Admin SDK)
+          console.log('🔑 [PUSH TOKEN] Getting native FCM token for Android...');
+          const fcmToken = await Notifications.getDevicePushTokenAsync();
+          token = fcmToken.data;
+          console.log('✅ [PUSH TOKEN] Native FCM token obtained');
+          console.log('📱 [PUSH TOKEN] Token type:', fcmToken.type); // Should be "fcm"
+        } else if (Platform.OS === 'ios') {
+          // For iOS: Get APNs token (will be handled by Firebase Admin SDK)
+          console.log('🔑 [PUSH TOKEN] Getting APNs token for iOS...');
+          const apnsToken = await Notifications.getDevicePushTokenAsync();
+          token = apnsToken.data;
+          console.log('✅ [PUSH TOKEN] Native APNs token obtained');
+          console.log('📱 [PUSH TOKEN] Token type:', apnsToken.type); // Should be "apns"
+        } else {
+          console.error('❌ [PUSH TOKEN] Unsupported platform:', Platform.OS);
           return null;
         }
         
-        console.log('🔑 [PUSH SERVICE] Using projectId:', projectId);
-        token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-        
         // ✅ ENHANCED LOGGING: Mask token for security but show enough to verify
         const maskedToken = token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : 'null';
-        console.log('📱 [PUSH SERVICE] Expo Push Token generated (masked):', maskedToken);
-        console.log('📱 [PUSH SERVICE] Token length:', token?.length || 0);
+        console.log('📱 [PUSH TOKEN] Native token generated (masked):', maskedToken);
+        console.log('📱 [PUSH TOKEN] Token length:', token?.length || 0);
+        console.log('✅ [PUSH TOKEN] Token compatible with Firebase Admin SDK');
       } catch (error) {
-        console.error('❌ Error getting Expo push token:', error);
-        // Handle specific validation errors
-        if (error.message && error.message.includes('Invalid uuid')) {
-          console.error('❌ Invalid projectId UUID format. Please check your app.json configuration.');
-        }
+        console.error('❌ [PUSH TOKEN] Error getting native push token:', error);
+        console.error('❌ [PUSH TOKEN] Error message:', error.message);
+        console.error('❌ [PUSH TOKEN] This may indicate missing google-services.json or Firebase configuration');
         return null;
       }
     } else {
