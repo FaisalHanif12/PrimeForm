@@ -203,8 +203,6 @@ export default function AITrainerScreen() {
     const dateKey = today.toISOString().split('T')[0]; // YYYY-MM-DD
     console.log('🎬 [AI TRAINER] Date key:', dateKey);
 
-    // ✅ CRITICAL: Check daily message limit FIRST (before showing ad)
-    // Daily usage limit: max 3 messages per user per day
     try {
       const usageKey = await getUserCacheKey(`ai_trainer_usage_${dateKey}`, userId);
       const rawUsage = await Storage.getItem(usageKey);
