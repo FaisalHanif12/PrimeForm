@@ -31,10 +31,10 @@ import NotificationModal from '../../src/components/NotificationModal';
 import DecorativeBackground from '../../src/components/DecorativeBackground';
 import ChatHistoryModal from '../../src/components/ChatHistoryModal';
 import aiTrainerService from '../../src/services/aiTrainerService';
-import { showRewardedAd } from '../../src/ads/showRewarded';
 import { AdUnits } from '../../src/ads/adUnits';
 import MarkdownText from '../../src/components/MarkdownText';
 import { useNotificationCount } from '../../src/hooks/useNotificationCount';
+import { rewardedAdManager } from '../../src/ads/RewardedAdManager';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -68,6 +68,13 @@ export default function AITrainerScreen() {
 
   useEffect(() => {
     loadChatHistory();
+
+    console.log('📥 [AI TRAINER] Preloading rewarded ad...');
+    rewardedAdManager.preloadAd(AdUnits.rewardedTrainer);
+    
+    return () => {
+      // Cleanup is handled by the manager
+    };
   }, []);
 
   // Ensure we always show at least the last 15 messages, and never more than exist.
@@ -227,63 +234,40 @@ export default function AITrainerScreen() {
 
     // If ad not watched today, show rewarded ad first
     if (!hasWatchedAdToday) {
-      console.log('📺 [AI TRAINER] Ad NOT watched today - showing rewarded ad...');
-      console.log('📺 [AI TRAINER] Ad Unit ID:', AdUnits.rewardedTrainer);
+      console.log('📺 [AI TRAINER] Ad NOT watched today - attempting to show ad...');
       
-      // ✅ CRITICAL: Add timeout fallback in case ad never loads or callbacks never fire
-      let adCallbackFired = false;
-      const adTimeout = setTimeout(() => {
-        if (!adCallbackFired) {
-          console.log('⏱️ [AI TRAINER] Ad load timeout (10s) - proceeding without ad');
-          showToast('warning', 'Ad timed out. Proceeding with message...');
+      // ✅ NEW: Show preloaded ad instantly (no blocking, no timeout)
+      const adShown = await rewardedAdManager.showAd(AdUnits.rewardedTrainer, {
+        onEarned: async () => {
+          console.log('🎉 [AI TRAINER] User watched ad - marking as watched');
+          await Storage.setItem(adWatchedKey, 'true');
+          console.log('📤 [AI TRAINER] Proceeding with message send...');
+          await proceedWithSendingMessage();
+        },
+        onError: (error) => {
+          console.error('❌ [AI TRAINER] Ad error:', error?.message);
+          // Ad not available or failed - proceed anyway (better UX)
+          showToast('info', t('aiTrainer.ad.notAvailable'));
           proceedWithSendingMessage();
+        },
+        onClosed: () => {
+          console.log('🔒 [AI TRAINER] Ad closed without watching - user can try again');
+          // Ad closed without watching - don't send message
+          // Preload next ad for retry
+          rewardedAdManager.preloadAd(AdUnits.rewardedTrainer);
         }
-      }, 10000); // 10 second timeout
-      
-      // Show rewarded ad
-      try {
-        showRewardedAd(AdUnits.rewardedTrainer, {
-          onEarned: async () => {
-            if (adCallbackFired) return; // Prevent double execution
-            adCallbackFired = true;
-            clearTimeout(adTimeout);
-            console.log('🎉 [AI TRAINER] onEarned callback triggered!');
-            // Mark ad as watched for today
-            await Storage.setItem(adWatchedKey, 'true');
-            console.log('✅ [AI TRAINER] Ad marked as watched for today');
-            // Proceed with sending message after ad is watched
-            console.log('📤 [AI TRAINER] Proceeding with message send...');
-            await proceedWithSendingMessage();
-          },
-          onError: (error) => {
-            if (adCallbackFired) return; // Prevent double execution
-            adCallbackFired = true;
-            clearTimeout(adTimeout);
-            console.error('❌ [AI TRAINER] Rewarded ad error:', error);
-            console.error('❌ [AI TRAINER] Error message:', error?.message);
-            console.error('❌ [AI TRAINER] Error code:', (error as any)?.code);
-            // If ad fails, still allow sending message (graceful degradation)
-            showToast('warning', 'Ad could not be loaded. Proceeding with message...');
-            proceedWithSendingMessage();
-          },
-          onClosed: () => {
-            if (adCallbackFired) return; // Prevent double execution
-            adCallbackFired = true;
-            clearTimeout(adTimeout);
-            console.log('🔒 [AI TRAINER] Ad closed by user');
-            // Ad was closed without watching - don't send message
-            // User can try again by clicking send button
-          }
-        });
-        console.log('📺 [AI TRAINER] showRewardedAd() called, waiting for callbacks...');
-      } catch (error) {
-        // Catch any synchronous errors from showRewardedAd
-        clearTimeout(adTimeout);
-        console.error('❌ [AI TRAINER] Exception calling showRewardedAd:', error);
-        showToast('error', 'Ad system error. Proceeding with message...');
-        proceedWithSendingMessage();
+      });
+
+      // If ad wasn't shown (not ready), proceed immediately
+      if (!adShown) {
+        console.log('⚠️ [AI TRAINER] Ad not ready - proceeding with message');
+        showToast('info', t('aiTrainer.ad.loading'));
+        await proceedWithSendingMessage();
+        // Preload for next time
+        rewardedAdManager.preloadAd(AdUnits.rewardedTrainer);
       }
-      return; // Exit early, message will be sent after ad is watched
+      
+      return; // Exit early, message will be sent after ad or immediately if ad not ready
     }
 
     console.log('✅ [AI TRAINER] Ad already watched today, proceeding directly');

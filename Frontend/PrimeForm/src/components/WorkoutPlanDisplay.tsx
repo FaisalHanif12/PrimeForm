@@ -22,9 +22,9 @@ import WorkoutPlanCard from './WorkoutPlanCard';
 import ExerciseDetailScreen from './ExerciseDetailScreen';
 import DecorativeBackground from './DecorativeBackground';
 import { useLanguage } from '../context/LanguageContext';
-import { showRewardedAd } from '../ads/showRewarded';
 import { AdUnits } from '../ads/adUnits';
 import Storage from '../utils/storage';
+import { rewardedAdManager } from '../ads/RewardedAdManager';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -54,7 +54,7 @@ export default function WorkoutPlanDisplay({
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Handle exercise completion - with rewarded ad for first exercise
-  const handleExerciseModalComplete = async () => {
+  const handleExerciseModalComplete = async (): Promise<void> => {
     if (!selectedExercise || !selectedDay) {
       return;
     }
@@ -79,25 +79,36 @@ export default function WorkoutPlanDisplay({
 
           // If ad not watched today, show rewarded ad first
           if (!hasWatchedAdToday) {
-            // Show rewarded ad before marking first exercise as complete
-            showRewardedAd(AdUnits.rewardedWorkout, {
+            console.log('📺 [WORKOUT] Showing first exercise ad...');
+            
+            // ✅ NEW: Show preloaded ad instantly (no blocking)
+            const adShown = await rewardedAdManager.showAd(AdUnits.rewardedWorkout, {
               onEarned: async () => {
-                // ✅ CRITICAL: Mark ad as watched for today (user-specific, preserved across login/logout)
+                console.log('🎉 [WORKOUT] User watched ad - marking as watched');
                 await Storage.setItem(adWatchedKey, 'true');
-                // Proceed with marking exercise as complete after ad is watched
                 await proceedWithExerciseCompletion();
               },
-              onError: (error) => {
-                console.error('Rewarded ad error:', error);
-                // If ad fails, still allow exercise completion (graceful degradation)
-                proceedWithExerciseCompletion();
+              onError: async (error) => {
+                console.error('❌ [WORKOUT] Ad error:', error?.message);
+                // Ad not available - proceed anyway (better UX)
+                await proceedWithExerciseCompletion();
               },
               onClosed: () => {
-                // Ad was closed without watching - don't mark exercise as complete
-                // User can try again by clicking complete exercise button
+                console.log('🔒 [WORKOUT] Ad closed without watching');
+                // Preload next ad for retry
+                rewardedAdManager.preloadAd(AdUnits.rewardedWorkout);
               }
             });
-            return; // Exit early, exercise will be marked complete after ad is watched
+
+            // If ad wasn't shown (not ready), proceed immediately
+            if (!adShown) {
+              console.log('⚠️ [WORKOUT] Ad not ready - proceeding with exercise');
+              await proceedWithExerciseCompletion();
+              // Preload for next time
+              rewardedAdManager.preloadAd(AdUnits.rewardedWorkout);
+            }
+            
+            return; // Exit early
           }
         }
       } catch (error) {
@@ -402,6 +413,10 @@ export default function WorkoutPlanDisplay({
         }
         setIsInitialized(true);
       }
+      
+      // ✅ CRITICAL: Preload rewarded ad in background for instant show
+      console.log('📥 [WORKOUT] Preloading first exercise rewarded ad...');
+      rewardedAdManager.preloadAd(AdUnits.rewardedWorkout);
     };
 
     initializeCompletion();

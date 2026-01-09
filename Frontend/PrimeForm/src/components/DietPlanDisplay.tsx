@@ -18,9 +18,9 @@ import mealCompletionService from '../services/mealCompletionService';
 import { getUserCacheKey, getCurrentUserId } from '../utils/cacheKeys';
 import aiDietService from '../services/aiDietService';
 import { useLanguage } from '../context/LanguageContext';
-import { showRewardedAd } from '../ads/showRewarded';
 import { AdUnits } from '../ads/adUnits';
 import Storage from '../utils/storage';
+import { rewardedAdManager } from '../ads/RewardedAdManager';
 
 interface DietPlanDisplayProps {
   dietPlan: DietPlan;
@@ -348,6 +348,10 @@ export default function DietPlanDisplay({
           setSelectedDay(currentWeekDays[0]);
         }
       }
+      
+      // ✅ CRITICAL: Preload rewarded ad in background for instant show
+      console.log('📥 [DIET] Preloading breakfast rewarded ad...');
+      rewardedAdManager.preloadAd(AdUnits.rewardedDiet);
       
       setIsInitialized(true);
     };
@@ -677,25 +681,36 @@ export default function DietPlanDisplay({
 
           // If ad not watched today, show rewarded ad first
           if (!hasWatchedAdToday) {
-            // Show rewarded ad before marking breakfast as complete
-            showRewardedAd(AdUnits.rewardedDiet, {
+            console.log('📺 [DIET] Showing breakfast ad...');
+            
+            // ✅ NEW: Show preloaded ad instantly (no blocking)
+            const adShown = await rewardedAdManager.showAd(AdUnits.rewardedDiet, {
               onEarned: async () => {
-                // ✅ CRITICAL: Mark ad as watched for today (user-specific, preserved across login/logout)
+                console.log('🎉 [DIET] User watched ad - marking as watched');
                 await Storage.setItem(adWatchedKey, 'true');
-                // Proceed with marking breakfast as complete after ad is watched
                 await proceedWithMealCompletion(meal, mealType, mealId, week);
               },
               onError: (error) => {
-                console.error('Rewarded ad error:', error);
-                // If ad fails, still allow meal completion (graceful degradation)
+                console.error('❌ [DIET] Ad error:', error?.message);
+                // Ad not available - proceed anyway (better UX)
                 proceedWithMealCompletion(meal, mealType, mealId, week);
               },
               onClosed: () => {
-                // Ad was closed without watching - don't mark meal as complete
-                // User can try again by clicking mark as eaten button
+                console.log('🔒 [DIET] Ad closed without watching');
+                // Preload next ad for retry
+                rewardedAdManager.preloadAd(AdUnits.rewardedDiet);
               }
             });
-            return; // Exit early, meal will be marked complete after ad is watched
+
+            // If ad wasn't shown (not ready), proceed immediately
+            if (!adShown) {
+              console.log('⚠️ [DIET] Ad not ready - proceeding with meal');
+              await proceedWithMealCompletion(meal, mealType, mealId, week);
+              // Preload for next time
+              rewardedAdManager.preloadAd(AdUnits.rewardedDiet);
+            }
+            
+            return; // Exit early
           }
         }
       } catch (error) {
